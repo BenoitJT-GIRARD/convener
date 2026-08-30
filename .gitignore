@@ -90,14 +90,14 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Event private keys (tools/convener_ops/eventkeys.py never writes one to disk --
+# Event private keys (tools/convener_ops/journey/eventkeys.py never writes one to disk --
 # this guards a human trying one out by hand). Only the published .pub half
 # belongs in instance/keys/events/.
 *.pem
 instance/keys/events/*
 !instance/keys/events/*.pub
 
-# Certificate signing private key (tools/convener_ops/signing.py never writes one
+# Certificate signing private key (tools/convener_ops/journey/signing.py never writes one
 # to disk either). Unlike instance/keys/events/, every .pub ever committed here stays
 # forever -- rotation retires a key from service, never from this directory
 # -- but the rule protecting the private half from an accidental commit is
@@ -107,17 +107,17 @@ instance/keys/signing/*
 !instance/keys/signing/*.pub
 !instance/keys/signing/README.md
 
-# Raw attendance export (tools/convener_ops/platform.py::ManualPlatform). Contains
+# Raw attendance export (tools/convener_ops/journey/platform.py::ManualPlatform). Contains
 # personal data -- display names and addresses off the meeting platform --
 # and is dropped here only for one read, never committed. The room link and
 # join instructions come from instance/data/speakers.yml and instance/data/config.yml instead
 # (`platform.find_speaker`), never from a file under this directory. This filename-specific
 # pattern deliberately does not reach instance/data/events/<id>/registrations.enc or
-# instance/data/events/<id>/survey-responses.enc (tools/convener_ops/registration.py and
+# instance/data/events/<id>/survey-responses.enc (tools/convener_ops/journey/registration.py and
 # survey.py) -- both *are* committed, and both hold nothing but
 # per-record ciphertext, the opposite of what this rule exists to keep out.
 # Nor does it reach instance/data/events/<id>/attendance-import.csv.enc
-# (tools/convener_ops/platform.py::encrypt_attendance_export) -- the same trick
+# (tools/convener_ops/journey/platform.py::encrypt_attendance_export) -- the same trick
 # played a third time: encrypted under the event's own public key, which
 # needs no secret to produce, and committed, so a CI job holding the
 # matching private key can read it even though the plaintext this rule

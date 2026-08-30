@@ -37,7 +37,7 @@ on:
           per-person record to restrict a resend to the way
           issue-certificates.yml's own resend_all can, since a
           survey invitation carries no identifier (see
-          tools/convener_ops/survey_invite.py's own module docstring),
+          tools/convener_ops/journey/survey_invite.py's own module docstring),
           so the only choice this input offers is all or nothing: tick
           it to deliberately invite every currently matched attendee
           again, including everyone the first run already reached. Never

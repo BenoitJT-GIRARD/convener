@@ -127,7 +127,7 @@ still holds.
   `services/form-relay/`. The same value must also be set as the
   repository secret `TALLY_WEBHOOK_SECRET` (see *CI-only secrets* below):
   Tally signs with it, the worker verifies it, and
-  `tools/convener_ops/proposal.py` verifies it again on the GitHub Actions side
+  `tools/convener_ops/journey/proposal.py` verifies it again on the GitHub Actions side
   — one secret, read in three places.
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
   `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from
@@ -170,7 +170,7 @@ free-tier evidence checked while choosing it.
 
 Unlike the other two, this worker cannot read what it forwards at all —
 the body is ciphertext the browser encrypted under the target event's
-public key (`tools/convener_ops/eventkeys.py`), and this worker holds no
+public key (`tools/convener_ops/journey/eventkeys.py`), and this worker holds no
 private key. Its validation is a shape check, not a content check: see
 its README for exactly what that does and does not verify.
 
@@ -211,7 +211,7 @@ what makes the relay's own Contents-API read possible at all. This is one
 of three layers now (the page, the relay, and the CI handler each check
 independently, the relay now reading this repository's own committed
 copy rather than a deployed one); see *Draining the submission queue*
-below, and `tools/convener_ops/submission_queue.py`'s own module docstring, for
+below, and `tools/convener_ops/journey/submission_queue.py`'s own module docstring, for
 why one alone was not enough.
 
 **To create:**
@@ -357,8 +357,8 @@ Every path either build emits carries that prefix baked in at build time
 — `site/.eleventy.js` reads it through `site/scripts/published.cjs` for
 the showcase, `app/vite.config.ts`'s own
 `base` for the application — bound by `tools/tests/test_site.py` to the
-same two addresses `tools/convener_ops/registration.py::SIGNUP_BASE` and
-`tools/convener_ops/certificate.py::VERIFICATION_BASE` already pin, so the
+same two addresses `tools/convener_ops/journey/registration.py::SIGNUP_BASE` and
+`tools/convener_ops/journey/certificate.py::VERIFICATION_BASE` already pin, so the
 four cannot silently drift apart (D-14, applied to this one more
 boundary). **A build served from a bare `localhost` root is not a preview
 of this — it is a different topology** (D-26): the same test suite that
@@ -536,13 +536,13 @@ is exactly the kind of thing `script-src 'self'` refuses.
 
 ## Meeting platform
 
-**Without it:** the manual adapter (`tools/convener_ops/platform.py::ManualPlatform`)
+**Without it:** the manual adapter (`tools/convener_ops/journey/platform.py::ManualPlatform`)
 is used — links are typed by hand and attendance is imported from a file. No
 room link is published automatically. This is D-13's ordinary state, not a
 degraded one, and it stays fully usable indefinitely: nothing in this project
 requires the meeting provider's own API to ever be configured.
 
-**With it:** `tools/convener_ops/platform_fcc.py::PlatformFCC` is used instead,
+**With it:** `tools/convener_ops/journey/platform_fcc.py::PlatformFCC` is used instead,
 selected automatically by `platform_from_env` from whether the secret below
 is set. Real per-person attendance is read from the provider's own
 `GET /api/v4/conferences/{id}/calls` — one row per connection, address,
@@ -589,7 +589,7 @@ Skipping the step costs one event's manual attendance import through the
 fallback above, never a cancelled seminar and never a security incident. The
 journey line and the board notice that drive this are not wired up yet;
 this section documents the procedure a volunteer, or whatever eventually
-wires it, follows, and `tools/convener_ops/platform_fcc.py`'s module docstring
+wires it, follows, and `tools/convener_ops/journey/platform_fcc.py`'s module docstring
 documents the same reasoning from the code's side.
 
 **Two routes free the recording quota, never one.** The provider's free
@@ -704,12 +704,12 @@ exception to "a registration's plaintext exists only inside the job that
 read it, for the length of that job's run", but with outbound email
 unconfigured (this project's default state) it was the path every
 registration took, not an exception. See
-`tools/convener_ops/confirmation.py`'s module docstring for the full reasoning.
+`tools/convener_ops/journey/confirmation.py`'s module docstring for the full reasoning.
 
 **To create:** an organisation mailbox reachable over SMTP (D-07's
 arbitration: no external transactional-email service, no subscription).
 Gmail and most providers want port `587` with STARTTLS; some want `465`
-with implicit TLS instead — `tools/convener_ops/confirmation.py` picks between
+with implicit TLS instead — `tools/convener_ops/journey/confirmation.py` picks between
 the two from `CONVENER_SMTP_PORT` itself, so either works without a code change.
 
 **Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`, `CONVENER_SMTP_USER`,
@@ -728,7 +728,7 @@ the reasoning is that a certificate in the spam folder does not exist.
 
 One exception to the no-personal-data-in-a-retained-surface rule above: an
 address is still the only identifier for one registration
-(`tools/convener_ops/registration.py`'s own module docstring), so a resend still
+(`tools/convener_ops/journey/registration.py`'s own module docstring), so a resend still
 names one by address. **It never does so in the clear.**
 `workflow_dispatch`'s own `encrypted_identifier` input carries that address
 hybrid-encrypted under the event's own published public key, not the
@@ -813,17 +813,17 @@ its *private* half — and unlike an absent SMTP host or an absent meeting
 token, there is no degraded mode a missing key falls back to. The job that
 would decrypt an event's registrations exits in error instead, rather than
 writing personal data to disk unencrypted for want of a key. See
-`tools/convener_ops/eventkeys.py` for the full reasoning, including why this is
+`tools/convener_ops/journey/eventkeys.py` for the full reasoning, including why this is
 the one place in this codebase where an absent integration (D-13) is not
 treated as a normal state.
 
 **To create:** for each event that will take registrations, generate a
-fresh key pair (`convener_ops.eventkeys.generate()`) — never reuse one event's
+fresh key pair (`convener_ops.journey.eventkeys.generate()`) — never reuse one event's
 pair for another, since a per-event key that read another event's data
 would not be a per-event key at all.
 
 1. Store the private half as the repository secret named by
-   `convener_ops.eventkeys.secret_name(event_id)` -- **not** simply the event id
+   `convener_ops.journey.eventkeys.secret_name(event_id)` -- **not** simply the event id
    uppercased: GitHub Actions secret names may only contain letters, digits
    and underscore, but an event id may legally contain `.` and `-` (the
    tests' own canonical id, `mrg-042`, does), so `secret_name` folds both to
@@ -897,7 +897,7 @@ did not create a second thing to destroy.
 
 **`.github/workflows/retention.yml`** runs daily and on demand
 (`workflow_dispatch`, no inputs). Each run: computes which events'
-90-day windows have elapsed (`convener_ops.eventkeys.is_due_for_destruction`,
+90-day windows have elapsed (`convener_ops.journey.eventkeys.is_due_for_destruction`,
 measured against `convener_ops.governance.paris_today` — never a raw clock
 read); deletes each one's `CONVENER_EVENT_KEY_<EVENT ID>` secret (`gh secret
 delete`, converging on the secret being *absent* regardless of that
@@ -905,7 +905,7 @@ command's own exit code — a secret already gone from a previous, partial
 run is success, not failure); and records every destruction it actually
 carried out (`convener-record-destructions`, reading `DESTROYED_IDS` and
 `DESTROYED_ON`) in `instance/data/event-key-destructions.yml`, the registry
-`convener_ops.eventkeys.key_status` reads to tell "destroyed on purpose" apart
+`convener_ops.journey.eventkeys.key_status` reads to tell "destroyed on purpose" apart
 from "this event never had a key". That same step also removes the
 event's `instance/keys/events/<id>.pub` once the registry write succeeds, so a
 destroyed event stops accepting new registrations too — the signup relay
@@ -969,10 +969,10 @@ this repository's own `CONVENER_RETENTION_TOKEN` secret.
 deadline): a participant's own registration removed from
 `registrations.enc` before
 the retention window ends, without touching any other registrant's own
-entry (`convener_ops.registration.erase`). Run
+entry (`convener_ops.journey.registration.erase`). Run
 **`.github/workflows/erase-registration.yml`** by hand
 (`workflow_dispatch`) with the event id and, **preferred**, the matching
-code from the participant's own confirmation e-mail (`convener_ops.registration
+code from the participant's own confirmation e-mail (`convener_ops.journey.registration
 .find_by_matching_code` recomputes and compares it — nothing on our side
 ever stores it). The e-mail address is accepted as a **documented,
 deliberate fallback** for someone who no longer has that e-mail —
@@ -1001,7 +1001,7 @@ is to prove there is nothing left.
 
 **There is no equivalent early-erasure command for one person's own survey
 responses, and this is a recorded gap, not an oversight.** A survey
-response (`tools/convener_ops/survey.py`) carries no name and no address — see
+response (`tools/convener_ops/journey/survey.py`) carries no name and no address — see
 that module's own docstring, "Why no identity travels with a response" —
 so nothing stored there can be matched back to a specific participant the
 way `convener-erase-registration` matches a registration by matching code or
@@ -1014,7 +1014,7 @@ files together, not one response on its own.
 `survey.py`'s own module docstring names the property, this is the
 procedure.** `instance/data/events/<id>/survey-responses.enc` holds one JSON object
 per response under its top-level `"responses"` array
-(`tools/convener_ops/survey.py::ResponseFile`), each entry an independent
+(`tools/convener_ops/journey/survey.py::ResponseFile`), each entry an independent
 hybrid-encrypted envelope with its own AES key and nonce — removing one
 array element and committing the result touches nothing else in the file,
 byte for byte, the same guarantee `convener-erase-registration` relies
@@ -1067,20 +1067,20 @@ certificate so a stranger can confirm it came from us — attesting, not
 concealing. The two also run opposite lifecycles: an event key is destroyed
 at the end of retention; this one is never destroyed, because a certificate
 must still verify however long after it was issued someone checks it. See
-`tools/convener_ops/signing.py`'s module docstring for the full reasoning behind
+`tools/convener_ops/journey/signing.py`'s module docstring for the full reasoning behind
 both differences, and for why the padding scheme, key size and wire format
 were each chosen the way they were.
 
 **Without it:** no certificate is issued. The job that would sign one
-(`tools/convener_ops/certificate.py`) cannot, and stops there —
+(`tools/convener_ops/journey/certificate.py`) cannot, and stops there —
 nothing partially written, nothing sensitive exposed. Unlike *Event
 registration keys*, this is an ordinary D-13 absence: there is no
 confidentiality risk a missing signing key could expose, only a feature
 (certificates) that does not run this time.
 
-**To create:** a human operator runs `convener_ops.signing.generate()`
+**To create:** a human operator runs `convener_ops.journey.signing.generate()`
 themselves, interactively, on their own machine — a Python shell is
-enough (`cd tools && uv run python`, then `from convener_ops.signing import
+enough (`cd tools && uv run python`, then `from convener_ops.journey.signing import
 generate; private_pem, public_pem = generate()`). **Not an automated
 step, and not something to delegate to an agent or a CI job:** this mints
 the one key that every future certificate depends on, and it is minted
@@ -1090,7 +1090,7 @@ or saved again. There is exactly one of these in service at a time —
 unlike an event key, this is not per-event.
 
 1. Commit the public half as `instance/keys/signing/<YYYY-MM-DD>.pub`, dated the day
-   it was generated (`convener_ops.signing.public_key_path`). This is not a
+   it was generated (`convener_ops.journey.signing.public_key_path`). This is not a
    secret: it is what lets a public verification page confirm a
    certificate offline, with no request to us at all. `instance/keys/signing/`
    holds a `README.md` describing this layout even when the directory is
@@ -1115,7 +1115,7 @@ shaped bug, and the same fix: publish, then enable signing.
 (steps 1 and 2 above) does not, by itself, retire the old one — the old
 private half stays `CONVENER_SIGNING_KEY`'s value until it is deliberately
 replaced. Once it is, the certificates already signed under it keep
-verifying: `convener_ops.signing.verify` is handed every published
+verifying: `convener_ops.journey.signing.verify` is handed every published
 `instance/keys/signing/*.pub`, not only the one currently in service, and tries each
 in turn (see the module docstring's "how a verifier chooses" section for
 the recommended, but not required, newest-first order). **Never remove a
@@ -1140,12 +1140,12 @@ is ever read.
 
 *Handle registration* (`.github/workflows/registration.yml`) runs on that
 dispatch and does exactly two things: it decrypts, and it re-encrypts —
-`tools/convener_ops/registration.py`'s module docstring explains why the stored
+`tools/convener_ops/journey/registration.py`'s module docstring explains why the stored
 file (`instance/data/events/<event id>/registrations.enc`) holds one independent
 hybrid envelope per registration rather than one for the whole event, and
 what that costs and buys. The plaintext never touches disk, a log, or
 standard output at any point; a test
-(`tools/tests/test_registration.py`, `tools/tests/test_cli.py`) pins that
+(`tools/tests/journey/test_registration.py`, `tools/tests/test_cli.py`) pins that
 directly by asserting no submitted name or address appears anywhere the
 job prints, on both the success and the failure paths.
 
@@ -1156,12 +1156,12 @@ step reads through an expression evaluated in the workflow file itself
 step whose `env:` it appears in. So the first step
 (`convener-registration-secret-name`) reads only the event id out of the
 dispatch payload and hands back the *name* of that event's key secret
-(`convener_ops.eventkeys.secret_name`) as a step output — never the key itself
+(`convener_ops.journey.eventkeys.secret_name`) as a step output — never the key itself
 — for the second step's `env:` to look up by
 (`secrets[steps.resolve.outputs.secret_name]`). An event with no such
 secret set resolves to an empty string, exactly like a literal
 `secrets.SOME_NAME` reference to a secret that does not exist, and the
-second step treats that the same way `tools/convener_ops/eventkeys.py` says an
+second step treats that the same way `tools/convener_ops/journey/eventkeys.py` says an
 absent event key must be treated: the job exits in error rather than doing
 anything with the ciphertext it was handed. That second step also decrypts,
 stores *and* commits — one step, not two, because the commit has to sit
@@ -1201,7 +1201,7 @@ with `git pull --rebase`: rebasing a JSON array whose closing lines both
 commits rewrote reliably conflicts, and a conflicted rebase leaves the tree
 mid-merge with nothing committed — the registration is gone, not merely
 delayed. Instead the job fetches the branch tip, hard-resets to it,
-**re-runs the handler**, and recommits: `convener_ops.registration.upsert` is
+**re-runs the handler**, and recommits: `convener_ops.journey.registration.upsert` is
 idempotent on the same address, so replaying it against the tree the other
 push just produced reproduces this registration's own entry (under a fresh
 AES key and nonce — encryption is never literally deterministic — but the
@@ -1227,7 +1227,7 @@ queue watchdog exists for exactly that silence.
 **Where the queue is.** A branch of this repository called
 `submission-queue`, one file per submission at
 `queue/survey/<entry id>.json` holding the relay's request body byte for
-byte. `tools/convener_ops/submission_queue.py` names the branch, and
+byte. `tools/convener_ops/journey/submission_queue.py` names the branch, and
 `.github/workflows/sweep-and-notify.yml` and
 `services/signup-relay/src/index.js` mirror that name; a test fails if
 they drift apart.
@@ -1249,7 +1249,7 @@ directory.
 > start **two workflows — six billed jobs — on every single submission**,
 > six times what the queue replaced. No offline test can see whether such a pull request
 > exists. What is held instead is the consequence one step later:
-> `tools/tests/test_submission_queue.py` fails if a queue file ever
+> `tools/tests/journey/test_submission_queue.py` fails if a queue file ever
 > reaches a checkout of the default branch, so merging one is red rather
 > than silent.
 
@@ -1266,7 +1266,7 @@ checkout), plan, drain, and clear:
 2. the **drain** step decrypts, checks each event's survey switch,
    validates and re-encrypts every waiting response into
    `instance/data/events/<event id>/survey-responses.enc`
-   (`tools/convener_ops/survey.py`) — one independent envelope per response,
+   (`tools/convener_ops/journey/survey.py`) — one independent envelope per response,
    appended, never matched to an existing entry, because nothing about a
    response identifies who submitted it (see `survey.py`, "Why no identity
    travels with a response"). It commits **the responses and
@@ -1378,7 +1378,7 @@ switch expecting it to take effect at once.
 
 ## Registration matching salt
 
-**Without it:** `tools/convener_ops/registration.py::matching_code` returns
+**Without it:** `tools/convener_ops/journey/registration.py::matching_code` returns
 nothing — no matching code is derived, printed anywhere, or included in
 the confirmation email a registration triggers. Attendance
 matching falls back to the address-and-name cascade instead of the typed
@@ -1577,7 +1577,7 @@ certificate id instead: random, public by design, already printed on the
 document and already published in `certificates-public.json`, so it names
 exactly one certificate without naming a person.
 `convener-reissue-certificate` resolves that id to a registration the same way
-`convener_ops.certificate.issue` computes a fingerprint in the first place, run
+`convener_ops.journey.certificate.issue` computes a fingerprint in the first place, run
 in the other direction -- see that module's own docstring and
 `convener_ops.cli.reissue_certificate`'s.
 
@@ -1728,7 +1728,7 @@ read here for the first time by anything other than the registration
 confirmation. Absent `email_transport` secrets are ordinary D-13 here too,
 and degrade the same way the confirmation does:
 nothing is ever written anywhere, not even to a private, short-
-retention artefact -- see `tools/convener_ops/delivery.py`'s own module
+retention artefact -- see `tools/convener_ops/journey/delivery.py`'s own module
 docstring for why that would have been the wrong pattern here regardless,
 for a signed, nominative document.
 
@@ -1754,9 +1754,9 @@ resend path independently.
 
 The rule is precise: optional, switched on per event, short,
 sent afterwards, and only to people recognised as present. It splits
-in two — `tools/convener_ops/survey.py` is the anonymous
+in two — `tools/convener_ops/journey/survey.py` is the anonymous
 storage side, already covered above under *Handling a survey response*;
-`tools/convener_ops/survey_invite.py` (16b) is who gets asked, which needs an
+`tools/convener_ops/journey/survey_invite.py` (16b) is who gets asked, which needs an
 identity to invite even though the answer it collects carries none.
 
 **`.github/workflows/invite-survey.yml`**, `workflow_dispatch` only, never
@@ -1769,7 +1769,7 @@ FreeConferenceCall conference id every attendance-reading workflow already
 takes, and `resend_all` (below).
 
 **Only a *matched* attendee is invited** — a stored registration the
-attendance cascade (`tools/convener_ops/attendance.py`) tied to a room
+attendance cascade (`tools/convener_ops/journey/attendance.py`) tied to a room
 presence, `attendance.match`'s own `matched` outcome, never `eligible`
 (the certificate-issuing duration threshold): the rule asks only
 whether we recognised someone present, not whether they stayed long enough
@@ -1777,7 +1777,7 @@ to earn a certificate. Neither an **unmatched** attendee (present, but the
 cascade could not tie the address it saw to any registration) nor an
 **unreachable** one (joined by phone, no address on file, at any point) is
 invited — not by policy, but by fact: neither has an address this pipeline
-holds. See `tools/convener_ops/survey_invite.py`'s own module docstring,
+holds. See `tools/convener_ops/journey/survey_invite.py`'s own module docstring,
 "Who gets invited, and why the other two do not", for the argument in full.
 
 **The invitation carries no per-person token, on purpose.** Every matched
@@ -1819,7 +1819,7 @@ key at all, unlike `certificates.yml`, which already lives under
 `instance/data/events/<id>/`. `CONVENER_MATCHING_SALT` is also ordinary D-13 for this
 command (unlike for certificate issuance), so such a handle could not
 always be computed in the first place. See
-`tools/convener_ops/survey_invite.py`'s own module docstring
+`tools/convener_ops/journey/survey_invite.py`'s own module docstring
 for the argument in full.
 
 **What actually reduces how often a bounce needs any recovery at all: an

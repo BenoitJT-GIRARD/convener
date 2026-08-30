@@ -406,7 +406,7 @@ export interface Speaker {
    *  fact -- the room link, the recording, the forum thread -- already
    *  lives on the speaker record rather than in the shared config. The
    *  three questions themselves are fixed for every event
-   *  (`tools/convener_ops/survey.py`'s module docstring); this is the only
+   *  (`tools/convener_ops/journey/survey.py`'s module docstring); this is the only
    *  thing that varies.
    *
    *  `false` by default, and an event with the switch off carries nothing
@@ -480,7 +480,7 @@ export interface Config {
    *  *below* two thirds rather than above -- so a duration of exactly two
    *  thirds of the session reads as eligible rather than being refused by a
    *  rounding artefact nobody typing a shorter number could see or contest.
-   *  See `tools/convener_ops/attendance.py::EligibilityThreshold` for the
+   *  See `tools/convener_ops/journey/attendance.py::EligibilityThreshold` for the
    *  calculation this feeds. */
   eligibility_share: number;
   /** The editorial board, one entry per member. Replaces the flat
@@ -522,7 +522,7 @@ export interface Config {
    *  One value for the whole series, not one per event (D-06):
    *  the chosen platform's account *is* the permanent room, so these
    *  instructions describe a room that never changes. Read by
-   *  `tools/convener_ops/platform.py::ManualPlatform.get_room`, which pairs
+   *  `tools/convener_ops/journey/platform.py::ManualPlatform.get_room`, which pairs
    *  this with `instance/data/speakers.yml`'s per-event `zoom_link`.
    *
    *  Kept immediately before `sla_days`, never between it and `channels`:

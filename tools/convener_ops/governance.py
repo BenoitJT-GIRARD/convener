@@ -111,7 +111,7 @@ def active_board(config: dict[str, Any], on: str) -> tuple[list[str], list[str]]
     counts the member as away -- the conservative reading, since it shrinks the
     denominator rather than silently letting an absent member carry a vote.
 
-    The single implementation of this mapping: `convener_ops.proposal` and
+    The single implementation of this mapping: `convener_ops.journey.proposal` and
     `convener_ops.sweep` both call it, and it mirrors
     `app/src/state/board.ts::activeBoard`, pinned together by
     `tools/tests/fixtures/governance-cases.json`'s `active_board_cases`.

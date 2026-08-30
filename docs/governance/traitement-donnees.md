@@ -101,7 +101,7 @@ named in `config/integrations.yml` and `docs/reference/operations.md`.
 
 Registration and attendance data is destroyed **90 days** after the event,
 by destroying the one key that could ever decrypt it — the retention window
-`tools/convener_ops/eventkeys.py` reads for every event. The encrypted files
+`tools/convener_ops/journey/eventkeys.py` reads for every event. The encrypted files
 themselves are not deleted: `instance/data/events/<id>/registrations.enc`, the
 attendance export and `survey-responses.enc` all stay committed —
 unreadable, not absent, so no commit history anywhere in
@@ -121,7 +121,7 @@ touched by this deadline.
 - **Access and rectification.** Rectifying the name, institution or
   announce-list preference on a registration has a procedure: registering
   again with the same address is an update, not a second entry
-  (`tools/convener_ops/registration.py::upsert`) — the same "second submission
+  (`tools/convener_ops/journey/registration.py::upsert`) — the same "second submission
   updates the first" mechanism the event page's form already uses.
   Rectifying the address itself, and access to what is held beyond that,
   do not: `convener-resend-confirmation` reproduces most of a registration back

@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import eventkeys
-from convener_ops.survey import (
+from convener_ops.journey import eventkeys
+from convener_ops.journey.survey import (
     _MAX_FEEDBACK_LENGTH,
     _PLAINTEXT_PAD_BYTES,
     FILE_VERSION,
@@ -467,7 +467,7 @@ def test_add_response_re_encrypts_under_derived_key_not_a_stale_published_one() 
 # test_registration.py's own copy of this comment.
 # ------------------------------------------------------------------ #
 
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "governance-cases.json"
+_FIXTURE_PATH = Path(__file__).parents[1] / "fixtures" / "governance-cases.json"
 _FIXTURE = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))[
     "event_survey_response_encryption"
 ]

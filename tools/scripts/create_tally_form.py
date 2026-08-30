@@ -2,8 +2,9 @@
 
 Why this exists
 ----------------
-`convener_ops.proposal.to_lead` has always looked a submission up by field label,
-against an interface that, until now, no form implemented. A form clicked
+`convener_ops.journey.proposal.to_lead` has always looked a submission up by
+field label, against an interface that, until now, no form implemented. A form
+clicked
 together in Tally's editor cannot be recreated if the account is ever lost;
 a form built from this script can -- D-03 applied to something other than
 code. Re-running it is safe: it finds the existing form by its title
@@ -18,10 +19,10 @@ exercised against the real network from a test.
 
 The labels are shared, not copied
 ----------------------------------
-`convener_ops.proposal` reads a submission by label -- `Name`, `Email`,
+`convener_ops.journey.proposal` reads a submission by label -- `Name`, `Email`,
 `Institution`, and so on, several with aliases it also accepts. Those labels
 are not retyped here: `_QUESTIONS` below is built by walking
-`convener_ops.proposal.FORM_FIELDS` itself, reading each label and its
+`convener_ops.journey.proposal.FORM_FIELDS` itself, reading each label and its
 `required` flag from there rather than restating them, so a label renamed
 in `proposal.py` changes the live form the next time this script runs, and
 a label renamed in one place without the other breaks a test rather than
@@ -53,8 +54,9 @@ line and no signal -- precisely the outcome a closed vocabulary exists to
 prevent, and at a steady rate rather than as an edge case.
 
 So `Gender` and `Career stage` are `DROPDOWN` questions here, and the
-resolution the earlier design avoided lives in `convener_ops.proposal.field_value`
-instead -- read by `convener_ops.cli.handle_proposal` before a submission ever
+resolution the earlier design avoided lives in
+`convener_ops.journey.proposal.field_value` instead -- read by
+`convener_ops.cli.handle_proposal` before a submission ever
 reaches `to_lead`, so `to_lead`'s `fields: dict[str, str]` stays an honest
 contract. Each option's `text` is the bare vocabulary token (`phd`, `NB`,
 `group-leader`, ...) and nothing else: any friendly gloss belongs in the
@@ -107,7 +109,7 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from convener_ops.declaration.published import load_identity
-from convener_ops.proposal import (
+from convener_ops.journey.proposal import (
     CAREER_STAGE_ORDER,
     FORM_FIELDS,
     GENDER_ORDER,
@@ -187,7 +189,7 @@ def _block(
 class _Question:
     """One form question: which label reads it back, and how it is asked.
 
-    `aliases` comes straight from `convener_ops.proposal.FORM_FIELDS` --
+    `aliases` comes straight from `convener_ops.journey.proposal.FORM_FIELDS` --
     `aliases[0]` is the canonical label the form uses; the rest are the
     aliases `to_lead` also accepts from older or hand-run submissions, never
     offered here since the form only ever produces its own canonical label.
@@ -382,7 +384,7 @@ def _build_questions() -> tuple[_Question, ...]:
     return tuple(questions)
 
 
-#: The eleven questions, in the order `convener_ops.proposal.FORM_FIELDS` lists
+#: The eleven questions, in the order `convener_ops.journey.proposal.FORM_FIELDS` lists
 #: them.
 _QUESTIONS: Final[tuple[_Question, ...]] = _build_questions()
 
@@ -393,7 +395,7 @@ def build_blocks() -> list[dict[str, Any]]:
 
     Pure: no network call, no environment read, no filesystem access -- the
     whole of this function's output is determined by this module's own
-    constants and by `convener_ops.proposal`'s shared label and vocabulary
+    constants and by `convener_ops.journey.proposal`'s shared label and vocabulary
     constants. Calling it twice, in the same process or a year apart,
     returns byte-identical output (see `_uuid`, and `GENDER_ORDER`/
     `CAREER_STAGE_ORDER` in `proposal.py` for why the vocabulary itself is

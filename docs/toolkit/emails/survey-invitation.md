@@ -10,8 +10,8 @@ than a volunteer composing it here, this page's own placeholders sit in
 **square brackets** rather than double braces — there being no speaker
 record to fill `{{ … }}` markers in from in the first place — kept
 anyway so a board member can read exactly what a participant receives
-without opening `tools/convener_ops/survey_invite.py`.
-`tools/tests/test_survey_invite.py` pins this page's subject line and its
+without opening `tools/convener_ops/journey/survey_invite.py`.
+`tools/tests/journey/test_survey_invite.py` pins this page's subject line and its
 one fixed sentence against that module's own constants, so the two cannot
 quietly say different things.*
 
@@ -20,7 +20,7 @@ attended, and to nobody else — the questionnaire itself is optional, and
 so is answering it. The link below is the same one for every recipient of
 the same event:
 there is no per-person code or token in it, on purpose — see
-`tools/convener_ops/survey_invite.py`'s own module docstring for why minting
+`tools/convener_ops/journey/survey_invite.py`'s own module docstring for why minting
 one would undo the anonymity the survey response itself is built to
 have.*
 
@@ -52,7 +52,7 @@ Best regards,
   and goes to the address on the participant's own registration, exactly
   like their registration confirmation or their certificate. Nothing about
   *this message* is anonymous. Only the response the link leads to is
-  designed to carry no identity at all — see `tools/convener_ops/survey.py`'s
+  designed to carry no identity at all — see `tools/convener_ops/journey/survey.py`'s
   own module docstring and
   `docs/reference/operations.md`'s "Anonymous against a stranger;
   pseudonymous by metadata against the organiser" section for the
@@ -65,14 +65,14 @@ Best regards,
   the attendance cascade tied to a room presence. An attendee the cascade
   could not tie to any registration has no stored address to send to
   either; a telephone joiner never had one on file, by any means, at any
-  point — see `tools/convener_ops/attendance.py`'s own module docstring, "Three
+  point — see `tools/convener_ops/journey/attendance.py`'s own module docstring, "Three
   outcomes, not two". Neither exclusion is a policy choice this message
   enforces; both are a plain fact this pipeline cannot get around.
 - **A resend invites everyone again, not only whoever missed the first
   round — by choice, not because anonymity forces it.** Unlike a
   certificate resend, which `certificate.py`'s own public identifiers let
   target precisely, `convener-invite-survey` mints no identifier at all — see
-  `tools/convener_ops/survey_invite.py`'s own module docstring
+  `tools/convener_ops/journey/survey_invite.py`'s own module docstring
   for the full argument: a per-person handle
   here would not undo the survey response's own anonymity, but it would be
   a permanent, cross-event linkage kept for a purpose that expires in
@@ -89,6 +89,6 @@ Best regards,
   (`config/integrations.yml`), nothing here is sent, and — unlike the
   registration confirmation — nothing is written anywhere as a fallback
   either: every attempt is folded into a bare sent/not-sent count, the
-  same choice `tools/convener_ops/delivery.py` makes for a certificate, made
+  same choice `tools/convener_ops/journey/delivery.py` makes for a certificate, made
   here for a plainer reason — this pipeline holds no identifier to write
   an unsent invitation *against* in the first place.

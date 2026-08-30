@@ -36,7 +36,7 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
  * still rendered through react-markdown's own `urlTransform`, which this
  * function stands in for). `SpeakerPage` uses it directly for a
  * candidate's own `links` field, entered through the public, unreviewed
- * proposal intake (`tools/convener_ops/proposal.py`) and rendered as a plain
+ * proposal intake (`tools/convener_ops/journey/proposal.py`) and rendered as a plain
  * `<a href>` with no sanitiser of its own between the two.
  */
 export function isSafeHref(href: string): boolean {

@@ -9,7 +9,7 @@ and `cli.py::render_check` is what turns the flag into the operator-facing
 text.
 
 **Three rows carry it today**, not one -- `event_keys` (see
-`tools/convener_ops/eventkeys.py`), `retention_token` and
+`tools/convener_ops/journey/eventkeys.py`), `retention_token` and
 `certificate_fingerprint`. This paragraph used to say "the one exception ...
 `event_keys` is that row today", which was true when it was written and had
 quietly stopped being so; it was corrected while counting the

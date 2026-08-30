@@ -1,8 +1,8 @@
 /**
  * The browser half of the post-event survey's hybrid encryption -- the
  * sibling of `app/src/signup/encrypt.ts`, reproducing the exact same wire
- * format `tools/convener_ops/eventkeys.py` documents field by field, for the
- * exact same reason: this file has to agree with `tools/convener_ops/survey.py`
+ * format `tools/convener_ops/journey/eventkeys.py` documents field by field, for the
+ * exact same reason: this file has to agree with `tools/convener_ops/journey/survey.py`
  * byte for byte, or every response this page sends becomes permanently
  * unreadable the moment the two implementations disagree.
  *
@@ -43,7 +43,7 @@
 
 /**
  * A participant's answers to the three fixed questions, and nothing else --
- * see `tools/convener_ops/survey.py`'s module docstring for why these three and
+ * see `tools/convener_ops/journey/survey.py`'s module docstring for why these three and
  * no others. `overall_rating` is a whole number 1-5; `recommend` is a plain
  * yes/no; `feedback` is free text, `''` when a participant chooses to leave
  * it blank -- the same "absence means blank string" idiom
@@ -137,7 +137,7 @@ export async function importEventPublicKey(publicKeyPem: string): Promise<Crypto
 /**
  * Hybrid-encrypts `fields` for the holder of the private half matching
  * `publicKeyPem` -- the browser-side mirror of
- * `tools/convener_ops/eventkeys.py::encrypt`, called here on a `SurveyResponse`
+ * `tools/convener_ops/journey/eventkeys.py::encrypt`, called here on a `SurveyResponse`
  * rather than a `Registration`. See the module docstring for the wire
  * format this produces.
  */

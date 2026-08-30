@@ -35,13 +35,13 @@ import instance_identity
 import pytest
 from ics_reader import parse_calendar
 
-from convener_ops.certificate import VERIFICATION_BASE
-from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.formats import BANNER
+from convener_ops.journey.certificate import VERIFICATION_BASE
+from convener_ops.journey.confirmation import CONTACT_EMAIL
+from convener_ops.journey.registration import SIGNUP_BASE, signup_url
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
-from convener_ops.registration import SIGNUP_BASE, signup_url
 
 #: The same zone `tools/convener_ops/governance.py::PARIS` already
 #: anchors this project's Python side on -- `zoneinfo`, the standard
@@ -915,7 +915,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 # shown, and that no page it can reach carries a `<script>` tag at all.
 #
 # The speaker-proposal page is the public entry point to the pipeline
-# `tools/convener_ops/proposal.py` already implements (a Tally form, its
+# `tools/convener_ops/journey/proposal.py` already implements (a Tally form, its
 # webhook verified and turned into a candidate lead) -- not a new
 # mechanism, so this section proves the page links to the one already
 # configured (the declaration's own `proposal_form`), and that the home page's own

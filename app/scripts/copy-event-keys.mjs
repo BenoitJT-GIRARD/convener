@@ -5,7 +5,7 @@
  * public half from the same origin the app itself is served from -- the same
  * reasoning `copy-handbook.mjs` gives for `docs/`, applied to a directory
  * that is public for a different reason: nothing under `instance/keys/events/*.pub`
- * is a secret (see `tools/convener_ops/eventkeys.py`'s module docstring), only
+ * is a secret (see `tools/convener_ops/journey/eventkeys.py`'s module docstring), only
  * `.pub` files exist here at all -- the private half never touches disk
  * outside a CI job, and `.gitignore` refuses everything under
  * `instance/keys/events/` except `*.pub` by construction.

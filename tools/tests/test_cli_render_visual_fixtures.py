@@ -18,7 +18,7 @@ from convener_ops.cli import render_visual_fixtures
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.formats import FORMATS
-from convener_ops.registration import signup_url
+from convener_ops.journey.registration import signup_url
 from convener_ops.visual import FIXTURE_ANNOUNCEMENT
 
 ROOT = repo_root()

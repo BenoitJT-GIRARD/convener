@@ -1,8 +1,9 @@
 """Turn one decrypted registration into a stored, re-encrypted record.
 
 This project's whole registration design (see
-`tools/convener_ops/eventkeys.py`'s module docstring) rests on plaintext existing
-in exactly one place: the memory of the CI job this module's functions run
+`tools/convener_ops/journey/eventkeys.py`'s module docstring) rests on
+plaintext existing in exactly one place: the memory of the CI job this
+module's functions run
 inside. `to_registration` is the only place a submitted envelope is ever
 turned into names an operator could read; every function below it either
 stays inside that same job's memory or hands back ciphertext, never the
@@ -109,8 +110,8 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
+from ..declaration import published
 from . import eventkeys
-from .declaration import published
 
 #: `registrations.enc`'s own format version -- the file-level analogue of
 #: `eventkeys.WIRE_VERSION`, in case the file's shape (not the envelope

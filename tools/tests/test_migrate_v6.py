@@ -257,11 +257,11 @@ def test_nothing_published_carries_the_key_at_all() -> None:
     nothing a reader outside this repository can reach."""
     for name in (
         "tools/convener_ops/declaration/published.py",
-        "tools/convener_ops/certificate.py",
-        "tools/convener_ops/eventkeys.py",
-        "tools/convener_ops/registration.py",
+        "tools/convener_ops/journey/certificate.py",
+        "tools/convener_ops/journey/eventkeys.py",
+        "tools/convener_ops/journey/registration.py",
         "tools/convener_ops/agenda.py",
-        "tools/convener_ops/signing.py",
+        "tools/convener_ops/journey/signing.py",
     ):
         text = (ROOT / name).read_text(encoding="utf-8")
         assert OLD_KEY not in text, name

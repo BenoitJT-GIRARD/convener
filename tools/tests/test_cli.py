@@ -18,11 +18,6 @@ import pytest
 import yaml
 from conftest import board_member, config, speaker
 
-from convener_ops import eventkeys
-from convener_ops.attendance import MatchedAttendee
-from convener_ops.certificate import CertificateEntry, CertificateEvent, IssueResult
-from convener_ops.certificate import fingerprint as certificate_fingerprint
-from convener_ops.certificate import issue as certificate_issue
 from convener_ops.cli import (
     UNMATCHED_ATTENDANCE,
     _load,
@@ -52,7 +47,16 @@ from convener_ops.cli import (
 )
 from convener_ops.declaration.paths import repo_root
 from convener_ops.governance import paris_today
-from convener_ops.platform import (
+from convener_ops.journey import eventkeys
+from convener_ops.journey.attendance import MatchedAttendee
+from convener_ops.journey.certificate import (
+    CertificateEntry,
+    CertificateEvent,
+    IssueResult,
+)
+from convener_ops.journey.certificate import fingerprint as certificate_fingerprint
+from convener_ops.journey.certificate import issue as certificate_issue
+from convener_ops.journey.platform import (
     AttendanceRow,
     EventNotFoundError,
     decrypt_attendance_rows,
@@ -60,8 +64,12 @@ from convener_ops.platform import (
     load_attendance_export_file,
     parse_attendance_csv,
 )
-from convener_ops.platform_fcc import RETRIEVED_TICK, FCCRequestError, PlatformFCC
-from convener_ops.registration import (
+from convener_ops.journey.platform_fcc import (
+    RETRIEVED_TICK,
+    FCCRequestError,
+    PlatformFCC,
+)
+from convener_ops.journey.registration import (
     Registration,
     RegistrationFile,
     dump_registration_file,
@@ -70,8 +78,8 @@ from convener_ops.registration import (
     to_registration,
     upsert,
 )
-from convener_ops.signing import derive_public_pem, generate, verify
-from convener_ops.survey_invite import survey_url
+from convener_ops.journey.signing import derive_public_pem, generate, verify
+from convener_ops.journey.survey_invite import survey_url
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -1149,7 +1157,9 @@ def test_handle_registration_confirmation_carries_the_code_when_salted(
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "shh")
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     _handle_and_send(tmp_path, monkeypatch)
 
@@ -1179,7 +1189,9 @@ def test_handle_registration_confirmation_names_what_changed_on_an_update(
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     monkeypatch.setenv(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
@@ -1225,7 +1237,9 @@ def test_handle_registration_confirmation_says_nothing_about_an_update_the_first
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     _handle_and_send(tmp_path, monkeypatch)
 
@@ -1254,7 +1268,9 @@ def test_handle_registration_confirmation_degrades_with_no_speaker_record(
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     _handle_and_send(tmp_path, monkeypatch)
 
@@ -1306,7 +1322,7 @@ class _RecordingSmtpClient:
     exercise a genuine "sent" outcome without opening a socket.
 
     `sent` holds `EmailMessage`, not `object`: this double stands in for
-    `convener_ops.confirmation`'s own `smtplib.SMTP`, and that module builds an
+    `convener_ops.journey.confirmation`'s own `smtplib.SMTP`, and that module builds an
     `EmailMessage` before every send. It is also what the tests below read
     back -- `get_content()` and header subscripting are `EmailMessage`'s
     own API, which the base `email.message.Message` does not carry."""
@@ -1350,7 +1366,9 @@ def test_handle_registration_sends_through_a_configured_transport(
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     _handle_and_send(tmp_path, monkeypatch)
 
@@ -1437,7 +1455,9 @@ def test_resend_confirmation_reproduces_the_original_code(
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "shh")
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     monkeypatch.setenv(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
@@ -1500,7 +1520,9 @@ def test_resend_confirmation_does_not_claim_an_update(
     monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
     monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv(
@@ -2664,7 +2686,9 @@ def test_invite_survey_only_invites_the_matched_attendee(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     assert invite_survey() == 0
     captured = capsys.readouterr()
@@ -2716,7 +2740,9 @@ def test_invite_survey_skips_an_entry_that_fails_to_decrypt(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     assert invite_survey() == 0
     out = capsys.readouterr().out
@@ -2747,7 +2773,9 @@ def test_invite_survey_composes_the_same_link_for_every_matched_attendee(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     assert invite_survey() == 0
     captured = capsys.readouterr()
@@ -2810,7 +2838,9 @@ def test_invite_survey_writes_record_true_to_github_output_when_something_sent(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
     output_path = tmp_path / "gh_output"
     output_path.write_text("", encoding="utf-8")
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
@@ -2907,7 +2937,9 @@ def test_invite_survey_resend_all_only_recognises_the_literal_true(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     assert invite_survey() == 0
     if expect_resend:
@@ -2943,7 +2975,9 @@ def test_invite_survey_resend_all_invites_the_matched_attendee_again(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _RecordingSmtpClient
+    )
 
     assert invite_survey() == 0
     captured = capsys.readouterr()
@@ -2976,7 +3010,7 @@ def test_invite_survey_retries_a_failed_delivery_once_before_giving_up(
     _FlakySurveySmtpClient.attempts = 0
     _FlakySurveySmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.confirmation.smtplib.SMTP", _FlakySurveySmtpClient
+        "convener_ops.journey.confirmation.smtplib.SMTP", _FlakySurveySmtpClient
     )
 
     assert invite_survey() == 0
@@ -3392,7 +3426,7 @@ def test_issue_certificates_warns_when_the_event_title_is_truncated(
     """There was a time when a title over
     `certificate._MAX_TITLE_LENGTH` was truncated on the signed,
     delivered certificate with nothing telling an operator it happened."""
-    from convener_ops.certificate import _MAX_TITLE_LENGTH
+    from convener_ops.journey.certificate import _MAX_TITLE_LENGTH
 
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     event_private_pem, signing_private_pem = _prepare_event(
@@ -5067,7 +5101,7 @@ def test_deliver_certificates_delivers_to_an_eligible_attendee_and_leaks_nothing
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     # Issuing first, exactly as the real workflow does (a delivery step
@@ -5116,7 +5150,7 @@ def test_deliver_certificates_already_registered_path_leaks_nothing(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -5148,7 +5182,7 @@ def test_deliver_certificates_never_writes_anything_to_disk(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
     assert issue_certificates() == 0
     capsys.readouterr()
@@ -5197,7 +5231,7 @@ def test_deliver_certificates_replays_the_identical_document_on_a_second_run(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
     assert issue_certificates() == 0
     capsys.readouterr()
@@ -5255,7 +5289,7 @@ def test_deliver_certificates_never_delivers_a_revoked_certificate_with_no_reiss
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -5309,7 +5343,7 @@ def test_deliver_certificates_delivers_the_reissued_certificate_not_the_revoked_
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -5363,7 +5397,7 @@ def test_deliver_certificate_refuses_a_revoked_certificate(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -5404,7 +5438,7 @@ def test_deliver_certificate_delivers_the_reissued_certificate_not_the_revoked_o
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -5534,7 +5568,7 @@ def test_deliver_certificates_with_deliver_only_targets_just_those_identifiers(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -5580,7 +5614,7 @@ def test_deliver_certificates_with_deliver_only_empty_targets_nobody(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
     assert issue_certificates() == 0
     capsys.readouterr()
@@ -5619,7 +5653,7 @@ def test_deliver_certificates_resend_all_ignores_deliver_only(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
     assert issue_certificates() == 0
     capsys.readouterr()
@@ -5995,7 +6029,7 @@ def test_deliver_certificate_delivers_the_named_certificate_and_leaks_nothing(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -6052,7 +6086,7 @@ def test_deliver_certificate_signs_the_row_it_resolved_not_a_different_one(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -6147,7 +6181,7 @@ def test_deliver_certificate_replays_the_identical_document_on_a_second_run(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     _RecordingCertificateSmtpClient.sent = []
     monkeypatch.setattr(
-        "convener_ops.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
+        "convener_ops.journey.delivery.smtplib.SMTP", _RecordingCertificateSmtpClient
     )
 
     assert issue_certificates() == 0
@@ -7613,10 +7647,10 @@ def test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_eve
 def _delete_recording_call_sites(package_dir: Path) -> list[str]:
     """Every `.py` file under `package_dir`, at any depth, that calls
     `delete_recording(` for real (excluding `def delete_recording(`
-    declarations). `rglob`, not `glob`:
-    `convener_ops` is flat today, but a non-recursive glob would silently stop
-    looking the day it grows a subpackage -- reproduced against a
-    synthetic one below."""
+    declarations). `rglob`, not `glob`: the package holds `cli.py` and
+    six sub-packages, so a non-recursive glob would read one file and
+    report the other forty clean -- reproduced against a synthetic
+    package below."""
     return [
         str(path.relative_to(package_dir))
         for path in sorted(package_dir.rglob("*.py"))
@@ -7724,9 +7758,9 @@ def test_release_recording_never_reads_the_discard_confirmation() -> None:
 def test_the_call_site_scan_is_recursive(tmp_path: Path) -> None:
     """Reproduces exactly what a review found: a
     non-recursive `glob("*.py")` misses a call hidden one directory down.
-    `convener_ops` is flat today (the test above proves it), so this is tested
-    against a synthetic package instead of waiting for a real subpackage
-    to exist."""
+    Read against a synthetic package rather than against `convener_ops`
+    itself, so what is pinned is the walk and not the shape the real
+    package happens to have."""
     (tmp_path / "cli.py").write_text("def f():\n    pass\n", encoding="utf-8")
     sub = tmp_path / "sub"
     sub.mkdir()

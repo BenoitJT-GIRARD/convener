@@ -9,9 +9,9 @@ from typing import Any, ClassVar
 import pytest
 import segno
 
-from convener_ops.certificate import ORGANISER, verification_url
-from convener_ops.confirmation import CONTACT_EMAIL, SmtpConfig
-from convener_ops.delivery import (
+from convener_ops.journey.certificate import ORGANISER, verification_url
+from convener_ops.journey.confirmation import CONTACT_EMAIL, SmtpConfig
+from convener_ops.journey.delivery import (
     DOCUMENT_INSTRUCTION,
     Delivery,
     DeliveryResult,
@@ -19,7 +19,7 @@ from convener_ops.delivery import (
     deliver,
     render_certificate,
 )
-from convener_ops.registration import Registration
+from convener_ops.journey.registration import Registration
 
 _TOKEN = "a-fake-token-not-a-real-signature"
 _IDENTIFIER = "f" * 32
@@ -333,10 +333,10 @@ class _FakeSmtpClient:
 def test_smtp_delivery_transport_uses_starttls_on_an_ordinary_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from convener_ops.delivery import _SmtpDeliveryTransport
+    from convener_ops.journey.delivery import _SmtpDeliveryTransport
 
     _FakeSmtpClient.instances = []
-    monkeypatch.setattr("convener_ops.delivery.smtplib.SMTP", _FakeSmtpClient)
+    monkeypatch.setattr("convener_ops.journey.delivery.smtplib.SMTP", _FakeSmtpClient)
     config = SmtpConfig(
         host="smtp.example.org", port=587, user="u", password="p", sender="from@x"
     )
@@ -368,10 +368,12 @@ def test_smtp_delivery_transport_uses_starttls_on_an_ordinary_port(
 def test_smtp_delivery_transport_uses_implicit_tls_on_port_465(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from convener_ops.delivery import _SmtpDeliveryTransport
+    from convener_ops.journey.delivery import _SmtpDeliveryTransport
 
     _FakeSmtpClient.instances = []
-    monkeypatch.setattr("convener_ops.delivery.smtplib.SMTP_SSL", _FakeSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.delivery.smtplib.SMTP_SSL", _FakeSmtpClient
+    )
     config = SmtpConfig(
         host="smtp.example.org", port=465, user="u", password="p", sender="from@x"
     )
@@ -392,7 +394,7 @@ def test_smtp_delivery_transport_uses_implicit_tls_on_port_465(
 # ------------------------------------------------------------------ #
 
 _DOCS_TEMPLATE = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "docs"
     / "toolkit"
     / "emails"

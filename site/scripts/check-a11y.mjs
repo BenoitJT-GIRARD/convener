@@ -53,7 +53,7 @@
  * content, not an empty `<div>` a checker could shrug past.
  *
  * `a11y.yml` generates a throw-away `<event-id>.pub` per fixture event
- * with `convener_ops.eventkeys.generate()` -- a fresh, never-committed key
+ * with `convener_ops.journey.eventkeys.generate()` -- a fresh, never-committed key
  * pair -- *before* building the app, so the registration island actually
  * reaches its `ready` state and renders its real `<input>`/`<label>`
  * markup for axe to see, rather than the "registration is not available"

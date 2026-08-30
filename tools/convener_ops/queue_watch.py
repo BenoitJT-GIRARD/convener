@@ -107,7 +107,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from .declaration.paths import DATA_DIR
-from .registration_routing import MISSED_DRAINS_COVERED
+from .journey.registration_routing import MISSED_DRAINS_COVERED
 
 #: Where the record lives, relative to a repository root -- the same "one
 #: function names the path" discipline `retention_liveness.LAST_RUN_PATH`

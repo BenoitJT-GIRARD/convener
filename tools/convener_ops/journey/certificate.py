@@ -374,9 +374,9 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
+from ..declaration import published
+from ..declaration.paths import DATA_DIR
 from .attendance import MatchedAttendee
-from .declaration import published
-from .declaration.paths import DATA_DIR
 from .registration import normalize_email
 from .signing import sign
 

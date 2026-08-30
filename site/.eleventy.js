@@ -17,7 +17,7 @@
 // stylesheet's own address, at any prefix.
 //
 // Both constants below used to be hand-typed literals,
-// bound to `tools/convener_ops/registration.py::SIGNUP_BASE`, to
+// bound to `tools/convener_ops/journey/registration.py::SIGNUP_BASE`, to
 // `certificate.py::VERIFICATION_BASE` and to `app/vite.config.ts`'s own
 // `base` by tests that could say the copies still agreed but never that
 // there was one. They are now read from `instance/config.json`, the
@@ -74,7 +74,7 @@ const SITE = {
   forum: IDENTITY.forum,
   forumHost: IDENTITY.forum_host,
   // The proposal form `src/propose.njk` sends people to -- the same form
-  // `tools/convener_ops/proposal.py`'s webhook receives from.
+  // `tools/convener_ops/journey/proposal.py`'s webhook receives from.
   //
   // Empty while the declaration still carries a placeholder instead of an
   // address, and `propose.njk` renders the page's other half when it is:

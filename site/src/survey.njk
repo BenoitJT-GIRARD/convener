@@ -19,7 +19,7 @@ permalink: "/survey/{{ event.id | lower }}/"
 # Excluded from the sitemap (site/sitemap.njk) -- see that template's own
 # comment for the pattern this follows, the same choice it already makes
 # for the two archive facets. This page is reached exactly one way: a
-# link in `tools/convener_ops/survey_invite.py`'s own e-mail, sent after the
+# link in `tools/convener_ops/journey/survey_invite.py`'s own e-mail, sent after the
 # event to people this project already has a reason to write to. A search
 # engine sending a stranger here gains that stranger nothing -- the page
 # answers no question anyone would search for, and a survey it has no
@@ -40,7 +40,7 @@ eleventyComputed:
   section, nothing else on it) reads closer to `verify.njk`: unlike
   registration, which is one form among several bands on an edition's own
   page, the survey has never lived there -- it is reached only from a
-  link in an e-mail (`tools/convener_ops/survey_invite.py`), sent after the
+  link in an e-mail (`tools/convener_ops/journey/survey_invite.py`), sent after the
   event, to people this project has no other reason to send back to the
   event page itself.
 

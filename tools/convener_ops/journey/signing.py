@@ -376,7 +376,7 @@ from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-from .declaration import paths
+from ..declaration import paths
 
 #: RSA modulus size for a signing key -- 3072, not `eventkeys.RSA_KEY_BITS`
 #: (2048). See the module docstring's "Key size" section for why a key

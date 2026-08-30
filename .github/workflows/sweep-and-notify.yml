@@ -288,7 +288,7 @@ jobs:
       # would therefore start two workflows -- six billed jobs -- per
       # submission, six times what this replaced. No offline test can see whether such a
       # pull request exists; what is held instead is the consequence one
-      # step on, in `tools/tests/test_submission_queue.py`, which fails if a
+      # step on, in `tools/tests/journey/test_submission_queue.py`, which fails if a
       # queue file ever reaches a checkout of the default branch.
       #
       # The order of these steps is the whole of "nothing is lost": the
@@ -307,7 +307,7 @@ jobs:
       # queue once its confirmation has actually been attempted. A drain
       # interrupted in between leaves the entry in the ledger *and* in the
       # queue, which is exactly how the next drain recognises "stored, not
-      # yet confirmed" -- see `tools/convener_ops/submission_queue.py`'s own
+      # yet confirmed" -- see `tools/convener_ops/journey/submission_queue.py`'s own
       # module docstring, including why that is deliberately at-least-once.
       - name: Fetch what the submission queue holds
         id: queue-fetch

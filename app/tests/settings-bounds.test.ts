@@ -3,7 +3,7 @@
  * arithmetic that bounds it.
  *
  * `tools/convener_ops/queue_watch.py` and
- * `tools/convener_ops/registration_routing.py` decide what
+ * `tools/convener_ops/journey/registration_routing.py` decide what
  * `instance/queue-drain.yml`'s `alarm_after_hours` and
  * `instance/registration-lanes.yml`'s `queue_beyond_hours` may be; the
  * scheduled jobs enforce it, and no browser is running when one runs. The

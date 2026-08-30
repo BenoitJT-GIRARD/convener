@@ -19,7 +19,7 @@ on:
 # cancelled run never starts, so the retry loop below (fetch, reset
 # --hard, re-run the handler) can never save it. This workflow stays
 # ungrouped instead: the step below re-derives on a rejected push rather
-# than rebasing, and `convener_ops.proposal.skip_reason` already refuses a
+# than rebasing, and `convener_ops.journey.proposal.skip_reason` already refuses a
 # duplicate submission by email -- re-running the handler against
 # whatever another run just pushed is safe on its own, with nothing to
 # queue behind.
@@ -66,7 +66,7 @@ jobs:
         # `git pull --rebase` -- see registration.yml's own comment for why
         # replaying a diff over instance/data/speakers.yml's own array conflicts
         # instead of applying. Re-running is safe specifically because
-        # `convener_ops.proposal.skip_reason` refuses a submission whose email
+        # `convener_ops.journey.proposal.skip_reason` refuses a submission whose email
         # already matches an existing `lead`: re-running against the tip
         # someone else just pushed reproduces this proposal's own new
         # entry beside whatever that other push added, never a duplicate.

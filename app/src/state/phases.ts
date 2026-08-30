@@ -367,11 +367,11 @@ export const PHASES: PhaseDef[] = [
       },
       {
         // The key -- 'delivered/recording-retrieved',
-        // not renamed here -- is `tools/convener_ops/platform_fcc.py::RETRIEVED_TICK`,
+        // not renamed here -- is `tools/convener_ops/journey/platform_fcc.py::RETRIEVED_TICK`,
         // read by `convener-release-recording` before it will let the meeting
         // platform's own copy be deleted (its own storage quota is a
         // condition of the next session recording at all). Pinned against
-        // that same string by `tools/tests/test_platform_fcc.py` and
+        // that same string by `tools/tests/journey/test_platform_fcc.py` and
         // `phases.test.ts`, both reading
         // `tools/tests/fixtures/event-chain-keys.json` (D-14) -- a drift
         // here would mean a host ticks a box the release job never reads,

@@ -64,7 +64,7 @@ name: Visuals production
 # the Python lockfile pinning the QR renderer all change what a *real*
 # rendered edition looks like just as much as they change the fixture
 # visuals.yml checks. The list also carries `tools/convener_ops/announce.py`,
-# `tools/convener_ops/registration.py` (the registration address every drafted
+# `tools/convener_ops/journey/registration.py` (the registration address every drafted
 # text points at, D-19) and the four `docs/toolkit/*.md` pages themselves
 # -- `announce.py` now renders those files rather than composing its own
 # English (D-14), so a wording change to any one of them is exactly as
@@ -125,7 +125,7 @@ on:
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
       - 'tools/convener_ops/announce.py'
-      - 'tools/convener_ops/registration.py'
+      - 'tools/convener_ops/journey/registration.py'
       - 'tools/convener_ops/public_data.py'
       - 'docs/toolkit/forum-post-announce.md'
       - 'docs/toolkit/linkedin-post.md'

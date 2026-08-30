@@ -7,7 +7,7 @@
  * produces the active-member logins and the subset of them unavailable on a
  * given date; `governance.eligibleVoters` does the subtracting.
  *
- * `assignLead` crosses the language boundary: `tools/convener_ops/proposal.py`
+ * `assignLead` crosses the language boundary: `tools/convener_ops/journey/proposal.py`
  * implements the same rule for the public-form intake path, and both are
  * pinned by `tools/tests/fixtures/governance-cases.json`'s `assign_lead_cases`.
  */
@@ -72,7 +72,7 @@ function idOrder(id: string): number {
  * lead is the oldest -- i.e. whoever has gone longest without a new one --
  * using the id's numeric suffix as a stand-in for creation order, since ids
  * are assigned in strictly increasing order (see
- * `tools/convener_ops/proposal.py::to_lead`). Any further tie (including "never
+ * `tools/convener_ops/journey/proposal.py::to_lead`). Any further tie (including "never
  * assigned") falls back to alphabetical login order, so the result never
  * depends on `config.board`'s incidental ordering and repeated calls with
  * the same input always agree.

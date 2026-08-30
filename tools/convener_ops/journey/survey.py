@@ -6,7 +6,7 @@ the *same* intake as registration: the same entry point, the same
 encrypted storage, the same key destruction. This module is the storage
 half of that rule: `app/src/survey/encrypt.ts` hybrid-encrypts a response in
 the browser exactly the way `app/src/signup/encrypt.ts` encrypts a
-registration (same wire format, `tools/convener_ops/eventkeys.py`), and this
+registration (same wire format, `tools/convener_ops/journey/eventkeys.py`), and this
 module decrypts, validates and re-stores it, in a CI job's memory only, the
 same discipline `registration.py`'s own module docstring holds itself to.
 

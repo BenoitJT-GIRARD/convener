@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from convener_ops import eventkeys
 from convener_ops.declaration import published
-from convener_ops.registration import (
+from convener_ops.journey import eventkeys
+from convener_ops.journey.registration import (
     _CODE_ALPHABET,
     _MAX_FIELD_LENGTH,
     FILE_VERSION,
@@ -751,7 +751,7 @@ def test_signup_base_is_the_event_pages_own_address() -> None:
 # this comment for how the fixture was built.
 # ------------------------------------------------------------------ #
 
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "governance-cases.json"
+_FIXTURE_PATH = Path(__file__).parents[1] / "fixtures" / "governance-cases.json"
 _FIXTURE = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))[
     "event_registration_encryption"
 ]

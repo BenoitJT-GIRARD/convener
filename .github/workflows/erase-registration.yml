@@ -3,7 +3,7 @@ name: Erase a registration early
 # The operator-facing side of erasure before the retention deadline --
 # a participant's registration removed from
 # registrations.enc before the window ends, without touching
-# any other registrant's own entry (tools/convener_ops/registration.py::
+# any other registrant's own entry (tools/convener_ops/journey/registration.py::
 # erase). The procedure has to be both
 # documented and reachable; this workflow is what makes it reachable, the
 # same way resend-confirmation.yml and revoke-certificate.yml make their
@@ -12,7 +12,7 @@ name: Erase a registration early
 # MATCHING_CODE, in preference to ENCRYPTED_IDENTIFIER. The code
 # is already in the participant's own confirmation e-mail and is
 # never stored anywhere on our side -- recomputing it and comparing is
-# tools/convener_ops/registration.py::find_by_matching_code's own job.
+# tools/convener_ops/journey/registration.py::find_by_matching_code's own job.
 # encrypted_identifier is accepted as a fallback for someone who no
 # longer has that e-mail -- the same deliberate, documented exception
 # resend-confirmation.yml's own header comment already makes for an
@@ -111,7 +111,7 @@ jobs:
         # never landed, still carries the un-erased entry), so re-running
         # the command recomputes the identical erasure rather than trying
         # to re-push a commit `git reset --hard` just discarded.
-        # `convener_ops.registration.erase` never re-encrypts a surviving
+        # `convener_ops.journey.registration.erase` never re-encrypts a surviving
         # entry, so re-running this against the same starting file
         # twice produces byte-identical output both times.
         run: |

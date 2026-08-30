@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { handle } from '../src/index.js';
 
 // The shared fixture is the contract (decision D-14): the same hybrid
-// wire format is written once in tools/convener_ops/eventkeys.py, once in
+// wire format is written once in tools/convener_ops/journey/eventkeys.py, once in
 // app/src/signup/encrypt.ts, and pinned here as a real, correctly-shaped
 // envelope -- rather than fabricated base64 this file would have to keep
 // in sync with the RSA key size and GCM nonce length by hand.
@@ -70,7 +70,7 @@ const CONTENTS_URL = (id) => `${REPOSITORY_API}/contents/instance/keys/events/${
 // A survey response is written to the queue branch
 // through the Contents API instead of being dispatched. These mirror
 // `src/index.js`'s own constants, which in turn mirror
-// `tools/convener_ops/submission_queue.py`'s -- a branch name that disagreed
+// `tools/convener_ops/journey/submission_queue.py`'s -- a branch name that disagreed
 // across the three would be a queue nothing ever drains.
 const QUEUE_BRANCH = 'submission-queue';
 const QUEUE_ROOT = `${REPOSITORY_API}/contents/queue/`;
@@ -95,7 +95,7 @@ const QUEUE_ENTRY_RE = /^[0-9a-z]{1,16}-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{
 const SURVEY_STATUS_CONTENTS_URL = `${REPOSITORY_API}/contents/instance/public-data/survey-status.json`;
 
 // The registration lane cutoffs, read the same way from
-// the same API. `tools/convener_ops/registration_routing.py` is what writes it
+// the same API. `tools/convener_ops/journey/registration_routing.py` is what writes it
 // and `deploy.yml` what commits it; this file only ever stands in for it.
 const ROUTING_CONTENTS_URL = `${REPOSITORY_API}/contents/instance/public-data/registration-routing.json`;
 

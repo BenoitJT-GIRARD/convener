@@ -334,7 +334,7 @@ describe('encryptSurveyResponse: malformed input is refused, not silently accept
  * carries one fixed key pair (reused from `event_registration_encryption`
  * -- the crypto is identical, only the plaintext shape differs) and, for
  * each case, an `envelope` that is the literal output of the encryption
- * below, captured once and pinned. `tools/tests/test_survey.py` decrypts
+ * below, captured once and pinned. `tools/tests/journey/test_survey.py` decrypts
  * that exact string with the real `eventkeys.decrypt` and
  * `to_survey_response`, and checks it recovers `fields`.
  */

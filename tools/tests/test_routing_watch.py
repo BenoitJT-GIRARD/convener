@@ -30,10 +30,11 @@ from typing import Any
 
 import pytest
 
-from convener_ops import registration_routing, routing_watch
+from convener_ops import routing_watch
 from convener_ops.cli import check_registration_routing
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
+from convener_ops.journey import registration_routing
 
 _ROOT = repo_root()
 _SWEEP_PATH = _ROOT / ".github" / "workflows" / "sweep-and-notify.yml"

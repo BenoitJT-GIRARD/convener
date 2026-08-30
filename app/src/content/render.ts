@@ -86,7 +86,7 @@ function signupBase(): string {
 }
 
 /**
- * The rule `tools/convener_ops/platform.py::find_speaker` states, computed here
+ * The rule `tools/convener_ops/journey/platform.py::find_speaker` states, computed here
  * rather than left for a volunteer to fill in: "`event_id` is
  * `edition_code`, lower-cased. Nothing else." A hand-filled event id in a
  * *public* announcement is exactly the shape this project refuses

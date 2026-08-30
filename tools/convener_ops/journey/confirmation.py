@@ -114,7 +114,7 @@ from email.message import EmailMessage
 from email.utils import formatdate
 from typing import Any, Final, Protocol
 
-from .declaration import published
+from ..declaration import published
 from .platform import EventNotFoundError, Platform, Room, find_speaker
 from .registration import Registration
 

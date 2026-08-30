@@ -241,7 +241,7 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
         <DetailBlock title="Links">
           <ul className="space-y-1 text-sm">
             {/* `links` comes from the public, unreviewed proposal intake
-                (tools/convener_ops/proposal.py) with no scheme check of its
+                (tools/convener_ops/journey/proposal.py) with no scheme check of its
                 own -- a candidate submitting `javascript:...` as a
                 "link" reaches this render unfiltered. `isSafeHref`
                 (content/fetch.ts, the same allowlist `handbookUrl`

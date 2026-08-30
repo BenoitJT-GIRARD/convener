@@ -154,10 +154,10 @@ async function fetchSurveyEnabled(eventId: string, signal: AbortSignal): Promise
 
 // The five-point scale spelled out as `1..5` rather than typed in the JSX
 // below, so the range this page renders can never quietly drift from the
-// range `tools/convener_ops/survey.py::_RATING_MIN`/`_RATING_MAX` accepts.
+// range `tools/convener_ops/journey/survey.py::_RATING_MIN`/`_RATING_MAX` accepts.
 const RATING_VALUES = [1, 2, 3, 4, 5] as const;
 
-// Mirrors `tools/convener_ops/survey.py::_MAX_FEEDBACK_LENGTH`. Bound here too,
+// Mirrors `tools/convener_ops/journey/survey.py::_MAX_FEEDBACK_LENGTH`. Bound here too,
 // not only server-side: before this, a 2000-plus-character answer was
 // accepted by this form and by the relay, dispatched, and only then
 // discarded by the handler as "could not be read" -- a participant who

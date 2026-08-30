@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import eventkeys
-from convener_ops.platform import (
+from convener_ops.journey import eventkeys
+from convener_ops.journey.platform import (
     ENCRYPTED_ATTENDANCE_FILENAME,
     AttendanceExportFile,
     AttendanceImportError,

@@ -3,7 +3,7 @@
  * encrypts a participant's answers in the browser (`encrypt.ts`) and POSTs
  * the envelope here. This worker never sees plaintext -- it cannot, by
  * construction: the browser holds only the event's *public* half of an
- * RSA-2048 key pair (`tools/convener_ops/eventkeys.py`), which can encrypt but
+ * RSA-2048 key pair (`tools/convener_ops/journey/eventkeys.py`), which can encrypt but
  * not decrypt. What reaches this worker is `{event_id, v, encrypted_key,
  * iv, ciphertext}`, and every field but `event_id` is base64 ciphertext.
  * See README.md for what that does and does not let this worker verify.
@@ -65,7 +65,7 @@
  * The cutoff is not computed here. `registrationCutoff` reads one
  * already-resolved instant per event out of
  * `instance/public-data/registration-routing.json`, which
- * `tools/convener_ops/registration_routing.py` produces and `deploy.yml`
+ * `tools/convener_ops/journey/registration_routing.py` produces and `deploy.yml`
  * commits, so every part of the rule with a project decision in it --
  * Europe/Paris, the standing start, the configured threshold and the floor
  * under it -- lives on the side that has tests and fixtures for it. This
@@ -130,7 +130,7 @@ function contentsUrl(repository, path) {
 }
 
 // Where a survey response goes instead of straight to a
-// `repository_dispatch`. Mirrors `tools/convener_ops/submission_queue.py`'s own
+// `repository_dispatch`. Mirrors `tools/convener_ops/journey/submission_queue.py`'s own
 // QUEUE_BRANCH / QUEUE_DIR / SURVEY_KIND, which the drain reads from -- a
 // branch name that disagreed between the two would be a queue nothing ever
 // drains, with nothing red anywhere to say so.
@@ -176,7 +176,7 @@ function refsUrl(repository) {
 const ROUTING_PATH = 'instance/public-data/registration-routing.json';
 const ROUTING_FILE_VERSION = 1;
 
-//: Mirrors tools/convener_ops/eventkeys.py -- see that module's docstring for why
+//: Mirrors tools/convener_ops/journey/eventkeys.py -- see that module's docstring for why
 //: these are exactly these numbers, not approximations.
 const WIRE_VERSION = 1;
 const RSA_ENCRYPTED_KEY_BYTES = 256; // 2048-bit modulus / 8, RSA_KEY_BITS in eventkeys.py
@@ -419,7 +419,7 @@ function base64DecodeContentsApi(value) {
  * This is the relay's own layer of the switch, not the only one: a page
  * that skipped this check entirely and posted straight to this route
  * would still be refused here, and the daily drain
- * (`tools/convener_ops/submission_queue.py`) checks again regardless -- this
+ * (`tools/convener_ops/journey/submission_queue.py`) checks again regardless -- this
  * check is a courtesy that saves a wasted queue entry, never the
  * authority.
  */
@@ -792,7 +792,7 @@ export async function handle(request, env) {
   // unconfigured secret or an unbound store refuses every request rather
   // than silently skipping the checks they exist for -- see README.md,
   // "Fail closed, not open", for why that is the opposite of how
-  // tools/convener_ops/proposal.py treats its own absent secret, and correctly
+  // tools/convener_ops/journey/proposal.py treats its own absent secret, and correctly
   // so for each. Checked before anything below touches GitHub or either
   // counter, so none of them is ever reached on a misconfigured deploy.
   const token = env.CONVENER_DISPATCH_TOKEN;

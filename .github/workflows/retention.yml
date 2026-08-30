@@ -3,7 +3,7 @@ name: Retention sweep
 # The job that makes this project's central retention promise true. The
 # cycle of life ends in "key destruction -- the event's data becomes
 # permanently unreadable" 90 days after the event
-# (tools/convener_ops/eventkeys.py::is_due_for_destruction), and that has
+# (tools/convener_ops/journey/eventkeys.py::is_due_for_destruction), and that has
 # to actually run rather than merely be documented.
 # Scheduled -- a retention job that only runs when somebody
 # remembers is the failure this exists to prevent -- with

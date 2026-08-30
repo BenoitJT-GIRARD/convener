@@ -13,8 +13,8 @@ from convener_ops.announce import (
 )
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
+from convener_ops.journey.registration import signup_url
 from convener_ops.public_data import to_public
-from convener_ops.registration import signup_url
 
 #: Every function below renders the real, committed
 #: `docs/toolkit/*.md` page -- the same file `app/src/content/render.ts`

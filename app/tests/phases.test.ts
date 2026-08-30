@@ -213,13 +213,13 @@ describe('the journey the volunteers actually keep', () => {
   });
 
   /**
-   * D-14: `tools/convener_ops/platform_fcc.py::RETRIEVED_TICK` is the one
+   * D-14: `tools/convener_ops/journey/platform_fcc.py::RETRIEVED_TICK` is the one
    * `runbook_progress` key Python itself reads (release_recording's own
    * gate) -- if this journey ticked a differently-spelled key, a host
    * could tick this box forever and the release job would never see it,
    * or the reverse: a recording could be released on a tick this journey
    * never shows. Pinned against the same fixture
-   * `tools/tests/test_platform_fcc.py::test_retrieved_tick_matches_the_shared_fixture`
+   * `tools/tests/journey/test_platform_fcc.py::test_retrieved_tick_matches_the_shared_fixture`
    * checks Python-side.
    */
   it('spells the recording-retrieved key the same way release_recording reads it', () => {

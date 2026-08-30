@@ -1,5 +1,5 @@
 /**
- * The browser half of the hybrid encryption scheme `tools/convener_ops/eventkeys.py`
+ * The browser half of the hybrid encryption scheme `tools/convener_ops/journey/eventkeys.py`
  * documents field by field -- read that module's docstring before this one.
  * This file has to reproduce its wire format exactly, or every registration
  * this page sends becomes permanently unreadable the moment the two

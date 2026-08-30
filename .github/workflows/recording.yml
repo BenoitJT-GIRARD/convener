@@ -8,7 +8,7 @@ name: Release a recording
 # `Platform.delete_recording`, and it refuses unless both the event's
 # `RETRIEVED_TICK` runbook step is ticked and the provider's own converted
 # recording is reachable, checked against `video/mp4` and
-# `Accept-Ranges: bytes` -- see tools/convener_ops/platform_fcc.py's module
+# `Accept-Ranges: bytes` -- see tools/convener_ops/journey/platform_fcc.py's module
 # docstring for the full reasoning and
 # tools/convener_ops/cli.py::release_recording's own docstring for the order
 # this enforces.

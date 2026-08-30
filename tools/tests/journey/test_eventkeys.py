@@ -13,8 +13,8 @@ from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from convener_ops import eventkeys
-from convener_ops.eventkeys import (
+from convener_ops.journey import eventkeys
+from convener_ops.journey.eventkeys import (
     ACTIVE,
     DESTROYED,
     ENVELOPE_FIELDS,
@@ -72,7 +72,7 @@ def test_the_public_half_alone_cannot_decrypt(
             aes_keys_drawn.append(drawn)
         return drawn
 
-    monkeypatch.setattr("convener_ops.eventkeys.token_bytes", spy)
+    monkeypatch.setattr("convener_ops.journey.eventkeys.token_bytes", spy)
 
     _, public_pem = generate()
     plaintext = b'{"email": "a registrant, never committed"}'
@@ -315,7 +315,8 @@ def test_decrypt_converts_unsupported_algorithm_to_decryption_error(
         raise UnsupportedAlgorithm("not supported")
 
     monkeypatch.setattr(
-        "convener_ops.eventkeys.serialization.load_pem_private_key", raise_unsupported
+        "convener_ops.journey.eventkeys.serialization.load_pem_private_key",
+        raise_unsupported,
     )
     _, public_pem = generate()
     ciphertext = encrypt(public_pem, b"a registration")
@@ -537,7 +538,7 @@ def test_destroy_is_idempotent_on_an_already_destroyed_event() -> None:
 # same cases on the other side.
 # ------------------------------------------------------------------ #
 
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "governance-cases.json"
+_FIXTURE_PATH = Path(__file__).parents[1] / "fixtures" / "governance-cases.json"
 _FIXTURE = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))[
     "event_registration_encryption"
 ]

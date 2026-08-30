@@ -30,7 +30,7 @@ from convener_ops.declaration.published import (
     identity_from_data,
     load_identity,
 )
-from convener_ops.registration import signup_url
+from convener_ops.journey.registration import signup_url
 from convener_ops.registration_code import (
     forum_code_svg,
     forum_code_target,

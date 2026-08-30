@@ -61,7 +61,7 @@ import type { LookupResult } from '../../verify/register';
  * after, through `Referer`. A router is not what made that safe: a static
  * page reads `location.hash` exactly as well as a `HashRouter` did, which
  * is why this extraction could drop the router and keep the property. See
- * `tools/convener_ops/certificate.py`'s own module docstring ("the
+ * `tools/convener_ops/journey/certificate.py`'s own module docstring ("the
  * verification address") and its
  * `test_verification_url_carries_the_token_after_the_fragment_not_before_it`
  * for the Python-side half of this same guarantee.

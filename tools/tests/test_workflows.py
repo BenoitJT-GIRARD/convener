@@ -42,14 +42,6 @@ from typing import Any, Final
 import pytest
 from conftest import WorkflowYaml, workflow_event_names, workflow_triggers
 
-from convener_ops import (
-    certificate,
-    confirmation,
-    platform_fcc,
-    registration,
-    signing,
-    survey_invite,
-)
 from convener_ops import cli as cli_module
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import (
@@ -60,6 +52,14 @@ from convener_ops.declaration.paths import (
     repo_root,
 )
 from convener_ops.declaration.yaml_safe import safe_load
+from convener_ops.journey import (
+    certificate,
+    confirmation,
+    platform_fcc,
+    registration,
+    signing,
+    survey_invite,
+)
 
 ROOT = repo_root()
 DEPLOY_WORKFLOW = Path(".github/workflows/deploy.yml")

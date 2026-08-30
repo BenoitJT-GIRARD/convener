@@ -86,7 +86,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from .declaration.published import load_identity
-from .registration import signup_url
+from .journey.registration import signup_url
 from .visual import date_line
 
 __all__ = [

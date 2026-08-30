@@ -86,7 +86,7 @@ function relayUrl(): string | undefined {
 // instance's inbox.
 const contactEmail = () => instanceIdentity().contact;
 
-// Mirrors `tools/convener_ops/registration.py::_MAX_FIELD_LENGTH`.
+// Mirrors `tools/convener_ops/journey/registration.py::_MAX_FIELD_LENGTH`.
 // Bound here too, not only server-side: before this, a
 // 201-character field was accepted by this form and by the relay,
 // encrypted, shown as sent, and only then dropped by `to_registration` as
@@ -155,7 +155,7 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
   }
 }
 
-// Two boundaries `tools/convener_ops/attendance.py` draws, written
+// Two boundaries `tools/convener_ops/journey/attendance.py` draws, written
 // "on the event page, in the same place as 'present without having
 // registered'" -- not only in `docs/reference/operations.md`, which a
 // participant never reads. Neither is a matching weakness to keep

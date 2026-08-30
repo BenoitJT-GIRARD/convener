@@ -1,5 +1,5 @@
 /**
- * The browser half of `tools/convener_ops/signing.py::verify` -- read that
+ * The browser half of `tools/convener_ops/journey/signing.py::verify` -- read that
  * module's docstring before this one, especially "the wire format
  * transports what it signs" and "verify before you parse". This file has
  * to reproduce its *behaviour* exactly (not its bytes: nothing here ever

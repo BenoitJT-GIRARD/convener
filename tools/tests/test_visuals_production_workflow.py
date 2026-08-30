@@ -88,7 +88,7 @@ _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/visual.py",
     "tools/convener_ops/ribbon.py",
     "tools/convener_ops/registration_code.py",
-    "tools/convener_ops/registration.py",
+    "tools/convener_ops/journey/registration.py",
     "tools/convener_ops/formats.py",
     "tools/convener_ops/governance.py",
     "tools/convener_ops/cli.py",

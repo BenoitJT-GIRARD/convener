@@ -295,7 +295,7 @@ describe('encryptRegistration: malformed input is refused, not silently accepted
  * agree. `tools/tests/fixtures/governance-cases.json::event_registration_encryption`
  * carries one fixed key pair and, for each case, an `envelope` that is the
  * literal output of the encryption below, captured once and pinned --
- * `tools/tests/test_eventkeys.py` decrypts that exact string with the real
+ * `tools/tests/journey/test_eventkeys.py` decrypts that exact string with the real
  * `eventkeys.decrypt` and checks it recovers `fields`. This file cannot run
  * that half (there is no decrypt function here, on purpose -- see the
  * describe block above), so what it pins is that encrypting `fields` afresh

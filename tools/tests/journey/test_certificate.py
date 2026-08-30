@@ -12,8 +12,10 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from convener_ops.attendance import MatchedAttendee
-from convener_ops.certificate import (
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import repo_root
+from convener_ops.journey.attendance import MatchedAttendee
+from convener_ops.journey.certificate import (
     _CERTIFICATE_ID_RE,
     EVENTS_DIR,
     FILE_VERSION,
@@ -37,9 +39,7 @@ from convener_ops.certificate import (
     sign_for,
     verification_url,
 )
-from convener_ops.declaration import published
-from convener_ops.declaration.paths import repo_root
-from convener_ops.registration import (
+from convener_ops.journey.registration import (
     _CODE_ALPHABET,
     _CODE_GROUP,
     _CODE_SYMBOLS,
@@ -47,7 +47,7 @@ from convener_ops.registration import (
     matching_code,
     normalize_email,
 )
-from convener_ops.signing import (
+from convener_ops.journey.signing import (
     MALFORMED,
     NO_MATCHING_KEY,
     PAYLOAD_FIELDS,
@@ -56,9 +56,9 @@ from convener_ops.signing import (
 )
 
 _FIXTURE = json.loads(
-    (Path(__file__).parent / "fixtures" / "certificate-verification.json").read_text(
-        encoding="utf-8"
-    )
+    (
+        Path(__file__).parents[1] / "fixtures" / "certificate-verification.json"
+    ).read_text(encoding="utf-8")
 )
 
 _EXPECTED_REGISTER_FIELDS = frozenset(
@@ -811,7 +811,7 @@ def test_sign_for_does_not_inspect_or_refuse_a_revoked_entry_itself() -> None:
 
 
 def test_certificate_event_truncates_a_title_longer_than_the_max_length() -> None:
-    from convener_ops.certificate import _MAX_TITLE_LENGTH
+    from convener_ops.journey.certificate import _MAX_TITLE_LENGTH
 
     long_title = "x" * (_MAX_TITLE_LENGTH + 50)
     event = CertificateEvent(event_id="mrg-042", title=long_title, date="2026-08-20")
@@ -826,7 +826,7 @@ def test_certificate_event_truncates_a_title_longer_than_the_max_length() -> Non
 def test_certificate_event_leaves_a_title_at_or_under_the_max_length_untouched() -> (
     None
 ):
-    from convener_ops.certificate import _MAX_TITLE_LENGTH
+    from convener_ops.journey.certificate import _MAX_TITLE_LENGTH
 
     exact_title = "y" * _MAX_TITLE_LENGTH
     event = CertificateEvent(event_id="mrg-042", title=exact_title, date="2026-08-20")
@@ -842,7 +842,7 @@ def test_issue_signs_the_truncated_title_never_the_original() -> None:
     payload and any later `render_certificate` call reading
     `event.title` both see the identical, already-short string -- there
     is no way to reach the untruncated original from either."""
-    from convener_ops.certificate import _MAX_TITLE_LENGTH
+    from convener_ops.journey.certificate import _MAX_TITLE_LENGTH
 
     private_pem, public_pem = generate()
     long_title = "z" * (_MAX_TITLE_LENGTH + 200)

@@ -92,15 +92,15 @@ close.
 Four items are not on the list above because nobody sends them from this
 page: [Registration confirmed](emails/registration-confirmed.md) goes out
 the moment a participant registers, composed and sent by
-`tools/convener_ops/confirmation.py`. [Certificate of attendance](certificate.md)
+`tools/convener_ops/journey/confirmation.py`. [Certificate of attendance](certificate.md)
 is generated once per eligible attendee after an event, by
-`tools/convener_ops/certificate.py`, and delivered by e-mail with
+`tools/convener_ops/journey/certificate.py`, and delivered by e-mail with
 [Certificate delivered](emails/certificate-delivered.md) as the message that
-carries it, composed and sent by `tools/convener_ops/delivery.py`.
+carries it, composed and sent by `tools/convener_ops/journey/delivery.py`.
 [Survey invitation](emails/survey-invitation.md) goes out only when an
 operator dispatches `.github/workflows/invite-survey.yml` for one event,
 to every attendee that run's own attendance match recognises present —
-composed and sent by `tools/convener_ops/survey_invite.py`. All four are kept in
+composed and sent by `tools/convener_ops/journey/survey_invite.py`. All four are kept in
 this section anyway, for the same reason every other message is — so their
 exact wording is one click away — but their placeholders are written in
 square brackets, not double braces, since nobody ever opens any of them

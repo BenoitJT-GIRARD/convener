@@ -845,7 +845,7 @@ steps:
       - signing_key
     walkthrough:
       - Open a Python shell inside `tools/` with `uv run python`, and generate
-        the pair with `from convener_ops.signing import generate; private_pem,
+        the pair with `from convener_ops.journey.signing import generate; private_pem,
         public_pem = generate()`.
       - Commit the public half first, as `instance/keys/signing/` plus the day it was
         generated and a `.pub` suffix. The order is load-bearing, because a

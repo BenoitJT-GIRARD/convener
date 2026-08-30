@@ -8,7 +8,7 @@ invents no date (see `tools/migrations/migrate_v3.py`). `sweep.expire_votes` ski
 silently, so an unattended overnight job never dies on bad data -- any lead
 whose `opened_on` does not parse, so those leads can never expire and
 nothing anywhere reports it. Intake was fixed separately
-(`convener_ops.proposal.to_lead` stamps the intake date); this script deals with
+(`convener_ops.journey.proposal.to_lead` stamps the intake date); this script deals with
 the backlog that predates the fix.
 
 Dating the backlog is a policy choice, not a technical one, and the project

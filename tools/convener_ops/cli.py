@@ -24,43 +24,11 @@ from convener_ops import (
     actions_usage,
     agenda,
     announce,
-    confirmation,
-    delivery,
-    eventkeys,
     formats,
     queue_watch,
-    registration_routing,
     retention_liveness,
     routing_watch,
-    signing,
-    submission_queue,
-    survey_invite,
     visual,
-)
-from convener_ops.attendance import (
-    EligibilityThreshold,
-    MatchedAttendee,
-    MatchEvent,
-    eligible_attendees,
-    match,
-)
-from convener_ops.certificate import (
-    EVENTS_DIR,
-    STATE_REVOKED,
-    CertificateEntry,
-    CertificateEvent,
-    certificates_path,
-    duration_hours,
-    fingerprint,
-    full_name,
-    is_valid_identifier,
-    issue,
-    public_register,
-    register_from_data,
-    register_to_data,
-    reissue,
-    revoke,
-    sign_for,
 )
 from convener_ops.declaration import published
 from convener_ops.declaration.integrations import (
@@ -78,8 +46,41 @@ from convener_ops.declaration.paths import (
 from convener_ops.declaration.yaml_safe import safe_load as yaml_safe_load
 from convener_ops.dispatch_alert import alert_message
 from convener_ops.governance import PARIS, paris_today
-from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
-from convener_ops.platform import (
+from convener_ops.journey import (
+    confirmation,
+    delivery,
+    eventkeys,
+    registration_routing,
+    signing,
+    submission_queue,
+    survey_invite,
+)
+from convener_ops.journey.attendance import (
+    EligibilityThreshold,
+    MatchedAttendee,
+    MatchEvent,
+    eligible_attendees,
+    match,
+)
+from convener_ops.journey.certificate import (
+    EVENTS_DIR,
+    STATE_REVOKED,
+    CertificateEntry,
+    CertificateEvent,
+    certificates_path,
+    duration_hours,
+    fingerprint,
+    full_name,
+    is_valid_identifier,
+    issue,
+    public_register,
+    register_from_data,
+    register_to_data,
+    reissue,
+    revoke,
+    sign_for,
+)
+from convener_ops.journey.platform import (
     ENCRYPTED_ATTENDANCE_FILENAME,
     AttendanceImportError,
     EventNotFoundError,
@@ -91,17 +92,20 @@ from convener_ops.platform import (
     load_attendance_export_file,
     parse_attendance_csv,
 )
-from convener_ops.platform_fcc import (
+from convener_ops.journey.platform_fcc import (
     FCCRequestError,
     PlatformFCC,
     converted_recording_is_reachable,
     missing_retrieval_evidence,
     platform_from_env,
 )
-from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
-from convener_ops.public_data import to_public, to_survey_status
-from convener_ops.register import LOG_FORMAT, entries_from_log, render_register
-from convener_ops.registration import (
+from convener_ops.journey.proposal import (
+    field_value,
+    skip_reason,
+    to_lead,
+    verify_signature,
+)
+from convener_ops.journey.registration import (
     AmbiguousMatchingCodeError,
     Registration,
     dump_registration_file,
@@ -115,6 +119,9 @@ from convener_ops.registration import (
     to_registration,
     upsert,
 )
+from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
+from convener_ops.public_data import to_public, to_survey_status
+from convener_ops.register import LOG_FORMAT, entries_from_log, render_register
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import (
@@ -129,25 +136,25 @@ from convener_ops.validate import (
 SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/reference/schema.md)\n"
 CONFIG_HEADER = "# Repo-wide config for the convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
-#: tools/convener_ops/certificate.py's module docstring for why this file
+#: tools/convener_ops/journey/certificate.py's module docstring for why this file
 #: survives the retention sweep on registrations.enc, in the same
 #: directory, untouched.
 CERTIFICATES_HEADER = (
     "# Certificate register -- no name, no address; "
-    "see tools/convener_ops/certificate.py\n"
+    "see tools/convener_ops/journey/certificate.py\n"
 )
 #: The destruction registry holds only an event id and a date --
-#: see tools/convener_ops/eventkeys.py's module docstring, "the destruction
+#: see tools/convener_ops/journey/eventkeys.py's module docstring, "the destruction
 #: registry lives in one file".
 DESTRUCTIONS_HEADER = (
-    "# Event key destruction registry; see tools/convener_ops/eventkeys.py\n"
+    "# Event key destruction registry; see tools/convener_ops/journey/eventkeys.py\n"
 )
 #: The survey invitation registry holds only an event id and a
-#: date -- see tools/convener_ops/survey_invite.py's module docstring for
+#: date -- see tools/convener_ops/journey/survey_invite.py's module docstring for
 #: why this is the whole bound a resend is checked against.
 SURVEY_INVITATIONS_HEADER = (
     "# Survey invitation registry -- no name, no address; "
-    "see tools/convener_ops/survey_invite.py\n"
+    "see tools/convener_ops/journey/survey_invite.py\n"
 )
 #: Evidence that retention.yml's own
 #: schedule still fires, independent of whether that day's sweep found
@@ -161,10 +168,10 @@ RETENTION_LAST_RUN_HEADER = (
 #: drain that committed its result and was then interrupted before clearing
 #: the queue does not apply them a second time. Committed in the *same*
 #: commit as the data those entries produced, which is the whole of why it
-#: works; see tools/convener_ops/submission_queue.py's own module docstring.
+#: works; see tools/convener_ops/journey/submission_queue.py's own module docstring.
 QUEUE_LEDGER_HEADER = (
     "# Which queued submissions a drain has already applied; "
-    "see tools/convener_ops/submission_queue.py\n"
+    "see tools/convener_ops/journey/submission_queue.py\n"
 )
 #: What the last window of runs actually billed, and the
 #: only place in this repository where a *measured* minute exists rather
@@ -832,7 +839,7 @@ def handle_registration() -> int:
     send one for a registration a later, failed attempt then discarded.
 
     Reads `REGISTRATION_PAYLOAD` (the raw relayed body -- see
-    `convener_ops.registration.to_registration` for why it is passed through
+    `convener_ops.journey.registration.to_registration` for why it is passed through
     whole) and `EVENT_PRIVATE_KEY` (the PEM the workflow selected using
     `resolve_registration_secret`'s own output). Never prints either of
     them, or anything decrypted from them: every message below names only

@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 
-from convener_ops.confirmation import Confirmation
 from convener_ops.declaration import published
-from convener_ops.registration import Registration
-from convener_ops.survey_invite import (
+from convener_ops.journey.confirmation import Confirmation
+from convener_ops.journey.registration import Registration
+from convener_ops.journey.survey_invite import (
     INVITATIONS_FILE_VERSION,
     NOTICE,
     SURVEY_BASE,
@@ -208,7 +208,7 @@ def test_survey_base_is_the_survey_pages_own_address() -> None:
 # ------------------------------------------------------------------ #
 
 _DOCS_TEMPLATE = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "docs"
     / "toolkit"
     / "emails"

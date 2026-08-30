@@ -135,8 +135,8 @@ instance:
     reason: >-
       The instance's cryptographic material: the published public half of
       each event key (instance/keys/events/,
-      tools/convener_ops/eventkeys.py) and of each certificate signing key
-      (instance/keys/signing/, tools/convener_ops/signing.py). Both
+      tools/convener_ops/journey/eventkeys.py) and of each certificate signing key
+      (instance/keys/signing/, tools/convener_ops/journey/signing.py). Both
       directories are empty of keys in this repository today and stay empty
       in a fresh duplicate -- generating one is an operator's act, never
       upstream's.

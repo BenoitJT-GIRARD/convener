@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops.platform import (
+from convener_ops.journey.platform import (
     AttendanceRow,
     EventNotFoundError,
     ManualPlatform,
@@ -16,7 +16,7 @@ from convener_ops.platform import (
     Recording,
     Room,
 )
-from convener_ops.platform_fcc import (
+from convener_ops.journey.platform_fcc import (
     RETRIEVED_TICK,
     TOKEN_ENV,
     FCCRequestError,
@@ -917,7 +917,7 @@ def test_urllib_transport_sends_bearer_auth_and_accept_headers(
         return _FakeHTTPResponse(b'{"ok": true}')
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     result = _UrllibTransport().get_json("/conferences/1/calls", "tok123")
@@ -941,7 +941,7 @@ def test_urllib_transport_delete_uses_the_delete_method(
         return _FakeHTTPResponse(b"")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     _UrllibTransport().delete("/conferences/1", "tok123")
@@ -959,7 +959,7 @@ def test_urllib_transport_maps_an_http_error_to_fcc_request_error(
         )
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     with pytest.raises(FCCRequestError, match="401"):
@@ -973,7 +973,7 @@ def test_urllib_transport_maps_a_url_error_to_fcc_request_error(
         raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     with pytest.raises(FCCRequestError, match="failed"):
@@ -987,7 +987,7 @@ def test_urllib_transport_maps_invalid_json_to_fcc_request_error(
         return _FakeHTTPResponse(b"not json")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     with pytest.raises(FCCRequestError, match="valid JSON"):
@@ -1022,7 +1022,7 @@ def test_urllib_transport_head_sends_a_head_request_with_no_auth_header(
         )
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
@@ -1048,7 +1048,7 @@ def test_urllib_transport_head_reads_no_body(monkeypatch: pytest.MonkeyPatch) ->
         return _ExplodingBodyResponse(b"", status=200, headers={})
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
@@ -1063,7 +1063,7 @@ def test_urllib_transport_head_omits_a_header_the_response_never_sent(
         return _FakeHTTPResponse(b"", status=200, headers={"Content-Type": "video/mp4"})
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
@@ -1084,7 +1084,7 @@ def test_urllib_transport_head_is_none_on_a_404(
         )
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
@@ -1101,7 +1101,7 @@ def test_urllib_transport_head_is_none_on_a_non_2xx_status(
         return _FakeHTTPResponse(b"", status=500, headers={})
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
@@ -1114,7 +1114,7 @@ def test_urllib_transport_head_is_none_on_a_network_error(
         raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
@@ -1133,7 +1133,7 @@ def test_urllib_transport_head_is_none_on_a_bad_status_line(
         raise http.client.BadStatusLine("garbage status line")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
@@ -1150,7 +1150,7 @@ def test_urllib_transport_head_is_none_on_a_malformed_url(
         raise ValueError("malformed URL")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.Request", fake_request
+        "convener_ops.journey.platform_fcc.urllib.request.Request", fake_request
     )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
@@ -1163,7 +1163,7 @@ def test_urllib_transport_head_is_none_and_never_opens_a_non_https_url(
         raise AssertionError("a non-https URL must never be opened")
 
     monkeypatch.setattr(
-        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+        "convener_ops.journey.platform_fcc.urllib.request.urlopen", fake_urlopen
     )
 
     assert _UrllibTransport().head("http://cdn.example.org/rec/1.video.mp4") is None
@@ -1266,7 +1266,7 @@ def test_retrieved_tick_matches_the_shared_fixture() -> None:
     from pathlib import Path
 
     fixture = json.loads(
-        (Path(__file__).parent / "fixtures" / "event-chain-keys.json").read_text(
+        (Path(__file__).parents[1] / "fixtures" / "event-chain-keys.json").read_text(
             encoding="utf-8"
         )
     )

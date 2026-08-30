@@ -28,8 +28,8 @@ from convener_ops.agenda import (
     build_internal_calendar,
 )
 from convener_ops.declaration.paths import repo_root
+from convener_ops.journey.registration import signup_url
 from convener_ops.notify import due_date
-from convener_ops.registration import signup_url
 
 _ROOT = repo_root()
 _FIXTURE_PATH = _ROOT / "tools" / "tests" / "fixtures" / "paris-standing-start.json"

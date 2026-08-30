@@ -45,7 +45,7 @@ start two of them -- six billed jobs -- on every submission, six times what
 the queue replaced.
 Whether such a pull request exists is repository state, not file content, so
 no offline test can see it. What *is* held offline is the consequence one
-step further on: `tools/tests/test_submission_queue.py` fails if a queue
+step further on: `tools/tests/journey/test_submission_queue.py` fails if a queue
 file ever appears in a checkout of the default branch, so merging one is red
 rather than silent.
 
@@ -144,7 +144,7 @@ GitHub Actions job can only reach a secret through an expression written in
 the workflow file itself -- never through a name a running step computed. A
 drain covering N events therefore needs N such expressions written out, so N
 has to be a constant. `MAX_EVENTS_PER_DRAIN` is that constant,
-`tools/tests/test_submission_queue.py` pins the workflow to exactly that many
+`tools/tests/journey/test_submission_queue.py` pins the workflow to exactly that many
 slots, and an event past the cap is deferred, never dropped.
 
 A slot is per *event*, not per kind -- one key opens both files -- so the two
@@ -168,8 +168,8 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final
 
+from ..declaration.paths import DATA_DIR
 from . import confirmation, eventkeys, survey
-from .declaration.paths import DATA_DIR
 from .registration import (
     dump_registration_file,
     event_id_from_payload,
@@ -180,7 +180,7 @@ from .registration import (
 )
 
 #: The branch the relay writes to and the drain empties. Named once, here,
-#: and read from this constant by `tools/tests/test_submission_queue.py`,
+#: and read from this constant by `tools/tests/journey/test_submission_queue.py`,
 #: `.github/workflows/sweep-and-notify.yml` and
 #: `services/signup-relay/src/index.js` -- three copies of a branch name
 #: that disagreed would be a queue nothing drains, with nothing red.
@@ -751,7 +751,7 @@ def annotation_lines(outcome: DrainOutcome) -> list[str]:
 
 def queue_files_in(paths: Sequence[str]) -> list[str]:
     """Every path in `paths` that is a queue entry -- the sweep
-    `tools/tests/test_submission_queue.py` runs over a checkout of the
+    `tools/tests/journey/test_submission_queue.py` runs over a checkout of the
     default branch, where the answer must always be empty.
 
     It exists because the one precondition the workflow sweep cannot

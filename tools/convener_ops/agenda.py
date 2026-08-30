@@ -73,8 +73,8 @@ from typing import Any, Final
 
 from .declaration import published
 from .governance import PARIS
+from .journey.registration import signup_url
 from .notify import Deadline, due_date
-from .registration import signup_url
 from .visual import STANDING_START_LOCAL
 
 #: `instance/data/config.yml::seminar_duration_minutes`'s own fallback --

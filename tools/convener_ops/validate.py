@@ -122,7 +122,7 @@ CONFIG_REQUIRED = frozenset(
         # reason for making this a configuration at all is that it must
         # be able to align with accreditation requirements this project
         # does not yet know - and alignment happens by editing this file,
-        # not by editing tools/convener_ops/attendance.py. A threshold that only
+        # not by editing tools/convener_ops/journey/attendance.py. A threshold that only
         # ever lives as a Python default is a constant with extra steps.
         "eligibility_share",
     }
@@ -978,8 +978,9 @@ def validate_config(cfg: Any) -> list[str]:
     # lives as a Python default is a constant with extra steps, and its
     # whole rationale - alignment with accreditation requirements not
     # yet known - happens by editing this file, not by editing
-    # `tools/convener_ops/attendance.py`). The `"eligibility_share" in cfg` guard
-    # below is not a leftover of the old, optional shape: it still has to
+    # `tools/convener_ops/journey/attendance.py`). The `"eligibility_share" in
+    # cfg` guard below is not a leftover of the old, optional shape: it still
+    # has to
     # be here, the same way `sla_days`'s own "must be a mapping" check is
     # guarded the same way - a missing key is `CONFIG_REQUIRED`'s to
     # report, once, by name; this block's job is only the range of a value

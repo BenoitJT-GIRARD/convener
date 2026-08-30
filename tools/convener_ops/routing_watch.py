@@ -128,7 +128,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
-from . import registration_routing
+from .journey import registration_routing
 
 #: How `registration_routing.to_routing_data` spells an instant. Seconds
 #: precision, always UTC, always the same width. Not shared with that

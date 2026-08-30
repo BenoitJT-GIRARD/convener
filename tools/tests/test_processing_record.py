@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import re
 
-from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.published import load_identity
-from convener_ops.eventkeys import RETENTION_DAYS
+from convener_ops.journey.confirmation import CONTACT_EMAIL
+from convener_ops.journey.eventkeys import RETENTION_DAYS
 
 ROOT = repo_root()
 PAGE = ROOT / "docs" / "governance" / "traitement-donnees.md"

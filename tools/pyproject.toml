@@ -14,7 +14,7 @@ dependencies = [
   # only true if a public key cannot decrypt -- a property no symmetric
   # scheme has. The choice was between this well-audited library and
   # hand-rolling RSA in the one module that handles other people's personal
-  # data; see tools/convener_ops/eventkeys.py for the rest of that reasoning.
+  # data; see tools/convener_ops/journey/eventkeys.py for the rest of that reasoning.
   "cryptography>=43",
   # A certificate carries a machine-readable code, and the delivery step's
   # own ruling requires the library that draws it to be pure Python, no
@@ -26,7 +26,7 @@ dependencies = [
   # project requires >=3.12), is BSD-3-Clause (the licence file itself, not
   # only the PyPI classifier), and renders SVG natively through
   # `svg_inline()` -- an embeddable `<svg>...</svg>` fragment, no Pillow, no
-  # raster step at all. See tools/convener_ops/delivery.py for where it is used
+  # raster step at all. See tools/convener_ops/journey/delivery.py for where it is used
   # and why HTML+SVG rather than a raster format.
   "segno>=1.6",
 ]

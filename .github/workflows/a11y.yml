@@ -32,7 +32,7 @@ name: Accessibility
 # - `app/**` -- both islands (`app/dist/islands/signup`,
 #   `app/dist/islands/verify`) this check mounts on the built pages.
 # - `tools/convener_ops/**` -- the "Generate throw-away event keys" step below
-#   runs `convener_ops.eventkeys.generate()` (imported through `paths.py`, and
+#   runs `convener_ops.journey.eventkeys.generate()` (imported through `paths.py`, and
 #   transitively whatever that module itself imports); a path filter has
 #   no finer grain than "the package", so the whole package is watched
 #   rather than the two files this step names directly.

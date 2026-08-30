@@ -28,14 +28,14 @@ import pytest
 import yaml
 from conftest import config, speaker
 
-from convener_ops import confirmation, eventkeys, registration, submission_queue
 from convener_ops.cli import (
     confirm_queued_registrations,
     drain_queue,
     plan_queue_drain,
     send_confirmation,
 )
-from convener_ops.submission_queue import (
+from convener_ops.journey import confirmation, eventkeys, registration, submission_queue
+from convener_ops.journey.submission_queue import (
     REGISTRATION_KIND,
     SURVEY_KIND,
     drain,
@@ -316,7 +316,7 @@ def test_a_registration_never_shares_a_ledger_entry_with_a_survey_response() -> 
     private_pem, public_pem = eventkeys.generate()
     reg = _name("m0000001")
     survey_name = _name("m0000002", kind=SURVEY_KIND)
-    from convener_ops import survey as survey_module
+    from convener_ops.journey import survey as survey_module
 
     plaintext = json.dumps(
         {"overall_rating": 5, "recommend": True, "feedback": "Loved it."}

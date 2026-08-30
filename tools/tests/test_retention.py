@@ -8,7 +8,7 @@ merely implemented; this module is that verification, plus the two
 companion guarantees that come with it: an early
 erasure that touches only the entry it names, and a destruction
 that leaves the certificate register untouched (see
-`tools/convener_ops/certificate.py`'s own module docstring).
+`tools/convener_ops/journey/certificate.py`'s own module docstring).
 
 Three layers, in three sections below:
 
@@ -37,22 +37,22 @@ import pytest
 import yaml
 from conftest import speaker
 
-from convener_ops import certificate, eventkeys
-from convener_ops.certificate import (
+from convener_ops.cli import erase_registration, record_destructions, retention_sweep
+from convener_ops.declaration.paths import repo_root
+from convener_ops.journey import certificate, eventkeys
+from convener_ops.journey.certificate import (
     CertificateEntry,
     register_from_data,
     register_to_data,
 )
-from convener_ops.cli import erase_registration, record_destructions, retention_sweep
-from convener_ops.declaration.paths import repo_root
-from convener_ops.eventkeys import DecryptionError, decrypt, encrypt, generate
-from convener_ops.platform import (
+from convener_ops.journey.eventkeys import DecryptionError, decrypt, encrypt, generate
+from convener_ops.journey.platform import (
     AttendanceRow,
     decrypt_attendance_rows,
     encrypt_attendance_rows,
     load_attendance_export_file,
 )
-from convener_ops.registration import (
+from convener_ops.journey.registration import (
     AmbiguousMatchingCodeError,
     Registration,
     RegistrationFile,
@@ -453,7 +453,7 @@ def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_firs
     file, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
     file, _replaced = upsert(file, grace, private_pem=private_pem)
     monkeypatch.setattr(
-        "convener_ops.registration.matching_code",
+        "convener_ops.journey.registration.matching_code",
         lambda event_id, email, salt: "ABCD-2345",
     )
 
@@ -1348,7 +1348,7 @@ def test_erase_registration_refuses_an_ambiguous_matching_code(
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
     monkeypatch.setattr(
-        "convener_ops.registration.matching_code",
+        "convener_ops.journey.registration.matching_code",
         lambda event_id, email, salt: "ABCD-2345",
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1385,7 +1385,7 @@ def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
     monkeypatch.setattr(
-        "convener_ops.registration.matching_code",
+        "convener_ops.journey.registration.matching_code",
         lambda event_id, email, salt: "ABCD-2345",
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1424,7 +1424,7 @@ def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_addres
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
     monkeypatch.setattr(
-        "convener_ops.registration.matching_code",
+        "convener_ops.journey.registration.matching_code",
         lambda event_id, email, salt: "ABCD-2345",
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))

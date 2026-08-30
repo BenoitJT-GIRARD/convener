@@ -862,24 +862,24 @@ cd tools && uv run convener-check-config
 row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > No certificate is issued in this run. The job that would sign one
-> (tools/convener_ops/certificate.py) cannot, and does not fall back to
-> anything -- there is no partially-written document, and nothing sensitive is
-> exposed by the absence, because signing attests rather than conceals: unlike
-> CONVENER_EVENT_KEY_<ID> above, there is no confidentiality risk this row
-> exists to prevent. This is an ordinary D-13 absence, the same shape as
+> (tools/convener_ops/journey/certificate.py) cannot, and does not fall back
+> to anything -- there is no partially-written document, and nothing sensitive
+> is exposed by the absence, because signing attests rather than conceals:
+> unlike CONVENER_EVENT_KEY_<ID> above, there is no confidentiality risk this
+> row exists to prevent. This is an ordinary D-13 absence, the same shape as
 > video_publishing's "entered by hand" or board_notifications' "printed
 > instead of sent" -- a feature that degrades, not a failure this repository
 > fails closed over. Unlike CONVENER_EVENT_KEY_<ID>, there is exactly one of
 > these at a time (not one per event), and it is never destroyed: see
-> tools/convener_ops/signing.py for why a certificate signing key's lifecycle
-> runs opposite to an event key's.
+> tools/convener_ops/journey/signing.py for why a certificate signing key's
+> lifecycle runs opposite to an event key's.
 
 **Credentials.** `CONVENER_SIGNING_KEY`
 
 **In a browser, in full:**
 
 1. Open a Python shell inside `tools/` with `uv run python`, and generate the
-   pair with `from convener_ops.signing import generate; private_pem,
+   pair with `from convener_ops.journey.signing import generate; private_pem,
    public_pem = generate()`.
 2. Commit the public half first, as `instance/keys/signing/` plus the day it
    was generated and a `.pub` suffix. The order is load-bearing, because a
@@ -920,8 +920,8 @@ cd tools && uv run convener-check-config
 `config/integrations.yml`*, which* `convener-check-config` *prints as this
 row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
-> tools/convener_ops/registration.py::matching_code returns nothing: no
-> matching code is derived, printed, or put in the confirmation email.
+> tools/convener_ops/journey/registration.py::matching_code returns nothing:
+> no matching code is derived, printed, or put in the confirmation email.
 > Attendance falls back to its own cascade -- exact address, then normalised
 > name -- instead of the typed code. convener-match- attendance's own
 > unmatched-attendance.md degrades the same way: with no salt, no salted
@@ -939,7 +939,7 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 `config/integrations.yml`*, which* `convener-check-config` *prints as this
 row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
-> tools/convener_ops/certificate.py::fingerprint reads the same
+> tools/convener_ops/journey/certificate.py::fingerprint reads the same
 > CONVENER_MATCHING_SALT as the matching_salt row above, for a second,
 > domain-separated purpose: the certificate register's own salted trace of an
 > address. Here the absence is *not* ordinary: a fingerprint that cannot be
@@ -1029,27 +1029,28 @@ is maintained there, and quoted here.*
 
 > Three consumers, all reported rather than retained -- none ever prints a
 > composed message, sent or not, and none writes one to a file or a build
-> artefact either. tools/convener_ops/confirmation.py: the registration
-> confirmation, carrying a participant's address and matching code, used to be
-> written to a local, .gitignore'd file and uploaded as a short-retention
-> build artefact instead of being sent -- removed once
+> artefact either. tools/convener_ops/journey/confirmation.py: the
+> registration confirmation, carrying a participant's address and matching
+> code, used to be written to a local, .gitignore'd file and uploaded as a
+> short-retention build artefact instead of being sent -- removed once
 > docs/governance/traitement-donnees.md's own Recipients section turned out to
 > call that artefact a documented exception, when with this row absent (this
 > project's default state) it was the path every registration took, not an
 > exception. Every attempt is folded into a bare sent/not-sent count instead,
 > and convener-resend-confirmation reproduces the identical message from the
 > stored registration and the same deterministic matching code, so nothing is
-> ever the only copy of anything. tools/convener_ops/delivery.py: the
+> ever the only copy of anything. tools/convener_ops/journey/delivery.py: the
 > certificate document this row would carry is never written anywhere at all,
 > not even to a private artefact, from the day this module was written -- see
 > that module's own docstring for why a signed, nominative document must never
 > land in any Actions surface, a stricter constraint than the registration
-> confirmation was held to at first. tools/convener_ops/survey_invite.py: the
-> post-event survey invitation, reusing confirmation.py's own transport rather
-> than a third copy of it, degrades the same bare-count way delivery.py does
-> -- and for a related but distinct reason: a survey invitation carries no
-> identifier at all to keep an unsent copy filed against, unlike a
-> certificate, which at least has a public one.
+> confirmation was held to at first.
+> tools/convener_ops/journey/survey_invite.py: the post-event survey
+> invitation, reusing confirmation.py's own transport rather than a third copy
+> of it, degrades the same bare-count way delivery.py does -- and for a
+> related but distinct reason: a survey invitation carries no identifier at
+> all to keep an unsent copy filed against, unlike a certificate, which at
+> least has a public one.
 
 **Credentials.** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`,
 `CONVENER_SMTP_USER`, `CONVENER_SMTP_PASSWORD`, `CONVENER_SMTP_FROM`
@@ -1121,21 +1122,21 @@ cd tools && uv run convener-check-config
 `config/integrations.yml`*, which* `convener-check-config` *prints as this
 row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
-> The manual adapter (tools/convener_ops/platform.py::ManualPlatform) is used.
-> The room and recording links are typed by hand into
+> The manual adapter (tools/convener_ops/journey/platform.py::ManualPlatform)
+> is used. The room and recording links are typed by hand into
 > instance/data/speakers.yml's existing zoom_link and youtube_url, join
 > instructions into instance/data/config.yml's instructions (one value for the
 > whole series -- the account is the permanent room), and attendance is
 > imported from instance/data/events/<id>/attendance-import.csv, a file that
 > is never committed. No room link is published automatically, and no
 > recording storage is managed on our side. Once set,
-> tools/convener_ops/platform_fcc.py::PlatformFCC is used instead (selected by
-> platform_fcc.py::platform_from_env, D-13): real per-person attendance is
-> read from the provider's own calls endpoint -- undocumented by the vendor,
-> but verified empirically -- and the recording is reported and deleted
-> through its own API instead of being tracked by hand. The value is the
-> current access token itself, not a client id and secret; it expires and must
-> be renewed roughly monthly, a step of the event journey rather than a
+> tools/convener_ops/journey/platform_fcc.py::PlatformFCC is used instead
+> (selected by platform_fcc.py::platform_from_env, D-13): real per-person
+> attendance is read from the provider's own calls endpoint -- undocumented by
+> the vendor, but verified empirically -- and the recording is reported and
+> deleted through its own API instead of being tracked by hand. The value is
+> the current access token itself, not a client id and secret; it expires and
+> must be renewed roughly monthly, a step of the event journey rather than a
 > one-time secret -- see docs/reference/operations.md's "Meeting platform"
 > section.
 

@@ -1,7 +1,7 @@
 # Certificate of attendance
 
 *Generated automatically, once per eligible attendee, by
-`tools/convener_ops/certificate.py` and delivered by e-mail --
+`tools/convener_ops/journey/certificate.py` and delivered by e-mail --
 never committed to this repository, ever, for any attendee (this project is
 categorical about it: no document naming a person is ever deposited here).
 Nobody opens this page and fills it in by
@@ -10,13 +10,13 @@ braces, the same convention
 [Registration confirmed](emails/registration-confirmed.md) uses for the same
 reason. Kept here anyway, so a board member can read what a certificate says
 without opening the Python module that renders it.
-`tools/tests/test_certificate.py` pins this page's field list against that
+`tools/tests/journey/test_certificate.py` pins this page's field list against that
 module's own `signing.PAYLOAD_FIELDS` and `certificate.py` constants, so the
 two cannot quietly say different things.*
 
 *What is signed and what is furniture: **name, event, date, duration in
 hours and the identifier are the signed payload** -- exactly the five fields
-`tools/convener_ops/signing.py::PAYLOAD_FIELDS` allows, no more, no less. The
+`tools/convener_ops/journey/signing.py::PAYLOAD_FIELDS` allows, no more, no less. The
 organiser's name and the verification address below are document furniture,
 not signed facts (both are content the certificate carries, but
 `signing.sign` would refuse a payload that tried to include them) -- a
@@ -48,7 +48,7 @@ longer than the identifier printed above it.]
 
 ## Notes for whoever reads this page
 
-- **Who receives one.** Every attendee `tools/convener_ops/attendance.py`'s
+- **Who receives one.** Every attendee `tools/convener_ops/journey/attendance.py`'s
   `eligible_attendees` names for this event -- present, matched to our own
   registration (never the platform's own, self-typed name), for at least
   the configurable share of the session `instance/data/config.yml`'s
@@ -61,7 +61,7 @@ longer than the identifier printed above it.]
   name on this certificate is `[first name] [surname]`, exactly as
   submitted at registration.
 - **The duration is rounded to the nearest quarter hour, ties rounding
-  up** -- `tools/convener_ops/certificate.py::duration_hours`'s own documented
+  up** -- `tools/convener_ops/journey/certificate.py::duration_hours`'s own documented
   rule, chosen because accreditation bodies read this figure and quote
   continuing-education credit in quarter- or half-hour units, not to five
   decimal places.
@@ -81,13 +81,13 @@ longer than the identifier printed above it.]
 - **A revoked certificate still verifies cryptographically.** Revocation
   is recorded in our internal register (`instance/data/events/<id>/certificates.yml`)
   alone, never by touching the signature -- see
-  `tools/convener_ops/certificate.py`'s own module docstring, "revocation
+  `tools/convener_ops/journey/certificate.py`'s own module docstring, "revocation
   touches the register, never the signature".
 - **We keep no name and no address once this is issued.** Our own register
   holds the certificate's identifier, the event id, the date it was issued,
   a salted fingerprint of the address (never published, and not reversible
   by anyone who does not hold the matching salt -- see
-  `tools/convener_ops/certificate.py`'s own module docstring, "the fingerprint
+  `tools/convener_ops/journey/certificate.py`'s own module docstring, "the fingerprint
   is reversible, given the salt", for what that qualification means and
   why the salt itself is never rotated), and its state. That register
   outlives the registration it was derived from:

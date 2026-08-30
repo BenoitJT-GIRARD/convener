@@ -31,10 +31,11 @@ from typing import Any
 import pytest
 from conftest import workflow_triggers
 
-from convener_ops import queue_watch, registration_routing
+from convener_ops import queue_watch
 from convener_ops.cli import check_queue_liveness, record_queue_watch
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
+from convener_ops.journey import registration_routing
 
 _ROOT = repo_root()
 _SWEEP_PATH = _ROOT / ".github" / "workflows" / "sweep-and-notify.yml"
@@ -755,7 +756,7 @@ def test_the_watchdog_names_no_branch_the_daily_job_alone_may_touch() -> None:
     mention the queue branch. This check reads a committed record on the
     default branch and never goes near that branch, so the guard still
     means what it means rather than having been renamed around."""
-    from convener_ops import submission_queue
+    from convener_ops.journey import submission_queue
 
     assert submission_queue.QUEUE_BRANCH not in _WATCHDOG
     assert "convener-check-queue-liveness" in _WATCHDOG

@@ -127,7 +127,7 @@ export function NewSpeaker() {
         current => {
           assignedId = nextSpeakerId(current);
           // A lead created here gets an owner by the same rotation the public
-          // form uses (`tools/convener_ops/proposal.py::to_lead`), so the two intake
+          // form uses (`tools/convener_ops/journey/proposal.py::to_lead`), so the two intake
           // routes cannot produce differently-owned leads. Computed from
           // `current`, since the rotation counts the open leads that exist at
           // write time -- not the ones a stale render remembered. `config` is

@@ -1,5 +1,5 @@
 """Compose the post-event survey invitation, and keep the one record that
-stops a re-dispatch from sending it twice. `tools/convener_ops/survey.py`
+stops a re-dispatch from sending it twice. `tools/convener_ops/journey/survey.py`
 is the storage side; this module is the *sending* side --
 sent afterwards, only to people recognised as present.
 
@@ -183,9 +183,9 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
+from ..declaration import published
+from ..declaration.paths import DATA_DIR
 from . import confirmation
-from .declaration import published
-from .declaration.paths import DATA_DIR
 from .registration import Registration
 
 __all__ = [

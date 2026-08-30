@@ -32,7 +32,7 @@
  *
  * Two copies of one arithmetic, and why that is allowed here
  * ---------------------------------------------------------
- * `tools/convener_ops/registration_routing.py` and
+ * `tools/convener_ops/journey/registration_routing.py` and
  * `tools/convener_ops/queue_watch.py` hold the same rules; they have to, because
  * they are what the scheduled jobs enforce and no browser is running when a
  * job runs. D-14's answer to a decision that genuinely lives on both sides

@@ -1,6 +1,6 @@
 /**
  * `s.links` reaches this screen straight from the public, unreviewed
- * proposal intake (`tools/convener_ops/proposal.py::to_lead`) -- a comma-split
+ * proposal intake (`tools/convener_ops/journey/proposal.py::to_lead`) -- a comma-split
  * list of whatever a candidate typed into the "Links" field of the Tally
  * form, with no scheme check anywhere on the Python side. Before this fix,
  * `SpeakerPage` handed every entry to a raw `href` unfiltered: a

@@ -8,8 +8,9 @@ from typing import Any, ClassVar
 
 import pytest
 
-from convener_ops import registration
-from convener_ops.confirmation import (
+from convener_ops.declaration import published
+from convener_ops.journey import registration
+from convener_ops.journey.confirmation import (
     CONTACT_EMAIL,
     FIELD_LABELS,
     MATCHING_INSTRUCTION,
@@ -27,9 +28,8 @@ from convener_ops.confirmation import (
     event_details,
     smtp_config_from_env,
 )
-from convener_ops.declaration import published
-from convener_ops.platform import ManualPlatform, Room
-from convener_ops.registration import Registration
+from convener_ops.journey.platform import ManualPlatform, Room
+from convener_ops.journey.registration import Registration
 
 # ------------------------------------------------------------------ #
 # Fixtures
@@ -491,10 +491,12 @@ class _FakeSmtpClient:
 def test_smtp_transport_uses_starttls_on_an_ordinary_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from convener_ops.confirmation import _SmtpTransport
+    from convener_ops.journey.confirmation import _SmtpTransport
 
     _FakeSmtpClient.instances = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _FakeSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP", _FakeSmtpClient
+    )
     config = SmtpConfig(
         host="smtp.example.org", port=587, user="u", password="p", sender="from@x"
     )
@@ -524,10 +526,12 @@ def test_smtp_transport_uses_starttls_on_an_ordinary_port(
 def test_smtp_transport_uses_implicit_tls_on_port_465(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from convener_ops.confirmation import _SmtpTransport
+    from convener_ops.journey.confirmation import _SmtpTransport
 
     _FakeSmtpClient.instances = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP_SSL", _FakeSmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.journey.confirmation.smtplib.SMTP_SSL", _FakeSmtpClient
+    )
     config = SmtpConfig(
         host="smtp.example.org", port=465, user="u", password="p", sender="from@x"
     )
@@ -566,7 +570,7 @@ def test_confirmation_is_a_plain_comparable_value() -> None:
 # ------------------------------------------------------------------ #
 
 _DOCS_TEMPLATE = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "docs"
     / "toolkit"
     / "emails"
@@ -603,7 +607,7 @@ def test_the_update_warning_matches_the_documentation_copy() -> None:
 #: the file this replaced. `encrypt.ts`, which these tests never read,
 #: stayed exactly where it was: shared, not moved, not forked.
 _SIGNUP_FORM = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "app"
     / "src"
     / "islands"
@@ -657,13 +661,13 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     longer carries "90 days" at all, so it is dropped from this binding
     rather than kept and left permanently unable to match.
     """
-    from convener_ops.confirmation import _DATA_PROTECTION
+    from convener_ops.journey.confirmation import _DATA_PROTECTION
 
     eventkeys_source = (
-        Path(__file__).resolve().parents[2] / "tools" / "convener_ops" / "eventkeys.py"
+        Path(__file__).resolve().parents[3] / "tools" / "convener_ops" / "journey" / "eventkeys.py"
     ).read_text(encoding="utf-8")
     event_page_source = (
-        Path(__file__).resolve().parents[2] / "site" / "src" / "event.njk"
+        Path(__file__).resolve().parents[3] / "site" / "src" / "event.njk"
     ).read_text(encoding="utf-8")
 
     def _days(text: str) -> str:
@@ -700,7 +704,7 @@ def test_signup_form_max_field_length_matches_the_python_constant() -> None:
     boundary: a hand-typed `200` on each side that could drift apart
     exactly the way `SurveyForm.tsx`'s own `MAX_FEEDBACK_LENGTH` still
     can, unbound, from `survey._MAX_FEEDBACK_LENGTH`."""
-    from convener_ops.registration import _MAX_FIELD_LENGTH
+    from convener_ops.journey.registration import _MAX_FIELD_LENGTH
 
     source = _SIGNUP_FORM.read_text(encoding="utf-8")
     match = re.search(r"MAX_FIELD_LENGTH = (\d+)", source)
@@ -721,7 +725,7 @@ def test_signup_form_max_field_length_matches_the_python_constant() -> None:
 # ------------------------------------------------------------------ #
 
 _ROOM_LINK_CLAIM = "The room link only ever reaches a participant here"
-_TOOLKIT_DIR = Path(__file__).resolve().parents[2] / "docs" / "toolkit"
+_TOOLKIT_DIR = Path(__file__).resolve().parents[3] / "docs" / "toolkit"
 _PUBLIC_ANNOUNCEMENT_TEMPLATES = (
     _TOOLKIT_DIR / "forum-post-announce.md",
     _TOOLKIT_DIR / "linkedin-post.md",
@@ -798,7 +802,7 @@ def test_every_public_announcement_template_publishes_the_signup_link_instead() 
 # deliberately mixed-case in the fixture -- lower-casing IS the rule.
 # ------------------------------------------------------------------ #
 
-_SIGNUP_LINK_FIXTURE = Path(__file__).parent / "fixtures" / "signup-link.json"
+_SIGNUP_LINK_FIXTURE = Path(__file__).parents[1] / "fixtures" / "signup-link.json"
 
 
 def _signup_link_cases() -> dict[str, Any]:

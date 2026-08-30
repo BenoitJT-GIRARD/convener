@@ -8,8 +8,8 @@ every other template in this section, so its placeholders are written in
 **square brackets**, not double braces, the same convention
 [Registration confirmed](registration-confirmed.md) uses for the same
 reason. Kept here anyway, so a board member can read what a participant
-receives without opening `tools/convener_ops/delivery.py`.
-`tools/tests/test_delivery.py` pins this page's subject line against that
+receives without opening `tools/convener_ops/journey/delivery.py`.
+`tools/tests/journey/test_delivery.py` pins this page's subject line against that
 module's own composed message, so the two cannot quietly say different
 things.*
 
@@ -81,4 +81,4 @@ Best regards,
   fallback at all — every attempt is folded into a bare sent/not-sent
   count, and nothing more, because keeping even a private local copy of a
   signed certificate is the one thing this project rules out. See
-  `tools/convener_ops/delivery.py`'s module docstring for the full argument.
+  `tools/convener_ops/journey/delivery.py`'s module docstring for the full argument.

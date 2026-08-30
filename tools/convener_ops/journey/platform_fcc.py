@@ -326,7 +326,7 @@ No transport is exercised by a test
 -------------------------------------
 `FCCTransport` is the seam: `PlatformFCC` is constructed with one, real
 callers get `_UrllibTransport` (the only place in this module that imports
-`urllib`), and every test in `tools/tests/test_platform_fcc.py` substitutes
+`urllib`), and every test in `tools/tests/journey/test_platform_fcc.py` substitutes
 a fake that returns fixture data built to match the fields verified
 empirically. No test opens a socket.
 """

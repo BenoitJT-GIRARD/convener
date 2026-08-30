@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { handle } from '../src/index.js';
 
 // The shared fixture is the contract (decision D-14): the same
-// webhook-signature rule is written once in tools/convener_ops/proposal.py and
+// webhook-signature rule is written once in tools/convener_ops/journey/proposal.py and
 // once here, and this file reads the very fixture
-// tools/tests/test_proposal.py reads, so the two cannot silently drift.
+// tools/tests/journey/test_proposal.py reads, so the two cannot silently drift.
 const FIXTURE_PATH = fileURLToPath(
   new URL('../../../tools/tests/fixtures/governance-cases.json', import.meta.url),
 );
@@ -15,7 +15,7 @@ const WEBHOOK_SIGNATURE_CASES = fixture.webhook_signature_cases;
 
 // A parametrize over an emptied fixture list would silently collect zero
 // tests and still pass -- this project has a history of vacuously passing
-// tests (see tools/tests/test_proposal.py's own guard), so this makes that
+// tests (see tools/tests/journey/test_proposal.py's own guard), so this makes that
 // impossible here too.
 if (!WEBHOOK_SIGNATURE_CASES || WEBHOOK_SIGNATURE_CASES.length === 0) {
   throw new Error('webhook_signature_cases fixture is empty');

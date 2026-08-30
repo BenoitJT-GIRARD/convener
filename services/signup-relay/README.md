@@ -104,7 +104,7 @@ new deploy.
 ## What "shape" means here, and what it deliberately cannot mean
 
 This worker cannot read the ciphertext it forwards — that is the whole
-point of encrypting in the browser (see `tools/convener_ops/eventkeys.py`'s and
+point of encrypting in the browser (see `tools/convener_ops/journey/eventkeys.py`'s and
 `encrypt.ts`'s own module docstring comments) — so its validation is a
 **shape** check, never a **content** check, and this README does not claim
 otherwise:
@@ -121,7 +121,7 @@ otherwise:
 - `v` is the wire version this worker was written against;
 - `encrypted_key`, `iv` and `ciphertext` are valid base64 that decode to the
   lengths the wire format fixes: 256 bytes, 12 bytes, and at least 16 bytes
-  (`tools/convener_ops/eventkeys.py`'s module docstring documents all three),
+  (`tools/convener_ops/journey/eventkeys.py`'s module docstring documents all three),
   measured in real bytes, not the UTF-16 code units JavaScript's own
   `.length` would give.
 
@@ -177,7 +177,7 @@ worker can trust it.
 
 ## Fail closed, not open
 
-`tools/convener_ops/proposal.py::verify_signature` tolerates an absent secret by
+`tools/convener_ops/journey/proposal.py::verify_signature` tolerates an absent secret by
 design — it sits behind an authenticated `repository_dispatch`, so an
 unset `TALLY_WEBHOOK_SECRET` there just skips a check a forged dispatch
 could not have passed anyway. This worker has no such shelter: it is the

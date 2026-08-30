@@ -215,9 +215,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Protocol, runtime_checkable
 
+from ..commit_format import _TOKEN
+from ..declaration.paths import DATA_DIR, repo_root
 from . import eventkeys
-from .commit_format import _TOKEN
-from .declaration.paths import DATA_DIR, repo_root
 from .registration import normalize_email
 
 #: The five columns `attendance-import.csv` must carry, by name. Extra

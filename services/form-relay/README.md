@@ -37,7 +37,7 @@ nothing here to slow it down or bound it. Three bounds, mirroring
   on a JavaScript string is UTF-16 code units, not bytes — the same
   distinction `services/signup-relay/src/index.js` draws for its own
   `MAX_BODY_BYTES`). Tally wraps up to eleven fields
-  (`tools/convener_ops/proposal.py::FORM_FIELDS`) with their own question text
+  (`tools/convener_ops/journey/proposal.py::FORM_FIELDS`) with their own question text
   and field metadata beside each answer, and a short abstract can run to a
   few paragraphs; 64 KiB is comfortably above any real submission's shape
   while remaining a firm, cheap-to-enforce ceiling far below "arbitrary".
@@ -86,7 +86,7 @@ give that worker a secret too, destroying its redeployability for no gain
 
 ## Why the signature is checked twice
 
-`tools/convener_ops/proposal.py::verify_signature` checks the same signature
+`tools/convener_ops/journey/proposal.py::verify_signature` checks the same signature
 again, on the GitHub Actions side, once the payload has already been
 accepted here. That is not redundancy: this worker attests that the
 request came from Tally; the check in `proposal.py` attests that the
@@ -94,7 +94,7 @@ payload was not forged by someone who already has write access to the
 repository (a `repository_dispatch` can be sent by anyone holding a token
 scoped to it). Both checks implement the same rule, pinned together by
 the fixture `tools/tests/fixtures/governance-cases.json` (decision D-14),
-read by both `test/index.test.js` here and `tools/tests/test_proposal.py`.
+read by both `test/index.test.js` here and `tools/tests/journey/test_proposal.py`.
 
 ## Deploying
 
@@ -134,7 +134,7 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
 ```
 
 - `TALLY_WEBHOOK_SECRET` — the same shared secret Tally signs with and
-  `tools/convener_ops/proposal.py::verify_signature` reads on the other side of
+  `tools/convener_ops/journey/proposal.py::verify_signature` reads on the other side of
   the dispatch. Same name on both sides on purpose: it is the same secret.
 - `CONVENER_DISPATCH_TOKEN` — a GitHub token with permission to send a
   `repository_dispatch` to the repository `instance/config.json` declares
@@ -156,7 +156,7 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
 
 ## Fail closed, not open
 
-Unlike `tools/convener_ops/proposal.py::verify_signature`, whose own copy of
+Unlike `tools/convener_ops/journey/proposal.py::verify_signature`, whose own copy of
 `TALLY_WEBHOOK_SECRET` accepts everything when unset (D-13: an absent
 integration is a normal state, not an error), a missing
 `TALLY_WEBHOOK_SECRET` here refuses every request rather than accepting

@@ -4,7 +4,7 @@
  * Tally signs a submission as base64(HMAC-SHA256(secret, rawBody)) in a
  * `Tally-Signature` header, over the raw JSON body and nothing else -- not
  * a wrapper, not a re-encoding. This worker checks that signature (the same
- * rule tools/convener_ops/proposal.py::verify_signature checks again, from a
+ * rule tools/convener_ops/journey/proposal.py::verify_signature checks again, from a
  * shared fixture, once the payload reaches GitHub Actions) and, only if it
  * holds, forwards the raw body onward as a `proposal-submitted`
  * repository_dispatch.

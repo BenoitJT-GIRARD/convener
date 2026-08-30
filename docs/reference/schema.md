@@ -67,7 +67,7 @@ given" — and is well formed.
 | `zoom_link` | string | The meeting link the session runs on. |
 | `youtube_url` | string | Where the recording sits. Recorded here; published only through the publication gate. |
 | `forum_thread` | string | Link to the forum announcement thread. |
-| `survey_enabled` | bool | Whether the post-event survey is open for this event. A per-event fact, not a `instance/data/config.yml` setting: the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/survey.py`'s module docstring); this is the only thing that varies. |
+| `survey_enabled` | bool | Whether the post-event survey is open for this event. A per-event fact, not a `instance/data/config.yml` setting: the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/journey/survey.py`'s module docstring); this is the only thing that varies. |
 | `runbook_progress` | map&lt;string, bool&gt; | Which lines of the journey are ticked, keyed `phase/item`. |
 | `checklist` | map&lt;string, ChecklistAssignee&gt; | Who owes each line of the journey, keyed by runbook item. An item with no entry here is nobody's in particular, which means the hosts' -- the behaviour the app has always had, and still the default. Never read from, and never written to, `assigned_to`. |
 | `metrics.registrations` | number \| null | How many people registered. |

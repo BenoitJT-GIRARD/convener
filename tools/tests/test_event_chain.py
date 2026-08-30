@@ -62,15 +62,6 @@ import pytest
 import yaml
 from conftest import config, speaker
 
-from convener_ops import eventkeys, signing
-from convener_ops.attendance import MatchedAttendee
-from convener_ops.certificate import (
-    CertificateEntry,
-    CertificateEvent,
-    register_to_data,
-)
-from convener_ops.certificate import issue as certificate_issue
-from convener_ops.certificate import revoke as certificate_revoke
 from convener_ops.cli import (
     CERTIFICATES_HEADER,
     UNMATCHED_ATTENDANCE,
@@ -89,15 +80,26 @@ from convener_ops.cli import (
     revoke_certificate,
 )
 from convener_ops.governance import paris_today
-from convener_ops.platform import (
+from convener_ops.journey import eventkeys, signing
+from convener_ops.journey.attendance import MatchedAttendee
+from convener_ops.journey.certificate import (
+    CertificateEntry,
+    CertificateEvent,
+    register_to_data,
+)
+from convener_ops.journey.certificate import issue as certificate_issue
+from convener_ops.journey.certificate import revoke as certificate_revoke
+from convener_ops.journey.platform import (
     decrypt_attendance_rows,
     encrypt_attendance_rows,
     load_attendance_export_file,
 )
-from convener_ops.platform import parse_attendance_csv as _parse_attendance_csv
-from convener_ops.registration import Registration, dump_registration_file
-from convener_ops.registration import load_registration_file as _load_registration_file
-from convener_ops.registration import upsert as _upsert_registration
+from convener_ops.journey.platform import parse_attendance_csv as _parse_attendance_csv
+from convener_ops.journey.registration import Registration, dump_registration_file
+from convener_ops.journey.registration import (
+    load_registration_file as _load_registration_file,
+)
+from convener_ops.journey.registration import upsert as _upsert_registration
 
 _ATTENDANCE_CSV_HEADER = "display_name,email,joined_at,left_at,duration_seconds"
 

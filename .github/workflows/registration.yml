@@ -20,7 +20,7 @@ on:
 # This workflow stays ungrouped instead: two registrations landing at once
 # is the ordinary case here, not an edge case, and the retry loop below
 # already makes a concurrent write to the same event's `registrations.enc`
-# safe on its own -- `convener_ops.registration.upsert` is idempotent on the
+# safe on its own -- `convener_ops.journey.registration.upsert` is idempotent on the
 # same address (see the "Decrypt, store and commit" step's own comment),
 # so re-deriving against whatever another run just pushed reproduces this
 # registration's own entry beside it rather than needing anything queued.
@@ -73,7 +73,7 @@ jobs:
         env:
           # services/signup-relay forwards the browser's whole POST body,
           # byte for byte, as client_payload.body -- see
-          # convener_ops.registration.to_registration's own docstring for why
+          # convener_ops.journey.registration.to_registration's own docstring for why
           # this step and the next both read it whole rather than
           # stripping event_id out of it first. Set as env, never inlined
           # into `run:`, so this attacker-reachable text is never
@@ -109,7 +109,7 @@ jobs:
         # `set -e` kills the step before the retry loop's own `::error::`
         # line is ever reached -- the record is gone and the tree is left
         # mid-rebase. Discarding the local commit and re-deriving instead
-        # is safe specifically because `convener_ops.registration.upsert` is
+        # is safe specifically because `convener_ops.journey.registration.upsert` is
         # idempotent on the same address: re-running against the tip
         # someone else just pushed reproduces this registration's own
         # entry (fresh ciphertext, since AES-GCM never reuses a key or
@@ -163,7 +163,7 @@ jobs:
           # `email_transport` (config/integrations.yml) and
           # `matching_salt`: absent here is D-13's ordinary state, handled
           # by `convener-send-confirmation` itself -- see
-          # `tools/convener_ops/confirmation.py`'s module docstring.
+          # `tools/convener_ops/journey/confirmation.py`'s module docstring.
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           # `_send_confirmation` calls `platform_from_env`
           # to resolve the room link (`confirmation.event_details`) --

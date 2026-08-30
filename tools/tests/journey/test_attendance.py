@@ -1,4 +1,4 @@
-"""Tests for `convener_ops.attendance` -- the matching cascade and
+"""Tests for `convener_ops.journey.attendance` -- the matching cascade and
 the summing that turns several connections into one person's duration.
 
 Historical figures at `@example.org` throughout, per project convention:
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from convener_ops.attendance import (
+from convener_ops.journey.attendance import (
     DEFAULT_ELIGIBILITY_SHARE,
     EligibilityThreshold,
     Matched,
@@ -23,8 +23,8 @@ from convener_ops.attendance import (
     eligible_attendees,
     match,
 )
-from convener_ops.platform import AttendanceRow
-from convener_ops.registration import Registration, matching_code
+from convener_ops.journey.platform import AttendanceRow
+from convener_ops.journey.registration import Registration, matching_code
 
 _EVENT_ID = "mrg-042"
 _SALT = "s3cr3t-salt-value"

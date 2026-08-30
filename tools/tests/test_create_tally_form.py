@@ -5,7 +5,7 @@ Three properties matter more than the rest:
 * `build_blocks()` is pure -- no network, no environment, no filesystem --
   and deterministic, so it is tested directly, with nothing faked;
 * the eleven labels, the two vocabularies, and their order come from
-  `convener_ops.proposal`, not from a second, hand-typed copy of them, so
+  `convener_ops.journey.proposal`, not from a second, hand-typed copy of them, so
   a rename or reorder on either side is expected to break a test here or in
   `test_proposal.py`, not to go unnoticed;
 * `main()` and `sync_form()` are the only parts that would ever reach
@@ -19,7 +19,7 @@ drops or downgrades to `undisclosed` -- is answered directly by the
 round-trip tests below: they build the exact webhook shape
 Tally sends for a chosen dropdown option, using `build_blocks()`'s own
 option uuids (never hand-typed ones), resolve it through the real
-`convener_ops.proposal.field_value`, and feed the result to the real `to_lead`.
+`convener_ops.journey.proposal.field_value`, and feed the result to the real `to_lead`.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ from create_tally_form import (
     sync_form,
 )
 
-from convener_ops.proposal import (
+from convener_ops.journey.proposal import (
     CAREER_STAGE_ORDER,
     FORM_FIELDS,
     GENDER_ORDER,
@@ -126,7 +126,7 @@ def _resolved_field(blocks: list[dict[str, Any]], label: str, chosen_text: str) 
 
 
 def _submission() -> dict[str, str]:
-    """A fields dict shaped exactly like `convener_ops.proposal.field_value`
+    """A fields dict shaped exactly like `convener_ops.journey.proposal.field_value`
     resolves a Tally webhook into: `{label: value}`, keyed by the same
     canonical labels `build_blocks()` asks for. `Gender` and `Career stage`
     are left for the caller to fill via `_resolved_field` -- they are

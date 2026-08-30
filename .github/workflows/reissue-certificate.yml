@@ -7,7 +7,7 @@ name: Reissue a certificate
 # be revoked (`revoke-certificate.yml`). Reusing
 # `convener-issue-certificates`'s own idempotent lookup for this would let a
 # routine re-run silently resurrect a correction nobody asked for; see
-# `tools/convener_ops/certificate.py::reissue`'s own docstring.
+# `tools/convener_ops/journey/certificate.py::reissue`'s own docstring.
 #
 # The input is CERTIFICATE_ID, never an address. A
 # `workflow_dispatch` input is rendered on the run page and retained with

@@ -10,7 +10,7 @@ import pytest
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
-from convener_ops.signing import (
+from convener_ops.journey.signing import (
     MALFORMED,
     MAX_TOKEN_BYTES,
     NO_MATCHING_KEY,

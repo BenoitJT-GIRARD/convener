@@ -79,7 +79,7 @@ from typing import Final
 import segno
 
 from .declaration import published
-from .registration import signup_url
+from .journey.registration import signup_url
 
 __all__ = [
     "QR_BORDER",

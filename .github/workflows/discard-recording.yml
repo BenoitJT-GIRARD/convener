@@ -6,7 +6,7 @@ name: Discard a recording
 # converted file stays publicly reachable at its own URL forever, even
 # after the conference is deleted -- verified against the provider, not
 # assumed. Two cases only, both named in
-# tools/convener_ops/platform_fcc.py's module docstring's "Which recordings
+# tools/convener_ops/journey/platform_fcc.py's module docstring's "Which recordings
 # take which route" section: the discussion segment, recorded on purpose
 # by the hosting runbook's three-step discipline but never published; and
 # a talk whose publication consent was withheld.

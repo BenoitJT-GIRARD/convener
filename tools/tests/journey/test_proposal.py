@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from conftest import EDITIONS, board_member, config, speaker
 
-from convener_ops.proposal import (
+from convener_ops.journey.proposal import (
     CAREER_STAGE_ORDER,
     CAREER_STAGES,
     GENDER_ORDER,
@@ -28,7 +28,7 @@ from convener_ops.validate import validate_speakers
 TODAY = "2026-01-08"
 
 _FIXTURE = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )

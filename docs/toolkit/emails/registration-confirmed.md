@@ -7,8 +7,8 @@ every other template in this section, so its placeholders are written in
 speaker record, and `{{ speaker.… }}` would render here as a missing marker,
 exactly the failure `toolkit/index.md` warns about. Kept here anyway, in the
 same form as every other outbound message, so a board member can read what a
-participant receives without opening `tools/convener_ops/confirmation.py`.
-`tools/tests/test_confirmation.py` pins this page's two load-bearing
+participant receives without opening `tools/convener_ops/journey/confirmation.py`.
+`tools/tests/journey/test_confirmation.py` pins this page's two load-bearing
 sentences against that module's own constants, so the two cannot quietly
 say different things.*
 
@@ -93,7 +93,7 @@ Best regards,
 - Without `email_transport`'s five secrets configured
   (`config/integrations.yml`), nothing here is actually sent: the composed
   message is written to a local file inside the job's own workspace instead,
-  never printed — see `tools/convener_ops/confirmation.py`'s module docstring for
+  never printed — see `tools/convener_ops/journey/confirmation.py`'s module docstring for
   why a message carrying an address and a matching code cannot use the same
   "print it to the job log" fallback `notify.py` uses for a message that
   carries neither.

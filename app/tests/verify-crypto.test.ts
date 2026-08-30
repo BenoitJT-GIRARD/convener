@@ -20,7 +20,7 @@ function toPem(der: ArrayBuffer, label: string): string {
 
 /** A fresh RSA-PKCS1v15/SHA-256 signing key pair -- for the two "signed by
  *  one of our own keys but the decoded payload still will not parse"
- *  cases the fixture cannot supply (`tools/convener_ops/signing.py::sign`
+ *  cases the fixture cannot supply (`tools/convener_ops/journey/signing.py::sign`
  *  refuses to produce one; see verify.ts's own docstring, "verify before
  *  you parse", for why this outcome is this system's own bug, never a
  *  forger's, and only reachable by a key that genuinely signed it).

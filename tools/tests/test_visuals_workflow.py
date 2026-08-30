@@ -168,7 +168,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/cli.py",
         "instances/example/instance/config.json",
         "tools/convener_ops/declaration/published.py",
-        "tools/convener_ops/registration.py",
+        "tools/convener_ops/journey/registration.py",
         "instances/example/instance/data/brand.json",
         "tools/convener_ops/brand.py",
         "fonts/**",

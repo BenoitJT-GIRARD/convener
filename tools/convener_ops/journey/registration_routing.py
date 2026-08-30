@@ -37,7 +37,7 @@ against a once-daily drain and a far-lane registrant is told they are
 registered and then never hears again until after the seminar.
 
 So the floor is derived here, from the drain's own cron, and
-`tools/tests/test_registration_routing.py` fails if the configured value
+`tools/tests/journey/test_registration_routing.py` fails if the configured value
 drops below it. `MISSED_DRAINS_COVERED` is why the floor is *twice* the
 drain's period rather than once: `sweep-and-notify.yml`'s own header
 comment records that GitHub's scheduled runs "are routinely ten to twenty
@@ -92,8 +92,8 @@ from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Final
 
-from .declaration.paths import PUBLIC_DATA_DIR
-from .governance import PARIS
+from ..declaration.paths import PUBLIC_DATA_DIR
+from ..governance import PARIS
 
 #: The maintainer-editable threshold, relative to a repository root. Beside
 #: `actions-budget.yml` and `integrations.yml`, never in `instance/data/config.yml`

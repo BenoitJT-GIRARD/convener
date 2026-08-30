@@ -881,7 +881,7 @@ def test_the_prose_sweep_refuses_a_citation_and_keeps_the_domain_noun() -> None:
     """Both halves, because only the second one can go quietly wrong.
 
     A sweep that refused `the plan` would be right about
-    `tools/tests/test_registration.py` and wrong about
+    `tools/tests/journey/test_registration.py` and wrong about
     `convener_ops/derivation.py`, which computes one and prints it -- and
     the way that failure shows up is a maintainer adding an exemption
     rather than a citation being removed.
