@@ -106,8 +106,8 @@ from math import ceil
 from pathlib import Path
 from typing import Any, Final
 
-from .declaration.paths import DATA_DIR
-from .journey.registration_routing import MISSED_DRAINS_COVERED
+from ..declaration.paths import DATA_DIR
+from ..journey.registration_routing import MISSED_DRAINS_COVERED
 
 #: Where the record lives, relative to a repository root -- the same "one
 #: function names the path" discipline `retention_liveness.LAST_RUN_PATH`
@@ -281,7 +281,7 @@ def alarm_bounds(period_hours: int, queue_beyond_hours: int) -> tuple[int, int]:
 
     Returns `(floor, ceiling)`. The two can meet, and with this
     repository's current settings they do -- see
-    `tools/tests/test_queue_watch.py`, which is where a configuration
+    `tools/tests/maintenance/test_queue_watch.py`, which is where a configuration
     outside them goes red. They can also cross, which is a real finding
     rather than a broken test: it says the lane threshold has been cut so
     close to the drain's cadence that no alarm can both wait for a healthy

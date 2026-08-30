@@ -20,7 +20,7 @@ from convener_ops.governance.governance import (
     PARIS,
     vote_window_days,
 )
-from convener_ops.sweep import expire_votes
+from convener_ops.maintenance.sweep import expire_votes
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:

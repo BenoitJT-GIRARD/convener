@@ -87,7 +87,7 @@ export function NewSpeaker() {
         host_1: '',
         host_2: '',
         status: 'lead',
-        // The vote window runs from `opened_on` (see tools/convener_ops/sweep.py), and
+        // The vote window runs from `opened_on` (see tools/convener_ops/maintenance/sweep.py), and
         // it opens the day the lead is recorded.
         selection: { ballots: [], opened_on: today, decided_on: '' },
         publication: {

@@ -1,5 +1,5 @@
 # What the example instance allows itself of its host organisation's Actions
-# minutes. The product's own reader is `tools/convener_ops/actions_usage.py`; the
+# minutes. The product's own reader is `tools/convener_ops/maintenance/actions_usage.py`; the
 # shape and the meaning of every key are that module's, and this file exists
 # only because `owner: instance` in `instance/actions-budget.yml` means a
 # second instance has to bring its own rather than inherit one.

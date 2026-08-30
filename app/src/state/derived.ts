@@ -57,7 +57,7 @@ export function parisDayOf(instant: Date): string {
  * `opened_on`, `joined_on`, `decided_on`, and every working-day deadline
  * derived from them. A volunteer acting late in the evening would stamp the
  * record with the wrong day and every later comparison would inherit it.
- * `tools/convener_ops/sweep.py::_paris_today` anchors the unattended job the same
+ * `tools/convener_ops/maintenance/sweep.py::_paris_today` anchors the unattended job the same
  * way; an ESLint rule in `eslint.config.js` keeps the UTC form from coming
  * back.
  */
@@ -158,7 +158,7 @@ export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
   if (s.status !== 'scheduled' || !s.date) return false;
   if (s.time) {
     // A falsy configured value (0, or unset) falls back to the default,
-    // matching tools/convener_ops/sweep.py's `or 90` — the two must agree since
+    // matching tools/convener_ops/maintenance/sweep.py's `or 90` — the two must agree since
     // one displays the transition and the other persists it.
     const duration = (config.seminar_duration_minutes || 90) * 60_000;
     return now.getTime() >= parisWallTimeToEpoch(s.date, s.time) + duration;
@@ -169,7 +169,7 @@ export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
 
 /**
  * What the user should see, which is not always what is recorded.
- * Persisting this transition is the scheduled job's business (tools/convener_ops/sweep.py),
+ * Persisting this transition is the scheduled job's business (tools/convener_ops/maintenance/sweep.py),
  * so that a single writer owns it and two open tabs cannot race.
  */
 export function effectiveStatus(s: Speaker, config: Config, now: Date): SpeakerStatus {

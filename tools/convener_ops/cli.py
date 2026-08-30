@@ -20,7 +20,6 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import actions_usage, queue_watch, retention_liveness, routing_watch
 from convener_ops.declaration import published
 from convener_ops.declaration.integrations import (
     ABSENT,
@@ -126,10 +125,16 @@ from convener_ops.journey.registration import (
     to_registration,
     upsert,
 )
+from convener_ops.maintenance import (
+    actions_usage,
+    queue_watch,
+    retention_liveness,
+    routing_watch,
+)
+from convener_ops.maintenance.sweep import expire_votes, sweep_inactive_members
+from convener_ops.maintenance.sweep import sweep as sweep_speakers
 from convener_ops.publication import agenda, announce, formats, visual
 from convener_ops.publication.public_data import to_public, to_survey_status
-from convener_ops.sweep import expire_votes, sweep_inactive_members
-from convener_ops.sweep import sweep as sweep_speakers
 
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the
@@ -159,11 +164,11 @@ SURVEY_INVITATIONS_HEADER = (
 )
 #: Evidence that retention.yml's own
 #: schedule still fires, independent of whether that day's sweep found
-#: anything due; see tools/convener_ops/retention_liveness.py's own module
+#: anything due; see tools/convener_ops/maintenance/retention_liveness.py's own module
 #: docstring.
 RETENTION_LAST_RUN_HEADER = (
     "# Evidence the retention sweep still runs; "
-    "see tools/convener_ops/retention_liveness.py\n"
+    "see tools/convener_ops/maintenance/retention_liveness.py\n"
 )
 #: Which queue entries a drain has already applied, so a
 #: drain that committed its result and was then interrupted before clearing
@@ -179,10 +184,10 @@ QUEUE_LEDGER_HEADER = (
 #: than a `timeout-minutes` ceiling. Committed on purpose: legible by
 #: opening this repository, with no run log to scroll and no CI required.
 #: The second line is the caveat that must travel with every number in the
-#: file; see tools/convener_ops/actions_usage.py's own module docstring.
+#: file; see tools/convener_ops/maintenance/actions_usage.py's own module docstring.
 ACTIONS_USAGE_HEADER = (
     "# What this repository's own Actions runs really billed; "
-    "see tools/convener_ops/actions_usage.py\n"
+    "see tools/convener_ops/maintenance/actions_usage.py\n"
     "# A LOWER BOUND, never the bill: the free minutes belong to the "
     "organisation and are shared.\n"
 )
@@ -1249,11 +1254,11 @@ QUEUE_BODY: Final = "queue-body.md"
 #: every other record this repository keeps about itself: legible by
 #: opening the repository, with no run log to scroll and no CI required,
 #: which is exactly what survives the scenario a watchdog inside GitHub
-#: Actions cannot report on. See tools/convener_ops/queue_watch.py's own module
-#: docstring.
+#: Actions cannot report on. See tools/convener_ops/maintenance/queue_watch.py's own
+#: module docstring.
 QUEUE_WATCH_HEADER = (
     "# What the public submission queue still holds, and since when; "
-    "see tools/convener_ops/queue_watch.py\n"
+    "see tools/convener_ops/maintenance/queue_watch.py\n"
 )
 
 
@@ -1850,7 +1855,7 @@ def check_queue_liveness() -> int:
         print(
             f"::error::{named} does not exist -- the daily job has never "
             "recorded what the public submission queue holds (or the file "
-            "was removed); see tools/convener_ops/queue_watch.py",
+            "was removed); see tools/convener_ops/maintenance/queue_watch.py",
             file=sys.stderr,
         )
         return 1
@@ -1942,8 +1947,8 @@ def check_registration_routing() -> int:
     `instance/registration-lanes.yml` with the same function `deploy.yml`
     runs, and compares it with the committed file over the events a
     registration arriving now could still be queued for. See
-    `tools/convener_ops/routing_watch.py` for why that comparison rather than
-    the file's age, and for why a file naming only past events is a quiet
+    `tools/convener_ops/maintenance/routing_watch.py` for why that comparison rather
+    than the file's age, and for why a file naming only past events is a quiet
     season instead of an alarm.
 
     Returns 0 even when a finding fires, the same split the budget alarm
@@ -2158,8 +2163,8 @@ def record_retention_run() -> int:
     above it actually found anything, deleted a secret, or even ran to
     completion -- this function answers only "did the schedule fire and
     the job start", never "did it finish correctly". See
-    `tools/convener_ops/retention_liveness.py`'s own module docstring for why
-    conflating the two into one signal would be worse than answering
+    `tools/convener_ops/maintenance/retention_liveness.py`'s own module docstring for
+    why conflating the two into one signal would be worse than answering
     neither: a broken token failing loudly every day is already visible
     on the Actions tab and in GitHub's own failure e-mail; recording that
     as "healthy" here would bury it behind a checkmark instead.
@@ -2434,7 +2439,7 @@ def check_actions_usage_liveness() -> int:
         print(
             f"::error::{named} does not exist -- the daily job has never "
             "recorded what this repository's runs cost (or the file was "
-            "removed); see tools/convener_ops/actions_usage.py",
+            "removed); see tools/convener_ops/maintenance/actions_usage.py",
             file=sys.stderr,
         )
         return 1

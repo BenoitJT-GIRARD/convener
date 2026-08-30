@@ -70,7 +70,7 @@ import type { Config, Speaker } from '../data/types';
  *
  *  Three are keyed as in `config.sla_days`. `lead_decision` is not a key of
  *  it: the board's deadline is `config.vote_window_days`, the number
- *  `tools/convener_ops/sweep.py` parks an expired lead on, and holding it
+ *  `tools/convener_ops/maintenance/sweep.py` parks an expired lead on, and holding it
  *  twice let a file say the board was on time the very morning the job
  *  parked the lead. */
 export const SLA_STEPS = [
@@ -209,7 +209,7 @@ export const SUMMARY_ITEM = 'delivered/forum-summary';
  * counts against the same card.
  *
  * This reads the *stored* status, not `effectiveStatus`: the wrap-up clock
- * therefore starts when `tools/convener_ops/sweep.py` records the talk as
+ * therefore starts when `tools/convener_ops/maintenance/sweep.py` records the talk as
  * delivered rather than the instant it ends. That is at most a day of slack on
  * a seven-day target, and it keeps this function free of a `now: Date`
  * argument -- which is what keeps a UTC-versus-Paris day from being
@@ -221,7 +221,7 @@ export function dueDate(s: Speaker, config: Config): Deadline | null {
   if (s.status === 'lead') {
     if (!s.selection.opened_on) return null;
     // `vote_window_days`, not an `sla_days` key of its own: the day
-    // this step becomes late is the day `tools/convener_ops/sweep.py` parks the
+    // this step becomes late is the day `tools/convener_ops/maintenance/sweep.py` parks the
     // lead, and while those were two numbers a config could set one to 20 and
     // have this screen call the board on time the morning the job parked it.
     return deadline('lead_decision', s.selection.opened_on, config.vote_window_days);

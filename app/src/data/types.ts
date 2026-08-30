@@ -496,7 +496,7 @@ export interface Config {
    *  `selection.opened_on`.
    *
    *  Also the board's decision deadline, which is why `sla_days` has no
-   *  `lead_decision`: `tools/convener_ops/sweep.py::expire_votes` parks a
+   *  `lead_decision`: `tools/convener_ops/maintenance/sweep.py::expire_votes` parks a
    *  lead the day after this window closes, and a second key holding the same
    *  deadline let a file say the board was on time that very morning. */
   vote_window_days: number;

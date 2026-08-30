@@ -33,7 +33,6 @@ from typing import Any
 import pytest
 from conftest import WorkflowYaml
 
-from convener_ops import actions_usage
 from convener_ops.cli import (
     actions_usage_window,
     check_actions_usage_liveness,
@@ -41,6 +40,7 @@ from convener_ops.cli import (
 )
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
+from convener_ops.maintenance import actions_usage
 
 _ROOT = repo_root()
 _SWEEP_PATH = _ROOT / ".github" / "workflows" / "sweep-and-notify.yml"

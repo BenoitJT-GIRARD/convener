@@ -712,7 +712,7 @@ describe('the rule as a whole', () => {
 
 /**
  * `isUnsettled` is one half of a rule implemented twice: the other half is
- * `tools/convener_ops/sweep.py::_unsettled_candidates`, which keeps a candidate the
+ * `tools/convener_ops/maintenance/sweep.py::_unsettled_candidates`, which keeps a candidate the
  * board is still arguing about off the inactivity proposal. The Python copy
  * mirrored the narrower `isPending` until these cases were written, so a
  * seated member carrying a deferred nomination could be named by the very

@@ -13,7 +13,7 @@
  *
  * These take and return ISO `YYYY-MM-DD` days and read no clock, so there is no
  * timezone for them to get wrong: the caller supplies the day, already anchored
- * on Europe/Paris the way `tools/convener_ops/sweep.py::_paris_today` anchors it. A
+ * on Europe/Paris the way `tools/convener_ops/maintenance/sweep.py::_paris_today` anchors it. A
  * signature taking a `Date` would have made a UTC-versus-Paris off-by-one day
  * *representable*; this one does not.
  *

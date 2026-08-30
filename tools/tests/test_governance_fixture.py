@@ -28,7 +28,7 @@ from convener_ops.governance.notify import (
     overdue_text,
     waiting_since,
 )
-from convener_ops.sweep import _unsettled_candidates
+from convener_ops.maintenance.sweep import _unsettled_candidates
 
 CASES = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(

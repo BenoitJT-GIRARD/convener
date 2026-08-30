@@ -68,7 +68,7 @@
 # here, as steps, for one reason: a workflow or a job created to watch the
 # cost would cost a billed job a day, every day, which is self-defeating.
 # The steps themselves are at the bottom of `daily`, with their own
-# reasoning; `tools/convener_ops/actions_usage.py` holds the arithmetic and
+# reasoning; `tools/convener_ops/maintenance/actions_usage.py` holds the arithmetic and
 # `instance/actions-budget.yml` the thresholds.
 
 name: Sweep and notify the board
@@ -592,7 +592,7 @@ jobs:
       # The signal is the **age of the oldest waiting entry**, not how many
       # are waiting: a hundred entries that arrived this morning is a good
       # day, one entry stuck for five days is somebody who will never get
-      # into the room. See tools/convener_ops/queue_watch.py's own module
+      # into the room. See tools/convener_ops/maintenance/queue_watch.py's own module
       # docstring for why that age is measured from this repository's own
       # successive observations rather than from the millisecond an entry
       # id carries.
@@ -728,7 +728,7 @@ jobs:
       # the board's thread, which this job already holds.
       #
       # The signal is what the file can still *route*, never how old it
-      # is -- see tools/convener_ops/routing_watch.py's own module docstring
+      # is -- see tools/convener_ops/maintenance/routing_watch.py's own module docstring
       # for the three mechanical reasons an age check would be the wrong
       # one here, chief among them that `deploy.yml` ignores `config/**`,
       # so this file can be minutes old and already wrong.
@@ -819,7 +819,7 @@ jobs:
       # The three steps are separate on purpose. The middle one is the
       # only thing in this feature that touches the network -- every line
       # of arithmetic downstream is a pure function driven from a fixture
-      # by tools/tests/test_actions_usage.py, which is a project-wide rule
+      # by tools/tests/maintenance/test_actions_usage.py, which is a project-wide rule
       # and not a preference.
       - name: Window
         id: usage-window

@@ -24,8 +24,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import retention_liveness
 from convener_ops.cli import check_retention_liveness, record_retention_run
+from convener_ops.maintenance import retention_liveness
 
 # ==================================================================== #
 # retention_liveness.py: the pure record shape and staleness arithmetic

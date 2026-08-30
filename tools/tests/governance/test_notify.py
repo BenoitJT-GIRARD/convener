@@ -43,7 +43,7 @@ from convener_ops.governance.notify import (
     resolve_channel,
     waiting_since,
 )
-from convener_ops.sweep import expire_votes
+from convener_ops.maintenance.sweep import expire_votes
 
 NOW = datetime(2026, 8, 18, 9, 0, tzinfo=UTC)
 

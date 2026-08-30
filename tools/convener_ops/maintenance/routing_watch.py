@@ -128,13 +128,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
-from .journey import registration_routing
+from ..journey import registration_routing
 
 #: How `registration_routing.to_routing_data` spells an instant. Seconds
 #: precision, always UTC, always the same width. Not shared with that
 #: module as one constant on purpose: what has to hold is that this reader
 #: can read what that writer writes, and
-#: `tools/tests/test_routing_watch.py` proves it by parsing that
+#: `tools/tests/maintenance/test_routing_watch.py` proves it by parsing that
 #: function's real output rather than by comparing two literals.
 INSTANT_FORMAT: Final = "%Y-%m-%dT%H:%M:%SZ"
 

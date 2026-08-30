@@ -19,7 +19,7 @@
 # only ever answers "did it run at all"). This workflow reads that one
 # committed fact, on its own independent daily schedule, and fails loudly
 # -- an `::error::` annotation, a red run -- once it has gone more than
-# `tools/convener_ops/retention_liveness.py::MAX_SILENT_DAYS` days without
+# `tools/convener_ops/maintenance/retention_liveness.py::MAX_SILENT_DAYS` days without
 # moving. It therefore catches: `retention.yml`'s schedule quietly
 # disabled while the rest of the repository stays active, its own runs
 # failing before they ever reach that last step (a checkout failure, a

@@ -223,7 +223,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     // The raw record is untouched: writing the transition is the scheduled
-    // job's business (tools/convener_ops/sweep.py), not the browser's.
+    // job's business (tools/convener_ops/maintenance/sweep.py), not the browser's.
     expect(result.current.speakers[0].status).toBe('scheduled');
     expect(result.current.spkSha).toBe('spksha');
     expect(putSpy).not.toHaveBeenCalled();

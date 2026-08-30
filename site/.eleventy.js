@@ -314,7 +314,7 @@ const SHARE_IMAGE_HEIGHT = 630;
 
 // The seminar's own fixed length, `instance/data/config.yml::
 // seminar_duration_minutes` (also read, with the same 90-minute default,
-// by `tools/convener_ops/sweep.py::sweep` and now by this feed's own Python
+// by `tools/convener_ops/maintenance/sweep.py::sweep` and now by this feed's own Python
 // twin, `tools/convener_ops/publication/agenda.py::build_internal_calendar`) -- a plain
 // site-wide constant, on the same footing `STANDING_START_LOCAL` above
 // already stands on, not a computed rule the D-14 fixture would need to

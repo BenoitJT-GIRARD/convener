@@ -24,7 +24,7 @@ export function SpeakerPage() {
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
   // Display only: what has aired, not necessarily what's recorded yet — the
-  // scheduled job (tools/convener_ops/sweep.py) is the single writer for that.
+  // scheduled job (tools/convener_ops/maintenance/sweep.py) is the single writer for that.
   const displayStatus = config ? effectiveStatus(s, config, new Date()) : s.status;
 
   async function toggle(key: string, value: boolean) {

@@ -73,7 +73,7 @@ from math import ceil
 from pathlib import Path
 from typing import Any, Final
 
-from .declaration.paths import DATA_DIR
+from ..declaration.paths import DATA_DIR
 
 #: Where a maintainer edits the thresholds. Deliberately **not**
 #: `instance/data/config.yml`: that file is the app's own governance config, read

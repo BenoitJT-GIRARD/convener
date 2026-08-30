@@ -41,7 +41,7 @@ export function Agenda() {
             <div className="space-y-2">
               {items.map(s => {
                 // Display only: what has aired, not necessarily what's
-                // recorded yet — the scheduled job (tools/convener_ops/sweep.py)
+                // recorded yet — the scheduled job (tools/convener_ops/maintenance/sweep.py)
                 // is the single writer for that transition.
                 const displayStatus = config ? effectiveStatus(s, config, now) : s.status;
                 return (

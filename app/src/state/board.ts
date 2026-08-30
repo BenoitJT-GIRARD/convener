@@ -185,7 +185,7 @@ function isPending(n: Nomination): boolean {
  * worse than the one this rule exists to prevent.
  *
  * Exported because this rule crosses the language boundary:
- * `tools/convener_ops/sweep.py::_unsettled_candidates` asks the same question of
+ * `tools/convener_ops/maintenance/sweep.py::_unsettled_candidates` asks the same question of
  * the same file, to keep a member the board is arguing about off the
  * inactivity proposal. The pair is pinned by
  * `tools/tests/fixtures/governance-cases.json`'s `unsettled_nomination_cases`,

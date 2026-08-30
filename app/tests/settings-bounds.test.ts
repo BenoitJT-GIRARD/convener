@@ -2,7 +2,7 @@
  * The browser's side of the boundary between an instance threshold and the
  * arithmetic that bounds it.
  *
- * `tools/convener_ops/queue_watch.py` and
+ * `tools/convener_ops/maintenance/queue_watch.py` and
  * `tools/convener_ops/journey/registration_routing.py` decide what
  * `instance/queue-drain.yml`'s `alarm_after_hours` and
  * `instance/registration-lanes.yml`'s `queue_beyond_hours` may be; the

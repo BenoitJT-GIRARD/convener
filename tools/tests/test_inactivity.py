@@ -24,7 +24,7 @@ from convener_ops.governance.governance import (
     last_ballot_on,
 )
 from convener_ops.governance.validate import validate_config
-from convener_ops.sweep import (
+from convener_ops.maintenance.sweep import (
     _inactivity_months,
     _months_before,
     sweep_inactive_members,

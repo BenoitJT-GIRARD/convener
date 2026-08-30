@@ -855,8 +855,8 @@ def validate_config(cfg: Any) -> list[str]:
             # A seat, not an *active* seat: the nomination attests that the
             # board granted one, which stays true after G-09 moves the member
             # to `inactive`. Requiring `active` here would make the inactivity
-            # rule (tools/convener_ops/sweep.py::sweep_inactive_members) unable to
-            # touch anyone the board itself admitted, and would push toward
+            # rule (tools/convener_ops/maintenance/sweep.py::sweep_inactive_members)
+            # unable to touch anyone the board itself admitted, and would push toward
             # deleting the nomination - erasing how a member arrived in order
             # to record that they have gone quiet.
             if outcome == "accepted" and isinstance(candidate, str):

@@ -1,4 +1,4 @@
-# What the example instance's own Actions runs really billed; see tools/convener_ops/actions_usage.py
+# What the example instance's own Actions runs really billed; see tools/convener_ops/maintenance/actions_usage.py
 # A LOWER BOUND, never the bill: the free minutes belong to the organisation and are shared.
 v: 1
 latest:

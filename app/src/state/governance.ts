@@ -98,7 +98,7 @@ export function decide(input: DecideInput): Outcome {
  * behaviour without changing its arguments.
  *
  * This gate is implemented in TypeScript only. No unattended path archives a
- * seminar -- `tools/convener_ops/sweep.py` writes the scheduled -> delivered
+ * seminar -- `tools/convener_ops/maintenance/sweep.py` writes the scheduled -> delivered
  * transition and nothing past it -- so there is no second implementation to
  * pin, and `tools/tests/fixtures/governance-cases.json` is deliberately not
  * extended for it. The working-day arithmetic this leans on *is* shared, and

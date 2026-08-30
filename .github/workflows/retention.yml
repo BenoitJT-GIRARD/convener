@@ -255,7 +255,7 @@ jobs:
         # CONVENER_RETENTION_TOKEN -- failing loudly every single day -- hide
         # behind a "ran recently" checkmark here; that is a real, ongoing
         # failure this step must never launder into looking fine. See
-        # tools/convener_ops/retention_liveness.py's own module docstring and
+        # tools/convener_ops/maintenance/retention_liveness.py's own module docstring and
         # retention-watchdog.yml's own header comment for the rest of this
         # reasoning, including what neither one catches.
         #

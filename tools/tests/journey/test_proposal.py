@@ -23,7 +23,7 @@ from convener_ops.journey.proposal import (
     to_lead,
     verify_signature,
 )
-from convener_ops.sweep import expire_votes
+from convener_ops.maintenance.sweep import expire_votes
 
 TODAY = "2026-01-08"
 

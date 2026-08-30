@@ -5,7 +5,7 @@ from typing import Any
 
 from conftest import config, speaker
 
-from convener_ops.sweep import sweep
+from convener_ops.maintenance.sweep import sweep
 
 
 def _scheduled(**overrides: Any) -> dict[str, Any]:

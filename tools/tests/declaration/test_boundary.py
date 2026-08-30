@@ -79,7 +79,6 @@ import pytest
 import yaml
 
 import convener_ops
-from convener_ops import actions_usage, queue_watch
 from convener_ops.declaration import boundary
 from convener_ops.declaration.boundary import (
     INSTANCE,
@@ -95,6 +94,7 @@ from convener_ops.declaration.boundary import (
 )
 from convener_ops.declaration.paths import repo_root
 from convener_ops.journey import registration_routing
+from convener_ops.maintenance import actions_usage, queue_watch
 
 ROOT = repo_root()
 

@@ -1920,7 +1920,7 @@ heavy year, a sabbatical or a period of leave; twelve is long enough that a
 proposal cannot be triggered by accident, which matters because every line
 the rule prints names a real volunteer.
 
-`tools/convener_ops/sweep.py::sweep_inactive_members` computes the proposal — the
+`tools/convener_ops/maintenance/sweep.py::sweep_inactive_members` computes the proposal — the
 config as it would read, and one line per member naming the date of their
 last ballot — and **no command applies it**.
 
@@ -2061,7 +2061,7 @@ Those two meet at 48, so raising `queue_beyond_hours` is the only thing that
 buys the alarm any room, and lowering it towards its own floor makes the pair
 impossible. The screen says so before anybody needs it, and refuses either
 end. Editing the files by hand still works and is still checked, but only
-later, by `tools/tests/test_queue_watch.py`.
+later, by `tools/tests/maintenance/test_queue_watch.py`.
 
 **When a saved value starts being read is not "on save", and it differs per
 value.** A commit here starts `.github/workflows/deploy.yml`, which is what

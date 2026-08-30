@@ -31,11 +31,11 @@ from typing import Any
 import pytest
 from conftest import workflow_triggers
 
-from convener_ops import queue_watch
 from convener_ops.cli import check_queue_liveness, record_queue_watch
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.journey import registration_routing
+from convener_ops.maintenance import queue_watch
 
 _ROOT = repo_root()
 _SWEEP_PATH = _ROOT / ".github" / "workflows" / "sweep-and-notify.yml"
