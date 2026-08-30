@@ -901,7 +901,7 @@ def test_no_test_module_reads_an_instance_path_while_it_loads() -> None:
     """
     board = load()
     offending: list[str] = []
-    for path in sorted((ROOT / "tools" / "tests").glob("*.py")):
+    for path in sorted((ROOT / "tools" / "tests").rglob("*.py")):
         source = path.read_text(encoding="utf-8")
         for line, candidate in _module_level_reads(source):
             if board.owner_of(candidate) == INSTANCE or board.owns_directory(candidate):

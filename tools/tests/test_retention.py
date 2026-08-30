@@ -157,7 +157,7 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
     suspect_fragments = ("private_pem", "private_key")
     package_dir = repo_root() / "tools" / "convener_ops"
     checked = 0
-    for path in sorted(package_dir.glob("*.py")):
+    for path in sorted(package_dir.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if not (
