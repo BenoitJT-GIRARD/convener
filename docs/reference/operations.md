@@ -93,11 +93,11 @@ still holds.
 
 **To create:**
 1. Build the public form: `TALLY_API_KEY=tly-xxxx uv run python
-   ../scripts/create_tally_form.py` from `tools/`. It is created as a
+   scripts/create_tally_form.py` from `tools/`. It is created as a
    `DRAFT`, deliberately — open it in Tally's dashboard and confirm the
    hint text actually renders under *Gender* and *Career stage* before
    publishing it. That text is placed on each dropdown's first option, a
-   location `scripts/create_tally_form.py`'s own docstring notes is
+   location `tools/scripts/create_tally_form.py`'s own docstring notes is
    inferred from Tally's schema rather than confirmed against a worked
    example, so the script cannot verify for itself that Tally renders it
    as a hint rather than treating it as something else (Tally's OpenAPI
@@ -2177,8 +2177,8 @@ a pure function, and no test in this repository ever makes an API call.
 
 ## The one-shot scripts
 
-`scripts/migrate_v3.py` and `scripts/open_vote_window.py` have both already
-run, and their effects are committed. They are kept, separately, and neither
+`tools/migrations/migrate_v3.py` and `tools/scripts/open_vote_window.py` have
+both already run, and their effects are committed. They are kept, separately, and neither
 is deleted nor merged into the other.
 
 Kept, because each is the record of what was done to the data on a day

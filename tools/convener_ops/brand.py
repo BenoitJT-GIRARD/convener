@@ -2,7 +2,7 @@
 instance, and the design ships whole rather than being demanded.
 
 Three things used to read `instance/data/brand.json`, each with its own two-line
-loader: `scripts/generate_brand_css.py` for the two stylesheets,
+loader: `tools/scripts/generate_brand_css.py` for the two stylesheets,
 `ribbon.py` for the motif, `visual.py` for the colours. Three loaders were
 harmless while there was exactly one file to load. They stopped being
 harmless the moment the file became optional: a duplicate that ships no
@@ -60,7 +60,7 @@ The arithmetic lives here, not in the generator
 WCAG 2.1 relative luminance and contrast are needed on both sides: by
 `generate_brand_css.py`, which refuses to write a stylesheet from a
 palette that fails AA, and by `visual.py`/`ribbon.py`, which are inside
-this package and cannot import `scripts/` (`tools/pyproject.toml`'s wheel
+this package and cannot import `tools/scripts/` (`tools/pyproject.toml`'s wheel
 ships `convener_ops` alone). One implementation, imported by the script, rather
 than the script owning it and the package doing without.
 """

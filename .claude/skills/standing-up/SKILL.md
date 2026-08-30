@@ -7,12 +7,13 @@ description: Carry out STANDING-UP.yml, the declared sequence that turns no repo
 
 This page is generated from `STANDING-UP.yml`, the one declaration of this
 sequence. Do not edit it: run `uv run python
-../scripts/generate_standing_up_skill.py` from `tools/` and commit what it
+scripts/generate_standing_up_skill.py` from `tools/` and commit what it
 writes, and continuous integration refuses a page the declaration does not
 derive. `docs/reference/standing-up.md` is the same declaration rendered for a
 person, and `AGENTS.md` points here for an agent that does not find this file
-on its own. The prose below lives in `scripts/generate_standing_up_skill.py`;
-the run sheet at the end comes from the declaration.
+on its own. The prose below lives in
+`tools/scripts/generate_standing_up_skill.py`; the run sheet at the end comes
+from the declaration.
 
 ## What this page is, and what it is not
 
@@ -59,8 +60,8 @@ For each step in the declared order, one step at a time:
    where it has one, `sets`, `walkthrough`, and either `degraded` or
    `integrations`.
 2. Where the run sheet says **carry out**, do it — with `gh`, `wrangler`,
-   `scripts/create_tally_form.py`, a file edit, or one of this repository's
-   own commands.
+   `tools/scripts/create_tally_form.py`, a file edit, or one of this
+   repository's own commands.
 3. Where it says **hand over**, stop, give the person the step, and wait for
    them.
 4. Prove it with that step's own `check`.

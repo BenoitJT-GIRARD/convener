@@ -26,10 +26,10 @@ browser-side "shrink to fit" script).
 Where the identity comes from, and where it does not
 --------------------------------------------------------
 Every colour below is read out of `instance/data/brand.json` by this module's own
-`_load_colours`, never imported from `scripts/generate_brand_css.py`:
+`_load_colours`, never imported from `tools/scripts/generate_brand_css.py`:
 `convener_ops` ships as an installed package (`tools/pyproject.toml`'s own
 `[tool.hatch.build.targets.wheel]` lists only this one package), and
-`scripts/` sits outside it -- exactly the boundary `ribbon.py`'s own
+`tools/scripts/` sits outside it -- exactly the boundary `ribbon.py`'s own
 `_load_motif` already respects (`ribbon.py`'s module docstring: "threaded
 in from `repo_root()` at the call site rather than resolved here"). So
 this reads the one shared source of fact directly, the same file the
@@ -402,7 +402,7 @@ def _load_colours(root: Path) -> dict[str, str]:
     decides *which* charter is in force (the instance's own values, or the
     product's default when a duplicate has not written any).
 
-    Still not an import of `scripts/generate_brand_css.py`, which is the
+    Still not an import of `tools/scripts/generate_brand_css.py`, which is the
     boundary the module docstring above is about: that script lives
     outside the installed package. `brand.py` is inside it, and it exists
     precisely so that this module and that script cannot answer "which

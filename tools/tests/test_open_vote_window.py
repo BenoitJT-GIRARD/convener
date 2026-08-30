@@ -1,4 +1,4 @@
-"""Opening the vote window on the backlog (scripts/open_vote_window.py).
+"""Opening the vote window on the backlog (tools/scripts/open_vote_window.py).
 
 The transformation is pure and tested here before it is ever pointed at
 `instance/data/`, because the file it rewrites holds real people's names and e-mail

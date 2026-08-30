@@ -1,4 +1,4 @@
-"""The v2 -> v3 migration (scripts/migrate_v3.py).
+"""The v2 -> v3 migration (tools/migrations/migrate_v3.py).
 
 The transformations are pure and tested here before they are ever pointed
 at `instance/data/`, because the file they rewrite holds real people's names, e-mail
@@ -278,9 +278,9 @@ def test_the_migrated_data_passes_the_validator() -> None:
     still fails here.
 
     The gap closes in two steps, not one, and each is named separately:
-    `scripts/migrate_v4.py` closes the six v4 fields but leaves
+    `tools/migrations/migrate_v4.py` closes the six v4 fields but leaves
     `survey_enabled` still missing (`expected_v5_gap` below), and
-    `scripts/migrate_v5.py` closes that. The third assertion runs all
+    `tools/migrations/migrate_v5.py` closes that. The third assertion runs all
     three one-shots in the order they were actually run against `instance/data/`
     and asserts the validator then finds nothing at all. Naming each gap
     and naming what closes it is what keeps this assertion exhaustive

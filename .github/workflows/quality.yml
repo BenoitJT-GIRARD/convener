@@ -194,14 +194,16 @@ jobs:
         run: npm ci
       - name: Lint
         working-directory: tools
-        # `../scripts` too: it is Python, holds the one-shot migrations and
-        # the schema-doc generator run below, and is not a package of its
-        # own with a gate of its own -- `tools/pyproject.toml` is the only
-        # ruff config in the repository, and this is the job that has `uv`.
-        run: uv run ruff check . ../scripts
+        # `.` is every Python file in the repository: the package, the
+        # generators, the migrations and the tests all sit under `tools/`,
+        # and `tools/pyproject.toml` is the only ruff config there is. The
+        # ruff hooks in `.pre-commit-config.yaml` cover the same set, and
+        # `tools/tests/test_lint_scope.py` reads both files and compares
+        # what each one reaches file by file.
+        run: uv run ruff check .
       - name: Format check
         working-directory: tools
-        run: uv run ruff format --check . ../scripts
+        run: uv run ruff format --check .
       - name: Types
         working-directory: tools
         run: uv run mypy
@@ -268,7 +270,7 @@ jobs:
         # Unlike the register above, this reads no history at all, only two
         # files in the tree, so it would be satisfied by the shallow clone the
         # other jobs take; it runs here because this is the job that has `uv`.
-        run: uv run python ../scripts/generate_schema_doc.py --check
+        run: uv run python scripts/generate_schema_doc.py --check
       - name: Standing-up guide
         working-directory: tools
         # `docs/reference/standing-up.md` is derived from `STANDING-UP.yml`,
@@ -279,7 +281,7 @@ jobs:
         # defect with a longer fuse. Same assertion-only run as the two
         # around it: writes nothing, fails if the committed page is not what
         # the declaration and `config/integrations.yml` give.
-        run: uv run python ../scripts/generate_standing_up_doc.py --check
+        run: uv run python scripts/generate_standing_up_doc.py --check
       - name: Standing-up skill
         working-directory: tools
         # The second rendering of that same declaration:
@@ -289,7 +291,7 @@ jobs:
         # `STANDING-UP.yml` when the step comes up. A guide corrected without
         # the run sheet beside it is the drift the step above exists to
         # refuse, one artefact further along. Assertion-only, like the rest.
-        run: uv run python ../scripts/generate_standing_up_skill.py --check
+        run: uv run python scripts/generate_standing_up_skill.py --check
       - name: Brand tokens and templates
         working-directory: tools
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
@@ -307,7 +309,7 @@ jobs:
         # below WCAG AA rather than only one that disagrees with a file.
         # That last clause is what lets the product ship a default palette
         # at all, so it has to run here and not only in pytest.
-        run: uv run python ../scripts/generate_brand_css.py --check
+        run: uv run python scripts/generate_brand_css.py --check
 
   # The former `typescript`, `site` and `spelling` jobs, merged.
   # Three jobs, one Node, one checkout -- and `app/`'s own `npm ci` run

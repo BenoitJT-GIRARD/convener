@@ -121,10 +121,10 @@ that goes red on somebody else's laptop for a reason that is not a defect.
 The alternatives were weighed against what this repository already does:
 
 - **Commit the PNG and hold it to a tolerance**, the way
-  `visuals/render-and-compare.mjs` holds `visuals/references/*.png` (24
+  `tools/visuals/render-and-compare.mjs` holds `tools/visuals/references/*.png` (24
   levels per channel, 0.1% of pixels). That comparison is honest for what
   it is for, and it needs a browser -- so it could never run inside
-  `scripts/generate_brand_css.py --check`, which is pure Python and is
+  `tools/scripts/generate_brand_css.py --check`, which is pure Python and is
   what `convener_ops.derivation` re-runs when it builds a duplicate's
   repository. A duplicate would inherit *this* instance's background, in a
   file no guard can read. That is the defect, not a smaller version of it.
@@ -511,7 +511,7 @@ def _values(root: Path) -> dict[str, str]:
 #: outright rather than drawing anything; `test_brand.py` parses both
 #: files as XML now, so the next one is a failing test instead.
 _GENERATED_NOTE: Final = """\
-  <!-- Generated, not drawn: scripts/generate_brand_css.py writes this file
+  <!-- Generated, not drawn: tools/scripts/generate_brand_css.py writes this file
   from instance/data/brand.json (the colours and the motif) and instance/config.json
   (the names). Change one of those, run that command, and commit what it
   writes; an edit made here is overwritten, and the check fails until it

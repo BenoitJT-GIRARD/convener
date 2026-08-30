@@ -1,5 +1,5 @@
 """Pins `.github/workflows/visuals.yml`,
-`visuals/render-and-compare.mjs` and `visuals/package.json` against the
+`tools/visuals/render-and-compare.mjs` and `tools/visuals/package.json` against the
 properties a green run does not, by itself, prove -- the same idiom
 `test_a11y_workflow.py` already uses for the accessibility checker.
 
@@ -28,9 +28,11 @@ _ROOT = repo_root()
 _WORKFLOW = (_ROOT / ".github" / "workflows" / "visuals.yml").read_text(
     encoding="utf-8"
 )
-_SCRIPT = (_ROOT / "visuals" / "render-and-compare.mjs").read_text(encoding="utf-8")
+_SCRIPT = (_ROOT / "tools" / "visuals" / "render-and-compare.mjs").read_text(
+    encoding="utf-8"
+)
 _PACKAGE_JSON = json.loads(
-    (_ROOT / "visuals" / "package.json").read_text(encoding="utf-8")
+    (_ROOT / "tools" / "visuals" / "package.json").read_text(encoding="utf-8")
 )
 #: Parsed structurally where a plain substring check would also match this
 #: file's own explanatory comments (which quite deliberately *do* mention
@@ -171,7 +173,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/brand.py",
         "fonts/**",
         "tools/uv.lock",
-        "visuals/**",
+        "tools/visuals/**",
         ".github/workflows/visuals.yml",
     }
     for path in expected_paths:
@@ -243,7 +245,7 @@ def test_node_version_meets_puppeteers_own_floor() -> None:
 
 
 def test_npm_ci_installs_from_the_visuals_lockfile() -> None:
-    assert "working-directory: visuals" in _WORKFLOW
+    assert "working-directory: tools/visuals" in _WORKFLOW
     assert "run: npm ci" in _WORKFLOW
 
 
@@ -263,7 +265,7 @@ def test_the_chrome_download_is_cached_by_the_lockfile_hash() -> None:
     new build exactly once, rather than serving a stale cached browser
     forever."""
     assert "~/.cache/puppeteer" in _WORKFLOW
-    assert "hashFiles('visuals/package-lock.json')" in _WORKFLOW
+    assert "hashFiles('tools/visuals/package-lock.json')" in _WORKFLOW
 
 
 def _run_strings() -> list[str]:

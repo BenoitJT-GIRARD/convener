@@ -53,7 +53,7 @@ CAREER_STAGES = frozenset(
     {"phd", "postdoc", "independent", "group-leader", "other", "undisclosed"}
 )
 #: '' is a legal consent: the migration sets it for any speaker whose status
-#: never reached a publishable state (see scripts/migrate_v3.py).
+#: never reached a publishable state (see tools/migrations/migrate_v3.py).
 PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: Schema v4. The fields the checklists have always asked for and the model
 #: never had, so they travelled by e-mail and were lost: a portrait, a short
@@ -394,7 +394,7 @@ def _validate_ballots(
         )
 
     # decided_on gets copied into every generated ballot's date by the
-    # migration (scripts/migrate_v3.py) - a malformed value here
+    # migration (tools/migrations/migrate_v3.py) - a malformed value here
     # would propagate into every ballot it touches, not stay in one field.
     decided_on = selection.get("decided_on")
     if decided_on and not DATE_RE.match(str(decided_on)):
@@ -559,7 +559,7 @@ def validate_speakers(
             )
 
         # career_stage and publication are required since the v3 migration
-        # (scripts/migrate_v3.py) gave every speaker both. They were
+        # (tools/migrations/migrate_v3.py) gave every speaker both. They were
         # checked only when present while the real data was still v2; now
         # their absence is a defect - a migration that silently dropped one
         # is exactly what this validator exists to catch.

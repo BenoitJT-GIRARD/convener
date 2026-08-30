@@ -56,7 +56,7 @@ hand at all any more. It is generated from the visual identity
 (`instance/data/brand.json`) and from this series' own declaration
 (`instance/config.json`), so every colour in it is the charter's and every name
 in it is this series'. To change one, change one of those two files and run
-`uv run python ../scripts/generate_brand_css.py` from `tools/`; the same
+`uv run python scripts/generate_brand_css.py` from `tools/`; the same
 command's `--check` fails the build if a template stops agreeing with them.
 
 That is also how they stopped carrying a palette nobody had chosen. Both files

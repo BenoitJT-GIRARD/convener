@@ -26,8 +26,8 @@ must never overwrite a switch someone has since turned on.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/migrate_v5.py --dry-run   # print the diff
-    uv run python ../scripts/migrate_v5.py             # write the file
+    uv run python migrations/migrate_v5.py --dry-run   # print the diff
+    uv run python migrations/migrate_v5.py             # write the file
 """
 
 from __future__ import annotations

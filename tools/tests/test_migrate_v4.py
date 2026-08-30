@@ -1,4 +1,4 @@
-"""The v3 -> v4 migration (scripts/migrate_v4.py).
+"""The v3 -> v4 migration (tools/migrations/migrate_v4.py).
 
 The transformations are pure and tested here before they are ever pointed
 at `instance/data/`, because the file they rewrite holds 31 real people's names,

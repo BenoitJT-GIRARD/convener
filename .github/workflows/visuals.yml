@@ -3,7 +3,7 @@ name: Visuals
 # Renders the announcement composition on a pinned engine
 # and compares it against a versioned reference image, so a visual
 # regression fails loudly in CI instead of shipping unnoticed.
-# See `visuals/render-and-compare.mjs`'s own module comment
+# See `tools/visuals/render-and-compare.mjs`'s own module comment
 # for the full argument: the comparison only means something because
 # the engine that renders it is pinned by this repository's own lockfile,
 # not whatever Chrome happens to be on the machine that runs it.
@@ -48,7 +48,7 @@ name: Visuals
 #   the committed reference images used to be a frozen
 #   photograph of whichever instance ran this repository -- its palette,
 #   its ribbon, its strapline, its wordmark, and its published address
-#   inside the QR code -- sitting in `visuals/`, which is the product's.
+#   inside the QR code -- sitting in `tools/visuals/`, which is the product's.
 #   They are the example's now, and two things follow. The images carry no
 #   real instance's identity, which is the byte-level half of a charter
 #   staying with its instance; and this job stops going red for a
@@ -88,7 +88,7 @@ name: Visuals
 #   same lock -- there is no finer-grained filter than the file, and an
 #   occasional unnecessary run against a warm cache costs little next to
 #   silently skipping the rare bump that does matter.
-# - `visuals/**` -- the render/compare script itself, its pinned
+# - `tools/visuals/**` -- the render/compare script itself, its pinned
 #   `puppeteer` version and lockfile, and the committed reference images:
 #   changing any of these is exactly the case this job exists to exercise
 #   (a deliberate `--update` of a reference is not verified until this job
@@ -111,7 +111,7 @@ name: Visuals
 # example-cockpit is private (D-15): Actions minutes are metered, not
 # unlimited the way a public repository's would be (2,000/month on the
 # free plan). A path filter plus the `actions/cache` step below (keyed on
-# `visuals/package-lock.json`, restoring the ~430MB Chrome-for-Testing
+# `tools/visuals/package-lock.json`, restoring the ~430MB Chrome-for-Testing
 # download `puppeteer` would otherwise re-fetch on every run) is what
 # keeps a job this heavy affordable at zero cost -- do not "simplify" this
 # away to a plain `on: push`, and do not drop the cache step because the
@@ -150,7 +150,7 @@ on:
       - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
-      - 'visuals/**'
+      - 'tools/visuals/**'
       - '.github/workflows/visuals.yml'
   pull_request:
     # Kept identical to push's own list above, by hand: GitHub Actions'
@@ -172,7 +172,7 @@ on:
       - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
-      - 'visuals/**'
+      - 'tools/visuals/**'
       - '.github/workflows/visuals.yml'
 
 # A newer push to a pull request supersedes
@@ -222,7 +222,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/puppeteer
-          key: puppeteer-${{ runner.os }}-${{ hashFiles('visuals/package-lock.json') }}
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('tools/visuals/package-lock.json') }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           # puppeteer 25.8.0's own declared floor (`engines.node`), and
@@ -233,22 +233,22 @@ jobs:
           # package's isolation buys is unchanged and unrelated: only this
           # workflow and visuals-production.yml pay for the bundled
           # Chrome-for-Testing download, because only they install
-          # `visuals/`.
+          # `tools/visuals/`.
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: visuals/package-lock.json
+          cache-dependency-path: tools/visuals/package-lock.json
       - name: Install the pinned renderer
-        working-directory: visuals
+        working-directory: tools/visuals
         run: npm ci
       # Every surface with a lockfile
       # gets an audit in this same quality chain -- this package is a new
       # surface with a new lockfile, so it gets one too rather than
       # becoming the one exception.
       - name: Dependency audit
-        working-directory: visuals
+        working-directory: tools/visuals
         run: npm audit
       - name: Render and compare against the versioned references
-        working-directory: visuals
+        working-directory: tools/visuals
         run: |
           node render-and-compare.mjs \
             --fixtures "${{ runner.temp }}/visual-fixtures" \

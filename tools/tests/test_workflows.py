@@ -3604,7 +3604,10 @@ _ORDINARY_YAML_PROBES: list[tuple[str, str]] = [
         "markdown emphasis inside a run: script",
     ),
     ("run: |\n  cmd1 && cmd2\n", "a shell && inside a run: script"),
-    ("paths:\n  - 'fonts/**'\n  - 'visuals/**'\n", "double-star glob path filters"),
+    (
+        "paths:\n  - 'fonts/**'\n  - 'tools/visuals/**'\n",
+        "double-star glob path filters",
+    ),
     ("schedule:\n  - cron: '0 6 * * *'\n", "a cron schedule"),
     (
         "run: |\n  cat <<EOF\n  * bullet one\n  * bullet two\n  EOF\n",

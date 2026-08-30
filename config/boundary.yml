@@ -128,7 +128,7 @@ instance:
       - path: instance/data/schema.md
         reason: >-
           A three-line stub pointing a reader at docs/reference/schema.md,
-          which scripts/generate_schema_doc.py derives from
+          which tools/scripts/generate_schema_doc.py derives from
           app/src/data/types.ts. It describes the product's model, not this
           instance's records, and no duplicate has any reason to edit it.
   - path: instance/keys/

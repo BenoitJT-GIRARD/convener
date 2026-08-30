@@ -340,7 +340,7 @@ def test_career_stage_order_is_exactly_the_set_it_derives() -> None:
 
 
 def test_the_vocabulary_this_form_offers_is_pinned() -> None:
-    # A change to either set changes what scripts/create_tally_form.py
+    # A change to either set changes what tools/scripts/create_tally_form.py
     # should build a dropdown from; pinned literally here -- not only in
     # test_create_tally_form.py, which this pin outlives if that script is
     # ever deleted -- so the change is caught, not only inferred from a

@@ -2,7 +2,7 @@
  * The model, and the source the handbook's schema appendix is generated from.
  *
  * `docs/reference/schema.md` is derived from this file by
- * `scripts/generate_schema_doc.py`, and CI refuses a page the types do not
+ * `tools/scripts/generate_schema_doc.py`, and CI refuses a page the types do not
  * derive. So the first paragraph of a field's documentation comment is not
  * only a note to whoever reads the code: it is the sentence a volunteer reads
  * in the handbook. Paragraphs after the first stay here, where the argument
@@ -190,7 +190,7 @@ export interface SpeakerSelection {
   decided_on: string;
 }
 
-/** `''` is a real stored value, not an oversight: `scripts/migrate_v3.py`
+/** `''` is a real stored value, not an oversight: `tools/migrations/migrate_v3.py`
  *  writes it for every speaker whose status never reached a publishable
  *  state, and `tools/convener_ops/validate.py` accepts it. It is spelled out here
  *  so that code reading `consent` has to face it -- neither `''` nor

@@ -20,9 +20,9 @@ on:
     # runs this workflow when it did not strictly have to. For a workflow
     # whose *absence* is the defect, that is the only safe direction, so
     # this list holds only what provably cannot reach the bundle -- the
-    # showcase (`site/`, published by `publish-vitrine.yml`), the
-    # reference renders, the relays (each with its own deploy workflow),
-    # and the four repository-root files nothing under `app/` reads.
+    # showcase (`site/`, published by `publish-vitrine.yml`), the relays
+    # (each with its own deploy workflow), and the four repository-root
+    # files nothing under `app/` reads.
     # Nothing under `docs/` is on it any more, which is the plainest
     # statement of what `copy-handbook.mjs`'s registry allowlist already
     # decided: `docs/` is an input in full, and which of its pages ship is
@@ -38,6 +38,17 @@ on:
     # editing an unrelated threshold now runs this workflow -- which is
     # the direction this list is chosen to fail in.
     #
+    # The rendering harness was an entry here, as `visuals/**`, and left
+    # when it moved under `tools/`. This job runs two commands with
+    # `tools/` as their working directory, so the whole of that directory
+    # is an input to what they do, and an entry carving one subtree out of
+    # it is the `config/**` shape again: a filter asserting something the
+    # derivation cannot confirm. `test_workflows.py::test_no_path_the_
+    # deploy_ignores_can_reach_the_deployed_bundle` is what noticed, on
+    # the same reading that removed `config/**`. The cost is that editing
+    # the renderer now runs this workflow, which is the direction this
+    # list is chosen to fail in.
+    #
     # An untracked working directory was a fourteenth entry here, and it
     # filtered nothing, on any machine: an untracked directory
     # -- `git ls-files` returns nothing for it -- and `paths-ignore:` is
@@ -52,7 +63,6 @@ on:
     # runner, which only ever sees tracked files.
     paths-ignore:
       - 'site/**'
-      - 'visuals/**'
       - 'services/**'
       - 'cspell.json'
       - 'project-words.txt'

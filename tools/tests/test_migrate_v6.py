@@ -1,4 +1,4 @@
-"""The v5 -> v6 migration (scripts/migrate_v6.py).
+"""The v5 -> v6 migration (tools/migrations/migrate_v6.py).
 
 Schema v6 renames one configuration key: `vw_counter` becomes
 `next_edition_number`. Unlike the three migrations before it, this one

@@ -22,8 +22,8 @@ than it sounds -- an accidental re-run must not double anybody's ballots.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/migrate_v3.py --dry-run   # print the diff
-    uv run python ../scripts/migrate_v3.py             # write the files
+    uv run python migrations/migrate_v3.py --dry-run   # print the diff
+    uv run python migrations/migrate_v3.py             # write the files
 """
 
 from __future__ import annotations

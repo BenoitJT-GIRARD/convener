@@ -5469,7 +5469,7 @@ def render_visual_fixtures() -> int:
     The one disk-writing seam between the two halves of that pipeline.
     `visual.render_announcement` and `formats.FORMATS` stay pure -- neither
     touches disk or knows this project builds a Node/Puppeteer step on top
-    of what they return -- and the pinned renderer (`visuals/`, a separate
+    of what they return -- and the pinned renderer (`tools/visuals/`, a separate
     npm package so only its own CI job ever pays for the Chrome-for-Testing
     download that isolation buys) never re-derives a page's own markup a second
     time in JavaScript: it reads exactly the bytes this command wrote.
@@ -5493,7 +5493,7 @@ def render_visual_fixtures() -> int:
     the declaration from; this command used to hand it `repo_root()`, so
     the three committed reference images were a frozen photograph of
     whichever instance ran the repository -- its palette, its ribbon, its
-    strapline, its wordmark -- sitting in `visuals/`, which is the
+    strapline, its wordmark -- sitting in `tools/visuals/`, which is the
     product's. Two things follow from handing it `instances/example/`
     instead, and both are the point rather than a side effect:
 

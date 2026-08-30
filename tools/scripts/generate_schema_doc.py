@@ -41,8 +41,8 @@ page.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/generate_schema_doc.py            # write the page
-    uv run python ../scripts/generate_schema_doc.py --check    # assert only
+    uv run python scripts/generate_schema_doc.py            # write the page
+    uv run python scripts/generate_schema_doc.py --check    # assert only
 
 There is no mode that prints the page: the appendix is written in the
 handbook's British English and the rest of it, and nothing this repository's
@@ -69,7 +69,7 @@ DOC_PATH: Final = Path("docs") / "reference" / "schema.md"
 
 #: How the script is invoked, quoted in the page and in the failure message.
 #: One string, so the page and the message cannot come to name two commands.
-COMMAND: Final = "uv run python ../scripts/generate_schema_doc.py"
+COMMAND: Final = "uv run python scripts/generate_schema_doc.py"
 
 
 # --------------------------------------------------------------------------
@@ -507,7 +507,7 @@ _HEADER: Final = f"""# Data schema
 and `convener-validate` both read. Do not edit it: run* `{COMMAND}` *from `tools/`
 and commit what it writes, and CI refuses a page the types do not derive.
 Every field, type, enumerated value and note below comes from the model; the
-prose between the tables lives in `scripts/generate_schema_doc.py`.*
+prose between the tables lives in `tools/scripts/generate_schema_doc.py`.*
 
 The repository stores all operational data in two YAML files under `instance/data/`:
 
@@ -619,9 +619,9 @@ check and not a test; see `docs/governance/editorial-board.md`.
 _HISTORY: Final = """## History
 
 `instance/data/speakers.yml` was originally split across two files, joined on an event
-id. `scripts/` holds the one-shot scripts that merged them into today's unified
-schema; they already ran and are kept only as a record, not as something to run
-again.
+id. `tools/migrations/` holds the one-shot migrations that merged them into
+today's unified schema; they already ran and are kept only as a record, not as
+something to run again.
 """
 
 

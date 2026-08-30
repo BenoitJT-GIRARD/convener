@@ -613,7 +613,7 @@ def test_every_tracked_dependency_tree_is_watched() -> None:
 
     Every one of these trees already gets an audit on the way in -- `npm
     audit` in `quality.yml` for `app/`, `site/` and the three relays, in
-    `visuals.yml` and `visuals-production.yml` for `visuals/`, `pip-audit`
+    `visuals.yml` and `visuals-production.yml` for `tools/visuals/`, `pip-audit`
     for `tools/`. An audit that reports a vulnerable package while nothing
     proposes the pull request replacing it is half a control: the finding
     arrives, and then it stays.

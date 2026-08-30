@@ -75,7 +75,7 @@ each time for no reason other than the interpreter's own hash seed.
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
     set -a && . ../.env && set +a
-    uv run python ../scripts/create_tally_form.py
+    uv run python scripts/create_tally_form.py
     rm -f ../.env
 
 The key is read from a `.env` at the repository root, which `.gitignore`

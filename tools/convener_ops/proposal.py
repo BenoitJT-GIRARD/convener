@@ -19,7 +19,7 @@ from convener_ops.governance import active_board
 # Iterating a `set` of `str` is `PYTHONHASHSEED`-dependent *across
 # processes* -- two runs of this interpreter can iterate the same set in a
 # different order. `GENDERS`/`CAREER_STAGES` are membership-tested only
-# here, but `scripts/create_tally_form.py` also needs a *stable* order to
+# here, but `tools/scripts/create_tally_form.py` also needs a *stable* order to
 # build a DROPDOWN's options from: iterate the set there and the
 # option order, and each option's `index`, would differ run to run, so
 # every re-run would rewrite the live form for no reason. These tuples are
@@ -43,7 +43,7 @@ CAREER_STAGE_ORDER: tuple[str, ...] = (
 CAREER_STAGES = frozenset(CAREER_STAGE_ORDER)
 
 # The eleven labels ``to_lead`` reads a submission by -- canonical name first,
-# any alias this module also accepts after it. ``scripts/create_tally_form.py``
+# any alias this module also accepts after it. ``tools/scripts/create_tally_form.py``
 # builds the live form's questions from these same tuples, not from a second,
 # hand-typed copy of them, so a label renamed on one side breaks a test
 # instead of breaking the form in production (D-03).
@@ -63,7 +63,7 @@ LABEL_PROPOSED_BY = ("Your name", "Who are you", "How you propose")
 
 #: Every field ``to_lead`` reads, in the order the form asks them, each as
 #: ``(aliases, required)`` with the canonical label first in ``aliases``.
-#: ``Name`` is the only required one. ``scripts/create_tally_form.py`` walks
+#: ``Name`` is the only required one. ``tools/scripts/create_tally_form.py`` walks
 #: this exact tuple to build the form's questions.
 FORM_FIELDS: tuple[tuple[tuple[str, ...], bool], ...] = (
     (LABEL_NAME, True),

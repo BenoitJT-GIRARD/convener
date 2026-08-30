@@ -3,7 +3,7 @@
  * The block below is generated from the charter in force -- instance/data/brand.json
  * if this instance has chosen its colours, brand/convener/brand.json if it
  * has not (tools/convener_ops/brand.py::source) -- by
- * scripts/generate_brand_css.py, whose --check fails on a stylesheet that
+ * tools/scripts/generate_brand_css.py, whose --check fails on a stylesheet that
  * has drifted from it. The token *names* are the product's and describe a
  * role rather than a hue: `primary` is the dominant colour, `turquoise` is
  * a ground, and which colours those are is the instance's answer, not this
@@ -56,7 +56,7 @@
 }
 
 :root {
-/* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */
+/* BEGIN GENERATED TOKENS -- tools/scripts/generate_brand_css.py */
   --paper:         #ffffff;
   --paper-soft:    #f4f0f1;
   --surface:       #ffffff;

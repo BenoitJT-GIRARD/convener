@@ -113,8 +113,8 @@ the charter's generator, and this is what the charter derives.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/generate_brand_css.py            # write the files
-    uv run python ../scripts/generate_brand_css.py --check    # assert only
+    uv run python scripts/generate_brand_css.py            # write the files
+    uv run python scripts/generate_brand_css.py --check    # assert only
 
 As with the schema generator, there is no mode that prints a file, and
 nothing this repository's Python writes to a terminal may be non-ASCII.
@@ -150,11 +150,11 @@ BACKGROUND_SVG_PATH: Final = brand_templates.BACKGROUND_PATH
 
 #: How the script is invoked, quoted in every failure message. One string,
 #: so the messages cannot come to name two different commands.
-COMMAND: Final = "uv run python ../scripts/generate_brand_css.py"
+COMMAND: Final = "uv run python scripts/generate_brand_css.py"
 
 #: Markers wrapping the generated block inside each stylesheet. Everything
 #: outside them, in either file, is this script's to leave alone.
-_BEGIN: Final = "/* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */"
+_BEGIN: Final = "/* BEGIN GENERATED TOKENS -- tools/scripts/generate_brand_css.py */"
 _END: Final = (
     "/* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */"
 )

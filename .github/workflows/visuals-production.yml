@@ -49,7 +49,7 @@ name: Visuals production
 # regenerated whole on every run (an edition no longer scheduled loses its
 # file the same run -- see the "Sync the share banner" step below) rather
 # than accumulated into. This is a binary diff on every edition change,
-# same as any other committed image in this repository (`visuals/
+# same as any other committed image in this repository (`tools/visuals/
 # references/*.png`) -- accepted for the one file an unattended
 # bot actually reads, not for the two a human downloads on demand.
 #
@@ -138,7 +138,7 @@ on:
       - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
-      - 'visuals/**'
+      - 'tools/visuals/**'
       - 'instance/data/speakers.yml'
       - '.github/workflows/visuals-production.yml'
   workflow_dispatch:
@@ -248,7 +248,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/puppeteer
-          key: puppeteer-${{ runner.os }}-${{ hashFiles('visuals/package-lock.json') }}
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('tools/visuals/package-lock.json') }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         if: steps.pages.outputs.count != '0'
         with:
@@ -256,24 +256,24 @@ jobs:
           # engines.node.
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: visuals/package-lock.json
+          cache-dependency-path: tools/visuals/package-lock.json
       - name: Install the pinned renderer
         if: steps.pages.outputs.count != '0'
-        working-directory: visuals
+        working-directory: tools/visuals
         run: npm ci
       # Every surface with a lockfile
-      # gets an audit in this same quality chain -- visuals/ already gets
+      # gets an audit in this same quality chain -- tools/visuals/ already gets
       # one in visuals.yml; this is a second job installing the identical
       # lockfile, so it gets one too rather than becoming the one
       # exception that only happens to be exempt because another workflow
       # already covers the same files.
       - name: Dependency audit
         if: steps.pages.outputs.count != '0'
-        working-directory: visuals
+        working-directory: tools/visuals
         run: npm audit
       - name: Render the production visuals
         if: steps.pages.outputs.count != '0'
-        working-directory: visuals
+        working-directory: tools/visuals
         run: |
           node render-production.mjs \
             --fixtures "${{ runner.temp }}/production-visuals" \

@@ -3,7 +3,7 @@
 The handbook's appendix drifted four times in two phases -- `proposed_by`
 defined as the wrong person, fields listed that the model had dropped, a
 thirty-day view count under a window that had become configuration -- and was
-corrected by hand every time. `scripts/generate_schema_doc.py` derives it from
+corrected by hand every time. `tools/scripts/generate_schema_doc.py` derives it from
 `app/src/data/types.ts` instead, and this module holds the two halves that make
 that stick.
 

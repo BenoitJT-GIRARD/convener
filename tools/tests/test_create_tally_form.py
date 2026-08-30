@@ -1,4 +1,4 @@
-"""Building the public proposal form on Tally (scripts/create_tally_form.py).
+"""Building the public proposal form on Tally (tools/scripts/create_tally_form.py).
 
 Three properties matter more than the rest:
 

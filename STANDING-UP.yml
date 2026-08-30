@@ -4,7 +4,7 @@
 # exists. This file is the other half: what somebody with no repositories and
 # no accounts does, in order, to have one -- and it is a declaration rather
 # than a page, because two things read it. `docs/reference/standing-up.md` is
-# generated from it by `scripts/generate_standing_up_doc.py`, and an agent
+# generated from it by `tools/scripts/generate_standing_up_doc.py`, and an agent
 # that carries the same sequence out reads these rows directly. Two documents
 # describing one procedure diverge; this repository has paid for that with
 # three palettes, five addresses and two path lists, and a corrected page
@@ -731,7 +731,7 @@ steps:
       afterwards, whichever way the run ended.
     command: >-
       cd tools && set -a && . ../.env && set +a && uv run python
-      ../scripts/create_tally_form.py; rm -f ../.env
+      scripts/create_tally_form.py; rm -f ../.env
     degraded: >-
       The form is built by hand, which is slower and, more to the point,
       unverifiable: the two dropdown questions deliver a closed vocabulary the

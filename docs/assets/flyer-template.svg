@@ -7,7 +7,7 @@
   300 dpi. Everything inside id="variable" changes for each event;
   everything inside id="fixed" is the series identity and stays put.</desc>
 
-  <!-- Generated, not drawn: scripts/generate_brand_css.py writes this file
+  <!-- Generated, not drawn: tools/scripts/generate_brand_css.py writes this file
   from instance/data/brand.json (the colours and the motif) and instance/config.json
   (the names). Change one of those, run that command, and commit what it
   writes; an edit made here is overwritten, and the check fails until it

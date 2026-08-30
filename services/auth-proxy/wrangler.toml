@@ -17,7 +17,7 @@ compatibility_date = "2026-01-01"
 # ALLOWED_ORIGIN:<origin>`, which reaches `src/index.js` as
 # `env.ALLOWED_ORIGIN` exactly as a `[vars]` entry would. Generating this
 # line from the declaration with a `--check` in CI -- the shape
-# `scripts/generate_schema_doc.py` and `generate_standing_up_doc.py`
+# `tools/scripts/generate_schema_doc.py` and `generate_standing_up_doc.py`
 # already use -- was the alternative, and it was rejected for what it
 # leaves behind: a generated copy is still a copy *in the file*, so the
 # product would still publish somebody's real origin and a duplicate would

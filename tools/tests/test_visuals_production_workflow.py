@@ -1,5 +1,5 @@
 """Pins `.github/workflows/visuals-production.yml` and
-`visuals/render-production.mjs` against the properties a green run does not,
+`tools/visuals/render-production.mjs` against the properties a green run does not,
 by itself, prove -- the same idiom `test_visuals_workflow.py` already uses
 for the regression workflow beside it.
 
@@ -26,7 +26,9 @@ from convener_ops.paths import repo_root
 _ROOT = repo_root()
 _WORKFLOW_PATH = _ROOT / ".github" / "workflows" / "visuals-production.yml"
 _WORKFLOW = _WORKFLOW_PATH.read_text(encoding="utf-8")
-_SCRIPT = (_ROOT / "visuals" / "render-production.mjs").read_text(encoding="utf-8")
+_SCRIPT = (_ROOT / "tools" / "visuals" / "render-production.mjs").read_text(
+    encoding="utf-8"
+)
 _VISUALS_WORKFLOW = (_ROOT / ".github" / "workflows" / "visuals.yml").read_text(
     encoding="utf-8"
 )
@@ -94,7 +96,7 @@ _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/brand.py",
     "fonts/**",
     "tools/uv.lock",
-    "visuals/**",
+    "tools/visuals/**",
 }
 
 
@@ -381,7 +383,8 @@ def test_the_chrome_cache_key_is_shared_with_visuals_yml() -> None:
     *both* workflows combined, never once per workflow (the workflow's own
     comment on this step)."""
     key_line = (
-        "key: puppeteer-${{ runner.os }}-${{ hashFiles('visuals/package-lock.json') }}"
+        "key: puppeteer-${{ runner.os }}-"
+        "${{ hashFiles('tools/visuals/package-lock.json') }}"
     )
     assert key_line in _WORKFLOW
     assert key_line in _VISUALS_WORKFLOW
@@ -392,7 +395,7 @@ def test_node_version_meets_puppeteers_own_floor() -> None:
 
 
 def test_npm_ci_and_audit_run_from_the_visuals_working_directory() -> None:
-    assert "working-directory: visuals" in _WORKFLOW
+    assert "working-directory: tools/visuals" in _WORKFLOW
     assert "run: npm ci" in _WORKFLOW
     assert "run: npm audit" in _WORKFLOW
 
@@ -425,7 +428,7 @@ def test_the_upload_step_uses_the_production_renderers_own_output_directory() ->
 
 
 def test_puppeteer_is_the_scripts_only_dependency() -> None:
-    """No new dependency was added: `visuals/package.json`'s own
+    """No new dependency was added: `tools/visuals/package.json`'s own
     `devDependencies` still lists only the one already pinned;
     this script imports it, adds nothing of its own."""
     assert "import puppeteer from 'puppeteer';" in _SCRIPT

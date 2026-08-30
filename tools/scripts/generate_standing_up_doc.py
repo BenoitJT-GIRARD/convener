@@ -33,7 +33,7 @@ deliberately not registered, for the reason `docs/reference/operations.md` is
 not -- it names every secret an instance uses, and the registry is the
 allowlist of what `app/scripts/copy-handbook.mjs` publishes into a bundle
 served from a *public* repository. So the binding is the one
-`scripts/generate_schema_doc.py` already established for a page derived from a
+`tools/scripts/generate_schema_doc.py` already established for a page derived from a
 file that is not a page: generate, commit, and let `--check` refuse anything
 else.
 
@@ -48,8 +48,8 @@ a repository that still held the wrong page.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/generate_standing_up_doc.py            # write it
-    uv run python ../scripts/generate_standing_up_doc.py --check    # assert
+    uv run python scripts/generate_standing_up_doc.py            # write it
+    uv run python scripts/generate_standing_up_doc.py --check    # assert
 
 There is no mode that prints the page: it is written in the handbook's British
 English and the rest of it, and nothing this repository's Python writes to a
@@ -82,7 +82,7 @@ DOC_PATH: Final = Path("docs") / "reference" / "standing-up.md"
 INTEGRATIONS_PATH: Final = Path("config") / "integrations.yml"
 
 #: What to run, named in the page itself so nobody edits the page instead.
-COMMAND: Final = "uv run python ../scripts/generate_standing_up_doc.py"
+COMMAND: Final = "uv run python scripts/generate_standing_up_doc.py"
 
 #: The declaration's own format version.
 DECLARATION_VERSION: Final = 1
@@ -565,7 +565,7 @@ Every step, actor, check, command and degradation below comes from that file;
 what an absent integration costs comes from*
 `{INTEGRATIONS_PATH.as_posix()}`*, which* `convener-check-config` *already
 prints. The prose between the steps lives in*
-`scripts/generate_standing_up_doc.py`*.*
+`tools/scripts/generate_standing_up_doc.py`*.*
 """
 
 _INTRODUCTION: Final = """\

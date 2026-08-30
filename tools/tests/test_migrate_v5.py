@@ -1,4 +1,4 @@
-"""The v4 -> v5 migration (scripts/migrate_v5.py).
+"""The v4 -> v5 migration (tools/migrations/migrate_v5.py).
 
 Schema v5 adds one field, `survey_enabled`.
 This mirrors test_migrate_v4.py's own shape, cut down to one field: the

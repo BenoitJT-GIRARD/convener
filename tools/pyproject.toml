@@ -156,8 +156,8 @@ target-version = "py312"
 # The swap would also cost more than the step it removes. `# nosec` is
 # bandit's syntax and ruff reads `# noqa`, so all eighteen suppressions
 # would have to be rewritten and six more added for the false positives
-# above. And `select` applies to everything CI lints (`ruff check .
-# ../scripts`), not only to the package bandit is pointed at: `S` finds
+# above. And `select` applies to everything CI lints (`ruff check .`
+# from `tools/`), not only to the package bandit is pointed at: `S` finds
 # 6,005 there, 5,888 of them `S101` -- `assert`, in this project's own
 # tests -- so it would need a `per-file-ignores` block bandit never
 # needed.
@@ -166,10 +166,11 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["convener_ops", "tests"]
-# The one-shot migrations under scripts/ are outside the package but are
-# imported by their tests, and are held to the same strictness.
-mypy_path = "../scripts"
+# `scripts` and `migrations` sit beside the package rather than inside
+# it -- the wheel ships `convener_ops` alone -- and are imported by their
+# tests. Named here rather than reached through `mypy_path`, so that the
+# same list states what is checked and where the modules are found.
+files = ["convener_ops", "tests", "scripts", "migrations"]
 
 [tool.coverage.run]
 # `branch` belongs here, not under [tool.coverage.report] -- coverage.py

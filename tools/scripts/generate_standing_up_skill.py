@@ -2,7 +2,7 @@
 
 `STANDING-UP.yml` declares what somebody with no repositories and no accounts
 does, in order, to have a running instance.
-`scripts/generate_standing_up_doc.py` renders it as the page a person follows.
+`tools/scripts/generate_standing_up_doc.py` renders it as the page a person follows.
 This script renders the same declaration as
 `.claude/skills/standing-up/SKILL.md`: the procedure whatever carries the
 sequence out follows instead.
@@ -44,8 +44,8 @@ which is what `--check` refuses, without repairing it.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/generate_standing_up_skill.py            # write
-    uv run python ../scripts/generate_standing_up_skill.py --check    # assert
+    uv run python scripts/generate_standing_up_skill.py            # write
+    uv run python scripts/generate_standing_up_skill.py --check    # assert
 
 There is no mode that prints the page, for the reason the page generator
 gives: nothing this repository's Python writes to a terminal is allowed to be
@@ -79,10 +79,10 @@ from convener_ops.paths import repo_root
 SKILL_PATH: Final = Path(".claude") / "skills" / "standing-up" / "SKILL.md"
 
 #: This file, named on the page so that nobody edits the page instead.
-GENERATOR: Final = "scripts/generate_standing_up_skill.py"
+GENERATOR: Final = "tools/scripts/generate_standing_up_skill.py"
 
 #: What to run to rewrite it.
-COMMAND: Final = f"uv run python ../{GENERATOR}"
+COMMAND: Final = "uv run python scripts/generate_standing_up_skill.py"
 
 #: The pointer an agent that does not discover `.claude/skills/` reads.
 ENTRY_POINT: Final = "AGENTS.md"
@@ -239,7 +239,7 @@ _LOOP: Final = "\n\n".join(
                 "`check`, `command` where it has one, `sets`, `walkthrough`, "
                 "and either `degraded` or `integrations`.",
                 "Where the run sheet says **carry out**, do it — with `gh`, "
-                "`wrangler`, `scripts/create_tally_form.py`, a file edit, or "
+                "`wrangler`, `tools/scripts/create_tally_form.py`, a file edit, or "
                 "one of this repository's own commands.",
                 "Where it says **hand over**, stop, give the person the step, "
                 "and wait for them.",

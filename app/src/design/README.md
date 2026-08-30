@@ -12,9 +12,9 @@ carry a signup form and a certificate lookup. Restrained, intentional, never
 generic.
 
 `tokens.css`'s custom properties are generated:
-`scripts/generate_brand_css.py` owns the block between the
+`tools/scripts/generate_brand_css.py` owns the block between the
 `GENERATED TOKENS` markers. Do not hand-edit it -- change `instance/data/brand.json`
-and run `uv run python ../scripts/generate_brand_css.py` from `tools/`, then
+and run `uv run python scripts/generate_brand_css.py` from `tools/`, then
 commit what it writes. That command also recomputes every contrast the charter
 records and refuses a palette measuring below WCAG AA, so a colour changed here
 is measured before it ships, not after. A colour with no brand equivalent (`--danger`,

@@ -7,7 +7,7 @@
 # gets an audit on the way in: `.github/workflows/quality.yml` runs `npm
 # audit` over `app/`, `site/` and the three relays under `services/`, and
 # `pip-audit` over `tools/`; `visuals.yml` and `visuals-production.yml`
-# audit `visuals/` in both jobs that install it. That rule is written into
+# audit `tools/visuals/` in both jobs that install it. That rule is written into
 # those files in as many words -- "every surface with a lockfile gets an
 # audit in this same quality chain".
 #
@@ -57,7 +57,7 @@ updates:
     directories:
       - /app
       - /site
-      - /visuals
+      - /tools/visuals
       - /services/auth-proxy
       - /services/form-relay
       - /services/signup-relay

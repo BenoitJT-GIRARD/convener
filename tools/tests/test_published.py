@@ -877,7 +877,7 @@ _LITERAL_IDENTITY_FILES = (Path(".github/CODEOWNERS"),)
 #: Files that hold this instance's identity because something *generated*
 #: them from the declaration. Not a second copy in the sense this module
 #: refuses -- nothing here is authored, and
-#: `scripts/generate_brand_css.py --check` fails the build the moment one
+#: `tools/scripts/generate_brand_css.py --check` fails the build the moment one
 #: of them stops agreeing with `instance/config.json`. Checked below all
 #: the same, rather than exempted: a generated file nobody compares is a
 #: hand-written one with better manners.
@@ -1001,7 +1001,7 @@ def test_the_generated_templates_carry_the_identity_the_declaration_names() -> N
     These three files are what a collaborator downloads, so the identity
     travelling outward is whatever they say. They are generated from
     `instance/config.json` and
-    `scripts/generate_brand_css.py --check` refuses them the moment they
+    `tools/scripts/generate_brand_css.py --check` refuses them the moment they
     stop being what it derives -- this is the assertion that the
     derivation is of *this* declaration and not of a literal somebody
     typed and forgot.

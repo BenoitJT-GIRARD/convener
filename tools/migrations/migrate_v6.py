@@ -66,8 +66,8 @@ take (D-25).
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python ../scripts/migrate_v6.py --dry-run   # print the diff
-    uv run python ../scripts/migrate_v6.py             # write the files
+    uv run python migrations/migrate_v6.py --dry-run   # print the diff
+    uv run python migrations/migrate_v6.py             # write the files
 """
 
 from __future__ import annotations

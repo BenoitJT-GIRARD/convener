@@ -6,7 +6,7 @@
   export it to PNG or JPEG and add it as a virtual background in whatever
   the session runs on.</desc>
 
-  <!-- Generated, not drawn: scripts/generate_brand_css.py writes this file
+  <!-- Generated, not drawn: tools/scripts/generate_brand_css.py writes this file
   from instance/data/brand.json (the colours and the motif) and instance/config.json
   (the names). Change one of those, run that command, and commit what it
   writes; an edit made here is overwritten, and the check fails until it

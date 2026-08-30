@@ -2,13 +2,13 @@
 
 *This page is generated from* `STANDING-UP.yml` — *the one
 declaration of this sequence, which the agent that carries it out reads too.
-Do not edit it: run* `uv run python ../scripts/generate_standing_up_doc.py` *from* `tools/` *and commit what it writes,
+Do not edit it: run* `uv run python scripts/generate_standing_up_doc.py` *from* `tools/` *and commit what it writes,
 and continuous integration refuses a page the declaration does not derive.
 Every step, actor, check, command and degradation below comes from that file;
 what an absent integration costs comes from*
 `config/integrations.yml`*, which* `convener-check-config` *already
 prints. The prose between the steps lives in*
-`scripts/generate_standing_up_doc.py`*.*
+`tools/scripts/generate_standing_up_doc.py`*.*
 
 Everything else written here is written for an instance that already exists.
 This page is the other half: what somebody with no repositories and no
@@ -718,7 +718,7 @@ deliberately — publishing is the next step, and it is a person's. `.env` is
 gone afterwards, whichever way the run ended.
 
 ```bash
-cd tools && set -a && . ../.env && set +a && uv run python ../scripts/create_tally_form.py; rm -f ../.env
+cd tools && set -a && . ../.env && set +a && uv run python scripts/create_tally_form.py; rm -f ../.env
 ```
 
 **Without it.** The form is built by hand, which is slower and, more to the

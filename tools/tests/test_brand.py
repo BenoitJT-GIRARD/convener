@@ -6,7 +6,7 @@ existed, two implementations each carried their own hand-typed copy of them --
 had drifted to a reconstruction's palette without anyone deciding that on
 purpose: purple on turquoise measured 4.44 there, below AA, where the
 measured charter gives 7.93, AAA.
-`scripts/generate_brand_css.py` derives both from the brand file instead,
+`tools/scripts/generate_brand_css.py` derives both from the brand file instead,
 and this module holds what makes that stick.
 
 A third file, `app/src/design/tokens.ts`, used to be generated here too and

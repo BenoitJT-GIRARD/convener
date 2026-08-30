@@ -31,7 +31,7 @@ in them, not tables; rendering them from the declaration would mean a
 generated handbook page for the sake of six numbers, and a reader who lands
 mid-page would be reading a generated paragraph they cannot edit. So the
 number stays written where it reads best and the claim is bound instead - the
-same trade `scripts/generate_schema_doc.py` did *not* make, because a schema
+same trade `tools/scripts/generate_schema_doc.py` did *not* make, because a schema
 appendix is a table and this is not.
 """
 
