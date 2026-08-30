@@ -92,7 +92,7 @@
 # entry here is a path `instance:` still hands over -- one of the two
 # would be a copy of the other, and `boundary.retired_from_data` refuses
 # it. `Boundary.ever_owned` is `owner_of` widened by this list, and it is
-# read by the history-reading half only: `convener_ops.derivation`, which
+# read by the history-reading half only: `convener_ops.derivation.derivation`, which
 # decides what a derived repository may carry. The two JavaScript readers
 # do not mirror it, because neither of them ever asks about a commit.
 #

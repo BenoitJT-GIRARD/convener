@@ -101,7 +101,7 @@ The third file, and why it is vector where it used to be a bitmap
 `docs/assets/video-call-background.svg` is what a host puts behind them
 during a session. It was a hand-drawn PNG until 2026-08-28, and it was the
 last hand-made file in `docs/assets/` -- which made it the one thing
-`convener_ops.derivation_guard` could not read: that guard sweeps every
+`convener_ops.derivation.derivation_guard` could not read: that guard sweeps every
 blob of every ref for the values this instance declares about itself, and
 a wordmark inside an image is invisible to it. The file it could not read
 carried this organisation's name, an address, a strapline written down
@@ -125,7 +125,7 @@ The alternatives were weighed against what this repository already does:
   levels per channel, 0.1% of pixels). That comparison is honest for what
   it is for, and it needs a browser -- so it could never run inside
   `tools/scripts/generate_brand_css.py --check`, which is pure Python and is
-  what `convener_ops.derivation` re-runs when it builds a duplicate's
+  what `convener_ops.derivation.derivation` re-runs when it builds a duplicate's
   repository. A duplicate would inherit *this* instance's background, in a
   file no guard can read. That is the defect, not a smaller version of it.
 - **Commit the PNG and hold it byte-for-byte**, the way

@@ -11,7 +11,7 @@
 # carries one RSA-2048 private key **on purpose**: generated for that fixture,
 # encrypting nothing anybody sent, and the only thing holding this project's
 # two languages to one wire format (D-14). The argument for keeping it is
-# written once, in `tools/convener_ops/derivation_guard.py::DECLARED_SECRETS`,
+# written once, in `tools/convener_ops/derivation/derivation_guard.py::DECLARED_SECRETS`,
 # where the derivation guard reads it. It is not repeated here.
 #
 # Without this file the `secrets` job is red on its first run and stays red.
@@ -35,7 +35,7 @@
 # `public_pem`. A slice of the private half would have made this file a second
 # copy of a key, and a copy the derivation guard would then have to refuse.
 #
-# `tools/tests/test_derivation_guard.py` holds every clause below against the
+# `tools/tests/derivation/test_derivation_guard.py` holds every clause below against the
 # fixture it names, offline and without the scanner: an allowlist that has
 # stopped standing for anything fails in the test suite instead of quietly
 # exempting nothing.

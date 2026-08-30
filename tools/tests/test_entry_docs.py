@@ -226,7 +226,7 @@ def test_the_diagram_carries_the_personal_data_lifecycle() -> None:
 #: They are still refused by name, because a page naming either sends its
 #: reader somewhere that is not there, and because the day somebody starts
 #: keeping a working record again is the day this matters most.
-#: `convener_ops.derivation_guard.KEPT_BACK` refuses the first the other
+#: `convener_ops.derivation.derivation_guard.KEPT_BACK` refuses the first the other
 #: way round, in the objects rather than in the prose.
 WORKING_RECORD = ("docs/superpowers/", ".superpowers/")
 

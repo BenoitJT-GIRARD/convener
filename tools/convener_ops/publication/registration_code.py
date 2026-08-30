@@ -216,7 +216,7 @@ def forum_code_svg(*, dark: str, root: Path | None = None) -> str:
 
     `title` puts the encoded string into the document as text. That is
     what makes the target of a printed code *readable* -- by a person
-    opening the file, and by `convener_ops.derivation_guard`, which sweeps
+    opening the file, and by `convener_ops.derivation.derivation_guard`, which sweeps
     every blob for this instance's declared values and can read an SVG
     where it could never read the modules of a rendered code.
     """

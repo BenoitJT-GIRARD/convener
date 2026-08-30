@@ -104,7 +104,7 @@ What this module cannot see, stated rather than left to be found
   because a record of whose charter it is belongs with the instance.
   **This module never saw any of it** -- a name is not a declared value
   and no sweep here could have found one, which is exactly what this
-  paragraph is for. `convener_ops.derivation_guard` can, by reading the
+  paragraph is for. `convener_ops.derivation.derivation_guard` can, by reading the
   instance's own records rather than by knowing what a name is; see its
   docstring for where that stops.
 

@@ -6,7 +6,7 @@ second copy of either would be the defect this whole phase exists to end:
 1. **The needles** -- every writable form of what `instance/config.json`
    and the charter in force declare. They are **not written here any
    more**: they have a second reader outside the suite
-   (`convener_ops.derivation_guard`, which asks the same question of every
+   (`convener_ops.derivation.derivation_guard`, which asks the same question of every
    blob of every ref before a public push), and a derivation with two
    readers belongs in the package. `convener_ops.declaration.needles` owns it; the names
    are re-exported below so every reader of this module keeps working and
@@ -245,7 +245,7 @@ def claimed_by_any(relative: str) -> bool:
 #: Why a test about the separation of two instances cannot run in a
 #: repository that ships only one.
 #:
-#: `convener_ops.derivation` lays `instances/example/` into every path
+#: `convener_ops.derivation.derivation` lays `instances/example/` into every path
 #: the boundary hands to the instance, because a product repository with
 #: those paths merely deleted neither starts its own suite nor builds --
 #: `paths.repo_root` finds a repository by `instance/data/config.yml` and the

@@ -497,7 +497,7 @@ def _coordinate_resolves(word: str, number: str, titles: frozenset[str]) -> bool
 #: reason is structural rather than convenient: everything above states the
 #: rule by naming the shapes it refuses -- `R-27`, `phase 8, task 3`,
 #: `Critical A` -- so a module that swept itself would refuse its own
-#: source the day it was written. `convener_ops.derivation_guard` already
+#: source the day it was written. `convener_ops.derivation.derivation_guard` already
 #: solved the identical problem the other way, by never writing a
 #: credential pattern as its own literal; a docstring has no such trick
 #: available, because the examples *are* the explanation.
@@ -882,7 +882,7 @@ def test_the_prose_sweep_refuses_a_citation_and_keeps_the_domain_noun() -> None:
 
     A sweep that refused `the plan` would be right about
     `tools/tests/journey/test_registration.py` and wrong about
-    `convener_ops/derivation.py`, which computes one and prints it -- and
+    `convener_ops/derivation/derivation.py`, which computes one and prints it -- and
     the way that failure shows up is a maintainer adding an exemption
     rather than a citation being removed.
     """
