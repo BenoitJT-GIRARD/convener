@@ -18,8 +18,8 @@ from pathlib import Path
 
 from conftest import EDITIONS
 
+from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.validate import validate_config, validate_speakers
-from convener_ops.yaml_safe import safe_load
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SPEAKERS = FIXTURES / "hand-edited-speakers.yml"

@@ -27,8 +27,8 @@ from convener_ops.agenda import (
     _slug,
     build_internal_calendar,
 )
+from convener_ops.declaration.paths import repo_root
 from convener_ops.notify import due_date
-from convener_ops.paths import repo_root
 from convener_ops.registration import signup_url
 
 _ROOT = repo_root()

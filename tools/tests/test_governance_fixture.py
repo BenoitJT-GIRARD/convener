@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from convener_ops.declaration.paths import repo_root
 from convener_ops.governance import (
     active_board,
     add_working_days,
@@ -22,7 +23,6 @@ from convener_ops.governance import (
     working_days_elapsed,
 )
 from convener_ops.notify import due_date, overdue, overdue_text, waiting_since
-from convener_ops.paths import repo_root
 from convener_ops.sweep import _unsettled_candidates
 
 CASES = json.loads(

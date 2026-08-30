@@ -2,7 +2,7 @@
 
 /* What the showcase's own build actually resolves this
  * project's published address to, printed as JSON for
- * `tools/tests/test_published.py` to compare against the same declaration
+ * `tools/tests/declaration/test_published.py` to compare against the same declaration
  * read from Python.
  *
  * `site/` carries no JS test runner of its own (no new dependency), so

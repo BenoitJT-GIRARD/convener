@@ -127,7 +127,7 @@ def test_record_retention_run_writes_todays_paris_date(
 
     path = retention_liveness.last_run_path(tmp_path)
     assert path.exists()
-    from convener_ops.yaml_safe import safe_load
+    from convener_ops.declaration.yaml_safe import safe_load
 
     loaded = safe_load(path.read_text(encoding="utf-8"))
     assert retention_liveness.last_run_from_data(loaded) == date(2026, 8, 23)
@@ -162,7 +162,7 @@ def test_record_retention_run_advances_the_date_on_a_later_day(
     assert record_retention_run() == 0
 
     path = retention_liveness.last_run_path(tmp_path)
-    from convener_ops.yaml_safe import safe_load
+    from convener_ops.declaration.yaml_safe import safe_load
 
     loaded = safe_load(path.read_text(encoding="utf-8"))
     assert retention_liveness.last_run_from_data(loaded) == date(2026, 8, 24)

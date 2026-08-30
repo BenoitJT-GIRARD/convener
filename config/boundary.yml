@@ -12,8 +12,8 @@
 # Everything not named below belongs to the product: upstream writes it,
 # upstream updates it, and a duplicate that edits it is forking rather than
 # tracking. The list below is the exception, deliberately short, and it is
-# read -- `tools/convener_ops/boundary.py` parses this file and
-# `tools/tests/test_boundary.py` holds the repository against what it says.
+# read -- `tools/convener_ops/declaration/boundary.py` parses this file and
+# `tools/tests/declaration/test_boundary.py` holds the repository against what it says.
 # Nothing restates it in prose; `INFORMATION-ARCHITECTURE.md` names this file
 # as the home of the notion rather than copying the list, for the reason that
 # document's own first rule gives.

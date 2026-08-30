@@ -105,15 +105,9 @@ import pytest
 import toolchain
 import yaml
 
-from convener_ops import (
-    agenda,
-    boundary,
-    certificate,
-    published,
-    registration,
-    survey_invite,
-)
-from convener_ops.paths import repo_root
+from convener_ops import agenda, certificate, registration, survey_invite
+from convener_ops.declaration import boundary, published
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 

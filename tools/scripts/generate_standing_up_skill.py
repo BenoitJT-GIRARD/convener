@@ -71,7 +71,7 @@ from generate_standing_up_doc import (
     load_sequence,
 )
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 #: Where the skill lives. Inside the repository, so that a duplicate has it
 #: from its first clone rather than from whatever the operator happens to

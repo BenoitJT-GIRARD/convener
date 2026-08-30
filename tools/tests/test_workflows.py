@@ -46,20 +46,20 @@ from convener_ops import (
     certificate,
     confirmation,
     platform_fcc,
-    published,
     registration,
     signing,
     survey_invite,
 )
 from convener_ops import cli as cli_module
-from convener_ops.paths import (
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import (
     DATA_DIR,
     KEYS_DIR,
     PUBLIC_DATA_DIR,
     REGISTER_PATH,
     repo_root,
 )
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.yaml_safe import safe_load
 
 ROOT = repo_root()
 DEPLOY_WORKFLOW = Path(".github/workflows/deploy.yml")
@@ -4564,7 +4564,7 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 #      boundary. The instance's own paths reach those scripts through
 #      `app/scripts/instance-paths.mjs`, which reads them from
 #      `config/boundary.yml`; `_JS_INSTANCE_PATHS` below reads the same
-#      declaration through `convener_ops.paths` and resolves each name to
+#      declaration through `convener_ops.declaration.paths` and resolves each name to
 #      the path it stands for.
 #   2. `_published_handbook_paths` -- the one input directory whose
 #      contents are filtered rather than copied wholesale. `docs/` is
@@ -4646,7 +4646,7 @@ _JS_PATH_BINDING_RE = re.compile(
 
 #: The names `app/scripts/instance-paths.mjs` gives the paths
 #: `config/boundary.yml` hands to the instance, against the same paths as
-#: `convener_ops.paths` reads them. Both sides answer from that one
+#: `convener_ops.declaration.paths` reads them. Both sides answer from that one
 #: declaration, so a copy script that reaches `instance/keys/` through `keysDir()`
 #: is read here as reaching `instance/keys/`.
 _JS_INSTANCE_PATHS: Final = {

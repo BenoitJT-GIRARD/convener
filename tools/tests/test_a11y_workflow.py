@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import re
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
 _WORKFLOW = (_ROOT / ".github" / "workflows" / "a11y.yml").read_text(encoding="utf-8")

@@ -2,7 +2,7 @@
  * Where the instance's own paths sit, read from `config/boundary.yml` --
  * this build's side of it.
  *
- * `tools/convener_ops/paths.py` is Python's reader of the same
+ * `tools/convener_ops/declaration/paths.py` is Python's reader of the same
  * declaration. Each of them names the declared paths once and every
  * caller builds the files it touches out of those names, so moving
  * `instance/data/` in the declaration moves them with it.

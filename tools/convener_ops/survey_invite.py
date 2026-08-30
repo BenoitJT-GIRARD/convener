@@ -183,8 +183,9 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
-from . import confirmation, published
-from .paths import DATA_DIR
+from . import confirmation
+from .declaration import published
+from .declaration.paths import DATA_DIR
 from .registration import Registration
 
 __all__ = [

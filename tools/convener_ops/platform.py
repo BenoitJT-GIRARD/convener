@@ -217,7 +217,7 @@ from typing import Any, Final, Protocol, runtime_checkable
 
 from . import eventkeys
 from .commit_format import _TOKEN
-from .paths import DATA_DIR, repo_root
+from .declaration.paths import DATA_DIR, repo_root
 from .registration import normalize_email
 
 #: The five columns `attendance-import.csv` must carry, by name. Extra

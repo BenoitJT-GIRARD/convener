@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 from convener_ops.commit_format import NO_PARENT, commit_range, log_range
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 pytestmark = pytest.mark.skipif(
     shutil.which("git") is None, reason="git is not on PATH"

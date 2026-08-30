@@ -151,8 +151,8 @@ from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 
-from convener_ops.paths import repo_root
-from convener_ops.published import INSTANCE_PATH
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.published import INSTANCE_PATH
 
 ROOT = repo_root()
 

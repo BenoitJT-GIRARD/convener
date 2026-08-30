@@ -338,7 +338,7 @@ steps:
       which keys are left. `.github/CODEOWNERS` has a check of its own, and it
       answers long before the first publish: the command below refuses any
       organisation but the declared one.
-    command: cd tools && uv run pytest tests/test_published.py -k literals
+    command: cd tools && uv run pytest tests/declaration/test_published.py -k literals
     degraded: >-
       The showcase and the cockpit both announce that they are not configured,
       on every page, which is correct and is the point. Worse than the band is
@@ -555,7 +555,7 @@ steps:
       No `wrangler.toml` still holds a placeholder id, and no worker names
       either value — an origin written back into a configuration or a
       repository written back into a worker's source is refused by
-      `tools/tests/test_published.py`, on the Python suite, with no worker's
+      `tools/tests/declaration/test_published.py`, on the Python suite, with no worker's
       suite run. Both greps below are anchored on what an assignment looks
       like rather than on the name: every one of these files explains in a
       comment why the value is not there, so a search for the bare word

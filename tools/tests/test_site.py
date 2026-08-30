@@ -35,11 +35,11 @@ import instance_identity
 import pytest
 from ics_reader import parse_calendar
 
-from convener_ops import published
 from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import repo_root
 from convener_ops.formats import BANNER
-from convener_ops.paths import repo_root
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
 from convener_ops.registration import SIGNUP_BASE, signup_url
 

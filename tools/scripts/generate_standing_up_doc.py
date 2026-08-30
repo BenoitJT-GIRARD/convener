@@ -68,8 +68,8 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops.integrations import Integration, load_declaration
-from convener_ops.paths import repo_root
+from convener_ops.declaration.integrations import Integration, load_declaration
+from convener_ops.declaration.paths import repo_root
 
 #: The declaration this page is rendered from. At the repository root rather
 #: than in `config/`, and that file's own header argues why.

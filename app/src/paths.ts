@@ -3,7 +3,7 @@
  * language boundary.
  *
  * One declaration -- `config/boundary.yml` -- and one reader per
- * language: `tools/convener_ops/paths.py` for Python,
+ * language: `tools/convener_ops/declaration/paths.py` for Python,
  * `app/scripts/instance-paths.mjs` for this build. This module is how the
  * paths that build read reach the browser, where no file can be read at
  * all. `vite.config.ts` substitutes them into every bundle through Vite's

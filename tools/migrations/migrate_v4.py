@@ -49,8 +49,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from convener_ops.cli import dump_speakers
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 #: The new text fields, each keyed by the field it is written after. The
 #: positions are those of `app/src/data/types.ts` and of the boundary

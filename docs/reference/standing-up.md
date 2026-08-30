@@ -271,7 +271,7 @@ it answers long before the first publish: the command below refuses any
 organisation but the declared one.
 
 ```bash
-cd tools && uv run pytest tests/test_published.py -k literals
+cd tools && uv run pytest tests/declaration/test_published.py -k literals
 ```
 
 **Without it.** The showcase and the cockpit both announce that they are not
@@ -502,11 +502,11 @@ hands it to `wrangler deploy`.
 **Proves it is done.** No `wrangler.toml` still holds a placeholder id, and no
 worker names either value — an origin written back into a configuration or a
 repository written back into a worker's source is refused by
-`tools/tests/test_published.py`, on the Python suite, with no worker's suite
-run. Both greps below are anchored on what an assignment looks like rather
-than on the name: every one of these files explains in a comment why the value
-is not there, so a search for the bare word matches the explanation and can
-never come back empty.
+`tools/tests/declaration/test_published.py`, on the Python suite, with no
+worker's suite run. Both greps below are anchored on what an assignment looks
+like rather than on the name: every one of these files explains in a comment
+why the value is not there, so a search for the bare word matches the
+explanation and can never come back empty.
 
 ```bash
 grep -RE "REPLACE_WITH_|^ALLOWED_ORIGIN" services/*/wrangler.toml ; grep -RE "github.com/repos/[A-Za-z0-9]" services/*/src/index.js

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.yaml_safe import safe_load
 
 
 def test_unquoted_hh_mm_stays_a_string_not_a_sexagesimal_int() -> None:

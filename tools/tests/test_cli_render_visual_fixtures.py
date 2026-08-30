@@ -13,10 +13,11 @@ from pathlib import Path
 import instance_identity
 import pytest
 
-from convener_ops import brand, published
+from convener_ops import brand
 from convener_ops.cli import render_visual_fixtures
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import repo_root
 from convener_ops.formats import FORMATS
-from convener_ops.paths import repo_root
 from convener_ops.registration import signup_url
 from convener_ops.visual import FIXTURE_ANNOUNCEMENT
 

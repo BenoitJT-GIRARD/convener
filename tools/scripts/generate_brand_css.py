@@ -131,7 +131,7 @@ from typing import Any, Final
 
 from convener_ops import brand, brand_templates
 from convener_ops.brand import rgb_triplet, rgba
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 #: The instance's own values, relative to the repository root. Not "the one
 #: source of fact" any more: an instance that

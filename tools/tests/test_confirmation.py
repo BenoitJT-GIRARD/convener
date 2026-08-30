@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 
 import pytest
 
-from convener_ops import published, registration
+from convener_ops import registration
 from convener_ops.confirmation import (
     CONTACT_EMAIL,
     FIELD_LABELS,
@@ -27,6 +27,7 @@ from convener_ops.confirmation import (
     event_details,
     smtp_config_from_env,
 )
+from convener_ops.declaration import published
 from convener_ops.platform import ManualPlatform, Room
 from convener_ops.registration import Registration
 

@@ -50,8 +50,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from convener_ops.cli import dump_speakers
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 #: The date the project owner chose for the whole backlog. Not `date.today()`:
 #: the value is a decision, and a decision belongs in the file that records

@@ -65,7 +65,7 @@ from generate_brand_css import (
     render_site_css,
 )
 
-from convener_ops import brand, brand_templates, published, ribbon
+from convener_ops import brand, brand_templates, ribbon
 from convener_ops.brand import (
     contrast_ratio,
     hex_to_rgb,
@@ -73,7 +73,8 @@ from convener_ops.brand import (
     rgb_triplet,
     rgba,
 )
-from convener_ops.paths import repo_root
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 

@@ -2,7 +2,7 @@
  * Who runs this series, on the application's side of the language boundary.
  *
  * One declaration -- `instance/config.json` -- and one reader per language:
- * `tools/convener_ops/published.py::load_identity` for Python,
+ * `tools/convener_ops/declaration/published.py::load_identity` for Python,
  * `site/scripts/published.cjs::identity` for the showcase's build,
  * `app/scripts/published.mjs::identity` for this one. This module is not a
  * fourth reader: it is how the value that build already read reaches the
@@ -152,7 +152,7 @@ let cachedUnconfigured: string[] | null = null;
  * linked its invented forum and whose every check stayed green -- a
  * declaration that belongs to somebody else is still a perfectly valid
  * declaration. `scripts/published.mjs::unconfigured` is this build's
- * reader of it; `tools/convener_ops/published.py::unconfigured` states the
+ * reader of it; `tools/convener_ops/declaration/published.py::unconfigured` states the
  * whole rule and why the `REPLACE` marker is deliberately no part of it.
  *
  * Throws when the define is absent, for the reason `instanceIdentity`

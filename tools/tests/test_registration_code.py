@@ -19,8 +19,8 @@ from datetime import date
 import pytest
 from qr_decode import decode_registration_qr
 
-from convener_ops.paths import repo_root
-from convener_ops.published import (
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.published import (
     DEGRADABLE_FIELDS,
     IDENTITY_FIELDS,
     INSTANCE_PATH,

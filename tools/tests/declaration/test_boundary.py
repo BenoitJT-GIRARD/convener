@@ -79,8 +79,9 @@ import pytest
 import yaml
 
 import convener_ops
-from convener_ops import actions_usage, boundary, queue_watch, registration_routing
-from convener_ops.boundary import (
+from convener_ops import actions_usage, queue_watch, registration_routing
+from convener_ops.declaration import boundary
+from convener_ops.declaration.boundary import (
     INSTANCE,
     PRODUCT,
     Boundary,
@@ -92,7 +93,7 @@ from convener_ops.boundary import (
     instance_files,
     load,
 )
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 
@@ -789,7 +790,7 @@ def test_a_path_nobody_declared_belongs_to_the_product() -> None:
     """The default, and it is the safe direction: a path only becomes the
     instance's by being named, never by being forgotten."""
     board = load()
-    assert board.owner_of("tools/convener_ops/boundary.py") == PRODUCT
+    assert board.owner_of("tools/convener_ops/declaration/boundary.py") == PRODUCT
     assert board.owner_of("app/src/main.tsx") == PRODUCT
     assert board.owner_of("site/src/_data/events.json") == PRODUCT
     assert board.owner_of("docs/toolkit/intro-scripts.md") == PRODUCT

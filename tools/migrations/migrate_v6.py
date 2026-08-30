@@ -80,8 +80,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 #: The key as schema v5 wrote it, and as this migration reads it. The one
 #: place in the product this spelling survives, and it survives here for

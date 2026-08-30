@@ -78,7 +78,7 @@ from typing import Final
 
 import segno
 
-from . import published
+from .declaration import published
 from .registration import signup_url
 
 __all__ = [

@@ -1,7 +1,7 @@
 // The one address this project is published at, read from
 // `instance/config.json` -- the showcase's side of it.
 //
-// `tools/convener_ops/published.py` is Python's reader of the same file and
+// `tools/convener_ops/declaration/published.py` is Python's reader of the same file and
 // `app/scripts/published.mjs` the application build's. Three readers of
 // one declaration, one per side of the language boundary, is D-14 applied
 // literally; three *copies* of the address is the defect it replaces, and
@@ -25,7 +25,7 @@
 // edition code: it prints the ones `src/_data/events.json` hands it, and
 // lower-cases them for the event page's own permalink (D-19). A reader
 // nothing called would be a third statement of a rule with two
-// consumers -- `tools/convener_ops/published.py` for the validator and the
+// consumers -- `tools/convener_ops/declaration/published.py` for the validator and the
 // jobs, `app/scripts/published.mjs` for the cockpit's own build, bound to
 // each other by `tools/tests/fixtures/edition-prefix.json`.
 //
@@ -107,7 +107,7 @@ function publishedAddress() {
 }
 
 // Who runs this series, and what it is called -- the other half of the
-// same declaration, read the same way. `tools/convener_ops/published.py::
+// same declaration, read the same way. `tools/convener_ops/declaration/published.py::
 // load_identity` is Python's reader of it and `app/scripts/published.mjs::
 // identity` the application build's.
 //
@@ -185,7 +185,7 @@ function identity() {
 }
 
 // Whether this instance is still publishing the identity the *product*
-// ships as its worked example -- `tools/convener_ops/published.py::
+// ships as its worked example -- `tools/convener_ops/declaration/published.py::
 // unconfigured` is Python's answer to the same question and
 // `app/scripts/published.mjs::unconfigured` the cockpit build's, mirrored
 // here clause for clause like everything else in this file.

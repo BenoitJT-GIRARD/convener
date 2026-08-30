@@ -28,8 +28,8 @@ import pytest
 from conftest import speaker
 
 import convener_ops.visual as visual
+from convener_ops.declaration.paths import repo_root
 from convener_ops.formats import BANNER, FORMATS, PRINT, SQUARE
-from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
 from convener_ops.ribbon import waypoints
 from convener_ops.visual import (

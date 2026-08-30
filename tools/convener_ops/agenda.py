@@ -71,7 +71,7 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Final
 
-from . import published
+from .declaration import published
 from .governance import PARIS
 from .notify import Deadline, due_date
 from .registration import signup_url

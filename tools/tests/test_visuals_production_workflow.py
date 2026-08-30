@@ -21,7 +21,7 @@ from __future__ import annotations
 import yaml
 from conftest import workflow_triggers
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
 _WORKFLOW_PATH = _ROOT / ".github" / "workflows" / "visuals-production.yml"
@@ -92,7 +92,7 @@ _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/formats.py",
     "tools/convener_ops/governance.py",
     "tools/convener_ops/cli.py",
-    "tools/convener_ops/published.py",
+    "tools/convener_ops/declaration/published.py",
     "tools/convener_ops/brand.py",
     "fonts/**",
     "tools/uv.lock",

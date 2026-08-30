@@ -1245,8 +1245,8 @@ def test_platform_from_env_forwards_conference_ids() -> None:
 
 
 def test_token_env_matches_the_declared_integration_secret() -> None:
-    from convener_ops.integrations import load_declaration
-    from convener_ops.paths import repo_root
+    from convener_ops.declaration.integrations import load_declaration
+    from convener_ops.declaration.paths import repo_root
 
     declaration = load_declaration(repo_root() / "config" / "integrations.yml")
     meeting_provider = next(i for i in declaration if i.name == "meeting_provider")

@@ -236,7 +236,7 @@ def is_placeholder(value: str) -> bool:
     """Whether a declared value is still the placeholder that stands in
     for one. Mirrored on the other side of the language boundary by
     `site/scripts/published.cjs`, and the two are held together by
-    `tools/tests/test_published.py::test_the_showcase_feeds_its_templates_
+    `tools/tests/declaration/test_published.py::test_the_showcase_feeds_its_templates_
     the_declared_identity`, which compares what that build hands its
     templates against what this reader derives."""
     return PLACEHOLDER_MARKER in value

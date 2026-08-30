@@ -22,7 +22,7 @@ import re
 import yaml
 from conftest import workflow_triggers
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
 _WORKFLOW = (_ROOT / ".github" / "workflows" / "visuals.yml").read_text(
@@ -167,7 +167,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/governance.py",
         "tools/convener_ops/cli.py",
         "instances/example/instance/config.json",
-        "tools/convener_ops/published.py",
+        "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/registration.py",
         "instances/example/instance/data/brand.json",
         "tools/convener_ops/brand.py",

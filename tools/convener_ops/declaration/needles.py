@@ -21,7 +21,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from . import brand, published
+from .. import brand
+from . import published
 
 #: A needle short enough that an accidental run of the same letters inside
 #: minified output is plausible is matched on word boundaries instead of

@@ -8,7 +8,7 @@ second copy of either would be the defect this whole phase exists to end:
    more**: they have a second reader outside the suite
    (`convener_ops.derivation_guard`, which asks the same question of every
    blob of every ref before a public push), and a derivation with two
-   readers belongs in the package. `convener_ops.needles` owns it; the names
+   readers belongs in the package. `convener_ops.declaration.needles` owns it; the names
    are re-exported below so every reader of this module keeps working and
    nobody has two places to look. `test_second_instance.py` sweeps a
    *build* for them; anything looking for "this instance's identity" in
@@ -56,8 +56,8 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Final
 
-from convener_ops.needles import contains, forms, needles
-from convener_ops.published import unconfigured
+from convener_ops.declaration.needles import contains, forms, needles
+from convener_ops.declaration.published import unconfigured
 
 __all__ = [
     "BINARY_SUFFIXES",

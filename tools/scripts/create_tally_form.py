@@ -106,6 +106,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Final
 
+from convener_ops.declaration.published import load_identity
 from convener_ops.proposal import (
     CAREER_STAGE_ORDER,
     FORM_FIELDS,
@@ -122,7 +123,6 @@ from convener_ops.proposal import (
     LABEL_PROPOSED_BY,
     LABEL_TITLE,
 )
-from convener_ops.published import load_identity
 
 #: The form's name in Tally, and the idempotency key: `sync_form` finds the
 #: existing form by this exact name (`GET /forms` has no filter-by-name

@@ -7,7 +7,7 @@
  * once: `config/boundary.yml` names the directories the instance owns
  * whole, and each configuration file `CONFIG_DIRS` holds directly states
  * its own answer in its own `owner:` key.
- * `tools/convener_ops/boundary.py` is the reader on the other side of the
+ * `tools/convener_ops/declaration/boundary.py` is the reader on the other side of the
  * language boundary; this is the browser's, and it reads the same bytes
  * rather than a list somebody typed into a screen. A hand-typed list would
  * be a third home for the boundary, in the one place where being wrong is
@@ -20,7 +20,7 @@
  * refuses rather than repairing anything it cannot read: a boundary read
  * wrongly is worse than a boundary not read at all.
  *
- * `tools/tests/test_boundary.py` is what holds the repository against the
+ * `tools/tests/declaration/test_boundary.py` is what holds the repository against the
  * declaration; nothing here duplicates that work. What this module does is
  * answer, in the browser, the two questions the screen asks: which paths,
  * and -- for the integrations -- which secrets, and what breaks without

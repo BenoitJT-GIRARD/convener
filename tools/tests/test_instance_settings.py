@@ -38,8 +38,9 @@ from typing import Any, Final
 
 import pytest
 
-from convener_ops import actions_usage, boundary, queue_watch, registration_routing
-from convener_ops.paths import repo_root
+from convener_ops import actions_usage, queue_watch, registration_routing
+from convener_ops.declaration import boundary
+from convener_ops.declaration.paths import repo_root
 
 _FIXTURE: Final = (
     repo_root() / "tools" / "tests" / "fixtures" / "instance-settings.json"

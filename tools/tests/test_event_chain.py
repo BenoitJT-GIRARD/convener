@@ -69,12 +69,8 @@ from convener_ops.certificate import (
     CertificateEvent,
     register_to_data,
 )
-from convener_ops.certificate import (
-    issue as certificate_issue,
-)
-from convener_ops.certificate import (
-    revoke as certificate_revoke,
-)
+from convener_ops.certificate import issue as certificate_issue
+from convener_ops.certificate import revoke as certificate_revoke
 from convener_ops.cli import (
     CERTIFICATES_HEADER,
     UNMATCHED_ATTENDANCE,

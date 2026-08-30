@@ -43,8 +43,8 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 ROOT = repo_root()
 PAGE = Path("docs/workflow/4-after.md")

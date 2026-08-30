@@ -16,7 +16,7 @@
  * ---------------------------------------
  * The set of things this instance owns is not typed into this file: it is
  * read from `config/boundary.yml` and from each `config/` file's own
- * `owner:` header, exactly as `tools/convener_ops/boundary.py` reads it
+ * `owner:` header, exactly as `tools/convener_ops/declaration/boundary.py` reads it
  * (`../settings/declaration.ts`). Of the eight paths that come back, three
  * are files of numbers and this screen offers them as a form. The other
  * five are not "not implemented": each one is a path a form is the wrong

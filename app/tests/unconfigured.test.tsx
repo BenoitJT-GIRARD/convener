@@ -9,7 +9,7 @@
  *
  * What "not configured" means, mechanically, is decided on the other side
  * of the language boundary and stated once in
- * `tools/convener_ops/published.py::unconfigured`: a declared value still
+ * `tools/convener_ops/declaration/published.py::unconfigured`: a declared value still
  * equal to the one the product ships in `instances/example/instance/
  * instance.json`. `app/scripts/published.mjs::unconfigured` is this
  * build's reader of it and `vite.config.ts` carries the answer into the
@@ -30,7 +30,7 @@ import { Login } from '../src/auth/Login';
 /** Every value `instance/config.json` declares about who is publishing,
  *  as `published.py::declared_values` names them. Written out here rather
  *  than derived, because this side of the boundary has no reader of the
- *  file: `tools/tests/test_published.py::test_the_declaration_names_every_
+ *  file: `tools/tests/declaration/test_published.py::test_the_declaration_names_every_
  *  value_that_says_who_is_publishing` is what holds the enumeration to the
  *  declaration's own lists, and
  *  `test_every_bundle_the_application_builds_carries_the_unconfigured_

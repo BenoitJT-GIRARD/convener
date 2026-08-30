@@ -20,7 +20,7 @@ import re
 
 import yaml
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
 _A11Y_PATH = _ROOT / ".github" / "workflows" / "a11y.yml"

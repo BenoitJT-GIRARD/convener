@@ -92,8 +92,8 @@ from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Final
 
+from .declaration.paths import PUBLIC_DATA_DIR
 from .governance import PARIS
-from .paths import PUBLIC_DATA_DIR
 
 #: The maintainer-editable threshold, relative to a repository root. Beside
 #: `actions-budget.yml` and `integrations.yml`, never in `instance/data/config.yml`

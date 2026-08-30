@@ -85,7 +85,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Final
 
-from .published import load_identity
+from .declaration.published import load_identity
 from .registration import signup_url
 from .visual import date_line
 

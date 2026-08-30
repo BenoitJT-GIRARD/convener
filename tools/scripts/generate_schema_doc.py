@@ -59,7 +59,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 #: The model, relative to the repository root. The one source this script has.
 TYPES_PATH: Final = Path("app") / "src" / "data" / "types.ts"

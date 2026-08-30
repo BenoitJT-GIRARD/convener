@@ -2,7 +2,7 @@
  * The one address this project is published at, read from
  * `instance/config.json` -- this build's side of it.
  *
- * `tools/convener_ops/published.py` is Python's reader of the same file and
+ * `tools/convener_ops/declaration/published.py` is Python's reader of the same file and
  * `site/scripts/published.cjs` the showcase's. Three readers of one
  * declaration, one per side of the language boundary, is D-14 applied
  * literally; three *copies* of the address is the defect it replaces,
@@ -85,7 +85,7 @@ export function published() {
 /**
  * Who runs this series, and what it is called -- the other half of the
  * same declaration, read the same way.
- * `tools/convener_ops/published.py::load_identity` is Python's reader of it
+ * `tools/convener_ops/declaration/published.py::load_identity` is Python's reader of it
  * and `site/scripts/published.cjs::identity` the showcase's.
  *
  * `vite.config.ts` injects the result into every bundle through Vite's
@@ -159,7 +159,7 @@ export function identity() {
 /**
  * The prefix this instance numbers its editions under -- the third part
  * of the same declaration, read the same way.
- * `tools/convener_ops/published.py::load_edition_prefix` is Python's reader of
+ * `tools/convener_ops/declaration/published.py::load_edition_prefix` is Python's reader of
  * it, and `EDITION_PREFIX_RE` there is the same expression as below.
  *
  * The showcase has no reader of its own for this and needs none: it
@@ -185,7 +185,7 @@ const EDITION_PREFIX_RE = new RegExp(`^[A-Z][A-Z0-9]{0,${EDITION_PREFIX_MAX_LENG
  *  Exported so the boundary is a worked example rather than a claim:
  *  `tools/tests/fixtures/edition-prefix.json` holds the cases and both
  *  sides answer them -- `app/tests/edition-prefix.test.ts` here,
- *  `tools/tests/test_published.py` against `EDITION_PREFIX_RE` there. A
+ *  `tools/tests/declaration/test_published.py` against `EDITION_PREFIX_RE` there. A
  *  prefix the build accepts and the validator refuses is a repository
  *  that can be built and cannot be validated. */
 export function isEditionPrefix(value) {
@@ -220,7 +220,7 @@ export function editionPrefix() {
  * Whether this instance is still publishing the identity the *product*
  * ships as its worked example.
  *
- * `tools/convener_ops/published.py::unconfigured` is Python's answer to the
+ * `tools/convener_ops/declaration/published.py::unconfigured` is Python's answer to the
  * same question and `site/scripts/published.cjs::unconfigured` the
  * showcase build's; the whole rule is stated once in the first of those
  * -- what counts as unconfigured, why it is a value-by-value comparison

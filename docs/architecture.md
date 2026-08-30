@@ -75,7 +75,7 @@ This system is meant to be run by more than one group, which makes an
 update a **merge**: it works only if the code and the running series live
 in paths that never overlap. So "what belongs to this series" is not a
 sentiment here, it is a list — `config/boundary.yml` holds it, and
-`tools/convener_ops/boundary.py` reads it. Everything the list does not name
+`tools/convener_ops/declaration/boundary.py` reads it. Everything the list does not name
 belongs to the code, and a directory is handed over whole rather than file
 by file: the records and configuration under `instance/data/`, the published
 public keys under `instance/keys/`, whatever continuous integration publishes into

@@ -34,7 +34,7 @@ if (!VALID_CASE || !INVALID_CASE) {
 // `.github/workflows/deploy-form-relay.yml`, which reads the declaration
 // through the reader that owns it. `src/index.js` names no repository at
 // all; `wrangler.toml`'s own header argues why, and
-// `tools/tests/test_published.py` is where the two are held together, on
+// `tools/tests/declaration/test_published.py` is where the two are held together, on
 // the side that has the declaration in reach.
 //
 // So this suite states a repository of its own instead of reading one,

@@ -7,7 +7,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import eventkeys, published
+from convener_ops import eventkeys
+from convener_ops.declaration import published
 from convener_ops.registration import (
     _CODE_ALPHABET,
     _MAX_FIELD_LENGTH,

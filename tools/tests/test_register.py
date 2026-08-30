@@ -18,7 +18,7 @@ from convener_ops.commit_format import (
     format_decision,
     judgemental_terms,
 )
-from convener_ops.paths import REGISTER_PATH
+from convener_ops.declaration.paths import REGISTER_PATH
 from convener_ops.register import (
     LOG_FORMAT,
     RegisterEntry,
@@ -501,7 +501,7 @@ def test_the_quality_workflow_checks_the_register_against_the_whole_history() ->
     hand edit -- or, on a repository with no decisions yet, match it and pass
     for one.
     """
-    from convener_ops.paths import repo_root
+    from convener_ops.declaration.paths import repo_root
 
     workflow = (repo_root() / ".github" / "workflows" / "quality.yml").read_text(
         encoding="utf-8"
@@ -532,7 +532,7 @@ def test_register_reports_a_history_it_cannot_read(
 
 def test_git_log_returns_lines_this_module_can_parse() -> None:
     """The one test that runs git, so the format string cannot drift unnoticed."""
-    from convener_ops.paths import repo_root
+    from convener_ops.declaration.paths import repo_root
 
     root = repo_root()
     if not (root / ".git").exists():

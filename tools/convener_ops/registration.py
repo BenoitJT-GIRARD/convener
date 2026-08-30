@@ -109,7 +109,8 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
-from . import eventkeys, published
+from . import eventkeys
+from .declaration import published
 
 #: `registrations.enc`'s own format version -- the file-level analogue of
 #: `eventkeys.WIRE_VERSION`, in case the file's shape (not the envelope

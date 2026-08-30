@@ -39,8 +39,8 @@ from convener_ops.cli import (
     check_actions_usage_liveness,
     record_actions_usage,
 )
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 _ROOT = repo_root()
 _SWEEP_PATH = _ROOT / ".github" / "workflows" / "sweep-and-notify.yml"

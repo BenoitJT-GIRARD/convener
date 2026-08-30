@@ -46,7 +46,7 @@ from migrate_v6 import (
 )
 
 from convener_ops.cli import SPEAKERS_HEADER, dump_config
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 from convener_ops.validate import validate_config
 
 ROOT = repo_root()
@@ -256,7 +256,7 @@ def test_nothing_published_carries_the_key_at_all() -> None:
     none of them reads the key under either name -- so renaming it moved
     nothing a reader outside this repository can reach."""
     for name in (
-        "tools/convener_ops/published.py",
+        "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/certificate.py",
         "tools/convener_ops/eventkeys.py",
         "tools/convener_ops/registration.py",

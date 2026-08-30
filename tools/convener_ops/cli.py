@@ -28,7 +28,6 @@ from convener_ops import (
     delivery,
     eventkeys,
     formats,
-    published,
     queue_watch,
     registration_routing,
     retention_liveness,
@@ -63,16 +62,23 @@ from convener_ops.certificate import (
     revoke,
     sign_for,
 )
-from convener_ops.dispatch_alert import alert_message
-from convener_ops.governance import PARIS, paris_today
-from convener_ops.integrations import (
+from convener_ops.declaration import published
+from convener_ops.declaration.integrations import (
     ABSENT,
     Integration,
     load_declaration,
     resolve_states,
 )
+from convener_ops.declaration.paths import (
+    DATA_DIR,
+    PUBLIC_DATA_DIR,
+    REGISTER_PATH,
+    repo_root,
+)
+from convener_ops.declaration.yaml_safe import safe_load as yaml_safe_load
+from convener_ops.dispatch_alert import alert_message
+from convener_ops.governance import PARIS, paris_today
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
-from convener_ops.paths import DATA_DIR, PUBLIC_DATA_DIR, REGISTER_PATH, repo_root
 from convener_ops.platform import (
     ENCRYPTED_ATTENDANCE_FILENAME,
     AttendanceImportError,
@@ -94,11 +100,7 @@ from convener_ops.platform_fcc import (
 )
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public, to_survey_status
-from convener_ops.register import (
-    LOG_FORMAT,
-    entries_from_log,
-    render_register,
-)
+from convener_ops.register import LOG_FORMAT, entries_from_log, render_register
 from convener_ops.registration import (
     AmbiguousMatchingCodeError,
     Registration,
@@ -120,7 +122,6 @@ from convener_ops.validate import (
     validate_config,
     validate_speakers,
 )
-from convener_ops.yaml_safe import safe_load as yaml_safe_load
 
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the

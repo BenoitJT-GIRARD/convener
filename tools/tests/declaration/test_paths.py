@@ -1,7 +1,7 @@
 """`repo_root`, and the one place an instance path is written down.
 
 `config/boundary.yml` declares which paths belong to the instance;
-`convener_ops/paths.py` turns each of them into a named constant, read from
+`convener_ops/declaration/paths.py` turns each of them into a named constant, read from
 that declaration; every other module in the package builds the paths it
 touches out of those constants. This module holds the third of those three
 statements. It walks every module the package ships and fails on one that
@@ -55,8 +55,8 @@ from pathlib import Path
 import pytest
 from test_cross_references import _tracked
 
-from convener_ops import boundary, paths
-from convener_ops.paths import (
+from convener_ops.declaration import boundary, paths
+from convener_ops.declaration.paths import (
     DATA_DIR,
     KEYS_DIR,
     PUBLIC_DATA_DIR,
@@ -72,7 +72,7 @@ ROOT = repo_root()
 #: allowed to write an instance path out: `paths.py` is where the
 #: constants are.
 PACKAGE = "tools/convener_ops/"
-HOME = "tools/convener_ops/paths.py"
+HOME = "tools/convener_ops/declaration/paths.py"
 
 
 def declared_instance_paths() -> tuple[str, ...]:
@@ -335,7 +335,7 @@ def test_the_sweep_reads_every_module_the_package_ships() -> None:
     read = {name for name, _ in swept()}
     shipped = {
         path.relative_to(ROOT).as_posix()
-        for path in (ROOT / PACKAGE).glob("*.py")
+        for path in (ROOT / PACKAGE).rglob("*.py")
         if path.relative_to(ROOT).as_posix() != HOME
     }
 

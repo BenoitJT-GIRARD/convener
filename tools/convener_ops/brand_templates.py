@@ -162,7 +162,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-from . import brand, formats, published, registration_code, ribbon
+from . import brand, formats, registration_code, ribbon
+from .declaration import published
 
 __all__ = [
     "ANNOUNCEMENT_PATH",

@@ -354,7 +354,7 @@ jobs:
           # `publish-vitrine.yml`'s own room-link guard already uses, rather
           # than a fourth parser written in shell.
           target="$(uv run --project tools python -c \
-            'from convener_ops.published import load; print(load().publish_repository)')"
+            'from convener_ops.declaration.published import load; print(load().publish_repository)')"
           # Refuse a target that is the repository this build came from.
           # `publish_repository` derives `<owner>/<repository>` from the
           # declared address and nothing else, so a repository served at

@@ -8,7 +8,7 @@ from typing import Any, Final
 
 import pytest
 
-from convener_ops.published import EditionPrefix
+from convener_ops.declaration.published import EditionPrefix
 
 #: `tools/scripts/` holds the generators and one-off utilities, and
 #: `tools/migrations/` the one-shot migrations. Both live outside the

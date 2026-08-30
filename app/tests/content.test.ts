@@ -144,7 +144,7 @@ describe('speaker.signup_link matches the shared D-14 fixture', () => {
   // comes from `instance/config.json`, which `vite.config.ts` substitutes
   // into this bundle (and into this test run, which reads the same
   // configuration) as `import.meta.env.VITE_PUBLISHED_URL` -- Python reads
-  // the same declaration through `convener_ops.published`. Asserting the define
+  // the same declaration through `convener_ops.declaration.published`. Asserting the define
   // exists at all is the point of the first case: without it every
   // assertion below would compare `undefined...` against `undefined...`
   // and pass while the built bundle shipped a broken public link.

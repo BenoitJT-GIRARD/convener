@@ -44,8 +44,8 @@ from convener_ops.certificate import (
     register_to_data,
 )
 from convener_ops.cli import erase_registration, record_destructions, retention_sweep
+from convener_ops.declaration.paths import repo_root
 from convener_ops.eventkeys import DecryptionError, decrypt, encrypt, generate
-from convener_ops.paths import repo_root
 from convener_ops.platform import (
     AttendanceRow,
     decrypt_attendance_rows,

@@ -15,7 +15,7 @@
 # count in this paragraph, which is exactly why nothing noticed. It is read
 # now, by test_integrations.py::test_this_declarations_own_header_names_
 # every_exception, which fails naming the row a fourth exception would add.
-# tools/convener_ops/integrations.py carried the same wrong sentence in its
+# tools/convener_ops/declaration/integrations.py carried the same wrong sentence in its
 # module docstring and in Integration.absent_is_normal's own comment. All
 # three are corrected.
 #

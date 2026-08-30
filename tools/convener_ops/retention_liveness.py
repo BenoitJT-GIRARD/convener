@@ -33,7 +33,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Final
 
-from .paths import DATA_DIR
+from .declaration.paths import DATA_DIR
 
 #: Where the record lives, relative to a repository root -- the same
 #: "one function names the path" discipline `eventkeys.destructions_path`

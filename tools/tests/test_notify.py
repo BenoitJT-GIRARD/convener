@@ -21,6 +21,8 @@ from conftest import config as make_config
 
 from convener_ops import cli, notify
 from convener_ops.commit_format import judgemental_terms
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.governance import vote_window_days
 from convener_ops.notify import (
     EVENT_KINDS,
@@ -40,9 +42,7 @@ from convener_ops.notify import (
     resolve_channel,
     waiting_since,
 )
-from convener_ops.paths import repo_root
 from convener_ops.sweep import expire_votes
-from convener_ops.yaml_safe import safe_load
 
 NOW = datetime(2026, 8, 18, 9, 0, tzinfo=UTC)
 
@@ -1678,7 +1678,7 @@ def test_the_channel_is_declared_as_an_integration() -> None:
     """Deferred configuration (D-13): `convener-check-config` reports the channel's
     state alongside every other integration, so an absent one reads as the
     normal state it is rather than as something broken."""
-    from convener_ops.integrations import load_declaration
+    from convener_ops.declaration.integrations import load_declaration
 
     declaration = load_declaration(repo_root() / "config" / "integrations.yml")
     channel = next(i for i in declaration if i.name == "board_notifications")

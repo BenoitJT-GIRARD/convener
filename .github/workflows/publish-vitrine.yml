@@ -158,8 +158,8 @@ jobs:
         run: |
           set -e
           links=$(uv run --project tools python -c '
-          from convener_ops.paths import repo_root
-          from convener_ops.yaml_safe import safe_load
+          from convener_ops.declaration.paths import repo_root
+          from convener_ops.declaration.yaml_safe import safe_load
 
           speakers = safe_load(
               (repo_root() / "data" / "speakers.yml").read_text(encoding="utf-8")
@@ -211,7 +211,7 @@ jobs:
           # guard above already uses, rather than a fourth parser written
           # in shell.
           target="$(uv run --project tools python -c \
-            'from convener_ops.published import load; print(load().publish_repository)')"
+            'from convener_ops.declaration.published import load; print(load().publish_repository)')"
           # Refuse a target that is the repository this build came from.
           # `publish_repository` derives `<owner>/<repository>` from the
           # declared address and nothing else, so a repository served at

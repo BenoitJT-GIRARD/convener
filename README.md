@@ -181,7 +181,7 @@ integration was the alternative, and it keeps a copy honest without
 removing it, at the price of a Python toolchain in a sequence a text
 editor has to be enough for. Left uncorrected it sends every review
 request to an organisation the duplicate does not own, and
-`tools/tests/test_published.py::test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
+`tools/tests/declaration/test_published.py::test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
 goes red on the first run.
 
 **Six files, then**: three the boundary declares, and three of the

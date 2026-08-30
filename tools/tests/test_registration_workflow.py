@@ -24,7 +24,7 @@ access this suite must not take on.
 
 from __future__ import annotations
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
 _REGISTRATION = (_ROOT / ".github" / "workflows" / "registration.yml").read_text(

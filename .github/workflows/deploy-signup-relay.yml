@@ -86,13 +86,13 @@ jobs:
           # uses for the repository it pushes a built site into, rather
           # than a second parser written in shell.
           origin="$(uv run --project tools python -c \
-            'from convener_ops.published import load; print(load().origin)')"
+            'from convener_ops.declaration.published import load; print(load().origin)')"
           if [ -z "$origin" ]; then
             echo "::error::instance/config.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
             exit 1
           fi
           repository="$(uv run --project tools python -c \
-            'from convener_ops.published import load_identity; print(load_identity().repository)')"
+            'from convener_ops.declaration.published import load_identity; print(load_identity().repository)')"
           if [ -z "$repository" ]; then
             echo "::error::instance/config.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
             exit 1

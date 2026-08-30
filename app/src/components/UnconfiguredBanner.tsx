@@ -14,7 +14,7 @@
  * instance, so this renders nothing at all on one -- no reserved strip of
  * screen, no markup. The whole rule, and why the `REPLACE` marker is
  * deliberately no part of it, is stated once in
- * `tools/convener_ops/published.py::unconfigured`.
+ * `tools/convener_ops/declaration/published.py::unconfigured`.
  *
  * Above the sign-in screen as well as above the cockpit, because the
  * sign-in screen is the only one of the two a *visitor* reaches: the

@@ -1,7 +1,7 @@
 /**
  * What this application's build actually resolves its
  * `base` to, for each of the four configurations `npm run build` invokes,
- * printed as JSON for `tools/tests/test_published.py` to compare against
+ * printed as JSON for `tools/tests/declaration/test_published.py` to compare against
  * the same declaration read from Python.
  *
  * `vite.config.ts` is TypeScript, so it cannot simply be `require`d the

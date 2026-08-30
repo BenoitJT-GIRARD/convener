@@ -130,7 +130,7 @@ jobs:
           import json
 
           from convener_ops import eventkeys
-          from convener_ops.paths import repo_root
+          from convener_ops.declaration.paths import repo_root
 
           root = repo_root()
           events = json.loads(

@@ -32,7 +32,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 from convener_ops.visual import date_line, paris_standing_start
 
 _ROOT = repo_root()

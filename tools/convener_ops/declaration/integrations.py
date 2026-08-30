@@ -18,7 +18,7 @@ in the declaration's own header and in `Integration.absent_is_normal`'s
 comment below -- the first of those being the more authoritative of the two,
 and the one the settings screen reads and ships into the demonstration. Task
 8 corrected both. Nothing read the count, which is exactly why nothing
-noticed; `tools/tests/test_integrations.py` reads it against that header
+noticed; `tools/tests/declaration/test_integrations.py` reads it against that header
 now.
 """
 

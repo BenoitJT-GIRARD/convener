@@ -106,7 +106,7 @@ from math import ceil
 from pathlib import Path
 from typing import Any, Final
 
-from .paths import DATA_DIR
+from .declaration.paths import DATA_DIR
 from .registration_routing import MISSED_DRAINS_COVERED
 
 #: Where the record lives, relative to a repository root -- the same "one

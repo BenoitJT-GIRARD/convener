@@ -35,8 +35,8 @@ from collections.abc import Iterable, Sequence
 from typing import Any
 
 from convener_ops.cli import dump_config, dump_speakers
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 #: Statuses whose recording exists, so consent is something to go and ask
 #: for rather than a field left blank.

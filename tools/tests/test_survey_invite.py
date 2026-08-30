@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import published
 from convener_ops.confirmation import Confirmation
+from convener_ops.declaration import published
 from convener_ops.registration import Registration
 from convener_ops.survey_invite import (
     INVITATIONS_FILE_VERSION,

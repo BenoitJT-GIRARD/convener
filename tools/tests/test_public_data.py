@@ -336,8 +336,8 @@ def test_the_programme_is_published_whatever_the_consent_says() -> None:
 def test_no_recording_in_the_real_feed_lacks_recorded_consent() -> None:
     # The property, stated over whatever `instance/data/speakers.yml` happens to
     # hold: no row carries a link unless that row's gate opened.
-    from convener_ops.paths import repo_root
-    from convener_ops.yaml_safe import safe_load
+    from convener_ops.declaration.paths import repo_root
+    from convener_ops.declaration.yaml_safe import safe_load
 
     path = repo_root() / "instance" / "data" / "speakers.yml"
     speakers = safe_load(path.read_text(encoding="utf-8"))

@@ -81,7 +81,7 @@ from generate_standing_up_skill import (
 from generate_standing_up_skill import COMMAND as SKILL_COMMAND
 from generate_standing_up_skill import main as skill_main
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 

@@ -33,7 +33,7 @@ import re
 import subprocess  # nosec B404
 from pathlib import Path
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 README = ROOT / "README.md"

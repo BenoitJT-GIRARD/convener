@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from convener_ops.integrations import load_declaration, resolve_states
-from convener_ops.paths import repo_root
+from convener_ops.declaration.integrations import load_declaration, resolve_states
+from convener_ops.declaration.paths import repo_root
 
 DECLARATION = """
 integrations:
@@ -233,7 +233,7 @@ def test_the_handbook_page_names_every_exception_the_declaration_holds() -> None
     """The fourth copy of the same sentence.
 
     `config/integrations.yml`'s own header and
-    `tools/convener_ops/integrations.py`'s docstring and comment were
+    `tools/convener_ops/declaration/integrations.py`'s docstring and comment were
     corrected from one exception to three when the second and third rows
     declared themselves; `docs/reference/operations.md` opens by making
     the same claim and was not, because nothing read it. It is read here,

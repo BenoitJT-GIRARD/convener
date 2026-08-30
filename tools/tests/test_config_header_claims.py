@@ -54,8 +54,8 @@ from pathlib import Path
 from typing import Any, Final
 
 from convener_ops import queue_watch, registration_routing
-from convener_ops.paths import repo_root
-from convener_ops.yaml_safe import safe_load
+from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 
 ROOT: Final = repo_root()
 

@@ -20,8 +20,8 @@ import yaml
 from conftest import speaker
 
 from convener_ops.cli import _scheduled_announcements, render_visuals
+from convener_ops.declaration.paths import repo_root
 from convener_ops.formats import FORMATS
-from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
 from convener_ops.visual import render_announcement
 

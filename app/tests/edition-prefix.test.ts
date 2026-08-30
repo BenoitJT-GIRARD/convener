@@ -14,7 +14,7 @@
  * 1. **The two readers of `instance/config.json::edition_prefix` agree
  *    about what a prefix is.** `tools/tests/fixtures/edition-prefix.json`
  *    holds the cases and both sides answer them --
- *    `tools/tests/test_published.py` against `published.EDITION_PREFIX_RE`
+ *    `tools/tests/declaration/test_published.py` against `published.EDITION_PREFIX_RE`
  *    there, `isEditionPrefix` here. A prefix the build accepts and the
  *    validator refuses is a repository that can be built and cannot be
  *    validated, which is the kind of disagreement a worked example

@@ -40,7 +40,7 @@ with, value by value: while any of the eleven values in
 `instance/config.json` is still one of these, the showcase prints a band
 above its masthead on every page and the cockpit prints one above its
 sign-in screen, naming the keys still to fill in
-(`tools/convener_ops/published.py::unconfigured`, and one reader per language
+(`tools/convener_ops/declaration/published.py::unconfigured`, and one reader per language
 beside it). That is why every value here has to stay invented and reserved
 rather than merely plausible: a value somebody could genuinely declare
 would make the warning fire on an instance that had been configured, and a

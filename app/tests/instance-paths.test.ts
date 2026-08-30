@@ -11,7 +11,7 @@
  * a string of its own, with the list of paths it refuses read from the
  * declaration at run time.
  *
- * `tools/tests/test_paths.py` is the same sweep over the Python package,
+ * `tools/tests/declaration/test_paths.py` is the same sweep over the Python package,
  * and the rule below is that rule's clause for clause.
  *
  * **Where this lives.** In the cockpit's suite, because the distinction

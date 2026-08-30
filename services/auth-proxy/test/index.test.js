@@ -7,7 +7,7 @@ import { handle } from '../src/index.js';
 // `env.ALLOWED_ORIGIN` -- passed to `wrangler deploy --var` by
 // `.github/workflows/deploy-auth-proxy.yml`, which reads the declaration
 // through the reader that owns it. `wrangler.toml` names no origin at
-// all; its own header argues why, and `tools/tests/test_published.py` is
+// all; its own header argues why, and `tools/tests/declaration/test_published.py` is
 // where the two are held together, on the side that has the declaration
 // in reach.
 //

@@ -5,14 +5,14 @@ from typing import Any
 import pytest
 from conftest import speaker
 
-from convener_ops import published
 from convener_ops.announce import (
     forum_announcement,
     mailing_list_message,
     network_post,
     recording_announcement,
 )
-from convener_ops.paths import repo_root
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import repo_root
 from convener_ops.public_data import to_public
 from convener_ops.registration import signup_url
 

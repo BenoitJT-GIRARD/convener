@@ -42,7 +42,7 @@ from generate_schema_doc import (
     schema_doc,
 )
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 from convener_ops.validate import STATUSES
 
 ROOT = repo_root()

@@ -31,8 +31,9 @@ allowance with a bound on the collector's own runtime and now sits in
 
 What this module does **not** do is decide anything about the future. No
 offline check can promise that a later upstream commit will not touch
-`instance/data/`. What it can do, and what `tools/tests/test_boundary.py` builds on
-top of it, is refuse the states that make such a commit *necessary* -- see
+`instance/data/`. What it can do, and what
+`tools/tests/declaration/test_boundary.py` builds on top of it, is refuse the
+states that make such a commit *necessary* -- see
 that module's own docstring for the formulation held and for what it
 leaves uncovered.
 """
@@ -80,7 +81,7 @@ DECLARATION_VERSION: Final = 1
 
 #: Where git is told how to merge a path, and the attribute that has to be
 #: on a `regenerated:` one. See `Handed.regenerated` for the argument;
-#: `tools/tests/test_boundary.py` holds the two together, so declaring a
+#: `tools/tests/declaration/test_boundary.py` holds the two together, so declaring a
 #: path regenerated and forgetting the attribute is a failing test rather
 #: than a field of conflicts in somebody else's repository a year later.
 GIT_ATTRIBUTES_PATH: Final = Path(".gitattributes")
@@ -290,7 +291,7 @@ class Boundary:
         """Every instance path a scheduled job rewrites in full, upstream's
         own runs included -- see `Handed.regenerated`. Sorted, computed,
         and the input to the `.gitattributes` check in
-        `tools/tests/test_boundary.py`."""
+        `tools/tests/declaration/test_boundary.py`."""
         return tuple(sorted(entry.path for entry in self.handed if entry.regenerated))
 
     @property

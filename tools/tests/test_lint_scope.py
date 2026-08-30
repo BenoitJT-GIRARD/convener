@@ -66,7 +66,7 @@ from typing import Final
 import pytest
 import yaml
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 ROOT: Final = repo_root()
 PRE_COMMIT_CONFIG: Final = ROOT / ".pre-commit-config.yaml"

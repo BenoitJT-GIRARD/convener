@@ -46,8 +46,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import boundary, needles
-from convener_ops.paths import repo_root
+from convener_ops.declaration import boundary, needles
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 

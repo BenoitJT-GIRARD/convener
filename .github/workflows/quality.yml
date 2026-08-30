@@ -167,7 +167,7 @@ jobs:
       # code rests on, so it has to run on every change rather than
       # only where somebody remembers to look; the build itself takes
       # about ten seconds once `node_modules` is there, and it makes no
-      # network call of any kind. `tests/test_published.py` reads the same
+      # network call of any kind. `tests/declaration/test_published.py` reads the same
       # install for a smaller reason: it loads all four of the
       # application's build configurations through Vite's own loader,
       # which it cannot do without the package.
@@ -189,7 +189,7 @@ jobs:
       - name: Install site (for tests/test_site.py's own build)
         working-directory: site
         run: npm ci
-      - name: Install app (for tests/test_second_instance.py and tests/test_published.py)
+      - name: Install app (for tests/test_second_instance.py and tests/declaration/test_published.py)
         working-directory: app
         run: npm ci
       - name: Lint

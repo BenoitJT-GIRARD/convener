@@ -76,7 +76,7 @@ What this module cannot see, stated rather than left to be found
 -----------------------------------------------------------------
 - **Anything that is not derivable from a declaration.** A needle is a
   value `instance/config.json` or the charter in force actually holds
-  (`convener_ops.needles.needles`, which this module still reaches through
+  (`convener_ops.declaration.needles.needles`, which this module still reaches through
   `instance_identity`). Two things this instance owns are held by
   neither, so nothing here can look for them: the **time zone** and the
   **standing start time** (`Europe/Paris` and 12:30, in `visual.py`,
@@ -169,8 +169,8 @@ import instance_identity
 import pytest
 import toolchain
 
-from convener_ops import boundary, published
-from convener_ops.paths import repo_root
+from convener_ops.declaration import boundary, published
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 

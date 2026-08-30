@@ -60,9 +60,9 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import boundary
 from convener_ops.commit_format import validate_messages
-from convener_ops.paths import repo_root
+from convener_ops.declaration import boundary
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 README = ROOT / "README.md"

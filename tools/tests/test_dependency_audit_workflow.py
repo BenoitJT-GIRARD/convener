@@ -41,7 +41,7 @@ for real once, and what it printed was read.
 
 from __future__ import annotations
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
 _WORKFLOW = (_ROOT / ".github" / "workflows" / "quality.yml").read_text(

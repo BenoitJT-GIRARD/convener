@@ -10,9 +10,9 @@ it touches out of them: `DATA_DIR / "config.yml"`, `KEYS_DIR / "events"`,
 `PUBLIC_DATA_DIR / "registration-routing.json"`. That is what makes the
 whole set movable from one place: change where the declaration puts
 `instance/data/` and these constants follow, and the hundred-odd places
-that build on them follow with it. `tools/tests/test_paths.py` sweeps the package and
-fails on a module that writes one of these paths out in a string of its
-own.
+that build on them follow with it. `tools/tests/declaration/test_paths.py`
+sweeps the package and fails on a module that writes one of these paths out
+in a string of its own.
 
 A file inside a declared directory is built from that directory's
 constant. The declaration has no entry to take it from:

@@ -133,7 +133,7 @@ from pathlib import Path
 
 from test_cross_references import _tracked, prose_of
 
-from convener_ops.paths import repo_root
+from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 

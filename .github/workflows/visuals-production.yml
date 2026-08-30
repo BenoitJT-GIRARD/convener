@@ -73,7 +73,7 @@ name: Visuals production
 # command had a consumer in it.
 #
 # It also carries `instance/config.json` and
-# `tools/convener_ops/published.py`, and this pair *is* shared with visuals.yml
+# `tools/convener_ops/declaration/published.py`, and this pair *is* shared with visuals.yml
 # for once: the composition reads the instance's own declaration now (the
 # wordmark band is `identity.forum_host`, the hero band is
 # `identity.strapline`, two of the "what to expect" rows name the forum),
@@ -132,7 +132,7 @@ on:
       - 'docs/toolkit/mailing-list-announce.md'
       - 'docs/toolkit/recording-announce.md'
       - 'instance/config.json'
-      - 'tools/convener_ops/published.py'
+      - 'tools/convener_ops/declaration/published.py'
       - 'instance/data/brand.json'
       - 'brand/convener/brand.json'
       - 'tools/convener_ops/brand.py'

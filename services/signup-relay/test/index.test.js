@@ -36,7 +36,7 @@ const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 // `.github/workflows/deploy-signup-relay.yml`, which reads the
 // declaration through the reader that owns it. `wrangler.toml` names no
 // origin at all; `services/auth-proxy/wrangler.toml`'s own header argues
-// why, and `tools/tests/test_published.py` is where the two are held
+// why, and `tools/tests/declaration/test_published.py` is where the two are held
 // together, on the side that has the declaration in reach.
 //
 // So this suite states an origin of its own instead of reading one, and
@@ -53,7 +53,7 @@ const ALLOWED_ORIGIN = 'https://pages.example.test';
 // `.github/workflows/deploy-signup-relay.yml`, which reads the declaration
 // through the reader that owns it. `src/index.js` names no repository at
 // all; `wrangler.toml`'s own header argues why, and
-// `tools/tests/test_published.py` is where the two are held together, on
+// `tools/tests/declaration/test_published.py` is where the two are held together, on
 // the side that has the declaration in reach.
 //
 // So this suite states a repository of its own, for the same reason it

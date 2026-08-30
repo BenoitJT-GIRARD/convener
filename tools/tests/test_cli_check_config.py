@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from convener_ops.cli import check_config, render_check
-from convener_ops.integrations import Integration
+from convener_ops.declaration.integrations import Integration
 
 
 def _absent() -> Integration:

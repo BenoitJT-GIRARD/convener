@@ -12,7 +12,6 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from convener_ops import published
 from convener_ops.attendance import MatchedAttendee
 from convener_ops.certificate import (
     _CERTIFICATE_ID_RE,
@@ -38,7 +37,8 @@ from convener_ops.certificate import (
     sign_for,
     verification_url,
 )
-from convener_ops.paths import repo_root
+from convener_ops.declaration import published
+from convener_ops.declaration.paths import repo_root
 from convener_ops.registration import (
     _CODE_ALPHABET,
     _CODE_GROUP,

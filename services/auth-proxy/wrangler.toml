@@ -27,6 +27,6 @@ compatibility_date = "2026-01-01"
 #
 # `src/index.js` refuses every request when `ALLOWED_ORIGIN` is unset, so a
 # deploy that dropped the flag fails closed rather than answering for
-# anybody (D-25). `tools/tests/test_published.py` holds both halves: no
+# anybody (D-25). `tools/tests/declaration/test_published.py` holds both halves: no
 # `services/*/wrangler.toml` names an origin, and both deploy workflows
 # derive one.

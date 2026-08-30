@@ -169,7 +169,7 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from . import confirmation, eventkeys, survey
-from .paths import DATA_DIR
+from .declaration.paths import DATA_DIR
 from .registration import (
     dump_registration_file,
     event_id_from_payload,

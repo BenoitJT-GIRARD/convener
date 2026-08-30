@@ -889,7 +889,7 @@ def platform_from_env(
     front, which implementation a caller gets.
 
     A blank token counts as unset, the same "empty string is not a value"
-    rule `convener_ops.integrations.resolve_states` already applies to every
+    rule `convener_ops.declaration.integrations.resolve_states` already applies to every
     other secret this project reads.
 
     `private_pem` is forwarded to `ManualPlatform` alone --

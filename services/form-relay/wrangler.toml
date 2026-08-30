@@ -23,7 +23,7 @@ compatibility_date = "2026-01-01"
 # `src/index.js` refuses every request with 502 when `REPOSITORY` is
 # unset -- before it spends the dispatch -- so a deploy that dropped the
 # flag fails closed instead of answering 502 for a reason an operator
-# would read as an expired token (D-25). `tools/tests/test_published.py`
+# would read as an expired token (D-25). `tools/tests/declaration/test_published.py`
 # holds both halves: no `services/*/src/index.js` names a repository, and
 # each deploy workflow that needs one derives it.
 

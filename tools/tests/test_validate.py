@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from conftest import EDITIONS, board_member, config, speaker
 
-from convener_ops.published import EditionPrefix
+from convener_ops.declaration.published import EditionPrefix
 from convener_ops.validate import (
     board_target_report,
     validate_config,
