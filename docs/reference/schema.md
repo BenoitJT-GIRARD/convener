@@ -114,7 +114,7 @@ eligible Board — active members, minus those who declared an absence, minus th
 recused on this lead — as two thirds rounded up, never fewer than three yes ballots.
 Below three eligible members the vote is suspended rather than decided on a bar that has
 stopped meaning anything. The rule lives in `app/src/state/governance.ts` and
-`tools/convener_ops/governance/governance.py`, pinned in both languages by
+`tools/convener_ops/governance/rule.py`, pinned in both languages by
 `tools/tests/fixtures/governance-cases.json`.
 
 ### Status values

@@ -164,7 +164,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/publication/ribbon.py",
         "tools/convener_ops/publication/registration_code.py",
         "tools/convener_ops/publication/formats.py",
-        "tools/convener_ops/governance/governance.py",
+        "tools/convener_ops/governance/rule.py",
         "tools/convener_ops/cli.py",
         "instances/example/instance/config.json",
         "tools/convener_ops/declaration/published.py",

@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops.governance.governance import (
+from convener_ops.governance.rule import (
     DEFAULT_VOTE_WINDOW_DAYS,
     PARIS,
     vote_window_days,

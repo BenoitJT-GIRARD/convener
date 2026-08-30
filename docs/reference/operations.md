@@ -898,7 +898,7 @@ did not create a second thing to destroy.
 **`.github/workflows/retention.yml`** runs daily and on demand
 (`workflow_dispatch`, no inputs). Each run: computes which events'
 90-day windows have elapsed (`convener_ops.journey.eventkeys.is_due_for_destruction`,
-measured against `convener_ops.governance.governance.paris_today` — never a raw clock
+measured against `convener_ops.governance.rule.paris_today` — never a raw clock
 read); deletes each one's `CONVENER_EVENT_KEY_<EVENT ID>` secret (`gh secret
 delete`, converging on the secret being *absent* regardless of that
 command's own exit code — a secret already gone from a previous, partial
@@ -2257,7 +2257,7 @@ Collect each member's GitHub login, then rewrite both files in step:
 2. `instance/data/speakers.yml` — every `selection.ballots[].voter`, using exactly
    the same mapping. A ballot on record carries whatever identifier was
    current when it was cast, and a vote is tallied only from ballots whose
-   voter is on the Board (`tools/convener_ops/governance/governance.py`), so a Board
+   voter is on the Board (`tools/convener_ops/governance/rule.py`), so a Board
    renamed on its own would silently discard every vote already cast.
 
 Check before starting that nothing *else* in `instance/data/speakers.yml` holds a

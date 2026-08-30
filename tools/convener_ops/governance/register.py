@@ -59,7 +59,7 @@ from datetime import date, datetime
 from typing import Final
 
 from convener_ops.governance.commit_format import ACTS, Decision, parse_decision
-from convener_ops.governance.governance import paris_today
+from convener_ops.governance.rule import paris_today
 
 #: The `git log --format=` string this module's parser expects: the author
 #: instant, a unit separator, the subject. The separator is a character no

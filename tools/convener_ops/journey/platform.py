@@ -30,7 +30,7 @@ The first version of this module opened its own file,
 licence to change. Review found the reasoning sound but pointed at the
 wrong file: every `convener_ops` business-logic module except `cli.py` is pure,
 receiving already-loaded data rather than reading a file itself --
-`governance.py`, `notify.py`, `sweep.py` and `public_data.py` all follow
+`rule.py`, `notify.py`, `sweep.py` and `public_data.py` all follow
 that rule, and it is the right one. The defect was that `ManualPlatform`
 was reading a file at all, not which file it was reading. So:
 

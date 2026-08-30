@@ -245,7 +245,7 @@ def claimed_by_any(relative: str) -> bool:
 #: Why a test about the separation of two instances cannot run in a
 #: repository that ships only one.
 #:
-#: `convener_ops.derivation.derivation` lays `instances/example/` into every path
+#: `convener_ops.derivation.repository` lays `instances/example/` into every path
 #: the boundary hands to the instance, because a product repository with
 #: those paths merely deleted neither starts its own suite nor builds --
 #: `paths.repo_root` finds a repository by `instance/data/config.yml` and the

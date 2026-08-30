@@ -18,7 +18,7 @@ import yaml
 from conftest import ballot, board_member, config, nomination, speaker
 
 from convener_ops import cli
-from convener_ops.governance.governance import (
+from convener_ops.governance.rule import (
     MINIMUM_ELIGIBLE,
     active_board,
     last_ballot_on,

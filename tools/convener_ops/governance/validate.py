@@ -20,7 +20,7 @@ from collections.abc import Collection
 from typing import Any
 
 from ..declaration.published import EditionPrefix
-from .governance import MINIMUM_ELIGIBLE
+from .rule import MINIMUM_ELIGIBLE
 
 STATUSES = frozenset(
     {
@@ -45,7 +45,7 @@ GENDERS = frozenset({"M", "F", "NB", "undisclosed"})
 SOURCES = frozenset({"form", "outreach", "organizer"})
 
 #: Governance model (schema v3, see app/src/data/types.ts). Kept in this
-#: module rather than imported from governance.py because governance.py
+#: module rather than imported from rule.py because rule.py
 #: does not define these vocabularies - it consumes already-valid ballots
 #: and never needed to enumerate the legal values itself.
 BALLOT_VALUES = frozenset({"yes", "abstain", "recused"})
@@ -372,7 +372,7 @@ def _validate_ballots(
     """Validate one speaker's selection (opened_on and ballots) against the
     governance model.
 
-    Note on scope: this deliberately duplicates none of governance.py's
+    Note on scope: this deliberately duplicates none of rule.py's
     eligibility math (threshold_for, eligible_voters, decide) - those answer
     "was this vote decided", a different question from "is this data well
     formed". In particular, decide() silently ignores a ballot cast by a
@@ -723,7 +723,7 @@ def validate_config(cfg: Any) -> list[str]:
     if "vote_threshold" in cfg:
         errors.append(
             "config.yml: vote_threshold is obsolete, the threshold is now "
-            "computed from the eligible board size (see governance.py), not stored"
+            "computed from the eligible board size (see rule.py), not stored"
         )
     if "board_members" in cfg:
         errors.append("config.yml: board_members is obsolete, migrate to board")

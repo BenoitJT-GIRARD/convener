@@ -93,7 +93,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from ..declaration.paths import PUBLIC_DATA_DIR
-from ..governance.governance import PARIS
+from ..governance.rule import PARIS
 
 #: The maintainer-editable threshold, relative to a repository root. Beside
 #: `actions-budget.yml` and `integrations.yml`, never in `instance/data/config.yml`

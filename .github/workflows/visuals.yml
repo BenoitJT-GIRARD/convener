@@ -23,7 +23,7 @@ name: Visuals
 #   its own pixels are part of every rendered format.
 # - `tools/convener_ops/publication/formats.py` -- the three named canvas sizes and
 #   the registration-slot geometry it shares with `visual.py`.
-# - `tools/convener_ops/governance/governance.py` -- `PARIS`, the one `ZoneInfo` the date
+# - `tools/convener_ops/governance/rule.py` -- `PARIS`, the one `ZoneInfo` the date
 #   line's own text is computed from (`visual.paris_standing_start`); a
 #   change here can change what the date line reads without touching
 #   `visual.py` itself.
@@ -141,7 +141,7 @@ on:
       - 'tools/convener_ops/publication/ribbon.py'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
-      - 'tools/convener_ops/governance/governance.py'
+      - 'tools/convener_ops/governance/rule.py'
       - 'tools/convener_ops/cli.py'
       - 'instances/example/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
@@ -163,7 +163,7 @@ on:
       - 'tools/convener_ops/publication/ribbon.py'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
-      - 'tools/convener_ops/governance/governance.py'
+      - 'tools/convener_ops/governance/rule.py'
       - 'tools/convener_ops/cli.py'
       - 'instances/example/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'

@@ -34,7 +34,7 @@ from conftest import config, speaker
 from convener_ops.cli import registration_routing_public_data
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
-from convener_ops.governance.governance import PARIS
+from convener_ops.governance.rule import PARIS
 from convener_ops.journey import registration_routing
 from convener_ops.journey.registration_routing import (
     CronShapeError,

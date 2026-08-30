@@ -193,7 +193,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from ..declaration import paths
 from ..governance.commit_format import _TOKEN
-from ..governance.governance import paris_today
+from ..governance.rule import paris_today
 
 #: RSA modulus size. 2048 bits keeps key generation and RSA-OAEP fast in
 #: both a browser and a CI job, and is accepted by NIST guidance well past

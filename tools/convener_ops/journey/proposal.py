@@ -14,7 +14,7 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from convener_ops.governance.governance import active_board
+from convener_ops.governance.rule import active_board
 
 # Iterating a `set` of `str` is `PYTHONHASHSEED`-dependent *across
 # processes* -- two runs of this interpreter can iterate the same set in a

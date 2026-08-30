@@ -45,7 +45,7 @@ they name, the browser-side encryption of a registration and the
 certificate signing and verification behind it, the retention sweep that
 destroys an event's key, and the two checks that decide what may leave a
 private repository at all — the boundary declaration (`config/boundary.yml`)
-and the derivation guard (`tools/convener_ops/derivation/derivation.py`).
+and the derivation guard (`tools/convener_ops/derivation/repository.py`).
 
 A weakness in a template is worth more to an attacker than the same
 weakness in one repository, because every duplicate inherits it. That is

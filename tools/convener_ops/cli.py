@@ -35,7 +35,6 @@ from convener_ops.declaration.paths import (
 )
 from convener_ops.declaration.yaml_safe import safe_load as yaml_safe_load
 from convener_ops.governance.dispatch_alert import alert_message
-from convener_ops.governance.governance import PARIS, paris_today
 from convener_ops.governance.notify import (
     daily_digest,
     dispatch,
@@ -47,6 +46,7 @@ from convener_ops.governance.register import (
     entries_from_log,
     render_register,
 )
+from convener_ops.governance.rule import PARIS, paris_today
 from convener_ops.governance.validate import (
     board_target_report,
     validate_config,

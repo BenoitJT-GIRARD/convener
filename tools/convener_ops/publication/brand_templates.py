@@ -125,7 +125,7 @@ The alternatives were weighed against what this repository already does:
   levels per channel, 0.1% of pixels). That comparison is honest for what
   it is for, and it needs a browser -- so it could never run inside
   `tools/scripts/generate_brand_css.py --check`, which is pure Python and is
-  what `convener_ops.derivation.derivation` re-runs when it builds a duplicate's
+  what `convener_ops.derivation.repository` re-runs when it builds a duplicate's
   repository. A duplicate would inherit *this* instance's background, in a
   file no guard can read. That is the defect, not a smaller version of it.
 - **Commit the PNG and hold it byte-for-byte**, the way

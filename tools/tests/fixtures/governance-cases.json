@@ -757,7 +757,7 @@
     }
   ],
   "working_day_cases": {
-    "_comment": "Working-day arithmetic, pinned across app/src/state/working-days.ts and tools/convener_ops/governance/governance.py. Weekends are Saturday and Sunday. PUBLIC HOLIDAYS ARE DELIBERATELY NOT MODELLED: the board's members do not share one national calendar, so a holiday list right for France would be wrong for the others, and an unmodelled holiday only ever makes a window longer, which is the prudent direction. The 1 May 2026 cases below pin that as a decision rather than an oversight. The count is of the days AFTER the start day, and `elapsed` is the exact inverse of `add`.",
+    "_comment": "Working-day arithmetic, pinned across app/src/state/working-days.ts and tools/convener_ops/governance/rule.py. Weekends are Saturday and Sunday. PUBLIC HOLIDAYS ARE DELIBERATELY NOT MODELLED: the board's members do not share one national calendar, so a holiday list right for France would be wrong for the others, and an unmodelled holiday only ever makes a window longer, which is the prudent direction. The 1 May 2026 cases below pin that as a decision rather than an oversight. The count is of the days AFTER the start day, and `elapsed` is the exact inverse of `add`.",
     "add": [
       {
         "name": "three working days from a Monday land on the Thursday",

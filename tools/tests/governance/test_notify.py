@@ -24,7 +24,6 @@ from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.governance import notify
 from convener_ops.governance.commit_format import judgemental_terms
-from convener_ops.governance.governance import vote_window_days
 from convener_ops.governance.notify import (
     EVENT_KINDS,
     MENTION_ENV,
@@ -43,6 +42,7 @@ from convener_ops.governance.notify import (
     resolve_channel,
     waiting_since,
 )
+from convener_ops.governance.rule import vote_window_days
 from convener_ops.maintenance.sweep import expire_votes
 
 NOW = datetime(2026, 8, 18, 9, 0, tzinfo=UTC)
@@ -1153,7 +1153,7 @@ def test_a_dispatch_always_carries_the_address_it_was_built_from() -> None:
 #: reason `public_data.PUBLIC_FIELDS` is one: a new dependency has to be added
 #: here deliberately, where a denylist only ever catches the transports
 #: somebody thought of. It covers the whole graph below, not one file, so a
-#: dependency added to `governance.py` lands here too.
+#: dependency added to `rule.py` lands here too.
 ALLOWED_IMPORTS = frozenset(
     {
         "__future__",
@@ -1243,7 +1243,7 @@ def test_the_notification_module_holds_no_transport() -> None:
     """Nothing reachable from this module names a transport.
 
     Over the package's own import graph, not over this one file. `notify.py`
-    imports `convener_ops.governance.governance`, so an `import urllib.request` added
+    imports `convener_ops.governance.rule`, so an `import urllib.request` added
     there is reachable from here and would give this module a transport by way of an
     attribute; a check that read `notify.py` alone would call that clean. Every
     `convener_ops` module reachable from `notify.py` is parsed, and every import any
@@ -1279,7 +1279,7 @@ def test_the_notification_module_holds_no_transport() -> None:
 
     # The graph is walked, not assumed: if `notify.py` ever stops importing
     # `governance`, this says so rather than quietly checking one file again.
-    assert seen == {"governance.notify", "governance.governance"}, seen
+    assert seen == {"governance.notify", "governance.rule"}, seen
 
     assert dynamic == [], f"a module is fetched at runtime: {dynamic}"
     undeclared = outside - ALLOWED_IMPORTS

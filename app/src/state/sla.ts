@@ -120,7 +120,7 @@ const MS_PER_DAY = 86_400_000;
  *  not a dependency of this one (see the header -- these are calendar days,
  *  and no conversion between the two units may become possible by accident),
  *  and the Python twins do the same, `notify.py` carrying its own `_DATE_RE`
- *  beside `governance.py`'s.
+ *  beside `rule.py`'s.
  *
  *  The round-trip and the year-zero refusal are not belt and braces:
  *  JavaScript accepts `2026-02-30` and rolls it forward to 2 March where

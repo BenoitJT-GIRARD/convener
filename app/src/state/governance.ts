@@ -1,7 +1,7 @@
 /**
  * The governance rule, for display.
  *
- * `tools/convener_ops/governance/governance.py` implements the same rule for writing, and both
+ * `tools/convener_ops/governance/rule.py` implements the same rule for writing, and both
  * are pinned by `tools/tests/fixtures/governance-cases.json`. A change here that
  * is not mirrored there is a defect, not a divergence of opinion: the volunteer
  * would see one threshold while the scheduled job applied another.

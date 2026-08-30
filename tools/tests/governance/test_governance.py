@@ -1,6 +1,6 @@
 """What only the Python side of the governance rule promises.
 
-`convener_ops.governance.governance` reads whatever is in the repository -- hand-edited
+`convener_ops.governance.rule` reads whatever is in the repository -- hand-edited
 YAML, a half-finished migration, a config from an older schema -- and runs unattended in
 a scheduled job, so it degrades to the safe empty answer instead of raising. Its
 TypeScript twin has no such guards and needs none: the browser only sees data
@@ -17,7 +17,7 @@ from typing import Any
 
 from conftest import board_member
 
-from convener_ops.governance.governance import (
+from convener_ops.governance.rule import (
     active_board,
     add_working_days,
     decide,

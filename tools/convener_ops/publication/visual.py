@@ -269,7 +269,7 @@ from pathlib import Path
 from typing import Final
 
 from ..declaration.published import load_identity
-from ..governance.governance import PARIS
+from ..governance.rule import PARIS
 from . import brand
 from .registration_code import registration_code_svg
 from .ribbon import (

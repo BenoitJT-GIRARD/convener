@@ -109,7 +109,7 @@ buy coverage at the price of an exemption list longer than the rule --
 which is the shape this project treats as a failed control, not as a
 thorough one:
 
-* **`the plan`.** `plan_queue_drain` computes one and `derivation.py`
+* **`the plan`.** `plan_queue_drain` computes one and `repository.py`
   prints one; `validate.py` and `app/src/state/channels.ts` both mean the
   promotion plan a volunteer edits. It is a noun this product owns.
 * **`the review`.** `docs/governance/editorial-board.md` says a member
@@ -882,7 +882,7 @@ def test_the_prose_sweep_refuses_a_citation_and_keeps_the_domain_noun() -> None:
 
     A sweep that refused `the plan` would be right about
     `tools/tests/journey/test_registration.py` and wrong about
-    `convener_ops/derivation/derivation.py`, which computes one and prints it -- and
+    `convener_ops/derivation/repository.py`, which computes one and prints it -- and
     the way that failure shows up is a maintainer adding an exemption
     rather than a citation being removed.
     """

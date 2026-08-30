@@ -2,7 +2,7 @@
  * example -- the condition under which a test about the *difference*
  * between two instances has no subject.
  *
- * `convener_ops.derivation.derivation` lays `instances/example/` into every path
+ * `convener_ops.derivation.repository` lays `instances/example/` into every path
  * `config/boundary.yml` hands to the instance, because a product
  * repository with those paths merely deleted neither starts its own
  * suite nor builds: several modules read an instance path while they

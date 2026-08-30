@@ -85,7 +85,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Final
 
-from convener_ops.governance.governance import paris_today, vote_window_days
+from convener_ops.governance.rule import paris_today, vote_window_days
 
 # ------------------------------------------------------------------ #
 # Lateness -- the twin of `app/src/state/sla.ts`
@@ -153,7 +153,7 @@ class Overdue(Deadline):
 #: An ISO calendar day, the only date form stored in the two data files.
 #: `date.fromisoformat` alone is too generous -- it also accepts `20260818`
 #: and week dates, neither of which this repository ever writes -- so the
-#: shape is checked before it is parsed, as `governance.py` does.
+#: shape is checked before it is parsed, as `rule.py` does.
 _DATE_RE: Final = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
