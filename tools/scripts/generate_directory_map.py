@@ -1,18 +1,26 @@
 """One map of the repository's root, derived from what the root actually holds.
 
-Two hand-written tables of top-level directories existed: one in `README.md`
-under *What is here*, one in `docs/architecture.md`. They disagreed with each
-other, and between them they described nine and eight of the twelve tracked
-top-level directories. `brand/`, `fonts/`, `instances/` and `.claude/` were in
-neither, and `config/` was in one of the two. A reader who cannot place a third
-of the root concludes the root is disorganised even when it is not.
+Two hand-written tables of top-level directories existed: nine rows in
+`README.md` under *What is here*, eight in `docs/architecture.md`. They
+disagreed with each other, and between them they placed eight of the twelve
+directories this repository tracks -- `README.md` spent three of its rows on
+`services/`'s own subdirectories, and `docs/architecture.md` named `.github/`
+one level down, as `.github/workflows/`. `.claude/`, `brand/`, `fonts/` and
+`instances/` were in neither table, and `config/` was in one of the two. A
+reader who cannot place a third of the root concludes the root is disorganised
+even when it is not.
 
 That is also the one place this repository broke its own first rule.
 `INFORMATION-ARCHITECTURE.md` asks for one home per notion, and for a passage
 needed twice to be *included* rather than copied. Two directory tables were
-exactly that copy, and they escaped `tools/tests/test_no_literal_copies.py`
-only because that sweep compares served handbook pages and the root
-`README.md` is not one.
+exactly that copy, and nothing in this repository could have said so.
+`tools/tests/test_no_literal_copies.py` compares served handbook pages, and
+the root `README.md` is not one -- but that is only the first of two reasons
+it never fired. The sweep's unit is a whole normalised sentence of at least a
+hundred characters, and its splitter cuts on a colon: every row of both tables
+opened with one, so each row broke into two fragments and neither reached the
+threshold. A `README.md` inside the sweep would have changed nothing. What
+catches this class of copy is the generation itself.
 
 So the map is derived, written once, into `docs/architecture.md`, and
 `README.md` links to it.

@@ -1,12 +1,12 @@
 """The map of the repository's root, and the guard that keeps it derived.
 
-Two hand-written tables of top-level directories existed, one in `README.md`
-and one in `docs/architecture.md`. They disagreed with each other, and between
-them they described nine and eight of the twelve directories this repository
-tracks: `brand/`, `fonts/`, `instances/` and `.claude/` were in neither, and
-`config/` was in one of the two. `tools/scripts/generate_directory_map.py`
-derives the one that survives, and this module holds the halves that make that
-stick.
+Two hand-written tables of top-level directories existed, nine rows in
+`README.md` and eight in `docs/architecture.md`. They disagreed with each
+other, and between them they placed eight of the twelve directories this
+repository tracks: `.claude/`, `brand/`, `fonts/` and `instances/` were in
+neither, and `config/` was in one of the two.
+`tools/scripts/generate_directory_map.py` derives the one that survives, and
+this module holds the halves that make that stick.
 
 **The map is held against `git ls-files`, not against itself.** Both sides of
 `--check` come out of the same generator, so a generator that read half the

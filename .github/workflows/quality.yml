@@ -314,9 +314,9 @@ jobs:
         working-directory: tools
         # `docs/architecture.md` and `README.md` each carried a
         # hand-written table of top-level directories. They disagreed, and
-        # between them they described nine and eight of the twelve the
-        # repository tracks: `brand/`, `fonts/`, `instances/` and
-        # `.claude/` were in neither. The table is generated now -- the
+        # between them they placed eight of the twelve the repository
+        # tracks: `.claude/`, `brand/`, `fonts/` and `instances/` were in
+        # neither. The table is generated now -- the
         # directories from `git ls-files`, the owner from
         # `config/boundary.yml` -- and `README.md` links to it instead of
         # restating it. Assertion-only, like the four above: writes
