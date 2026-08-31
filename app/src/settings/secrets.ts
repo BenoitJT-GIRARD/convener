@@ -40,7 +40,8 @@ import type { Integration } from './declaration';
 
 /** Where an operator sets these, named once so the screen and its refusal
  *  sentence agree. */
-export const SECRETS_SETTINGS_PATH = 'Settings → Secrets and variables → Actions';
+export const SECRETS_SETTINGS_PATH =
+  "GitHub's Settings → Secrets and variables → Actions";
 
 /** The names GitHub answered with, or the sentence saying why it did not.
  *  Never a value of either kind. */

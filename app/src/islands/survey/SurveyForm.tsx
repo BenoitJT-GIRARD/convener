@@ -250,7 +250,10 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
         // *is* open must not read this as "try a different event" the
         // way the 'closed' page's own message would otherwise imply.
         setSubmitState('error');
-        setSubmitError('Submitting answers is not available yet. Please try again later.');
+        setSubmitError(
+          'Submitting answers is not available yet, so nothing you typed has been sent. ' +
+            'Please try again later.',
+        );
         return;
       }
       const envelope: unknown = JSON.parse(envelopeJson);
@@ -297,9 +300,10 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
         <div className="notice survey-form__unavailable">
           <p className="notice__eyebrow">This survey is not available right now</p>
           <p>
-            We could not retrieve what this event needs before anything can be sent. We
-            never send answers unencrypted, so nothing has been sent. Please try again
-            later, or contact <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
+            We could not retrieve the encryption key this event needs before anything can
+            be sent. We never send answers unencrypted, so nothing has been sent. Please
+            try again later, or contact{' '}
+            <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
           </p>
         </div>
       )}
