@@ -233,7 +233,7 @@ The variable parts, and how each is handled
   module never fetches a URL and never reads `instance/data/speakers.yml` itself --
   `photo_url` is, by the schema's own words, "a link, not an upload: the
   repository holds records, not media"
-  (`docs/reference/schema.md`), so turning it into something this function
+  (`docs/operating/schema.md`), so turning it into something this function
   can inline (a `data:` URI, most likely) is a job for whatever calls this
   module with real data, not for a pure renderer that this project also
   needs to keep off the network in its own test suite. What *is* this

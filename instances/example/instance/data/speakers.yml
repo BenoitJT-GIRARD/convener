@@ -1,5 +1,5 @@
 # The example instance's own speakers and editions (unified schema v6 --
-# see docs/reference/schema.md). The same file `instance/data/speakers.yml` is for
+# see docs/operating/schema.md). The same file `instance/data/speakers.yml` is for
 # the instance that runs this repository, written for one that does not
 # exist.
 #

@@ -9,8 +9,8 @@
  * of three skipped directories (`superpowers`, `stylesheets`, `app` -- a
  * directory denylist). Both existed; neither was the allowlist
  * `public_data.py` describes. The denylist named three directories and
- * never `docs/reference/`, so any `.md` page added there shipped, whichever
- * it was -- `docs/reference/operations.md`, which names every secret and
+ * never `docs/operating/`, so any `.md` page added there shipped, whichever
+ * it was -- `docs/operating/operations.md`, which names every secret and
  * every procedure, did exactly that, verified by a real build before this
  * change. The extension allowlist covered `.png`, and `docs/handbook/assets/` was
  * never skipped, so a `.png` dropped there shipped too -- verified the same

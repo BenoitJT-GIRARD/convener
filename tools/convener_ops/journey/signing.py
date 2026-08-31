@@ -284,7 +284,7 @@ one.** A well-formed token that no offered key validates is exactly what a
 tampered or forged certificate looks like from here -- and *exactly* what
 a genuine certificate looks like when it was signed under a key this
 caller's `public_pems` list does not (yet) include, which
-`docs/reference/operations.md`'s own publish-before-secret ordering
+`docs/operating/operations.md`'s own publish-before-secret ordering
 warning names as a real, reachable failure mode: sign first, publish the
 `.pub` second, and every certificate issued in between is genuine and
 currently unconfirmable. This module has no way to tell those two apart --
@@ -344,7 +344,7 @@ certificate under a key with no public half yet committed for anyone to
 verify it against -- see `NO_MATCHING_KEY` above for exactly what that
 produces on the verifying end. `generate` itself has no opinion on who
 calls it or how the result is handled -- it is
-`docs/reference/operations.md`'s "Certificate signing key" section, not
+`docs/operating/operations.md`'s "Certificate signing key" section, not
 this module, that is the place this constraint is a procedure rather than
 only a property of the function.
 

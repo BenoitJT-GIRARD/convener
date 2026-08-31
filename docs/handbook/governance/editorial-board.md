@@ -4,7 +4,7 @@ The Editorial Board is the small group that **steers the series**: it validates 
 
 ## Who is on it
 
-- A small, named group — not a crowd. The size it aims for, and the size it may not exceed, are declared once as `board_min` and `board_max` in `instance/data/config.yml`; the Board screen shows today's headcount against both. Why the first is a target and the second a rule is in `docs/reference/operations.md` ("The Board's target size").
+- A small, named group — not a crowd. The size it aims for, and the size it may not exceed, are declared once as `board_min` and `board_max` in `instance/data/config.yml`; the Board screen shows today's headcount against both. Why the first is a target and the second a rule is in `docs/operating/operations.md` ("The Board's target size").
 - It is reviewed once a year (see below).
 - Being on the Board is a real commitment: you take part in the speaker votes. The Board is the dependable core of the series.
 
@@ -66,7 +66,7 @@ recorded, and an unanswered field is the gate working rather than the gate
 being broken.
 
 A governance file that is not finished yet is a normal, expected state and not
-a defect to be rediscovered. `docs/reference/operations.md` ("Deferred
+a defect to be rediscovered. `docs/operating/operations.md` ("Deferred
 governance configuration") names each setting that is ordinarily left
 unfinished until an instance's people are in a room together, what it costs
 while it stands, and the change that ends it. Do not fix one of them piecemeal

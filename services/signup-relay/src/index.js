@@ -79,7 +79,7 @@
  * silence must mean send it now. Guessing wrong in this direction costs one
  * billed workflow run.
  *
- * See `queueSubmission` below, and docs/reference/operations.md's
+ * See `queueSubmission` below, and docs/operating/operations.md's
  * "Draining the submission queue".
  *
  * What *is* separate is the abuse ceiling: `/survey` gets its own KV
@@ -572,7 +572,7 @@ function putQueueEntry(path, body, token, repository, kind) {
  * racing to create it is a success for both, not a failure for the loser.
  *
  * Needs no privilege beyond the `Contents: read & write` this worker
- * already holds for `repository_dispatch` (docs/reference/operations.md).
+ * already holds for `repository_dispatch` (docs/operating/operations.md).
  * That is the ceiling this design was built against, not a starting point:
  * a queue that had needed more would have been the wrong shape.
  */

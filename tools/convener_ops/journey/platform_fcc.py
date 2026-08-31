@@ -89,7 +89,7 @@ costs a manual attendance import for that one event, through
 incident. None of that renewal or notice logic lives in this module: this
 module only ever *uses* whatever token it is given, the same "receives what
 it needs, does not go looking" rule `platform.py` already follows for
-speaker records and config. See `docs/reference/operations.md`'s "Meeting
+speaker records and config. See `docs/operating/operations.md`'s "Meeting
 platform" section for the renewal procedure as a reader would follow it.
 
 Which FCC conference is which event -- the one thing this module does
@@ -122,7 +122,7 @@ problem" risk the design ruling below names -- a host who must remember to
 open the Actions tab is still a host who can forget. Automation of the
 *trigger* waits on a verified way to resolve an event id to its FCC
 conference id; until one exists, releasing a recording is a runbook step,
-documented as one in `docs/reference/operations.md`, not something this
+documented as one in `docs/operating/operations.md`, not something this
 module quietly promises to do on its own.
 
 get_room does not call the API

@@ -61,7 +61,7 @@ instance.
   them, not here. If what you found is a defect in the code they are
   running, it is in scope above and both reports are worth making.
 - **Limits this project already documents rather than claims to have
-  closed.** `docs/reference/operations.md` records that whoever holds an
+  closed.** `docs/operating/operations.md` records that whoever holds an
   event's key and its attendance list can pair a survey answer with roughly
   when it arrived; `docs/handbook/governance/traitement-donnees.md` records what a
   certificate register does and does not hold; `TRADEMARK.md` records that

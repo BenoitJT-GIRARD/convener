@@ -127,7 +127,7 @@ instance:
     kept:
       - path: instance/data/schema.md
         reason: >-
-          A three-line stub pointing a reader at docs/reference/schema.md,
+          A three-line stub pointing a reader at docs/operating/schema.md,
           which tools/scripts/generate_schema_doc.py derives from
           app/src/data/types.ts. It describes the product's model, not this
           instance's records, and no duplicate has any reason to edit it.

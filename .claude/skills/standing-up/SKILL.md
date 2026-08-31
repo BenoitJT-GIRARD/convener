@@ -9,7 +9,7 @@ This page is generated from `STANDING-UP.yml`, the one declaration of this
 sequence. Do not edit it: run `uv run python
 scripts/generate_standing_up_skill.py` from `tools/` and commit what it
 writes, and continuous integration refuses a page the declaration does not
-derive. `docs/reference/standing-up.md` is the same declaration rendered for a
+derive. `docs/operating/standing-up.md` is the same declaration rendered for a
 person, and `AGENTS.md` points here for an agent that does not find this file
 on its own. The prose below lives in
 `tools/scripts/generate_standing_up_skill.py`; the run sheet at the end comes
@@ -151,7 +151,7 @@ here.
 - **Where a walkthrough says a value must never be written to a file, that is
   the whole rule.** Do not offer to generate it, do not offer a shell to
   generate it in, and do not read the terminal it is generated in.
-  `docs/reference/operations.md` states the same refusal for the certificate
+  `docs/operating/operations.md` states the same refusal for the certificate
   signing key, which is the one credential in this product that nothing
   automated is allowed near.
 - **A local `.env` is allowed exactly once, and is deleted.** One credential
@@ -247,5 +247,5 @@ it over.
   stage exists to prevent, and it is the one failure in this sequence that
   cannot be corrected later.
 
-`docs/reference/operations.md` is what an instance runs on afterwards. This
+`docs/operating/operations.md` is what an instance runs on afterwards. This
 page hands over to it and does not repeat it.

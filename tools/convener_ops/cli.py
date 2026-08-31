@@ -139,7 +139,7 @@ from convener_ops.publication.public_data import to_public, to_survey_status
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the
 #: YAML-boundary fixture is written by one side and read by the other.
-SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/reference/schema.md)\n"
+SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/operating/schema.md)\n"
 CONFIG_HEADER = "# Repo-wide config for the convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
 #: tools/convener_ops/journey/certificate.py's module docstring for why this file
@@ -2073,7 +2073,7 @@ def retention_sweep() -> int:
             "cannot delete a repository secret). Without it this job "
             "cannot carry out the destruction the retention window "
             "promises, so it fails rather than exiting clean having "
-            "destroyed nothing -- see docs/reference/operations.md, "
+            "destroyed nothing -- see docs/operating/operations.md, "
             "'Retention and early erasure'",
             file=sys.stderr,
         )
@@ -2475,7 +2475,7 @@ def record_destructions() -> int:
     """`convener-record-destructions`: write `instance/data/event-key-destructions.yml`
     with every id in `DESTROYED_IDS` (comma-joined, `retention_sweep`'s
     own `$GITHUB_OUTPUT`, or a hand-run operator recovering from a wedged
-    sweep -- see `docs/reference/operations.md`, 'Retention and early
+    sweep -- see `docs/operating/operations.md`, 'Retention and early
     erasure') recorded as destroyed on `DESTROYED_ON` (an ISO date; every
     event one sweep finds due shares one Paris day) -- factored out of
     `retention_sweep` itself so `retention.yml`'s commit-and-push retry
@@ -2858,7 +2858,7 @@ def encrypt_attendance_export() -> int:
     (exit 1) when the event id is not shaped like one, when no public key
     has been published for it yet (`instance/keys/events/<id>.pub` absent -- an
     operator has to create the event's key pair, per
-    `docs/reference/operations.md`'s "Event registration keys" section,
+    `docs/operating/operations.md`'s "Event registration keys" section,
     before anyone can register for it at all, so this is never the first
     command run against a fresh event), when there is no plaintext export
     to encrypt at the expected path, or when the CSV itself is malformed
@@ -4906,7 +4906,7 @@ def release_recording() -> int:
     persisted mapping, never resolved from an unverified listing
     endpoint, and never scheduled or unattended for that same reason
     (`platform_fcc.py`'s module docstring says so plainly, as does
-    `docs/reference/operations.md`). `PlatformFCC._conference_id` validates
+    `docs/operating/operations.md`). `PlatformFCC._conference_id` validates
     its shape (digits only) before it can reach a URL; a malformed value
     surfaces here as a plain `ValueError`, caught the same way as every
     other "the platform did not answer" case in this function.
@@ -5587,7 +5587,7 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
     after the point an announcement is useful -- so a real, ordinarily
     written record never reaches this branch. But nothing stops a
     hand-edited file from setting `publication.outcome: published` on a
-    still-`scheduled` row, and `docs/reference/schema.md` calls
+    still-`scheduled` row, and `docs/operating/schema.md` calls
     `photo_url` "a link, not an upload": turning it into something
     `render_announcement` can inline would mean this command reaching onto
     the network for a URL a data file names, which it does not do. A row

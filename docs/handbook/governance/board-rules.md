@@ -127,7 +127,7 @@ The yearly meeting acts through that same door: a member whose objection the mee
 
 **Inactivity (G-09)** is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
 
-Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in `docs/reference/operations.md` ("Inactivity").
+Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in `docs/operating/operations.md` ("Inactivity").
 
 Inactive is not a departure and not a judgement. The seat is kept, the entry stays in the file with the day you joined intact, and coming back is one word changed back. A member re-seated through a nomination is reactivated in place rather than added a second time.
 

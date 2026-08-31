@@ -1,6 +1,6 @@
 """The standing-up guide, rendered from the sequence it describes.
 
-`docs/reference/standing-up.md` is the page somebody with no repositories and
+`docs/operating/standing-up.md` is the page somebody with no repositories and
 no accounts reads. A later agent skill carries the same sequence out. Two
 documents describing one procedure diverge -- this repository has already paid
 for that with three palettes, five addresses and two path lists -- so there is
@@ -29,7 +29,7 @@ Why this and not the handbook's own transclusion
 another registered page, in the browser, at read time. It cannot help here for
 two reasons that are both structural. The declaration is YAML, not a page with
 headings, and a fragment is a window onto a heading; and this page is
-deliberately not registered, for the reason `docs/reference/operations.md` is
+deliberately not registered, for the reason `docs/operating/operations.md` is
 not -- it names every secret an instance uses, and the registry is the
 allowlist of what `app/scripts/copy-handbook.mjs` publishes into a bundle
 served from a *public* repository. So the binding is the one
@@ -76,7 +76,7 @@ from convener_ops.declaration.paths import repo_root
 DECLARATION_PATH: Final = Path("STANDING-UP.yml")
 
 #: The page it renders.
-DOC_PATH: Final = Path("docs") / "reference" / "standing-up.md"
+DOC_PATH: Final = Path("docs") / "operating" / "standing-up.md"
 
 #: The other file read, and the only one: what an absent integration costs.
 INTEGRATIONS_PATH: Final = Path("config") / "integrations.yml"
@@ -619,7 +619,7 @@ later ones.\
 """
 
 _CLOSING: Final = """\
-`docs/reference/operations.md` is the page to read next, and the one to keep
+`docs/operating/operations.md` is the page to read next, and the one to keep
 open afterwards: it covers everything an instance does *after* it is standing
 — handling a registration, matching attendance, issuing and revoking a
 certificate, draining the queue, the retention sweep and the early-erasure

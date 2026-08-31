@@ -279,7 +279,7 @@ def _bundle_configurations() -> dict[str, Any]:
     without `app/node_modules` there is no answer to compare and the four
     tests below reported an absent install as four failures. That is D-25
     read backwards -- loud where nothing is broken -- and it is the first
-    thing `docs/reference/publishing-the-product.md` used to walk a fresh
+    thing `docs/operating/publishing-the-product.md` used to walk a fresh
     derivation into. On a runner the same absence still fails, by name,
     because `quality.yml` installs `app/`'s packages before `pytest` runs.
     """

@@ -6,7 +6,7 @@ import { request } from '../net/request';
 
 /** The GitHub team whose membership this check reads. The *slug* is the
  *  product's -- every duplicate creates a team by this name, and
- *  `docs/reference/operations.md` says so -- while the organisation it
+ *  `docs/operating/operations.md` says so -- while the organisation it
  *  belongs to is the instance's, taken from the one repository name
  *  `instance/config.json` declares. Two facts, each in the place that
  *  owns it. */

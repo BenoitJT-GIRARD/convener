@@ -1,6 +1,6 @@
 name: Match attendance
 
-# `convener-match-attendance` (`docs/reference/operations.md`,
+# `convener-match-attendance` (`docs/operating/operations.md`,
 # "Matching attendance") had no workflow of its own -- two other workflows'
 # own header comments told a volunteer to "run convener-match-attendance by hand
 # first" before either issuing certificates or inviting the survey, but

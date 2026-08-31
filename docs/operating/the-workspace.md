@@ -67,7 +67,7 @@ anything about a person, and none of them needs a volunteer's machine to be on.
 Two more run on every push and are how a mistake is caught early: the data
 files are validated, and the application's own checks are run before it is
 deployed. What each one needs configured, and what it does when it is not, is
-in `docs/reference/operations.md`.
+in `docs/operating/operations.md`.
 
 ## When something looks wrong
 

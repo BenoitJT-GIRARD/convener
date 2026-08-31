@@ -14,7 +14,7 @@ The repository stores all operational data in two YAML files under `instance/dat
   the season counters
 
 Both files are validated in CI by `convener-validate` (see
-`docs/reference/operations.md`) on every commit.
+`docs/operating/operations.md`) on every commit.
 
 ## `instance/data/speakers.yml`
 

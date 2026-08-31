@@ -54,7 +54,7 @@ Best regards,
   *this message* is anonymous. Only the response the link leads to is
   designed to carry no identity at all — see `tools/convener_ops/journey/survey.py`'s
   own module docstring and
-  `docs/reference/operations.md`'s "Anonymous against a stranger;
+  `docs/operating/operations.md`'s "Anonymous against a stranger;
   pseudonymous by metadata against the organiser" section for the
   qualified claim this page must never say more plainly than it is true:
   against a stranger a stored answer is anonymous; against whoever holds

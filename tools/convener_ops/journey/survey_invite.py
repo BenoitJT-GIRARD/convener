@@ -64,7 +64,7 @@ recipient's own address, out of the same registration record their
 confirmation and their certificate already used it from. Nothing about
 this invitation is anonymous, and nothing here claims it is -- only the
 *survey response* the link leads to is designed to carry no identity; see
-`survey.py`'s module docstring and `docs/reference/operations.md`'s
+`survey.py`'s module docstring and `docs/operating/operations.md`'s
 "Anonymous against a stranger; pseudonymous by metadata against the
 organiser" section for the qualified claim this module must never
 contradict by saying less carefully. This module does not repeat that

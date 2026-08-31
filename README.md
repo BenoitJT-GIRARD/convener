@@ -16,7 +16,7 @@ pushes the result into its root. Nobody edits anything there. Every byte in
 it is reproducible from the private one, so losing it costs a rebuild.
 
 Anyone standing this up for themselves needs both before anything else
-works. `docs/reference/standing-up.md` is the whole path from nothing —
+works. `docs/operating/standing-up.md` is the whole path from nothing —
 no repositories, no accounts — to a running instance, step by step, with
 every step that exists only in a browser written out in full; it is
 walkable with a web browser and a text editor, and every account it asks
@@ -25,7 +25,7 @@ an agent follows are both generated from one declaration,
 `STANDING-UP.yml`, so an agent shortens the work without the browser route
 falling behind it — that route is the one the product is designed around.
 `AGENTS.md` says where each rendering lives.
-`docs/reference/operations.md` says which settings each repository needs,
+`docs/operating/operations.md` says which settings each repository needs,
 and takes over once the instance is standing.
 
 ### Which repository is which
@@ -47,7 +47,7 @@ demonstration is that instance, built and served out of a working copy —
 `site/README.md` gives the command, and the prefix it says to open at is
 the one a real deployment is served under. Creating and pushing that
 repository happens once and is written out in
-`docs/reference/publishing-the-product.md`, which is the one sequence
+`docs/operating/publishing-the-product.md`, which is the one sequence
 `STANDING-UP.yml` deliberately does not declare.
 
 Locally the picture is smaller than that table: the product, and — only
@@ -106,7 +106,7 @@ private**. Three facts make a fork incompatible with that:
 
 **Duplicate instead**: a new *private* repository of your own, holding
 these contents, with no fork relationship to this one.
-`docs/reference/operations.md` has what to do;
+`docs/operating/operations.md` has what to do;
 [D-15](docs/decisions/d-15-publication-topology.md) has the reasoning in
 full, including why the product itself is published even so.
 
@@ -166,7 +166,7 @@ correct and nothing that can disagree. The second of the two was the more
 expensive to leave: it sat in the workers' own source rather than in their
 configuration, so nothing ever told a duplicate to change it, and a relay
 left uncorrected would have gone on writing into this instance's
-repository. `docs/reference/standing-up.md` gives the namespace step as a
+repository. `docs/operating/standing-up.md` gives the namespace step as a
 step of its own.
 
 **One more product file carries a value nothing can derive for it, and a
@@ -188,9 +188,9 @@ goes red on the first run.
 product's carrying one hand-typed value each — two storage namespace
 identifiers and one team handle.
 
-`docs/reference/operations.md` covers the rest of standing an instance up —
+`docs/operating/operations.md` covers the rest of standing an instance up —
 the accounts, the secrets, and what degrades without each — and
-`docs/reference/standing-up.md` is the ordered path through all of it, from
+`docs/operating/standing-up.md` is the ordered path through all of it, from
 a person who has neither repository to an instance that runs.
 
 ## What is here
@@ -242,7 +242,7 @@ Check which external integrations are configured:
 cd tools && uv run convener-check-config
 ```
 
-See `docs/reference/operations.md` for what each integration needs, and what
+See `docs/operating/operations.md` for what each integration needs, and what
 happens without it.
 
 ### Local checks (optional)

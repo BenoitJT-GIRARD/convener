@@ -49,7 +49,7 @@ from convener_ops.declaration.yaml_safe import safe_load
 ROOT = repo_root()
 PAGE = Path("docs/handbook/workflow/4-after.md")
 GATES = Path("docs/handbook/governance/board-rules.md")
-OPERATIONS = Path("docs/reference/operations.md")
+OPERATIONS = Path("docs/operating/operations.md")
 HOSTING = Path("docs/handbook/workflow/3-hosting.md")
 DRAIN_WORKFLOW = Path(".github/workflows/sweep-and-notify.yml")
 

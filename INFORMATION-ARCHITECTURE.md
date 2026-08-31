@@ -27,10 +27,10 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
 | T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/handbook/toolkit/` |
-| What each screen of the app is for | `docs/reference/the-workspace.md` |
+| What each screen of the app is for | `docs/operating/the-workspace.md` |
 | Live speaker & event data | `instance/data/speakers.yml` |
-| External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
-| How somebody with no repositories and no accounts gets a running instance | `STANDING-UP.yml`, rendered by `tools/scripts/generate_standing_up_doc.py` into `docs/reference/standing-up.md` for a person and by `tools/scripts/generate_standing_up_skill.py` into `.claude/skills/standing-up/SKILL.md` for an agent — which carries the order and the actor, and reads every step's own content back out of the declaration |
+| External integrations | `config/integrations.yml`, documented in `docs/operating/operations.md` |
+| How somebody with no repositories and no accounts gets a running instance | `STANDING-UP.yml`, rendered by `tools/scripts/generate_standing_up_doc.py` into `docs/operating/standing-up.md` for a person and by `tools/scripts/generate_standing_up_skill.py` into `.claude/skills/standing-up/SKILL.md` for an agent — which carries the order and the actor, and reads every step's own content back out of the declaration |
 | Which paths belong to this series rather than to the code | `config/boundary.yml`, and each `config/` file's own `owner:` key |
 | The address this project is published at | `instance/config.json`, read by `tools/convener_ops/declaration/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
 | A second, invented instance to build as | `instances/example/`, one file per path `config/boundary.yml` hands to the instance |

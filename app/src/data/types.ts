@@ -1,7 +1,7 @@
 /**
  * The model, and the source the handbook's schema appendix is generated from.
  *
- * `docs/reference/schema.md` is derived from this file by
+ * `docs/operating/schema.md` is derived from this file by
  * `tools/scripts/generate_schema_doc.py`, and CI refuses a page the types do not
  * derive. So the first paragraph of a field's documentation comment is not
  * only a note to whoever reads the code: it is the sentence a volunteer reads

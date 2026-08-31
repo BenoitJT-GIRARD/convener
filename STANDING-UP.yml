@@ -3,7 +3,7 @@
 # Everything else in this repository is written for an instance that already
 # exists. This file is the other half: what somebody with no repositories and
 # no accounts does, in order, to have one -- and it is a declaration rather
-# than a page, because two things read it. `docs/reference/standing-up.md` is
+# than a page, because two things read it. `docs/operating/standing-up.md` is
 # generated from it by `tools/scripts/generate_standing_up_doc.py`, and an agent
 # that carries the same sequence out reads these rows directly. Two documents
 # describing one procedure diverge; this repository has paid for that with
@@ -45,7 +45,7 @@
 # no API at all (creating a mailbox, registering a GitHub App, minting a
 # fine-grained personal access token), or the value it produces must never
 # exist anywhere but in the hands of the person who minted it (the
-# certificate signing key, which `docs/reference/operations.md` already
+# certificate signing key, which `docs/operating/operations.md` already
 # refuses to let anything automated near). Everything else is `agent`: a file
 # edit, a command, or an API call something can make with credentials it has
 # been handed. Minting is a person's act; setting what was minted is not, and

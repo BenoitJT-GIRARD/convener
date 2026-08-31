@@ -16,7 +16,7 @@
  * `registry.ts` declares, not any string that merely appears somewhere in
  * the file. The first version of this file did not make
  * that distinction -- `/\bfile:\s*'([^']+)'/g` ran over the *entire* source,
- * so an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
+ * so an ordinary explanatory comment mentioning `file: 'operating/operations.md'`
  * anywhere in `registry.ts` -- even one written to warn against exactly
  * that path -- would have been read back out as a published file, silently
  * reopening the leak this script exists to close. `extractDeclaration` below

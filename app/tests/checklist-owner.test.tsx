@@ -132,7 +132,7 @@ describe('the owner of a journey line', () => {
   });
 
   it('shows no control for a name left under a channel the config no longer has', () => {
-    // What `docs/reference/schema.md` says about removing a channel: the
+    // What `docs/operating/schema.md` says about removing a channel: the
     // owner already written under `promotion/<key>` stays in the file, on a
     // line no screen shows -- so there is nothing here offering to clear it,
     // and the appendix says which route does. The page used to claim the

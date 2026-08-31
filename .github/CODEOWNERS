@@ -24,7 +24,7 @@
 # refuses it naming any organisation other than the declared one.
 #
 # Longer form, with the rest of the board's own setup:
-# docs/reference/operations.md, "Board notifications", step 2.
+# docs/operating/operations.md, "Board notifications", step 2.
 
 # Default: handbook, governance, and app changes are reviewed by the Editorial Board.
 *               @example-instance/editorial-board

@@ -23,7 +23,7 @@ code, and there is no other channel for either.
 `/survey` **writes it to the submission queue instead**:
 one Contents-API `PUT` of `queue/survey/<entry id>.json` on the
 `submission-queue` branch, and no run starts at all. One daily drain
-handles everything waiting — see `docs/reference/operations.md`, "Draining
+handles everything waiting — see `docs/operating/operations.md`, "Draining
 the submission queue", for the branch, the ledger and the one precondition
 nothing can enforce (never open a pull request from that branch). It costs
 this worker the same number of GitHub API calls the dispatch did, and the

@@ -8,7 +8,7 @@
  * `X-Content-Type-Options`, `Permissions-Policy`, HSTS and COOP/COEP/CORP
  * are categorically unavailable, not merely undone, and `frame-ancestors`
  * is ignored outright when delivered by `<meta>` -- see
- * `docs/reference/operations.md`'s own "Content-Security-Policy" section
+ * `docs/operating/operations.md`'s own "Content-Security-Policy" section
  * for that boundary written out in full.
  *
  * The last public route this document carried

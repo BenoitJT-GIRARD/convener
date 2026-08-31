@@ -1,3 +1,3 @@
 # Data schema
 
-See `docs/reference/schema.md` for the current, authoritative schema.
+See `docs/operating/schema.md` for the current, authoritative schema.

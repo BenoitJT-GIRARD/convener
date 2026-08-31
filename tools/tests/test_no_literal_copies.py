@@ -216,8 +216,8 @@ def test_a_fenced_block_shared_by_two_pages_is_not_a_copy() -> None:
     )
     assert len(normalise(command)) >= MIN_DUPLICATE_CHARS
     fenced = "\n".join(["# Page", "", "```bash", command, "```", ""])
-    assert duplicates({"reference/tools.md": fenced, "a/b.md": fenced}) == []
-    assert duplicates({"reference/tools.md": command, "a/b.md": command}) != []
+    assert duplicates({"operating/tools.md": fenced, "a/b.md": fenced}) == []
+    assert duplicates({"operating/tools.md": command, "a/b.md": command}) != []
 
 
 def test_no_paragraph_appears_twice_across_the_handbook() -> None:

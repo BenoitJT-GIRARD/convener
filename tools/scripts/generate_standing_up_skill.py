@@ -376,7 +376,7 @@ _SECRETS: Final = "\n\n".join(
                 "**Where a walkthrough says a value must never be written to a "
                 "file, that is the whole rule.** Do not offer to generate it, "
                 "do not offer a shell to generate it in, and do not read the "
-                "terminal it is generated in. `docs/reference/operations.md` "
+                "terminal it is generated in. `docs/operating/operations.md` "
                 "states the same refusal for the certificate signing key, "
                 "which is the one credential in this product that nothing "
                 "automated is allowed near.",
@@ -414,7 +414,7 @@ _CLOSING: Final = "\n\n".join(
             ]
         ),
         _wrap(
-            "`docs/reference/operations.md` is what an instance runs on "
+            "`docs/operating/operations.md` is what an instance runs on "
             "afterwards. This page hands over to it and does not repeat it."
         ),
     ]

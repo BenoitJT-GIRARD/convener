@@ -4,7 +4,7 @@
  * `copy-handbook.mjs` used to copy every file under `docs/` that had a
  * recognised extension and sat outside a couple of skipped directories --
  * an extension filter and a directory skip-list standing in for an
- * allowlist, and never one. `docs/reference/operations.md` shipped into the
+ * allowlist, and never one. `docs/operating/operations.md` shipped into the
  * built app because of exactly that: a recognised extension (`.md`),
  * outside every skipped directory. `handbook-registry.mjs::publishedPaths`
  * replaces that with the allowlist that already existed for a different
@@ -76,7 +76,7 @@ describe('the two extractors that read registry.ts as text agree with the real m
 describe('the extraction reads each export\'s own literal, not the whole file', () => {
   // A reviewer proved by execution that the first version of these two
   // functions ran `/\bfile:\s*'([^']+)'/g` over the *entire* source text:
-  // an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
+  // an ordinary explanatory comment mentioning `file: 'operating/operations.md'`
   // anywhere in registry.ts -- inside the object literal, outside it,
   // anywhere -- would have been read back out as a path to publish. These
   // fixtures put that exact decoy in three places a real edit to
@@ -84,10 +84,10 @@ describe('the extraction reads each export\'s own literal, not the whole file', 
 
   it('ignores a decoy comment inside CONTENT_REGISTRY\'s own object literal', () => {
     const source = `
-// file: 'reference/operations.md' -- decoy, before the block entirely
+// file: 'operating/operations.md' -- decoy, before the block entirely
 export const CONTENT_REGISTRY = {
   'a': {
-    // file: 'reference/operations.md' -- decoy, inside one entry
+    // file: 'operating/operations.md' -- decoy, inside one entry
     file: 'a.md',
     anchor: null,
   },
@@ -105,7 +105,7 @@ export const CONTENT_REGISTRY = {
   'a': { file: 'a.md', anchor: null },
 };
 export const PUBLIC_ASSETS = [
-  // 'reference/operations.md' -- decoy, inside the array
+  // 'operating/operations.md' -- decoy, inside the array
   'handbook/assets/x.svg',
 ];
 `;
@@ -114,14 +114,14 @@ export const PUBLIC_ASSETS = [
 
   it('ignores a decoy string outside both blocks entirely', () => {
     const source = `
-/* a block comment mentioning file: 'reference/operations.md', above everything */
+/* a block comment mentioning file: 'operating/operations.md', above everything */
 export const CONTENT_REGISTRY = {
   'a': { file: 'a.md', anchor: null },
 };
 export const PUBLIC_ASSETS = [
   'handbook/assets/x.svg',
 ];
-// a trailing comment mentioning file: 'reference/operations.md' and 'handbook/assets/y.png'
+// a trailing comment mentioning file: 'operating/operations.md' and 'handbook/assets/y.png'
 `;
     expect(parseContentFiles(source)).toEqual(['a.md']);
     expect(parsePublicAssets(source)).toEqual(['handbook/assets/x.svg']);
@@ -143,10 +143,10 @@ describe('a real run against the real docs/ tree', () => {
     expect(onDisk).toEqual(publishedPaths(REGISTRY_SOURCE));
   });
 
-  it('never publishes docs/reference/operations.md -- it names every secret this project uses', async () => {
+  it('never publishes docs/operating/operations.md -- it names every secret this project uses', async () => {
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
-    expect(slash(await walkAll(dst))).not.toContain('reference/operations.md');
+    expect(slash(await walkAll(dst))).not.toContain('operating/operations.md');
   });
 
   it('never publishes anything under docs/superpowers/ -- the specs and plans this project never releases', async () => {
@@ -220,7 +220,7 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
     // The probe sits at the top level of docs/ -- not under
-    // `reference/`, `assets/` or `superpowers/` -- exactly so that a
+    // `operating/`, `handbook/assets/` or `superpowers/` -- exactly so that a
     // denylist of today's three known-bad paths would still let it
     // through. Only a real allowlist stops it.
     expect(files).not.toContain('zzz-not-in-the-registry.md');

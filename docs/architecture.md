@@ -235,7 +235,7 @@ No code change is ever needed to connect, rotate or remove an external
 service — a secret is set or unset, never a line of code. Exactly which
 account to create, which secret to set it under, and how to confirm it is
 working, for every integration this system has, is documented in
-`docs/reference/operations.md` in this repository.
+`docs/operating/operations.md` in this repository.
 
 ## Contributing
 

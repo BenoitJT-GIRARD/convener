@@ -24,7 +24,7 @@
 # TALLY_WEBHOOK_SECRET, VITRINE_DEPLOY_TOKEN, CLOUDFLARE_API_TOKEN. Declaring
 # them here would make `convener-check-config` report them permanently "absent"
 # on every machine that isn't the CI runner, which is noise, not
-# information. They are documented instead in docs/reference/operations.md,
+# information. They are documented instead in docs/operating/operations.md,
 # with what each is for and where it is set.
 #
 # event_keys is deliberately not excluded by that same reasoning, even
@@ -40,7 +40,7 @@
 # ordinary D-13 noise: no certificate is issued, nothing else happens, and
 # nothing personal is at risk the way an undecryptable registration would
 # be. It earns its own row rather than living only in
-# docs/reference/operations.md for the same reason matching_salt does,
+# docs/operating/operations.md for the same reason matching_salt does,
 # below: "is CONVENER_SIGNING_KEY actually set" is a structural fact
 # convener-check-config and its tests can see, not only a sentence a future edit
 # could silently stop being true under. See tools/convener_ops/journey/signing.py for
@@ -148,7 +148,7 @@ integrations:
       being tracked by hand. The value is the current access token itself,
       not a client id and secret; it expires and must be renewed roughly
       monthly, a step of the event journey rather than a one-time secret --
-      see docs/reference/operations.md's "Meeting platform" section.
+      see docs/operating/operations.md's "Meeting platform" section.
 
   - name: email_transport
     label: Outbound email
@@ -245,7 +245,7 @@ integrations:
       a promise with legal weight deserves a red job every day until the
       credential is set, not a quiet skip. See
       tools/convener_ops/cli.py::retention_sweep and
-      docs/reference/operations.md, 'Retention and early erasure'.
+      docs/operating/operations.md, 'Retention and early erasure'.
 
   - name: signing_key
     label: Certificate signing key

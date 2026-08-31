@@ -30,7 +30,7 @@ Four vocabularies, each read from the repository at run time:
   because two instances in this repository say those prefixes are theirs.
 * **`G-NN`** -- a governance rule. Derived from the pages under `docs/`
   that state the rules, each of which *titles* the rule with its number:
-  `## Inactivity (G-09)` in `docs/reference/operations.md`, `### The bar
+  `## Inactivity (G-09)` in `docs/operating/operations.md`, `### The bar
   (G-01)` in `docs/handbook/governance/board-rules.md`, `**Declaring an absence
   (G-04)**` opening its own paragraph on that same page. Writing a new
   rule and titling it is what makes its number citable; there is nothing
@@ -255,7 +255,7 @@ SEVERITY_TOKEN = re.compile(
 #: * `the spec`, abbreviated and bare. A public standard is always named
 #:   where it is cited -- "the CSP specification", "Tally's OpenAPI spec",
 #:   "the Fetch spec" -- so an unqualified `the spec` is this project's
-#:   own. `the specification` is *not* refused: `docs/reference/
+#:   own. `the specification` is *not* refused: `docs/operating/
 #:   operations.md` uses it four times for CSP.
 #: * `acceptance criterion` / `criteria` -- a numbered requirements list.
 #:   This product has no such thing of its own to confuse it with.
@@ -904,7 +904,7 @@ def test_a_prose_citation_of_the_working_record_is_caught(tmp_path: Path) -> Non
 
 def test_a_numbered_ruling_is_caught_and_an_unnumbered_one_is_not() -> None:
     """`ruling 6` is a coordinate into a list this repository never
-    publishes. "a design ruling", which is how `docs/reference/
+    publishes. "a design ruling", which is how `docs/operating/
     operations.md` and `platform_fcc.py` both name a settled decision,
     carries no number and is not a citation at all."""
     assert unresolvable_coordinates("Ruling 6: inviting people to") == ["Ruling 6"]

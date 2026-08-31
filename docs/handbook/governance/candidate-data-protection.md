@@ -19,7 +19,7 @@ names and institutional email addresses" — and pointed at
 good deal more than a name and an address, and `selection-criteria.md` is the
 Board's editorial judgement, not a data-handling process; it never described
 one. This page replaces that sentence with an honest account, established
-against the schema (`docs/reference/schema.md`) and the code that reads each
+against the schema (`docs/operating/schema.md`) and the code that reads each
 field, not against what would be convenient to claim.
 
 ## What we hold
@@ -77,7 +77,7 @@ their behalf — rather than the workshop they might one day deliver:
 One further field deserves a plain word, though it is not personal data:
 `metrics` — registrations, live peak attendance, 30-day YouTube views and
 forum replies. These describe the *event*, not the person who delivered it,
-which is exactly how `docs/reference/schema.md` itself draws the line: "the
+which is exactly how `docs/operating/schema.md` itself draws the line: "the
 edition fields ... describe the workshop they deliver." It sits on this
 record only because the schema treats a speaker and the edition they deliver
 as one entity, and it is shown on the record's own page alongside everything

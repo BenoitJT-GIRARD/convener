@@ -108,7 +108,7 @@ from locking everyone out.
 
 Nothing enforces the `Write`-only boundary automatically once someone
 joins the Board, and nothing revokes it automatically once they leave.
-`docs/reference/operations.md`'s own *Inactivity (G-09)* section already
+`docs/operating/operations.md`'s own *Inactivity (G-09)* section already
 describes the manual checklist a departure requires; this decision is
 what names who runs it — the architect, the only account with the
 organisation-owner permission the checklist actually needs — rather than

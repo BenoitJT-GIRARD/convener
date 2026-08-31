@@ -2,7 +2,7 @@
 
 Published public halves of the certificate signing key -- see
 `tools/convener_ops/journey/signing.py`'s module docstring for the full design, and
-`docs/reference/operations.md`'s "Certificate signing key" section for the
+`docs/operating/operations.md`'s "Certificate signing key" section for the
 operator procedure. This file documents the layout as a contract: the
 public verification page (`app/src/verify/`) reads this directory at
 build time and fetches what it finds at runtime -- see "What the
@@ -13,7 +13,7 @@ just a note to a future reader.
 **This directory is deliberately empty of keys right now.** No certificate
 signing key has been generated yet -- that is an operator's action, done
 once when `CONVENER_SIGNING_KEY` is first set (see *Certificate signing key* in
-`docs/reference/operations.md`), never an automated one, and never
+`docs/operating/operations.md`), never an automated one, and never
 performed into a file that could be committed by mistake. An empty
 directory here is the correct, expected state until that happens, not a
 sign that a key went missing or that the layout is broken. `.gitignore`
@@ -36,7 +36,7 @@ blob out of the commit it names. It is not a "lost key" to account for or
 worry about recovering -- it never signed a single real certificate, and no
 verifier should ever need to know it existed. The real, first signing key
 is whichever one an operator generates by following the procedure in
-`docs/reference/operations.md`.
+`docs/operating/operations.md`.
 
 **Those two commits are cited by subject, not by hash, deliberately.** A
 hash written into prose is a cross-reference that any rewrite of the
@@ -146,7 +146,7 @@ never collapse two of them together:
   include yet -- which is a real, reachable state: sign the certificate,
   then publish the `.pub` file, and every certificate issued in that
   window is genuine and currently unconfirmable (see
-  `docs/reference/operations.md`'s publish-before-secret warning). Naming
+  `docs/operating/operations.md`'s publish-before-secret warning). Naming
   a real attendee's certificate a forgery is the worst thing this feature
   can do. Display a neutral "cannot confirm this certificate right now"
   state instead -- not an accusation.

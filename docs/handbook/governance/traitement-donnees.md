@@ -95,7 +95,7 @@ exists, but what it retains is ciphertext, decryptable only by whichever
 CI job later holds this event's own private key. Both are also restricted
 to collaborators with write access to this repository — the same boundary
 that already gates every other administrative action here — and both are
-named in `config/integrations.yml` and `docs/reference/operations.md`.
+named in `config/integrations.yml` and `docs/operating/operations.md`.
 
 ## Duration
 
@@ -179,7 +179,7 @@ address the confirmation email and the event page's own notice both name.
   individually, at the wall-clock minute it arrived, so whoever holds both
   the event's key and its attendance list — the organiser, and only the
   organiser — can pair an answer's position with roughly when it was
-  submitted. `docs/reference/operations.md` records this in full; this page
+  submitted. `docs/operating/operations.md` records this in full; this page
   does not describe it more favourably than that one does.
 
 ---
@@ -188,5 +188,5 @@ address the confirmation email and the event page's own notice both name.
 registration form itself as a mounted island
 (`app/src/islands/signup/SignupForm.tsx`), for what a participant reads before
 registering, and
-`docs/reference/operations.md` for the full procedures behind
+`docs/operating/operations.md` for the full procedures behind
 every measure named above.*

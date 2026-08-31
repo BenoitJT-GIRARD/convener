@@ -813,7 +813,7 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 > having destroyed nothing must never look, from the Actions tab, identical to
 > one that genuinely had nothing to do -- a promise with legal weight deserves
 > a red job every day until the credential is set, not a quiet skip. See
-> tools/convener_ops/cli.py::retention_sweep and docs/reference/operations.md,
+> tools/convener_ops/cli.py::retention_sweep and docs/operating/operations.md,
 > 'Retention and early erasure'.
 
 This is one of the rows whose absence is not an ordinary state. The report
@@ -1137,7 +1137,7 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 > deleted through its own API instead of being tracked by hand. The value is
 > the current access token itself, not a client id and secret; it expires and
 > must be renewed roughly monthly, a step of the event journey rather than a
-> one-time secret -- see docs/reference/operations.md's "Meeting platform"
+> one-time secret -- see docs/operating/operations.md's "Meeting platform"
 > section.
 
 **Credentials.** `CONVENER_MEETING_API_TOKEN`
@@ -1199,7 +1199,7 @@ time would mean naming an event that does not exist yet.
 
 ## After this page
 
-`docs/reference/operations.md` is the page to read next, and the one to keep
+`docs/operating/operations.md` is the page to read next, and the one to keep
 open afterwards: it covers everything an instance does *after* it is standing
 — handling a registration, matching attendance, issuing and revoking a
 certificate, draining the queue, the retention sweep and the early-erasure

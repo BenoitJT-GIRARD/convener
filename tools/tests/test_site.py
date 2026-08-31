@@ -1477,9 +1477,7 @@ def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None
     `test_the_governance_record_link_resolves_to_the_published_handbook`
     below.
     """
-    expected_call = (
-        f"{{{{ '/app/docs/{_governance_record_file()}' | absoluteUrl }}}}"
-    )
+    expected_call = f"{{{{ '/app/docs/{_governance_record_file()}' | absoluteUrl }}}}"
     for template in _GOVERNANCE_LINK_TEMPLATES:
         source = template.read_text(encoding="utf-8")
         assert expected_call in source, (

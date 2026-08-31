@@ -235,7 +235,7 @@ def test_the_handbook_page_names_every_exception_the_declaration_holds() -> None
     `config/integrations.yml`'s own header and
     `tools/convener_ops/declaration/integrations.py`'s docstring and comment were
     corrected from one exception to three when the second and third rows
-    declared themselves; `docs/reference/operations.md` opens by making
+    declared themselves; `docs/operating/operations.md` opens by making
     the same claim and was not, because nothing read it. It is read here,
     against the declaration rather than against a list written out again:
     a fourth row declaring `absent_is_normal: false` fails this test by
@@ -249,7 +249,7 @@ def test_the_handbook_page_names_every_exception_the_declaration_holds() -> None
     a check on a heading rather than on the claim.
     """
     declaration = load_declaration(repo_root() / "config" / "integrations.yml")
-    page = (repo_root() / "docs" / "reference" / "operations.md").read_text(
+    page = (repo_root() / "docs" / "operating" / "operations.md").read_text(
         encoding="utf-8"
     )
     opening = _first_paragraph(page)

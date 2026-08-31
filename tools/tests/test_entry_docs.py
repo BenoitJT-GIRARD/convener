@@ -10,7 +10,7 @@ pinned here rather than trusted by inspection:
    docs/architecture.md are not registered pages themselves, so nothing
    already checks their own outbound links the way
    `app/tests/registered-links.test.ts` checks a registered page's.
-2. `docs/reference/operations.md` -- documents every secret this project
+2. `docs/operating/operations.md` -- documents every secret this project
    uses and is deliberately excluded from the app's public bundle -- is
    named by these two files *in prose, never as a clickable link*, this
    repository's own convention for a path a reader should not be led to
@@ -52,7 +52,7 @@ UNREGISTERED_BUT_SAFE = {"index.md", "README.md", "architecture.md"}
 #: The path this repository's own convention names in prose rather than as
 #: a link -- see `INFORMATION-ARCHITECTURE.md` and `site/README.md` for the
 #: precedent.
-OPERATIONS_REFERENCE = "docs/reference/operations.md"
+OPERATIONS_REFERENCE = "docs/operating/operations.md"
 
 #: The published form of the decision register -- see
 #: `docs/decisions/index.md` itself for what it holds.
@@ -180,7 +180,7 @@ def test_the_entry_docs_link_to_the_decisions_index() -> None:
 
 
 def test_the_operations_reference_is_named_not_linked_and_real() -> None:
-    # docs/reference/operations.md documents every secret this project
+    # docs/operating/operations.md documents every secret this project
     # uses and is deliberately excluded from the app's public bundle
     # (app/tests/copy-handbook.test.ts) -- named, never linked, the same
     # convention as the decision register above.
@@ -252,7 +252,7 @@ def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     `docs/README.md` both pointed a public reader at a design
     specification no clone would ever hold, `site/README.md` at a decision
     whose published form sits in `docs/decisions/`, and
-    `docs/reference/operations.md` at four such paths plus one under
+    `docs/operating/operations.md` at four such paths plus one under
     `.superpowers/`, which `.gitignore` keeps out of *every* clone and
     which was therefore already unfollowable here.
 

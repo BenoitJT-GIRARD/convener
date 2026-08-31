@@ -202,7 +202,7 @@ QUEUE_DIR: Final = "queue"
 #: matching code, and there is no second channel for either, so only a
 #: registration whose event is still days away may ever wait for a drain.
 #: The proposal is absent for a different reason, recorded in
-#: `docs/reference/operations.md`: `services/form-relay` receives Tally's
+#: `docs/operating/operations.md`: `services/form-relay` receives Tally's
 #: webhook body in the clear, so queuing it would put a stranger's name and
 #: address into this repository's history in plain text, outside the key
 #: destruction D-22 relies on.

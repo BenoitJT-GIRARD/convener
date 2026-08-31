@@ -157,7 +157,7 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
 
 // Two boundaries `tools/convener_ops/journey/attendance.py` draws, written
 // "on the event page, in the same place as 'present without having
-// registered'" -- not only in `docs/reference/operations.md`, which a
+// registered'" -- not only in `docs/operating/operations.md`, which a
 // participant never reads. Neither is a matching weakness to keep
 // improving; both are stated here exactly as the matching cascade actually
 // behaves, not softened into "we will do our best". `event.njk` carries no

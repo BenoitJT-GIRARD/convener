@@ -6,8 +6,8 @@ Every tool the series uses, and how to get access.
 |---|---|---|
 | **The workspace** (this app) | The handbook, and where each webinar stands | Sign in with GitHub — [The workspace](the-workspace.md) |
 | **LinkedIn** | Announcement posts | Ask the organisers |
-| **The meeting platform** | Hosting the webinar and recording it | The organisation's own account — see `docs/reference/operations.md` |
-| **The video channel** | Publishing the recordings | The organisation's own account — see `docs/reference/operations.md` |
+| **The meeting platform** | Hosting the webinar and recording it | The organisation's own account — see `docs/operating/operations.md` |
+| **The video channel** | Publishing the recordings | The organisation's own account — see `docs/operating/operations.md` |
 | **The forum** | Discussion before and after each talk | {{ instance.forum_host }} |
 
 !!! tip "Everyone registers"

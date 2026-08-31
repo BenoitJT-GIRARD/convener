@@ -14,7 +14,7 @@ name: Retention sweep
 # matter what this job's own `permissions:` grants -- a fine-grained
 # personal access token, scoped to this repository, with the 'Secrets'
 # permission set to read and write and nothing else. See
-# docs/reference/operations.md, 'Retention and early erasure', for how to
+# docs/operating/operations.md, 'Retention and early erasure', for how to
 # create one. Without it, the "Compute what is due" step below fails this
 # job outright, on every run, whether or not anything is actually due for
 # destruction today -- see tools/convener_ops/cli.py::retention_sweep's own

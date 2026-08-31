@@ -14,7 +14,7 @@ order, with the actor who carries it out, what proves it is done, and what an
 instance loses by skipping it. Nothing restates that file. Two renderings are
 generated from it and refused by continuous integration if they drift:
 
-- `docs/reference/standing-up.md` — the guide a person follows with a web
+- `docs/operating/standing-up.md` — the guide a person follows with a web
   browser and a text editor, and no agent at all. It is the product, not a
   fallback, and nothing may make it slower or less complete.
 - `.claude/skills/standing-up/SKILL.md` — the same sequence as a procedure for

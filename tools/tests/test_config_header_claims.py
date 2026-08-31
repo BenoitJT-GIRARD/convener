@@ -36,7 +36,7 @@ somebody shortening the threshold, derived from nothing. *Two drain
 periods*, in both files -- a count of drains
 (`registration_routing.MISSED_DRAINS_COVERED`), not a figure the
 declarations move. And the same claim where it is already bound or where
-binding it would buy nothing: `docs/reference/operations.md` states the
+binding it would buy nothing: `docs/operating/operations.md` states the
 coupled bounds and `test_handbook_claims.py` reads them, while
 `app/src/settings/bounds.ts` and `app/src/screens/Settings.tsx` state it in
 a docstring explaining why the settings screen exists -- product files, in

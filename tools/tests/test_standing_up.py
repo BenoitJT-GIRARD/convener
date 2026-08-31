@@ -1,7 +1,7 @@
 """One sequence, three readers, and the control that keeps them one.
 
 `STANDING-UP.yml` declares what somebody with no repositories and no accounts
-does to have a running instance. `docs/reference/standing-up.md` is that
+does to have a running instance. `docs/operating/standing-up.md` is that
 sequence as a person reads it; `.claude/skills/standing-up/SKILL.md` is the
 run sheet an agent carries it out from. Two documents describing one procedure
 diverge; the whole point of the declaration is that there is only one, so this

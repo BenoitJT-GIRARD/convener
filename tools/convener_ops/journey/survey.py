@@ -70,7 +70,7 @@ array position with arrival time, at whatever resolution the workflow that
 writes it commits at. That is a property of an append-only git store, not
 a defect this module introduces or could remove without breaking the
 independent-envelope-per-response shape retention needs -- see
-`docs/reference/operations.md`'s "Retention and early erasure" section,
+`docs/operating/operations.md`'s "Retention and early erasure" section,
 which carries the full argument for whoever next builds on this file.
 
 Same storage shape, same reason, as `registration.py`

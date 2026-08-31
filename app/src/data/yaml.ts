@@ -49,7 +49,7 @@ export function serializeConfig(cfg: Config): string {
 }
 
 export const SPEAKERS_HEADER =
-  '# Speakers (unified schema v6 — see docs/reference/schema.md)\n';
+  '# Speakers (unified schema v6 — see docs/operating/schema.md)\n';
 export const CONFIG_HEADER = '# Repo-wide config for the convener app\n';
 
 export function withSpeakersHeader(body: string): string {

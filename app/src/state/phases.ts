@@ -244,7 +244,7 @@ export const PHASES: PhaseDef[] = [
         window: 7,
       },
       {
-        // Decided in docs/reference/operations.md
+        // Decided in docs/operating/operations.md
         // ("Meeting platform" -> "Renewing the token") and wired here:
         // the chosen meeting platform's access token is short-lived
         // (roughly a month) and cannot be renewed unattended -- the
@@ -261,7 +261,7 @@ export const PHASES: PhaseDef[] = [
         // example it exists for. Skipping this one costs a single event's
         // manual attendance import through the fallback, never a
         // cancelled seminar and never a security incident
-        // (`docs/reference/operations.md`), which is the opposite of
+        // (`docs/operating/operations.md`), which is the opposite of
         // that bar.
         key: 'scheduled/T-7/token-renewal',
         form: 'checkbox',
@@ -358,7 +358,7 @@ export const PHASES: PhaseDef[] = [
         // speaker record), so there is nothing here to condition on; an
         // event with a meeting-platform account simply finds this tick
         // easy (there is nothing to do) rather than the line being
-        // absent. See docs/reference/operations.md's own "Encrypting the
+        // absent. See docs/operating/operations.md's own "Encrypting the
         // manual attendance export" section for the procedure this line
         // stands for.
         key: 'delivered/attendance-export-encrypted',

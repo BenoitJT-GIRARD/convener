@@ -111,7 +111,7 @@ beforeEach(() => {
 
 // The two matching boundaries -- "present without having
 // registered" and "joined by telephone" -- named on the event page itself,
-// not only in docs/reference/operations.md. `event.njk` carries no copy of
+// not only in docs/operating/operations.md. `event.njk` carries no copy of
 // this text (unlike the data-protection notice, which the njk template
 // now owns alone), so the island keeps rendering it -- a test here, rather
 // than trusting the JSX to keep saying it, is what makes removing it a red
