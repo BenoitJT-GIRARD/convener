@@ -6,7 +6,7 @@ import { activeBoard } from '../state/board';
 import { applyTransition, canTransition } from '../state/transitions';
 import { parisToday } from '../state/derived';
 import { dataEdit, formatDecision, identifier } from '../state/decisions';
-import { CAREER_STAGES, GENDERS } from '../data/types';
+import { CAREER_STAGES, CAREER_STAGE_LABEL, GENDERS, GENDER_LABEL } from '../data/types';
 import { speakersFile } from '../paths';
 import type { Speaker, SpeakerStatus, Gender, CareerStage } from '../data/types';
 
@@ -127,7 +127,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
           >
             {GENDERS.map(g => (
               <option key={g} value={g}>
-                {g}
+                {GENDER_LABEL[g]}
               </option>
             ))}
           </select>
@@ -146,7 +146,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
           >
             {CAREER_STAGES.map(stage => (
               <option key={stage} value={stage}>
-                {stage}
+                {CAREER_STAGE_LABEL[stage]}
               </option>
             ))}
           </select>
@@ -368,9 +368,16 @@ function ForceStatus({ speaker }: { speaker: Speaker }) {
           onClick={apply}
           className="px-3 py-1.5 text-sm rounded border border-danger text-danger hover:bg-danger hover:text-white disabled:opacity-50"
         >
-          Force status
+          Force this status
         </button>
-        <span className="text-xs text-ink-muted">Logged in commit message.</span>
+        {/* The same sentence the hidden-conflict panel below already prints,
+            because it is the same fact about the same register. "Logged in
+            commit message." named the mechanism and not the consequence:
+            what a volunteer needs before pressing a red button is that the
+            move is attributed to them and permanent. */}
+        <span className="text-xs text-ink-muted">
+          Recorded in the decision register with your name.
+        </span>
       </div>
     </div>
   );

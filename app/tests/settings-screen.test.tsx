@@ -169,8 +169,13 @@ const FIRST_RENDER = { timeout: 5000 };
 
 /** The alarm field, once the screen has finished reading the repository. */
 function alarmField() {
+  // The accessible name leads with the words printed beside the field and
+  // keeps the key and the path behind them: two files carry a
+  // `max_silent_days`, so the name still has to disambiguate, but it may no
+  // longer omit "Queue alarm" -- which is what a sighted volunteer reads and
+  // what a screen-reader user was not being told.
   return screen.findByLabelText(
-    'alarm_after_hours in instance/queue-drain.yml',
+    'Queue alarm — alarm_after_hours in instance/queue-drain.yml',
     undefined,
     FIRST_RENDER,
   );
@@ -250,7 +255,7 @@ describe('the settings screen', () => {
   it('refuses the other end of the coupling from the other file', async () => {
     renderSettings(makeBackend());
     const lane = await screen.findByLabelText(
-      'queue_beyond_hours in instance/registration-lanes.yml',
+      'Immediate-lane threshold — queue_beyond_hours in instance/registration-lanes.yml',
       undefined,
       FIRST_RENDER,
     );
@@ -269,7 +274,7 @@ describe('the settings screen', () => {
     // the manoeuvre nothing tells anybody about today.
     fireEvent.change(
       await screen.findByLabelText(
-        'queue_beyond_hours in instance/registration-lanes.yml',
+        'Immediate-lane threshold — queue_beyond_hours in instance/registration-lanes.yml',
         undefined,
         FIRST_RENDER,
       ),
@@ -306,7 +311,7 @@ describe('the settings screen', () => {
     renderSettings(backend);
     fireEvent.change(
       await screen.findByLabelText(
-        'queue_beyond_hours in instance/registration-lanes.yml',
+        'Immediate-lane threshold — queue_beyond_hours in instance/registration-lanes.yml',
         undefined,
         FIRST_RENDER,
       ),
@@ -436,7 +441,7 @@ describe('the same screen, demonstrated', () => {
     );
     fireEvent.change(
       await screen.findByLabelText(
-        'queue_beyond_hours in instance/registration-lanes.yml',
+        'Immediate-lane threshold — queue_beyond_hours in instance/registration-lanes.yml',
         undefined,
         FIRST_RENDER,
       ),

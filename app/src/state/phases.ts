@@ -385,7 +385,7 @@ export const PHASES: PhaseDef[] = [
         key: 'delivered/recording-retrieved',
         form: 'checkbox',
         label: 'Recording retrieved and archived somewhere durable',
-        note: 'Only tick this once the file is genuinely downloaded and saved elsewhere -- it is one of two proofs the release job checks before deleting the platform copy, and a false tick risks losing the recording for good.',
+        note: 'Only tick this once the file is genuinely downloaded and saved elsewhere — it is one of two proofs the release job checks before deleting the platform copy, and a false tick risks losing the recording for good.',
       },
       {
         key: 'delivered/registrations',

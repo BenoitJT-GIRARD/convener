@@ -21,16 +21,21 @@ describe('friendlyError', () => {
   });
 
   it('maps 403 to a save-specific message when context is save', () => {
+    // Never "your access token": the device-flow sign-in shows the volunteer
+    // no token at all, and the sentence has to name a recovery they can walk
+    // to.
     const e = new GitHubError(403, 'GitHub 403: secret leak');
     expect(friendlyError(e, 'save')).toBe(
-      'Your access token does not have permission to save.',
+      'Your GitHub account does not have permission to save to this repository. ' +
+        'Ask whoever set this instance up for write access.',
     );
   });
 
   it('maps 403 to a load-specific message when context is load', () => {
     const e = new GitHubError(403, 'GitHub 403: secret leak');
     expect(friendlyError(e, 'load')).toBe(
-      'Your access token does not have permission to load this.',
+      'Your GitHub account does not have permission to read this. ' +
+        'Ask whoever set this instance up for access.',
     );
   });
 
@@ -61,9 +66,11 @@ describe('friendlyError', () => {
     );
   });
 
-  it('maps 404 to a plain not-found message', () => {
+  it('maps 404 to a plain not-found message naming what was not found', () => {
     const e = new GitHubError(404, 'GitHub 404: Not Found');
-    expect(friendlyError(e, 'load')).toBe('That could not be found on GitHub.');
+    expect(friendlyError(e, 'load')).toBe(
+      'GitHub could not find that file. If this keeps happening, ask whoever set this instance up.',
+    );
   });
 
   it('maps any 5xx to the generic "not responding" message, without the raw body', () => {
@@ -79,9 +86,19 @@ describe('friendlyError', () => {
     expect(friendlyError(e, 'save')).toMatch(/someone else is editing/);
   });
 
-  it('maps a network failure (bare TypeError) to the generic "not responding" message', () => {
+  it('says only that GitHub could not be reached when it never answered at all', () => {
+    // A bare TypeError is a request that got no answer: offline, DNS, a
+    // captive portal. "GitHub is not responding" asserts a state of GitHub
+    // that nothing here established, and is plainly false for the commonest
+    // cause. The two branches are separate for that reason -- a status code
+    // above is an answer that *was* received.
     const e = new TypeError('Failed to fetch');
-    expect(friendlyError(e, 'load')).toBe('GitHub is not responding. Try again in a moment.');
+    expect(friendlyError(e, 'load')).toBe(
+      'Could not reach GitHub. Check your connection, then try again.',
+    );
+    expect(friendlyError(new GitHubError(500, 'boom'), 'load')).toBe(
+      'GitHub is not responding. Try again in a moment.',
+    );
   });
 
   it('logs the raw error for diagnosis without surfacing it', () => {

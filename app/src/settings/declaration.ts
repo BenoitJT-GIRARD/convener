@@ -116,7 +116,7 @@ export function handedFromData(data: unknown): Handed[] {
   }
   if (document.owner !== PRODUCT) {
     throw new DeclarationRefused(
-      `${BOUNDARY_PATH} must declare \`owner: ${PRODUCT}\` -- the list of what ` +
+      `${BOUNDARY_PATH} must declare \`owner: ${PRODUCT}\` — the list of what ` +
         "an instance owns is the product's own statement about itself",
     );
   }

@@ -120,12 +120,12 @@ layout: layout.njk
       </div>
       <div class="archive__actions">
         {% if e.youtube_url %}
-          <a class="archive__action unstyled" href="{{ e.youtube_url }}" target="_blank" rel="noopener">Watch</a>
+          <a class="archive__action unstyled" href="{{ e.youtube_url }}" target="_blank" rel="noopener" aria-label="Watch {{ e.title }}">Watch</a>
         {% else %}
           <span class="archive__action--disabled">No recording</span>
         {% endif %}
         {% if e.forum_thread %}
-          <a class="archive__action archive__action--alt unstyled" href="{{ e.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+          <a class="archive__action archive__action--alt unstyled" href="{{ e.forum_thread }}" target="_blank" rel="noopener" aria-label="Discuss {{ e.title }}">Discuss</a>
         {% else %}
           <span class="archive__action--disabled">No thread</span>
         {% endif %}

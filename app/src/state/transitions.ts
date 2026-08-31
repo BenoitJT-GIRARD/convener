@@ -244,7 +244,7 @@ export function applyTransition(
       const accepted = acceptedDates(s).find(d => d === p.date);
       if (!accepted) {
         throw new DateRejected(
-          `${p.date} is not a date this speaker has accepted. Record their reply first -- ` +
+          `${p.date} is not a date this speaker has accepted. Record their reply first — ` +
             'locking a date commits them to that evening.',
         );
       }

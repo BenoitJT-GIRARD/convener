@@ -179,7 +179,7 @@ describe.skipIf(ONE_INSTANCE)('the field that code is typed into', () => {
     disagree('edition_prefix');
     inDemo();
     lockScreen();
-    const suggest = await waitFor(() => screen.getByText('suggest'));
+    const suggest = await waitFor(() => screen.getByText('Suggest the next code'));
     suggest.click();
     await waitFor(() =>
       expect(screen.getByPlaceholderText(`${EXAMPLE.edition_prefix}-N`)).toHaveValue(

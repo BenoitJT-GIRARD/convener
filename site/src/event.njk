@@ -282,7 +282,7 @@ eleventyComputed:
   #}
   {% if event.forum_thread %}
   <div class="event__discuss">
-    <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+    <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener" aria-label="Discuss {{ event.title }}">Discuss</a>
   </div>
   {% endif %}
 </section>
@@ -295,12 +295,12 @@ eleventyComputed:
 
   <div class="archive__actions event__links">
     {% if event.youtube_url %}
-      <a class="archive__action unstyled" href="{{ event.youtube_url }}" target="_blank" rel="noopener">Watch</a>
+      <a class="archive__action unstyled" href="{{ event.youtube_url }}" target="_blank" rel="noopener" aria-label="Watch {{ event.title }}">Watch</a>
     {% else %}
       <span class="archive__action--disabled">No recording yet</span>
     {% endif %}
     {% if event.forum_thread %}
-      <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+      <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener" aria-label="Discuss {{ event.title }}">Discuss</a>
     {% else %}
       <span class="archive__action--disabled">No thread yet</span>
     {% endif %}

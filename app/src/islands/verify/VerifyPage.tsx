@@ -223,8 +223,8 @@ function Revoked({ cert }: { cert: DisplayCertificate }) {
   return (
     <Panel tone="accent" title="Certificate revoked">
       <p>
-        This certificate&apos;s signature is genuine -- it really was issued to the person
-        named below -- but {instanceIdentity().organisation} has since revoked it. A revoked
+        This certificate&apos;s signature is genuine — it really was issued to the person
+        named below — but {instanceIdentity().organisation} has since revoked it. A revoked
         certificate
         should not be relied on to attest attendance.
       </p>
@@ -264,7 +264,7 @@ function CannotCheckSignature() {
       <p>
         We could not load the signing keys we publish, so we could not check whether this
         certificate&apos;s signature is genuine. This is not a sign that anything is wrong
-        with it -- please try again shortly, or contact{' '}
+        with it — please try again shortly, or contact{' '}
         <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a> if this persists.
       </p>
     </Panel>
@@ -290,12 +290,12 @@ function StateUnknown({
   return (
     <Panel tone="info" title="We cannot confirm the current state">
       <p>
-        This certificate&apos;s signature is genuine -- it was issued to the person named
+        This certificate&apos;s signature is genuine — it was issued to the person named
         below.{' '}
         {reason === 'register_unreachable'
           ? 'We could not reach our register just now to confirm whether it is still current or has since been revoked.'
           : "This certificate does not carry an identifier we can look up, so we cannot confirm whether it is still current or has since been revoked."}{' '}
-        This is not a sign that the certificate is invalid -- please try again shortly, or
+        This is not a sign that the certificate is invalid — please try again shortly, or
         contact <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
       </p>
       <CertificateDetails cert={cert} />
@@ -315,10 +315,10 @@ function NotInRegister({ cert }: { cert: DisplayCertificate }) {
   return (
     <Panel tone="info" title="Not yet reflected in our register">
       <p>
-        This certificate&apos;s signature is genuine -- it was issued to the person named
+        This certificate&apos;s signature is genuine — it was issued to the person named
         below. We read our register successfully, but it does not currently list this
         certificate&apos;s identifier. This can happen briefly right after issuance and is not
-        a sign that anything is wrong -- if it persists, contact{' '}
+        a sign that anything is wrong — if it persists, contact{' '}
         <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
       </p>
       <CertificateDetails cert={cert} />
@@ -338,7 +338,7 @@ function NotInRegister({ cert }: { cert: DisplayCertificate }) {
 function RecordCaveat() {
   return (
     <p>
-      This confirms a record in our register, not the document itself -- we have not checked
+      This confirms a record in our register, not the document itself — we have not checked
       any certificate&apos;s signature or contents this way, and we cannot show a name without
       the full verification link (with its token), usually printed as a QR code on the
       certificate itself.
@@ -387,7 +387,7 @@ function RecordUnknown({ identifier }: { identifier: string }) {
     <Panel tone="info" title="We cannot confirm this right now">
       <p>
         We could not reach our register just now to look up identifier{' '}
-        <IdentifierText id={identifier} />. This is not a sign that anything is wrong -- please
+        <IdentifierText id={identifier} />. This is not a sign that anything is wrong — please
         try again shortly.
       </p>
     </Panel>

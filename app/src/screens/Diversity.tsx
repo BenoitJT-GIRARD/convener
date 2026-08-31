@@ -34,23 +34,8 @@ import { LoadError } from '../components/LoadError';
 import { parisToday } from '../state/derived';
 import { MIN_REPORTING_BASIS, distribution, reportOn } from '../state/diversity';
 import type { Counts, DimensionReport, Distribution } from '../state/diversity';
+import { CAREER_STAGE_LABEL, GENDER_LABEL } from '../data/types';
 import type { CareerStage, Gender } from '../data/types';
-
-const CAREER_STAGE_LABEL: Record<CareerStage, string> = {
-  phd: 'PhD student',
-  postdoc: 'Postdoc',
-  independent: 'Independent researcher',
-  'group-leader': 'Group leader',
-  other: 'Other',
-  undisclosed: 'Not declared',
-};
-
-const GENDER_LABEL: Record<Gender, string> = {
-  M: 'Man',
-  F: 'Woman',
-  NB: 'Non-binary',
-  undisclosed: 'Not declared',
-};
 
 /**
  * The two natures of objective, which must never be merged (G-13).
@@ -289,7 +274,7 @@ export function DistributionView({ dist }: { dist: Distribution }) {
 export function Diversity() {
   const { config, speakers, loading, error } = useData();
 
-  if (loading) return <p className="text-ink-muted">Loading…</p>;
+  if (loading) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
   if (!config) return <p className="text-ink-muted">Nothing to show yet.</p>;
 

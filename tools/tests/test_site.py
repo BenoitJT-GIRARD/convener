@@ -2749,7 +2749,7 @@ def test_an_edition_with_no_banner_file_still_emits_no_og_image_tag(
 def test_the_organiser_link_points_at_the_apps_real_published_base(
     built_site: Path,
 ) -> None:
-    """The masthead and the footer both offer "Organizer access" on every
+    """The masthead and the footer both offer "Organiser access" on every
     page. That link used to be a hand-typed absolute address in
     `site/src/_data/site.json`, naming a repository that will not exist and
     a path that never did -- a dead link on every public page, and one that

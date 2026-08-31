@@ -96,7 +96,7 @@ export async function loadSecretNames(token: string): Promise<SecretNames> {
         'GitHub did not say which secrets and variables this repository holds ' +
         `(${said}). Listing them needs a token with access to the repository's ` +
         'own Actions settings, and this screen only ever asks for their names ' +
-        '-- never a value, which no endpoint would return anyway. What each ' +
+        '— never a value, which no endpoint would return anyway. What each ' +
         'integration is for is below regardless.',
     };
   }

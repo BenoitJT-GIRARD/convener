@@ -37,6 +37,39 @@ export function isCareerStage(v: string): v is CareerStage {
 }
 
 /**
+ * How the two closed sets above are written on screen.
+ *
+ * Beside the values rather than beside one screen that happens to need
+ * them. The Diversity screen has read a speaker's stage as "PhD student"
+ * and their gender as "Woman" since it was written, while the two forms
+ * that *record* those fields -- New speaker, and the admin panel -- offered
+ * the stored codes themselves: a volunteer chose "NB" and "group-leader"
+ * and was later shown "Non-binary" and "Group leader" for the same person.
+ * One set of words, kept where the sets are, so the entry form and the
+ * measure cannot say different things about one answer.
+ *
+ * The stored value is untouched: these are the option *labels*, and
+ * `instance/data/speakers.yml` still holds `NB` and `group-leader`.
+ * `undisclosed` reads "Not declared" because that is what it means -- the
+ * speaker was asked and said nothing, which is an answer, not a gap.
+ */
+export const GENDER_LABEL: Record<Gender, string> = {
+  M: 'Man',
+  F: 'Woman',
+  NB: 'Non-binary',
+  undisclosed: 'Not declared',
+};
+
+export const CAREER_STAGE_LABEL: Record<CareerStage, string> = {
+  phd: 'PhD student',
+  postdoc: 'Postdoc',
+  independent: 'Independent researcher',
+  'group-leader': 'Group leader',
+  other: 'Other',
+  undisclosed: 'Not declared',
+};
+
+/**
  * What a speaker has said about one proposed slot.
  *
  * There is no `pending` and no fourth value. An answer that has not come

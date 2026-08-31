@@ -43,7 +43,7 @@ export function Board() {
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  if (loading) return <p className="text-ink-muted">Loading…</p>;
+  if (loading) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
   if (!config || !login) return <p className="text-ink-muted">Nothing to show yet.</p>;
 

@@ -163,7 +163,8 @@ export function proposeDates(
       const other = hit.speaker.edition_code || hit.speaker.id;
       throw new DateRejected(
         `${slot.date} clashes with ${other}, which is on ${hit.speaker.date}, ` +
-          `${hit.daysApart} day(s) away. The series keeps ${windowDays} days between events, ` +
+          `${hit.daysApart === 1 ? '1 day' : `${hit.daysApart} days`} away. The series keeps ` +
+          `${windowDays} days between events, ` +
           'so offer a date further from that one.',
       );
     }
@@ -230,7 +231,7 @@ export function lockDate(current: Speaker, accepted: AcceptedDate, editionCode: 
   const slot = current.candidate_dates.find(c => c.date === accepted && c.answer === 'accepted');
   if (!slot) {
     throw new DateRejected(
-      `${accepted} is not a date this speaker has accepted. Record their reply first -- ` +
+      `${accepted} is not a date this speaker has accepted. Record their reply first — ` +
         'locking a date commits them to that evening.',
     );
   }

@@ -16,7 +16,7 @@ const ACTIVE_COLUMNS: { key: SpeakerStatus; label: string }[] = [
 
 export function Pipeline() {
   const { speakers, loading, error, config } = useData();
-  if (loading) return <p className="text-ink-muted">Loading…</p>;
+  if (loading) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
   const now = new Date();
   const today = parisToday();

@@ -27,7 +27,7 @@ export function Inbox() {
   const { speakers, loading, error, config } = useData();
   const { login } = useAuth();
   const role = useRole();
-  if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
+  if (loading || !role) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
 
   const today = parisToday();
@@ -83,7 +83,7 @@ export function Inbox() {
         label="To act on"
         rows={actions}
         variant="action"
-        empty="No actions due. Nice."
+        empty="Nothing is waiting on you right now."
       />
 
       {awareness.length > 0 && (

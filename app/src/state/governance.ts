@@ -158,7 +158,7 @@ function consentBlocker(p: Publication): string {
   }
   return (
     'The speaker has not given permission for their recording to be published. ' +
-    'Ask them, then record their answer above -- not hearing back is not a yes.'
+    'Ask them, then record their answer above — not hearing back is not a yes.'
   );
 }
 

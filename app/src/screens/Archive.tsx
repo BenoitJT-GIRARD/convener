@@ -84,7 +84,7 @@ export function Archive() {
     return result;
   }, [speakers, q]);
 
-  if (loading) return <p className="text-ink-muted">Loading…</p>;
+  if (loading) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
 
   const visible = active === 'all' ? CATEGORIES : CATEGORIES.filter(c => c.key === active);

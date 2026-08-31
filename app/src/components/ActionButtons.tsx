@@ -18,6 +18,13 @@ import { parisToday } from '../state/derived';
 import { formatDecision, identifier, transitionDecision } from '../state/decisions';
 import type { BallotValue, DateAnswer, Speaker } from '../data/types';
 
+/** Written out rather than left as "member(s)": a board of one is an
+ *  ordinary state on a small series, and the count is read at the moment a
+ *  vote is stuck. `state/sla.ts` writes its own day counts the same way. */
+function members(n: number): string {
+  return n === 1 ? '1 member is' : `${n} members are`;
+}
+
 interface Props {
   speaker: Speaker;
   role: Role;
@@ -111,7 +118,7 @@ export function ActionButtons({ speaker, role }: Props) {
         buttons.push(
           <span className="text-sm text-ink-muted" key="msg">
             {outcome.suspended
-              ? `Board vote on hold: only ${outcome.eligible} member(s) are eligible to vote today.`
+              ? `Board vote on hold: only ${members(outcome.eligible)} eligible to vote today.`
               : `Awaiting board vote (${outcome.yes} / ${outcome.threshold}).`}
           </span>,
         );
@@ -220,8 +227,8 @@ function BallotForm({
     <div className="w-full space-y-3 border border-border p-3">
       <p className="text-sm text-ink-muted">
         {outcome.suspended
-          ? `Board vote on hold: only ${outcome.eligible} member(s) are eligible to vote today.`
-          : `${outcome.yes} of ${outcome.threshold} yes votes needed · ${outcome.eligible} member(s) eligible.`}
+          ? `Board vote on hold: only ${members(outcome.eligible)} eligible to vote today.`
+          : `${outcome.yes} of ${outcome.threshold} yes votes needed · ${members(outcome.eligible)} eligible.`}
       </p>
       {existing && (
         <p className="text-sm">
@@ -514,7 +521,7 @@ function CandidateDates({
       {canLock && (
         <div className="flex gap-2 items-center flex-wrap">
           <label className="flex items-center gap-1.5">
-            <span className="text-xs font-mono uppercase text-ink-muted">&#8470;</span>
+            <span className="text-xs font-mono uppercase text-ink-muted">Edition</span>
             <input
               type="text"
               placeholder={`${editionCodePrefix()}N`}
@@ -528,7 +535,7 @@ function CandidateDates({
             onClick={() => config && setEdition(nextEditionCode(speakers, config.next_edition_number))}
             className="text-xs text-primary-hover underline"
           >
-            suggest
+            Suggest the next code
           </button>
         </div>
       )}

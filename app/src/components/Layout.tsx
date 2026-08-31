@@ -39,7 +39,7 @@ export function Layout() {
               {instance.series}
             </span>
             <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-accent/40 border border-white/30">
-              Organizer
+              Organiser
             </span>
           </Link>
           <div className="flex items-center gap-3 text-sm">

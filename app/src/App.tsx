@@ -25,7 +25,7 @@ import { NewSpeaker } from './screens/NewSpeaker';
  */
 function Shell() {
   const { ready, token } = useAuth();
-  if (!ready) return <div className="p-8 text-ink-muted">Loading…</div>;
+  if (!ready) return <div className="p-8 text-ink-muted">Checking your sign-in…</div>;
   if (!token) return <Login />;
   return (
     <DataProvider>

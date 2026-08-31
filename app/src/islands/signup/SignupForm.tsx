@@ -168,7 +168,7 @@ function AttendanceBoundaries() {
       <p className="notice__eyebrow">About your certificate</p>
       <p>
         <strong>Turning up without registering does not make you eligible.</strong> We only
-        recognise people we can match to a registration -- register first if you want a
+        recognise people we can match to a registration — register first if you want a
         certificate.
       </p>
       <p>
@@ -294,7 +294,10 @@ export function SignupForm({ eventId }: { eventId?: string }) {
         // about the participant's data has left this function, encrypted or
         // otherwise -- there is simply nowhere to send it to.
         setSubmitState('error');
-        setSubmitError('Registration is not open for this event yet. Please try again later.');
+        setSubmitError(
+          'Registration is not open for this event yet, so nothing you typed has been ' +
+            'sent. Please try again later.',
+        );
         return;
       }
       const envelope: unknown = JSON.parse(envelopeJson);

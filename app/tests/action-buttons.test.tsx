@@ -216,7 +216,7 @@ describe('ActionButtons date negotiation', () => {
     // satisfy disables the control instead of failing the save.
     expect(await screen.findByRole('button', { name: /Lock this date/ })).toBeDisabled();
     await waitFor(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'suggest' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest the next code' }));
       expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
     });
     fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));

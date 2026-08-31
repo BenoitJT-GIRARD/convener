@@ -73,7 +73,7 @@ export function Consent() {
   const { speakers, loading, error } = useData();
   const role = useRole();
 
-  if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
+  if (loading || !role) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
 
   const waiting = awaitingAnswerList(speakers);

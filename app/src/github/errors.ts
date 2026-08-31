@@ -10,12 +10,22 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
 
   if (e instanceof GitHubError) {
     if (e.status === 401) return 'Your sign-in has expired. Sign in again.';
+    // Not "your access token": on the device-flow sign-in there is no token
+    // the volunteer ever saw, and the thing without the right is the account.
+    // The recovery names the one person who can grant it, because a volunteer
+    // told only that they may not write has nowhere to go next.
     if (e.status === 403) {
       return context === 'save'
-        ? 'Your access token does not have permission to save.'
-        : 'Your access token does not have permission to load this.';
+        ? 'Your GitHub account does not have permission to save to this repository. ' +
+            'Ask whoever set this instance up for write access.'
+        : 'Your GitHub account does not have permission to read this. ' +
+            'Ask whoever set this instance up for access.';
     }
-    if (e.status === 404) return 'That could not be found on GitHub.';
+    // "That" named nothing. Every 404 reaching here is a path this app asked
+    // the Contents API for, so the sentence can say so and offer the one
+    // person who can look.
+    if (e.status === 404)
+      return 'GitHub could not find that file. If this keeps happening, ask whoever set this instance up.';
     return 'GitHub is not responding. Try again in a moment.';
   }
 
@@ -67,6 +77,11 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   if (e instanceof Error && e.name === 'PublicationBlocked') return e.message;
 
   // Anything else (a rejected fetch: offline, DNS failure, captive portal)
-  // reaches here as a bare TypeError with no useful message to show.
-  return 'GitHub is not responding. Try again in a moment.';
+  // reaches here as a bare TypeError. GitHub never answered at all, so it is
+  // not known to be unwell -- and on the commonest cause of this branch, a
+  // volunteer on a train, it is perfectly healthy. The sentence claims only
+  // what is actually established, and offers the check that fixes it most
+  // often. A status this app *did* receive keeps the older sentence above,
+  // where "not responding" is what was observed.
+  return 'Could not reach GitHub. Check your connection, then try again.';
 }

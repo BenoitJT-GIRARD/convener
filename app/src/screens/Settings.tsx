@@ -69,6 +69,12 @@ import type { SettingsDocument } from '../settings/load';
 import { SECRETS_SETTINGS_PATH, loadSecretNames, reportAll } from '../settings/secrets';
 import type { IntegrationReport, SecretNames } from '../settings/secrets';
 
+/** A floor written out rather than left as "day(s)": one day is the floor a
+ *  daily cadence actually produces, so the singular is the common case. */
+function days(n: number): string {
+  return n === 1 ? '1 day' : `${n} days`;
+}
+
 /** The identity of a field, for the draft map. Not a path: two files carry
  *  a `max_silent_days` and they are different settings. */
 function fieldId(setting: Setting): string {
@@ -124,7 +130,12 @@ function SettingField({
             className="w-32 px-3 py-2 border border-border rounded-md bg-surface text-sm font-mono"
             type="number"
             step="any"
-            aria-label={`${setting.key} in ${setting.file}`}
+            // The visible label first, then what disambiguates it: two files
+            // carry a `max_silent_days`, so the key and the path have to stay
+            // in the name -- but a name that omits the words actually printed
+            // beside the field leaves a screen-reader user hearing a path
+            // where everybody else reads "Queue alarm".
+            aria-label={`${setting.label} — ${setting.key} in ${setting.file}`}
             value={value}
             onChange={event => onChange(event.target.value)}
           />
@@ -143,8 +154,16 @@ function SettingField({
         <Refused refusal={refusal} />
       ) : (
         <p className="mt-1 text-xs text-ink-faint">
-          Saved, this takes effect {setting.effect.when} ({setting.effect.where})
-          {value.trim() !== stored && stored !== '' && ` The file says ${stored} today.`}
+          {/* Three separate sentences, because they are three separate
+              claims: when the value starts being read, where to go and
+              look, and whether what is in the field has been written yet.
+              They ran together without a full stop between the second and
+              the third -- the facts were right and the paragraph was not
+              readable as three. `effect.when` ends in its own full stop;
+              nothing here adds a second one. */}
+          Once saved, this takes effect {setting.effect.when} See{' '}
+          <code className="font-mono">{setting.effect.where}</code>.
+          {value.trim() !== stored && stored !== '' && ` Not saved yet: the file still says ${stored}.`}
         </p>
       )}
     </div>
@@ -176,7 +195,7 @@ function CouplingNote({ coupling }: { coupling: Coupling }) {
           threshold has to move first.
         </>
       )}{' '}
-      The silence tolerance is floored at {silenceFloorDays(coupling.periodHours)} day(s),
+      The silence tolerance is floored at {days(silenceFloorDays(coupling.periodHours))},
       and the lane threshold at {laneFloorHours(coupling.periodHours)} hours, from the
       same cadence.
     </p>
@@ -268,7 +287,7 @@ export function Settings() {
     );
   }
   if (doc === null || !token) {
-    return <div className="p-8 text-ink-muted">Loading…</div>;
+    return <div className="p-8 text-ink-muted">Reading this instance&rsquo;s declarations…</div>;
   }
 
   const coupling = couplingOf(doc);

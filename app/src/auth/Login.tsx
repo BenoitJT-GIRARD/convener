@@ -52,7 +52,7 @@ function Shell({ children }: { children: ReactNode }) {
             {instance.series}
           </span>
           <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-accent/40 border border-white/30">
-            Organizer
+            Organiser
           </span>
         </div>
       </header>
@@ -80,7 +80,7 @@ function Shell({ children }: { children: ReactNode }) {
             View a live demo
           </button>
           <p className="text-xs text-ink-muted mt-3">
-            No sign-in required, edits stay local to your browser tab.
+            No sign-in needed. Edits stay in this tab and are never saved.
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@ function TokenPanel() {
           disabled={busy}
           className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
         >
-          {busy ? 'Checking...' : 'Sign in ->'}
+          {busy ? 'Checking…' : 'Sign in →'}
         </button>
         {err && <p className="text-danger text-sm">{err}</p>}
       </form>
@@ -214,7 +214,7 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
         >
           Open GitHub
         </button>
-        <p className="text-xs text-ink-muted text-center">Waiting for confirmation...</p>
+        <p className="text-xs text-ink-muted text-center">Waiting for you to confirm on GitHub…</p>
       </div>
     );
   }
@@ -246,7 +246,7 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
         onClick={start}
         className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
       >
-        {state.step === 'requesting' ? 'Starting...' : 'Sign in with GitHub'}
+        {state.step === 'requesting' ? 'Starting…' : 'Sign in with GitHub'}
       </button>
     </div>
   );

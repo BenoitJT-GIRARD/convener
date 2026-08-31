@@ -203,10 +203,10 @@ export function whyNotAForm(path: string): string | null {
     return 'Derived from instance/data/ by the product\'s own commands and committed by Deploy app. Typing into it would be typing an answer the next run overwrites.';
   }
   if (path === registerPath()) {
-    return 'A total re-rendering of this repository\'s own commit history, written by the register workflow on every push and never by hand -- convener-register --check fails the build if anybody tries.';
+    return 'A total re-rendering of this repository\'s own commit history, written by the register workflow on every push and never by hand — convener-register --check fails the build if anybody tries.';
   }
   if (path === 'instance/config.json') {
-    return 'Read by the build itself: the address, the identity and the edition prefix are compiled into this bundle and into the showcase, so a change here would take effect at the next deploy and not before -- and this screen is running on the old one. The edition prefix is frozen besides: it is in published addresses, on issued certificates and in key filenames, and a series never renumbers editions it has already run.';
+    return 'Read by the build itself: the address, the identity and the edition prefix are compiled into this bundle and into the showcase, so a change here would take effect at the next deploy and not before — and this screen is running on the old one. The edition prefix is frozen besides: it is in published addresses, on issued certificates and in key filenames, and a series never renumbers editions it has already run.';
   }
   return null;
 }

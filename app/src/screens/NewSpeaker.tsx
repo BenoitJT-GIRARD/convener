@@ -5,7 +5,7 @@ import { assignLead } from '../state/board';
 import { parisToday } from '../state/derived';
 import { useAuth } from '../auth/AuthContext';
 import { formatDecision, identifier } from '../state/decisions';
-import { CAREER_STAGES } from '../data/types';
+import { CAREER_STAGES, CAREER_STAGE_LABEL, GENDERS, GENDER_LABEL } from '../data/types';
 import type { Speaker, Gender, CareerStage } from '../data/types';
 
 function nextSpeakerId(speakers: Speaker[]): string {
@@ -247,10 +247,11 @@ export function NewSpeaker() {
               onChange={e => up('gender', e.target.value as Gender)}
               className={`${inputCls} mt-1`}
             >
-              <option value="undisclosed">undisclosed</option>
-              <option value="F">F</option>
-              <option value="M">M</option>
-              <option value="NB">NB</option>
+              {GENDERS.map(g => (
+                <option key={g} value={g}>
+                  {GENDER_LABEL[g]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="block">
@@ -262,7 +263,7 @@ export function NewSpeaker() {
             >
               {CAREER_STAGES.map(stage => (
                 <option key={stage} value={stage}>
-                  {stage}
+                  {CAREER_STAGE_LABEL[stage]}
                 </option>
               ))}
             </select>

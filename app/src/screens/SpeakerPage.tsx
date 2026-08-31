@@ -19,7 +19,7 @@ export function SpeakerPage() {
   const { speakers, loading, error, config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const role = useRole();
-  if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
+  if (loading || !role) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
