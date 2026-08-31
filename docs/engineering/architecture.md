@@ -287,6 +287,6 @@ carries an "edit on GitHub" link, and an edit becomes an ordinary pull
 request. Once it is merged, the cockpit shows the new wording live, cached
 for about five minutes.
 
-The pictures on `README.md` are rendered rather than taken by hand:
-`screenshots/README.md` gives the three commands that rebuild both
-interfaces and re-capture them.
+The pictures on `README.md` are rendered rather than taken by hand, from a
+build of the instance `instances/example/` declares rather than of this one:
+`screenshots/README.md` gives the command and says what the renderer refuses.

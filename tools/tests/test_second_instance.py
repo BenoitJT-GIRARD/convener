@@ -26,6 +26,13 @@ by building a repository that *is* another instance:
    from that tree (`boundary.instance_files`, so `kept:` files stay);
 3. `instances/example/` is laid into the holes that leaves.
 
+`tools/scripts/second_instance_build.py` is where that happens, and it is
+there rather than here because it has a second caller:
+`tools/scripts/render_readme_shots.py` needs the same tree, so that the
+pictures `README.md` shows are pictures of the example collective. Two
+copies of it would be two builds free to diverge, and the sweep below
+would then hold one of them while `screenshots/` showed the other.
+
 Step 2 is why this test also tests the boundary. If a path carrying this
 instance's identity is not declared there, it survives the deletion, and
 the sweep in step 4 finds it -- the declaration and the proof are the same
@@ -156,10 +163,7 @@ What this module cannot see, stated rather than left to be found
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import subprocess
-import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -167,6 +171,7 @@ from typing import Final, NoReturn
 
 import instance_identity
 import pytest
+import second_instance_build
 import toolchain
 
 from convener_ops.declaration import boundary, published
@@ -174,16 +179,11 @@ from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 
-#: Where the fictional instance lives. Product-owned: upstream ships it,
-#: upstream maintains it, and a duplicate that edits it is editing an
-#: example rather than its own configuration.
-EXAMPLE = Path("instances") / "example"
-
-#: Where this build puts the posters. Not `tools/visuals/`, which the tracked
-#: tree already uses for the reference renders and which
-#: `convener-render-visuals` regenerates *whole* -- pointing it there would
-#: delete them.
-POSTERS = "posters"
+#: Where the fictional instance lives, and where this build puts the
+#: posters. Both are the build's own, so both are read from the module that
+#: performs it rather than restated here.
+EXAMPLE = second_instance_build.EXAMPLE
+POSTERS = second_instance_build.POSTERS
 
 #: The instance paths that deliberately have no counterpart under
 #: `instances/example/`, each with the reason. Checked in both directions,
@@ -200,7 +200,8 @@ DELIBERATELY_ABSENT: Final = {
     "instance/public-data/": (
         "Empty in a fresh clone by construction -- everything in it is "
         "derived from instance/data/ by the product's own commands, and this "
-        "build runs them (see `_publish`). An example that carried a "
+        "build runs them (see `second_instance_build.publish`). An example "
+        "that carried a "
         "committed projection would be carrying a stale copy of its own "
         "input."
     ),
@@ -219,29 +220,6 @@ _ARTEFACT_TREES: Final = ("site/_site", "app/dist", "public-data", POSTERS)
 _ARTEFACT_FILES: Final = (
     "docs/handbook/assets/announcement-template.svg",
     "docs/handbook/assets/flyer-template.svg",
-)
-
-#: Run one `convener_ops.cli` entry point in a process of its own. `sys.argv`
-#: is rebuilt because several of those functions read it for their own
-#: arguments, and `sys.executable` is this suite's own interpreter, which
-#: is the one with `convener_ops` installed -- no `uv` on PATH, no console
-#: script to locate.
-_CLI_RUNNER: Final = (
-    "import sys\n"
-    "from convener_ops import cli\n"
-    "name = sys.argv[1]\n"
-    "sys.argv = [name.replace('_', '-'), *sys.argv[2:]]\n"
-    "raise SystemExit(getattr(cli, name)())\n"
-)
-
-#: Cleared for the build. `deploy.yml` forwards these from repository
-#: variables and D-13 makes their absence the ordinary state; letting a
-#: developer's own environment supply one would build a second instance
-#: pointed at this one's relay.
-_BUILD_VARIABLES: Final = (
-    "VITE_AUTH_PROXY_URL",
-    "VITE_GITHUB_APP_CLIENT_ID",
-    "VITE_SIGNUP_RELAY_URL",
 )
 
 
@@ -294,156 +272,6 @@ class Built:
         return pairs
 
 
-def _link_directory(target: Path, link: Path) -> None:
-    """`link` -> `target`, without needing a privilege.
-
-    Windows refuses `os.symlink` to anybody without
-    `SeCreateSymbolicLinkPrivilege`, which a developer's shell and a CI
-    runner both ordinarily lack; a directory *junction* needs none and
-    behaves like a directory for every filesystem call `node` makes.
-    `shutil.rmtree` unlinks a junction rather than descending into it
-    (Python 3.12's `DirEntry.is_junction`), and this module's own fixture
-    removes both links before anything else cleans up, so a scratch tree
-    can never take `node_modules` with it.
-    """
-    if sys.platform == "win32":
-        import _winapi
-
-        _winapi.CreateJunction(str(target), str(link))
-        return
-    os.symlink(target, link, target_is_directory=True)
-
-
-def _run(args: list[str], *, cwd: Path, env: dict[str, str], what: str) -> None:
-    result = subprocess.run(
-        args, cwd=cwd, env=env, capture_output=True, text=True, timeout=600
-    )
-    if result.returncode != 0:
-        raise AssertionError(
-            f"the second instance's build failed at {what}:\n"
-            f"{result.stdout[-4000:]}\n{result.stderr[-4000:]}"
-        )
-
-
-def _environment(root: Path) -> dict[str, str]:
-    env = {k: v for k, v in os.environ.items() if k not in _BUILD_VARIABLES}
-    env["CONVENER_REPO_ROOT"] = str(root)
-    return env
-
-
-def _lay_out(root: Path) -> None:
-    """The scratch tree: this repository's product, the example's instance."""
-    tracked = subprocess.run(
-        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout.splitlines()
-    assert len(tracked) > 100, f"the file listing found almost nothing: {tracked}"
-    for name in tracked:
-        source = ROOT / name
-        if not source.is_file():
-            continue
-        target = root / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-
-    declared = boundary.load(ROOT)
-    inherited = set(declared.regenerated_paths)
-    for name in boundary.instance_files(ROOT, declared):
-        if name in inherited:
-            continue
-        owned = root / name
-        if owned.is_file():
-            owned.unlink()
-
-    for source in sorted((ROOT / EXAMPLE).rglob("*")):
-        if not source.is_file():
-            continue
-        relative = source.relative_to(ROOT / EXAMPLE)
-        if relative.parts[0] == "README.md":
-            continue
-        target = root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-
-
-def _publish(root: Path) -> None:
-    """Everything the scheduled jobs derive, in the order they derive it.
-
-    The same commands `deploy.yml` and `publish-vitrine.yml` run, and in
-    their order: the charter's stylesheets and templates before either
-    bundler reads them, the public projection before the showcase's
-    fixture is refreshed from it.
-    """
-    env = _environment(root)
-    for name in (
-        "validate",
-        "public_data",
-        "survey_status_public_data",
-        "registration_routing_public_data",
-        "certificates_public_data",
-        "agenda_internal",
-    ):
-        _run(
-            [sys.executable, "-c", _CLI_RUNNER, name],
-            cwd=root,
-            env=env,
-            what=f"convener-{name.replace('_', '-')}",
-        )
-    _run(
-        [sys.executable, str(root / "tools" / "scripts" / "generate_brand_css.py")],
-        cwd=root,
-        env=env,
-        what="generate_brand_css.py",
-    )
-    _run(
-        [sys.executable, "-c", _CLI_RUNNER, "render_visuals", str(root / POSTERS)],
-        cwd=root,
-        env=env,
-        what="convener-render-visuals",
-    )
-    # `publish-vitrine.yml`'s own "Refresh site data" step: the showcase
-    # builds from a committed fixture, refreshed from the public
-    # projection before every real build.
-    shutil.copyfile(
-        root / "instance" / "public-data" / "events-public.json",
-        root / "site" / "src" / "_data" / "events.json",
-    )
-
-
-def _build(root: Path) -> None:
-    """The two bundlers, invoked the way a build invokes them."""
-    env = _environment(root)
-    for script in (
-        "copy-fonts.mjs",
-        "copy-handbook.mjs",
-        "copy-event-keys.mjs",
-        "copy-signing-keys.mjs",
-        "copy-certificates.mjs",
-        "copy-survey-status.mjs",
-    ):
-        _run(
-            ["node", str(root / "app" / "scripts" / script)],
-            cwd=root / "app",
-            env=env,
-            what=script,
-        )
-    vite = root / "app" / "node_modules" / "vite" / "bin" / "vite.js"
-    for island in ("", "island-signup", "island-verify", "island-survey"):
-        mode = ["--mode", island] if island else []
-        _run(
-            ["node", str(vite), "build", *mode],
-            cwd=root / "app",
-            env=env,
-            what=f"vite build {island or 'production'}",
-        )
-    eleventy = root / "site" / "node_modules" / "@11ty" / "eleventy" / "cmd.cjs"
-    _run(
-        ["node", str(eleventy), f"--output={(root / 'site' / '_site').as_posix()}"],
-        cwd=root / "site",
-        env=env,
-        what="eleventy",
-    )
-
-
 @pytest.fixture(scope="module")
 def second_instance_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The second instance's repository, laid out but not yet built.
@@ -459,7 +287,7 @@ def second_instance_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """
     root = tmp_path_factory.mktemp("second-instance") / "repository"
     root.mkdir()
-    _lay_out(root)
+    second_instance_build.lay_out(root)
     return root
 
 
@@ -483,17 +311,14 @@ def second_instance(second_instance_tree: Path) -> Iterator[Built]:
                 f"Run `npm ci` in {package}/ before this suite.",
             )
     root = second_instance_tree
-    links = [root / package / "node_modules" for package in ("app", "site")]
+    links: list[Path] = []
     try:
-        for link in links:
-            _link_directory(ROOT / link.relative_to(root), link)
-        _publish(root)
-        _build(root)
+        links = second_instance_build.link_node_modules(root, ("app", "site"))
+        second_instance_build.publish(root)
+        second_instance_build.build(root)
         yield Built(root=root)
     finally:
-        for link in links:
-            if link.exists():
-                os.rmdir(link)
+        second_instance_build.unlink_node_modules(links)
 
 
 # ------------------------------------------------------------------ #
@@ -912,7 +737,8 @@ def test_this_tree_is_what_an_unconfigured_duplicate_looks_like(
     so it is proved on every machine whether or not anything can be built
     here.
 
-    `_lay_out` copies `instances/example/`'s files into the holes the
+    `second_instance_build.lay_out` copies `instances/example/`'s files
+    into the holes the
     boundary leaves, so the declaration this build is made from *is* the
     example's, value for value -- which is precisely the state a duplicate
     is in on the day it is made and before anybody has edited anything.

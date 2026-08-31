@@ -6,19 +6,28 @@ here is drawn by hand.
 ## Refreshing them
 
 ```
-cd app && npm run build
-cd ../site && npm run build
-cd ../tools/visuals && npm run shots
+cd tools && uv run --frozen python scripts/render_readme_shots.py
 ```
 
-`render-readme-shots.mjs` assembles those two builds into the tree the
-publishing workflows actually push — the showcase at the path prefix
-`instance/config.json` declares, the cockpit one level under it — serves it
-on a port the operating system hands out, and captures the four pages on the
-same pinned browser the rest of this repository renders with. Its own module
-comment says what each picture is allowed to show and where its data comes
-from.
+That builds this repository as the instance `instances/example/` declares —
+the same manoeuvre `tools/tests/test_second_instance.py` performs — and runs
+`tools/visuals/render-readme-shots.mjs` inside the result, which assembles the
+two builds into the tree the publishing workflows actually push, serves it on a
+port the operating system hands out, and captures the four pages on the same
+pinned browser the rest of this repository renders with. The four PNGs are
+copied back over the tracked ones.
 
-**Refresh them whenever either interface changes.** A screenshot in a README
-is a claim about what the software does, and a stale one is a false claim
-nothing else in this repository would catch.
+**The renderer refuses to run anywhere else.** Its first act is to compare the
+declaration it can see against `instances/example/instance/config.json`, value
+by value, and stop while any of them is this repository's own. A masthead is
+compiled into a build rather than fetched by it, so a picture taken here would
+carry this series' name into four files the derived public repository publishes
+verbatim and no guard can read: `convener-check-derivation` reports the
+non-text blobs it did not read on every run, and the second instance's sweep
+skips a `.png` for the same reason. Both scripts' own comments carry the rest of
+that reasoning, and `tools/tests/test_readme_shots.py` runs the refusal rather
+than reading it.
+
+**Refresh them whenever either interface changes.** A screenshot in a README is
+a claim about what the software does, and a stale one is a false claim nothing
+else in this repository would catch.

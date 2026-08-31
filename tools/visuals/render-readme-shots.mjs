@@ -1,7 +1,7 @@
-/* The README's own screenshots -- the three pages a visitor is shown
- * before they have installed anything, rendered from a real build on the
- * same pinned engine `render-and-compare.mjs` and `render-production.mjs`
- * already use.
+/* The README's own screenshots -- the mark at the top of it and the
+ * three pages a visitor is shown before they have installed anything,
+ * rendered from a real build on the same pinned engine
+ * `render-and-compare.mjs` and `render-production.mjs` already use.
  *
  * Its own file, beside those two, for the reason `render-production.mjs`'s
  * module comment gives for being one: each of the three renders a
@@ -23,21 +23,61 @@
  * at `app/`. D-26's rule, applied to the pictures: a page served at a
  * bare local root looks right and is not the shape anybody visits.
  *
+ * Whose build, and why this refuses to be told
+ * ============================================
+ * The example collective's, always. A masthead is compiled rather than
+ * fetched -- `app/vite.config.ts` carries `identity` into the bundle
+ * through Vite's own `define`, `site/.eleventy.js` composes the same
+ * values into every showcase page -- so a picture taken here would be a
+ * picture of whichever series happens to run this repository, in four
+ * files `screenshots/` hands to the derived public repository verbatim.
+ * Nothing downstream could catch it:
+ * `convener_ops.derivation.derivation_guard` cannot read a raster and
+ * says so in every report it writes, and
+ * `tools/tests/test_second_instance.py`'s sweep skips a `.png` for the
+ * same reason. `docs/assets/zoom-background.png` was deleted for exactly
+ * that once.
+ *
+ * So `refuseUnlessTheExampleDeclares` is a refusal rather than a
+ * convention: this script stops unless every value the declaration it can
+ * see carries about *who is publishing* is still the one
+ * `instances/example/instance/config.json` ships -- the same value-by-value
+ * comparison `published.unconfigured` makes on the Python side, and for
+ * the reason its docstring gives (a half-configured duplicate is the
+ * dangerous state, so file-against-file would be the wrong test). If the
+ * only repository it can run in is one nobody's identity reaches, the
+ * images can only ever show the example.
+ *
+ * `tools/scripts/render_readme_shots.py` is what provides such a
+ * repository: it lays `instances/example/` into a scratch copy of this
+ * one, builds it, runs *that tree's own copy of this file*, and brings the
+ * four pictures back. Run this script here instead and it refuses, naming
+ * every value it finds configured. That is the same answer
+ * `convener-render-visual-fixtures` already gives for the reference
+ * renders in `references/`: render as the example, and there is nothing
+ * in the file to leak.
+ *
  * `serveStatic` and the MIME map are the same small dependency-free
  * server the two sibling scripts already carry, duplicated for the same
  * reason theirs are duplicates of each other: small enough that anyone
  * auditing this file on its own reads the whole thing.
  *
- * The three subjects, and what each is allowed to show
- * ===================================================
+ * The four subjects, and what each is allowed to show
+ * ==================================================
+ * - **The banner**, the charter's own mark on the charter's own ground.
+ *   Product-owned on both sides, and `stageTheBanner` below gives the
+ *   whole of why it is a raster at all.
  * - **The cockpit**, at `?demo=1`. That is the product's own
  *   demonstration mode -- no account, no repository, the example instance
  *   under `instances/example/` compiled into the bundle. Nothing here
  *   invents data for it.
- * - **A public event page**, from `site/src/_data/events.json`, the build
- *   fixture that repository already commits. Invented people, invented
- *   talks; `publish-vitrine.yml` overwrites it from the real records in
- *   continuous integration and this script deliberately does not.
+ * - **A public event page**, from `site/src/_data/events.json`, which the
+ *   build this runs against has already refreshed from the example
+ *   instance's own public projection the way `publish-vitrine.yml`
+ *   refreshes it from the real records. The edition is the one that file
+ *   leaves `scheduled`, read from it rather than named here: an edition
+ *   code carries the declared prefix, so a code written into this file
+ *   would be one instance's value inside the product's own renderer.
  * - **The verification page**, holding the one signed certificate this
  *   repository already commits -- `tools/tests/fixtures/certificate-
  *   verification.json`, a real RSA-3072 signature over an invented name,
@@ -50,8 +90,16 @@
  *   this project's own test certificate, which is what it would do on a
  *   real one.
  *
+ * Every one of the three pages carries the product's own **not
+ * configured** band, and that is the build being honest rather than a
+ * defect in the picture: the declaration these are rendered from *is*
+ * still the example's, which is the condition `published.unconfigured`
+ * warns on and the whole reason these pictures can be published at all.
+ * The three heights below leave room for it, so each shot still frames
+ * what `README.md`'s own caption for it promises.
+ *
  * D-25's trap, the same one `render-production.mjs` names: a run that
- * quietly wrote two of three images still leaves a non-empty directory.
+ * quietly wrote three of four images still leaves a non-empty directory.
  * `SHOTS` is what was promised and the count is checked against it.
  */
 
@@ -60,7 +108,6 @@ import { readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import puppeteer from 'puppeteer';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
@@ -71,8 +118,57 @@ const OUT = path.join(ROOT, 'screenshots');
 const STAGE = path.join(HERE, 'readme-shots-stage');
 const FIXTURE = path.join(ROOT, 'tools', 'tests', 'fixtures', 'certificate-verification.json');
 const DECLARATION = path.join(ROOT, 'instance', 'config.json');
+const EXAMPLE = path.join(ROOT, 'instances', 'example', 'instance', 'config.json');
+const EVENTS = path.join(ROOT, 'site', 'src', '_data', 'events.json');
 const CHARTER = path.join(ROOT, 'brand', 'convener', 'brand.json');
 const BANNER = path.join(ROOT, 'brand', 'convener', 'convener-banner.svg');
+
+/** Every value a declaration carries about *who* is publishing, under the
+ *  name the declaration itself gives it -- the address, the edition
+ *  prefix, and the fields of `identity`. The Node half of
+ *  `published.declared_values`, read raw for the reason that function
+ *  gives: the question is whether somebody has typed their own value
+ *  here, which is a question about text. */
+function declaredValues(data) {
+  const values = new Map();
+  for (const key of ['published_url', 'edition_prefix']) {
+    if (typeof data?.[key] === 'string' && data[key]) values.set(key, data[key]);
+  }
+  if (data?.identity && typeof data.identity === 'object') {
+    for (const [field, value] of Object.entries(data.identity)) {
+      if (typeof value === 'string' && value) values.set(`identity.${field}`, value);
+    }
+  }
+  return values;
+}
+
+/** The refusal the module comment argues for. Every declared value must
+ *  still be the example's; the ones that are not are named, because a
+ *  reader who is told "configured" and not *what* is configured goes
+ *  looking through a file rather than at a line. */
+async function refuseUnlessTheExampleDeclares() {
+  const [declared, example] = await Promise.all(
+    [DECLARATION, EXAMPLE].map(async (file) =>
+      declaredValues(JSON.parse(await readFile(file, 'utf8')))
+    )
+  );
+  const configured = [...declared].filter(([name, value]) => example.get(name) !== value);
+  if (configured.length > 0) {
+    const named = configured
+      .map(([name, value]) => `  ${name}: ${JSON.stringify(value)}`)
+      .join('\n');
+    throw new Error(
+      'this repository is configured, so no picture may be taken in it. ' +
+        'instance/config.json declares its own value for:\n' +
+        `${named}\n` +
+        'A capture made here would carry that identity into every copy of ' +
+        'screenshots/, and nothing downstream can read a raster back out ' +
+        'again. Run `tools/scripts/render_readme_shots.py`, which builds ' +
+        'this repository as the instance instances/example/ declares and ' +
+        'runs this script inside that build.'
+    );
+  }
+}
 
 /** The path prefix the published address declares, read from the one file
  *  that says it rather than typed here -- the same derivation
@@ -99,26 +195,26 @@ const SHOTS = [
     // and the link show the same thing.
     url: 'app/?demo=1',
     width: 1440,
-    height: 1010,
+    height: 1120,
     // The board's own inbox has rendered once the demonstration's speakers
     // are on screen; `networkidle0` alone only says the bundle arrived.
     ready: 'main',
   },
   {
     name: 'event-page',
-    // The one edition the committed fixture leaves `scheduled`, so the
+    // The one edition the build's own data leaves `scheduled`, so the
     // page carries its abstract and its registration form rather than an
-    // archive entry.
-    url: 'events/mrg-05/',
+    // archive entry; read below by `scheduledEvent`.
+    url: null,
     width: 1200,
-    height: 1150,
+    height: 1340,
     ready: 'main',
   },
   {
     name: 'verification',
     url: null, // built below from the fixture's own verification path
     width: 1200,
-    height: 1150,
+    height: 1340,
     ready: '.verify',
   },
 ];
@@ -260,14 +356,35 @@ async function stageTheBanner(served) {
   return 'banner.html';
 }
 
+/** The address of the one edition this build leaves `scheduled`, in the
+ *  form `event.njk`'s own permalink gives it (`/events/<id>/`, lowered).
+ *  Refuses rather than picking one when there is not exactly one: a
+ *  README showing an archive entry where it promises a registration form
+ *  is a false claim, and so is one that silently chose between two. */
+async function scheduledEvent() {
+  const events = JSON.parse(await readFile(EVENTS, 'utf8'));
+  const scheduled = events.filter((event) => event.status === 'scheduled');
+  if (scheduled.length !== 1) {
+    throw new Error(
+      `site/src/_data/events.json leaves ${scheduled.length} editions scheduled, ` +
+        'and this picture is of an event page before its event -- there is no ' +
+        'second-best page to photograph instead'
+    );
+  }
+  return `events/${scheduled[0].id.toLowerCase()}/`;
+}
+
 async function main() {
+  await refuseUnlessTheExampleDeclares();
   const prefix = await pathPrefix();
   const served = await assemble(prefix);
   const verificationPath = await stageTheTestCertificate(served);
   const bannerPath = await stageTheBanner(served);
+  const eventPath = await scheduledEvent();
   for (const shot of SHOTS) {
     if (shot.name === 'verification') shot.url = verificationPath;
     if (shot.name === 'banner') shot.url = bannerPath;
+    if (shot.name === 'event-page') shot.url = eventPath;
   }
 
   await mkdir(OUT, { recursive: true });
@@ -278,6 +395,13 @@ async function main() {
   let browser;
   let written = 0;
   try {
+    // Imported here rather than at the top of the file, so that the
+    // refusal above runs on a machine that has never installed this
+    // package. A top-level import fails first, with a resolver error
+    // about puppeteer, which tells a reader nothing about the thing this
+    // script actually stopped for -- and it would put the one heavy
+    // dependency in the way of the one check that costs nothing.
+    const { default: puppeteer } = await import('puppeteer');
     browser = await puppeteer.launch({ headless: true });
     for (const shot of SHOTS) {
       const page = await browser.newPage();
