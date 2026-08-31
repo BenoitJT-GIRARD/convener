@@ -1365,7 +1365,7 @@ def test_no_run_script_rebases_a_local_commit_on_a_rejected_push(
     workflow: Path,
 ) -> None:
     """Closes the class this repository fixed five instances of
-    (candidate-form.yml, deploy.yml, register.yml, sweep.yml,
+    (candidate-form.yml, deploy.yml, derive-decision-register.yml, sweep.yml,
     visuals-production.yml): a retry loop that rebases a local commit onto
     a rejected push, rather than fetching the refreshed tip, hard-resetting
     and re-running the handler against it (registration.yml's and
@@ -1522,7 +1522,7 @@ def test_re_deriving_on_a_rejected_push_loses_no_entry(tmp_path: Path) -> None:
     Re-deriving (fetch, reset --hard, re-run the handler against the
     refreshed file, recommit, retry) is exactly registration.yml's and
     survey.yml's own retry loop, and candidate-form.yml's, deploy.yml's,
-    register.yml's, sweep.yml's and visuals-production.yml's too. Both
+    derive-decision-register.yml's, sweep.yml's and visuals-production.yml's too. Both
     entries must survive."""
     clone_a, clone_b = _local_repo_pair(tmp_path)
 
@@ -5305,7 +5305,7 @@ def test_every_ignored_path_still_names_something_in_this_repository(
 # declaring both `push:` and `pull_request:` -- five of the thirteen --
 # because the property it was written for is about running the same
 # checks twice on one commit. The eight that declare `push:` alone,
-# `deploy.yml` and `register.yml` among them, escape it entirely.
+# `deploy.yml` and `derive-decision-register.yml` among them, escape it entirely.
 #
 # Two properties are held below, because a branch write reaches a
 # workflow by two different routes and only one of them is a `push:`
@@ -5336,7 +5336,7 @@ def test_the_push_sweep_reaches_the_workflows_the_double_run_sweep_cannot() -> N
     A parametrisation that silently found nothing would report green
     forever, so the count is guarded like every other sweep here. But the
     sharper statement is the containment: this sweep must be a strict
-    superset of the narrower one, and `register.yml` -- `push:` with no
+    superset of the narrower one, and `derive-decision-register.yml` -- `push:` with no
     `pull_request:` beside it -- must be in the difference. The day both
     sweeps agree, either the repository changed shape or this one has
     quietly narrowed to the older property.
@@ -5358,8 +5358,8 @@ def test_the_push_sweep_reaches_the_workflows_the_double_run_sweep_cannot() -> N
         "`pull_request:` too, and it is now no wider than the thing it "
         "was written to widen"
     )
-    assert "register.yml" in found - also_reviewed, (
-        f"register.yml is no longer among the `push:`-only workflows "
+    assert "derive-decision-register.yml" in found - also_reviewed, (
+        f"derive-decision-register.yml is no longer among the `push:`-only workflows "
         f"({sorted(found - also_reviewed)}) -- it is the plainest example "
         "of the eight the narrower sweep cannot see, and if it has "
         "stopped being one, check that this sweep still sees the others"

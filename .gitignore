@@ -11,6 +11,12 @@ docs/handbook/assets/app/
 # already uses for instance/keys/events/<id>.pub, rather than depending on a
 # deployed example-showcase URL that has never actually been built.
 instance/public-data/*
+# The directory's own contract: what lands here, which command writes each
+# file and what is refused entry. Exempted for the reason
+# instance/keys/signing/README.md is -- a fresh clone holds none of the
+# projections below, so a directory that documents itself has to survive
+# holding nothing.
+!instance/public-data/README.md
 !instance/public-data/survey-status.json
 # The internal agenda feed: committed for the identical
 # reason survey-status.json is -- `.github/workflows/deploy.yml`'s own
@@ -37,6 +43,15 @@ instance/public-data/*
 # Notification body -- a run artefact of convener-notify-*, written only when a
 # channel is configured, posted by the notify workflow, never edited.
 notify-body.md
+
+# The working record this repository is developed against: specifications,
+# plans and task reports, none of which is the product. It was ignored by a
+# `.gitignore` of its own inside `.superpowers/sdd/`, which covered that one
+# sub-directory and nothing beside it -- so a file written one level up was
+# untracked, invisible in `git status`, and one `git add` away from being
+# published. Named here, where every other exclusion this repository makes
+# is named.
+.superpowers/
 
 # The Actions budget alarm's own body, written by convener-record-actions-usage
 # only when a channel is configured *and* something actually fired -- the
@@ -96,6 +111,11 @@ Thumbs.db
 *.pem
 instance/keys/events/*
 !instance/keys/events/*.pub
+# The directory's own contract -- naming, what a key is for, and why a
+# file here is never renamed. Same exemption instance/keys/signing/
+# README.md already has, for the same reason: no key exists here in a
+# fresh clone.
+!instance/keys/events/README.md
 
 # Certificate signing private key (tools/convener_ops/journey/signing.py never writes one
 # to disk either). Unlike instance/keys/events/, every .pub ever committed here stays

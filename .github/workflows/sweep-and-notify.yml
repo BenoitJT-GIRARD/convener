@@ -729,9 +729,10 @@ jobs:
       #
       # The signal is what the file can still *route*, never how old it
       # is -- see tools/convener_ops/maintenance/routing_watch.py's own module docstring
-      # for the three mechanical reasons an age check would be the wrong
-      # one here, chief among them that `deploy.yml` ignores `config/**`,
-      # so this file can be minutes old and already wrong.
+      # for the two mechanical reasons an age check would be the wrong one
+      # here, chief among them that this repository's own jobs rewrite the
+      # projection's inputs under the recursion guard, so the published
+      # file can be minutes old and already wrong.
       - name: Check that registrations can still be queued
         id: routing-watch
         # Guarded on the `uv` install, not on the sweep or on the queue

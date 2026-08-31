@@ -90,7 +90,9 @@ that holds them:
 
 - `docs/handbook/governance/register.md` — the instance's, inside a directory the product owns.
 - `instance/data/schema.md` — the product's, inside a directory the instance owns.
+- `instance/keys/events/README.md` — the product's, inside a directory the instance owns.
 - `instance/keys/signing/README.md` — the product's, inside a directory the instance owns.
+- `instance/public-data/README.md` — the product's, inside a directory the instance owns.
 <!-- END GENERATED DIRECTORY MAP -- edit tools/scripts/generate_directory_map.py, not this block -->
 
 ## What this series owns, and what anybody duplicating it would keep

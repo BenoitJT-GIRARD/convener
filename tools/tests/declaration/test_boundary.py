@@ -380,13 +380,18 @@ def test_every_declared_file_exists_and_every_kept_file_with_it() -> None:
             assert board.owner_of(kept.path) == PRODUCT
 
 
-def test_the_kept_exceptions_are_the_two_this_task_found() -> None:
-    """Named, so that a third cannot appear without somebody deciding to
-    let it. Both are documentation of a contract that lives where an
-    operator will meet it, and both are candidates for a move later --
-    which is a maintainer's call, not this module's."""
+def test_every_kept_exception_is_named_here() -> None:
+    """Named, so that one more cannot appear without somebody deciding to
+    let it. Every one is documentation of a contract that lives where an
+    operator will meet it, and every one is a candidate for a move later
+    -- which is a maintainer's call, not this module's."""
     kept = {kept.path for entry in load().handed for kept in entry.kept}
-    assert kept == {"instance/data/schema.md", "instance/keys/signing/README.md"}
+    assert kept == {
+        "instance/data/schema.md",
+        "instance/keys/events/README.md",
+        "instance/keys/signing/README.md",
+        "instance/public-data/README.md",
+    }
 
 
 def test_a_directory_is_the_instance_s_only_when_all_of_it_is() -> None:
@@ -394,14 +399,32 @@ def test_a_directory_is_the_instance_s_only_when_all_of_it_is() -> None:
     directories as tree objects whose path has no trailing slash and
     cannot spell the question `owner_of` answers.
 
-    The second half is the one that earns the method: a directory holding
-    a file the product keeps cannot be dropped without dropping that file
-    with it, so it is not the instance's however the entry above it
-    reads. `instance/keys/signing/README.md` is the verification page's own
-    contract, and it is meant to ship."""
+    The `True` half is asked of a declaration built here, because every
+    directory the real one hands over now carries a `kept:` file: the
+    schema stub, and one README in each of the three directories that are
+    empty in a fresh clone. A directory with no exception inside it is
+    still the shape the method has to answer for, and this is where that
+    shape now exists.
+
+    The `False` half is the one that earns the method, and it is asked of
+    the real declaration: a directory holding a file the product keeps
+    cannot be dropped without dropping that file with it, so it is not the
+    instance's however the entry above it reads.
+    """
+    whole = Boundary(
+        handed=declaration_from_data(
+            {
+                "owner": PRODUCT,
+                "v": boundary.DECLARATION_VERSION,
+                "instance": [{"path": "instance/records/", "reason": "the records"}],
+            }
+        ),
+        config_owners={},
+    )
+    assert whole.owns_directory("instance/records")
+    assert whole.owns_directory("instance/records/")
+
     board = load()
-    assert board.owns_directory("instance/public-data")
-    assert board.owns_directory("instance/public-data/")
     assert not board.owns_directory("site")
     for kept in (kept for entry in board.handed for kept in entry.kept):
         parent = kept.path.rsplit("/", 1)[0]
@@ -478,7 +501,7 @@ def test_every_regenerated_path_is_told_to_git_how_to_merge() -> None:
 
     Declaring a path the instance's says upstream will not *edit* it. It
     cannot say upstream will not *run*: upstream is itself a running
-    instance, and `.github/workflows/register.yml` rewrites
+    instance, and `.github/workflows/derive-decision-register.yml` rewrites
     `docs/handbook/governance/register.md` in full from the commit history on every
     push, on both sides of any merge. Both renderings are correct, they
     are entirely different, and they touch the same lines -- a conflict on

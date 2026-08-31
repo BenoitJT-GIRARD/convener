@@ -10,7 +10,7 @@
 instance/public-data/agenda-internal.ics binary
 
 # `config/boundary.yml` declares this path `regenerated:` -- rewritten in
-# full from the commit history by `.github/workflows/register.yml`, in
+# full from the commit history by `.github/workflows/derive-decision-register.yml`, in
 # every instance including this one. Upstream's rows and a duplicate's rows
 # are both correct, entirely different, and rewritten on both sides between
 # any two merges, so git sees two sides that changed the same lines and
@@ -18,6 +18,6 @@ instance/public-data/agenda-internal.ics binary
 # resolution, written down. It needs the driver configured once per clone
 # (`git config merge.ours.driver true`); without it git falls back to the
 # ordinary conflict, which is the state this replaces.
-# `tools/tests/test_boundary.py` refuses a `regenerated:` path that is
-# missing this line.
+# `tools/tests/declaration/test_boundary.py` refuses a `regenerated:` path
+# that is missing this line.
 docs/handbook/governance/register.md merge=ours

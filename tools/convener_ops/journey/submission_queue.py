@@ -26,8 +26,9 @@ Where the queue lives, and why it is a branch
 -----------------------------------------------
 `QUEUE_BRANCH`, a branch of this repository that no workflow watches --
 never a path on the default branch. That half of the question is closed
-rather than open: `register.yml`, `quality.yml` and `security.yml` start on
-*any* commit to the default branch with no path filter at all, and
+rather than open: `derive-decision-register.yml`, `quality.yml` and
+`security.yml` start on *any* commit to the default branch with no path
+filter at all, and
 `deploy.yml` filters with `paths-ignore`, so a queue file committed to the
 default branch would start at least five runs per submission -- the exact
 inverse of this module's purpose. The relay writes with its own token, not

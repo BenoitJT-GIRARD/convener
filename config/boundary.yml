@@ -141,6 +141,13 @@ instance:
       in a fresh duplicate -- generating one is an operator's act, never
       upstream's.
     kept:
+      - path: instance/keys/events/README.md
+        reason: >-
+          The naming of an event key file, what one key per event buys and
+          why a file here is never renamed. Product documentation at the
+          path where the keys go, so that an operator opening an empty
+          directory meets the contract rather than nothing. Upstream
+          maintains it; an instance never edits it.
       - path: instance/keys/signing/README.md
         reason: >-
           The wire format and the directory's contract, which the verification
@@ -151,7 +158,7 @@ instance:
     regenerated: true
     reason: >-
       The decision register: a total re-rendering of this repository's own
-      commit history, written by .github/workflows/register.yml on every
+      commit history, written by .github/workflows/derive-decision-register.yml on every
       push (tools/convener_ops/governance/register.py, cli.py::register) and never by hand
       -- the file's own preamble says so, and convener-register --check fails
       the build if anybody tries. It sits under docs/ because it is written
@@ -165,9 +172,16 @@ instance:
     reason: >-
       Everything the instance publishes about itself, derived from
       instance/data/ by the product's own commands and committed by
-      .github/workflows/deploy.yml. Upstream ships no content here at all --
-      the directory is empty in a fresh clone, and .gitignore's own
-      exceptions name the three files a running instance commits into it.
+      .github/workflows/deploy.yml. Upstream ships no projection here at
+      all -- the directory holds no data in a fresh clone, and .gitignore's
+      own exceptions name the files a running instance commits into it.
+    kept:
+      - path: instance/public-data/README.md
+        reason: >-
+          Which command writes each projection, who reads it, and what is
+          refused entry. Product documentation at the path the projections
+          land in, so that an operator opening an empty directory meets the
+          contract. Upstream maintains it; an instance never edits it.
 
 retired:
   - path: data/

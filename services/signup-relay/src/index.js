@@ -135,7 +135,7 @@ function contentsUrl(repository, path) {
 // branch name that disagreed between the two would be a queue nothing ever
 // drains, with nothing red anywhere to say so.
 //
-// A branch, never a path on the default branch: `register.yml`,
+// A branch, never a path on the default branch: `derive-decision-register.yml`,
 // `quality.yml` and `security.yml` start on *any* commit to the default
 // branch with no path filter at all, and this worker writes with its own
 // token rather than a job's GITHUB_TOKEN, so GitHub's recursion guard does

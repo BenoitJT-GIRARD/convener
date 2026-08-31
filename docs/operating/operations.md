@@ -1232,7 +1232,7 @@ byte. `tools/convener_ops/journey/submission_queue.py` names the branch, and
 `services/signup-relay/src/index.js` mirror that name; a test fails if
 they drift apart.
 
-A **branch**, never a path on `main`: `register.yml`, `quality.yml` and
+A **branch**, never a path on `main`: `derive-decision-register.yml`, `quality.yml` and
 `security.yml` start on any commit to the default branch with no path
 filter at all, and `deploy.yml` filters with `paths-ignore`, so a queue
 file on `main` would bill at least five runs per submission — the exact

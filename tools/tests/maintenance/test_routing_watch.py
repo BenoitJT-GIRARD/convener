@@ -176,9 +176,9 @@ def test_a_file_that_is_wrong_about_an_event_inside_the_threshold_is_silent() ->
 
 
 def test_a_live_event_published_with_the_wrong_cutoff_diverges() -> None:
-    """The `instance/registration-lanes.yml` case: `deploy.yml` ignores
-    `config/**`, so a threshold edited there changes what this repository
-    would publish and regenerates nothing."""
+    """The `instance/registration-lanes.yml` case: a threshold edited there
+    changes what this repository would publish, and the committed
+    projection stays as it was until something regenerates it."""
     expected = _cutoffs(_LIVE)
     published = registration_routing.to_routing_data([_LIVE], _THRESHOLD + 24)
     cutoffs = published["queue_until"]

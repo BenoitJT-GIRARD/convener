@@ -954,8 +954,9 @@ def test_no_queue_file_is_committed_to_the_default_branch() -> None:
     ]
     assert queue_files_in(tracked) == [], (
         "a queue entry has reached the default branch. Every commit to it "
-        "starts register.yml, quality.yml and security.yml with no path "
-        "filter at all, plus deploy.yml -- one submission, at least five "
+        "starts derive-decision-register.yml, quality.yml and security.yml "
+        "with no path filter at all, plus deploy.yml -- one submission, at "
+        "least five "
         "billed runs, which is the exact inverse of what the queue is for. "
         "This is what an open pull request from "
         f"{submission_queue.QUEUE_BRANCH!r} looks like once it is merged"

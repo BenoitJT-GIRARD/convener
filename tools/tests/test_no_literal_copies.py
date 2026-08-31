@@ -52,12 +52,18 @@ MIN_DUPLICATE_CHARS = 100
 _REPO = Path(__file__).resolve().parents[2]
 _DOCS = _REPO / "docs"
 
-#: The rule `app/scripts/handbook-files.mjs` applies, so that this sweep covers
-#: exactly the pages a volunteer can open. Held against that file itself by
-#: ``test_the_skip_list_is_the_one_the_app_applies`` below, which reads
-#: `SKIP_DIRS` out of it: a directory added to one side and not the other
-#: silently shrinks what this test looks at, and shrinking it is invisible --
-#: the sweep still passes, over less.
+#: The rule `app/scripts/handbook-files.mjs` applies, read out of that file by
+#: ``test_the_skip_list_is_the_one_the_app_applies`` below: a directory added
+#: to one side and not the other silently shrinks what this test looks at, and
+#: shrinking it is invisible -- the sweep still passes, over less.
+#:
+#: This is a *superset* of what the app copies, and used to be described as
+#: the same set. It stopped being that when `copy-handbook.mjs` moved to the
+#: allowlist `app/src/content/registry.ts` already held: the registry names 80
+#: published paths today, this walk finds 88 markdown pages. The difference is
+#: pages committed under `docs/` that nothing has registered yet, and sweeping
+#: them for copies is the stricter reading of the rule -- a copy made in an
+#: unregistered page is a copy the day somebody registers it.
 _SKIP_DIRS = {"superpowers", "stylesheets", "app"}
 
 #: Where the app's copy of the same rule lives, and the form it is written in.
@@ -70,7 +76,10 @@ _SENTENCE_END = re.compile(r"(?<=[.!?:])\s+")
 
 
 def served_pages() -> list[Path]:
-    """Every markdown page under `docs/` that the app copies into the build."""
+    """Every markdown page under `docs/` outside the three directories
+    `handbook-files.mjs` skips -- every page a reader of the documentation can
+    open, and a superset of what the app copies. See `_SKIP_DIRS` above for
+    which of the two sets this is and why."""
     out = []
     for path in sorted(_DOCS.rglob("*.md")):
         rel = path.relative_to(_DOCS)

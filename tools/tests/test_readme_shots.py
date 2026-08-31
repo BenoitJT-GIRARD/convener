@@ -40,6 +40,7 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Final
 
+import instance_identity
 import pytest
 import render_readme_shots
 import toolchain
@@ -85,6 +86,10 @@ def _run_renderer(root: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_the_renderer_refuses_the_repository_it_is_committed_in() -> None:
     """The whole of the fix, run rather than read.
 
@@ -92,6 +97,14 @@ def test_the_renderer_refuses_the_repository_it_is_committed_in() -> None:
     nothing for it -- so the renderer must stop, and it must say which
     values made it stop, because a reader told only "configured" goes
     looking through a file instead of at a line.
+
+    The guard above is what the derived repository needs, and it was
+    missing: there the declaration *is* the example's, so the renderer is
+    right to run and this test failed by construction in every derivation
+    -- red for the one reason it can never fix, which is the shape
+    `instance_identity.ONE_INSTANCE` exists to name. The assertion below
+    stays as well: it is the same condition asked where a failure would
+    otherwise be silent, on a repository the skip did not catch.
     """
     _node_or_skip()
     assert published.unconfigured(ROOT) == (), (

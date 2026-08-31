@@ -149,12 +149,12 @@ META_COMMENTARY = re.compile(
 def swept() -> list[tuple[str, str]]:
     """Every page rule 7 applies to, with its text.
 
-    The pages under `docs/` come from `test_no_literal_copies.served_pages`,
-    which is the rule `app/scripts/handbook-files.mjs` applies -- so this
-    sweep covers exactly what a volunteer can open in the cockpit, and gains
-    a page the day that one does. The pages at the repository root are the
-    other half of what `cspell.json` already gates, and are what whoever
-    arrives at the repository reads first.
+    The pages under `docs/` come from `test_no_literal_copies.served_pages`
+    -- every markdown page in the three documentation trees, which is a
+    superset of the 80 the cockpit's registry publishes, so a page written
+    today is held to the rule before anybody registers it. The pages at the
+    repository root are the other half of what `cspell.json` already gates,
+    and are what whoever arrives at the repository reads first.
     """
     pages: list[tuple[str, str]] = []
     for path in list(served_pages()) + sorted(ROOT.glob("*.md")):

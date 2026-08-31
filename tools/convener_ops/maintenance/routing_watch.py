@@ -29,13 +29,9 @@ runs, called here rather than reimplemented -- and compares it with the
 committed file, **restricted to the events whose lane a registration
 arriving right now still depends on**.
 
-An age check was the obvious candidate and it is the wrong one, for three
+An age check was the obvious candidate and it is the wrong one, for two
 mechanical reasons rather than a preference:
 
-* `deploy.yml` declares `paths-ignore: config/**`. Editing
-  `instance/registration-lanes.yml` changes every cutoff and starts nothing,
-  so the published file can be minutes old and already wrong -- and that
-  drift never heals on its own, which that file's own header warns about.
 * Between seminars nothing that feeds the projection moves at all, so a
   file untouched for a month is exactly right. An age threshold that did
   not cry wolf across a quiet season would have to be longer than the gap
@@ -47,7 +43,18 @@ mechanical reasons rather than a preference:
   dispatches `publish-vitrine.yml` by hand because of it). A healthy
   repository can therefore go a long time with no deploy at all.
 
-All three say the same thing: the file's age is uncorrelated with the only
+There was a third, and it stopped being true twice over. It read
+`deploy.yml` declares `paths-ignore: config/**`, so editing the lane file
+changes every cutoff and starts nothing -- written when the file was
+`config/registration-lanes.yml`. The file is `instance/registration-lanes.yml`
+now, and `config/**` left `deploy.yml`'s `paths-ignore` when the published
+address moved into `instance/config.json`. A person editing the lane file
+today does start `deploy.yml`, and it does rewrite the projection. The two
+above are untouched by either move: the projection's other input,
+`instance/data/speakers.yml`, is rewritten by this repository's own jobs
+under the recursion guard, and a quiet season moves nothing at all.
+
+Both say the same thing: the file's age is uncorrelated with the only
 property that matters, which is whether it still answers correctly for the
 events that can still be registered for.
 
