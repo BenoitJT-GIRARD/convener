@@ -685,8 +685,8 @@ make that resolution exists, a human supplies the conference id by hand,
 once, when running either workflow — so releasing or discarding a
 recording remains a runbook step, not something this project promises to
 do unattended. This does not fully close the "the quota problem is a
-forgetting problem" risk the design ruling above names; it is a known,
-disclosed limit, not an oversight.
+forgetting problem" risk the design ruling above names; it is a known and
+disclosed limit.
 
 ## Outbound email
 
@@ -1000,7 +1000,7 @@ contradiction must never pass silently in the one command whose whole job
 is to prove there is nothing left.
 
 **There is no equivalent early-erasure command for one person's own survey
-responses, and this is a recorded gap, not an oversight.** A survey
+responses, and this section is where that gap is recorded.** A survey
 response (`tools/convener_ops/journey/survey.py`) carries no name and no address — see
 that module's own docstring, "Why no identity travels with a response" —
 so nothing stored there can be matched back to a specific participant the
@@ -1324,7 +1324,7 @@ proved only that an event's public key existed, never that its organiser
 turned the survey on, and neither `SurveyForm.tsx` nor the relay had any
 way to know the switch existed at all (`survey_enabled` is `NEVER_PUBLISHED`
 on both languages' own consent classification, so a static page had no
-file to read it from). The consequence was concrete, not theoretical: every
+file to read it from). The consequence reached the data: every
 one of the 31 live records shipped with the switch off, so *every*
 submission this pipeline could receive followed the one path that did
 check — the participant was thanked, the relay answered `204`, and the
@@ -1360,8 +1360,8 @@ appears under `queue/survey/` on the `submission-queue` branch. Run *Sweep
 and notify the board* by hand (`workflow_dispatch`) rather than waiting
 for 05:00 UTC, and `instance/data/events/<event id>/survey-responses.enc` gains one
 entry while the queue file disappears. Submitting again adds a second,
-independent entry — this is by design, not a defect; see `survey.py`'s own
-docstring. With `survey_enabled` left `false` (the default for every
+independent entry — see `survey.py`'s own
+docstring for the design that produces it. With `survey_enabled` left `false` (the default for every
 event), the submission is refused by the relay before it
 is ever queued, and no file is written at all.
 
@@ -1373,8 +1373,8 @@ which only reflects a new checkbox state once *Deploy app* next builds and
 commits it. A board member who ticks the box expecting the survey page to
 open immediately will see it stay closed until that build finishes — the
 handler itself would already refuse the response either way, so this is a
-UX lag, not a security gap, but it is worth saying to whoever flips the
-switch expecting it to take effect at once.
+UX lag, not a security gap, and whoever flips the switch waits for that
+build before the page opens.
 
 ## Registration matching salt
 
@@ -2231,8 +2231,8 @@ any message.
 Three settings in the governance data are ordinarily left unfinished
 until an instance's people are in a room together. They are a **deferred
 configuration** in the sense of decision D-13 — the state below is normal
-and expected, not a defect to be rediscovered and not something to fix
-piecemeal by guessing. All three touch `instance/data/config.yml`, the first two
+and expected, and all three are settled together rather than guessed at
+piecemeal. All three touch `instance/data/config.yml`, the first two
 `instance/data/speakers.yml` as well, and they are easiest done together, in one
 commit, with `cd tools && uv run convener-validate` run before it is
 pushed.

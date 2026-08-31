@@ -43,7 +43,7 @@ the same discipline D-24 already asks of every operator command:
   down. No step is combined with another, and no step is skipped because
   the previous one looked like it worked.
 
-**The bus factor, stated rather than left for someone to notice.** One
+**The bus factor.** One
 owner means nobody can administer the organisation — add a collaborator,
 rotate a secret, or even transfer ownership itself — if that single
 account is ever lost. The ordinary recommendation is at least two owners:
@@ -53,7 +53,7 @@ first. That second seat is itself a trade, not a free improvement — see
 Cost, below — so this decision states the trade-off and leaves the
 choice to the maintainer rather than making it on their behalf.
 
-**The architect is a trust root, stated rather than left implicit.** An
+**The architect is a trust root.** An
 organisation owner can overwrite any secret and add themselves to
 anything the organisation holds. That is not a gap in this design; it is
 what "owner" means on GitHub, and no permission model can route around

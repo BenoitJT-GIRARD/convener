@@ -9,7 +9,7 @@ Either way, the result is a new **Lead**, with one person looking after it.
 
 ## Finding a speaker is not contacting them
 
-**Do not write to a prospective speaker before the Board has validated them.** This is a rule, not a courtesy. Spotting someone, reading their work and putting their name forward is the whole of what this step asks of you; the invitation is a separate act, taken afterwards, by the two Event Hosts, with [the invitation template](../toolkit/emails/invitation.md).
+**Do not write to a prospective speaker before the Board has validated them.** Spotting someone, reading their work and putting their name forward is the whole of what this step asks of you; the invitation is a separate act, taken afterwards, by the two Event Hosts, with [the invitation template](../toolkit/emails/invitation.md).
 
 The reason is what an early approach does to the vote. A researcher who has been written to believes, quite reasonably, that they have been invited — so the Board is no longer being asked whether to invite them. It is being asked to ratify a decision somebody else has already taken, or else to send a volunteer back to a stranger to explain that the invitation was not one. Neither of those is a decision, and the second costs the series a person's goodwill for nothing. A vote can only be a real vote while every outcome is still available.
 

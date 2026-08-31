@@ -48,7 +48,7 @@ example instance's, edits stay in the tab, and nothing is ever saved.
 > **Do not fork this repository — duplicate it.**
 >
 > GitHub offers *Fork* as the obvious action, and it is the wrong one here.
-> This is a security instruction, not a preference. An instance holds
+> An instance holds
 > participants' names, addresses and affiliations, so the repository
 > holding it has to be private — and:
 >

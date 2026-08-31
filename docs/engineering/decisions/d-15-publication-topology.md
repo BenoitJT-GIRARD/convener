@@ -81,7 +81,7 @@ of those are better published than not: the validation a relay performs on
 untrusted input is a parser, which gains from being read, and a retention
 period is a promise the people whose data it concerns are entitled to see.
 
-**What publication does cost, stated rather than left to be discovered.** An
+**What publication costs.** An
 attacker no longer has to work out where the weak points are: the scheduled
 jobs are visible, so the running cost of an instance can be computed instead
 of probed; the secret-bearing workflows are indexed by the monitor that
@@ -91,7 +91,7 @@ to that is not to publish less. It is that every control here has to hold
 against somebody who has read it — which is the standard the cryptography in
 this project was already held to, and is now the standard for the rest.
 
-**Two consequences that are controls, not preferences.**
+**Two consequences, and each of them is a control.**
 
 **An instance repository must be private, and it must not be a fork.** GitHub
 offers "Fork" as the obvious action on a public repository, and it is the

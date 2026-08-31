@@ -178,7 +178,7 @@ Two units are in use, on purpose, and nothing converts between them.
 
 Reading a calendar window as working days would stretch fourteen days into twenty; reading a working-day window as calendar days would shorten it across every weekend. Either way a real deadline moves by real days, so the unit is stated wherever a window is.
 
-**Public holidays are deliberately not modelled.** The Board's members do not all work under the same national calendar, so a holiday list that was right for one country would be wrong for the others. An unmodelled holiday only ever makes a window effectively *longer*, which is the prudent direction. This is a decision, not an omission, and the tests pin it.
+**Public holidays are deliberately not modelled.** The Board's members do not all work under the same national calendar, so a holiday list that was right for one country would be wrong for the others. An unmodelled holiday only ever makes a window effectively *longer*, which is the prudent direction, and the tests pin it.
 
 Every date in the system is a **Paris calendar day**, everywhere, so a member reading the app late at night in another time zone sees the same day as the nightly job.
 

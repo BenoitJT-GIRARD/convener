@@ -38,9 +38,8 @@ working instance and one that has published something it cannot take back.
 | `cockpit` | private | The instance itself: the code, the workflows, the participant records, and every secret. Private because `instance/data/speakers.yml` and the per-event registration files hold personal data, and a repository holding those cannot be public. Created as a new repository of your own, never as a fork — repositories in one fork network share an object store, so a commit pushed to a private-looking fork stays reachable from the public parent for ever, and no setting inside the fork closes that route. |
 | `showcase` | public | The publication target, and nothing else. GitHub Pages will not serve a private repository without a paid plan, which the no-cost constraint rules out, so continuous integration in the cockpit builds `site/` and `app/` and pushes the result into this repository's root. Nobody edits anything here. Every byte is reproducible from the cockpit, so losing it costs a rebuild. |
 
-The split is forced, not preferred, and
-`docs/engineering/decisions/d-15-publication-topology.md` is the argument in
-full. Both exist before anything else works.
+`docs/engineering/decisions/d-15-publication-topology.md` is the argument for
+the split in full. Both exist before anything else works.
 
 ## How to read a step
 

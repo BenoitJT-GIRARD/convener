@@ -1,6 +1,6 @@
 # Content rules
 
-This is the contract the handbook and the app honour. Six rules.
+This is the contract the handbook and the app honour. Seven rules: six about where a page's content sits, and one about how its sentences are written.
 
 ## 1 · One source per piece of information
 
@@ -82,6 +82,19 @@ Which directory a page sits in says who it is written for.
 - **`engineering/`** — how the system is built and why: the architecture, the decision records, and this file.
 
 Nothing sits at the root of `docs/`, where an index written for a volunteer and a note written for a developer used to sit beside each other with nothing saying which was which. `tools/tests/test_docs_directory.py` refuses a tracked file under `docs/` that is in none of the three, and refuses an exception with no reason beside it. The exceptions are named in that module, and there are none today.
+
+## 7 · How a page is written
+
+The six rules above place a page's content. This one shapes its sentences. It applies to every page under `docs/` and to the pages at the repository root.
+
+1. **Do not argue against an alternative the reader has not proposed.** A page says what the thing is and what to do with it. Why it is this and not something else is a decision record under `docs/engineering/decisions/`, and a page that needs the argument links to it.
+2. **No hollow antithesis.** "X, not Y", where Y is a suspicion of carelessness nobody voiced — *not an accident*, *not an oversight*, *not a preference* — defends a choice against a reader who was not attacking it. A contrast carrying something the reader can act on is a different sentence: "square brackets, not double braces" is an instruction.
+3. **No meta-commentary.** A page does not narrate its own act of stating — *worth saying out loud*, *stated rather than left to be discovered*. Write the sentence and let it stand.
+4. **The first paragraph says what the thing is.** Not what it replaces, and not what it is mistaken for.
+
+`tools/tests/test_writing_rules.py` holds 2 and 3. Both are literal shapes with a closed list behind them, checked on every page this section applies to, and it names this page as the one exception: the rules above are stated by quoting the shapes they refuse, so a sweep including it would refuse the sentences that define it.
+
+That module holds neither 1 nor 4, and says so in its own docstring. Whether an alternative was one the reader had in mind, and whether an opening paragraph defines rather than positions, are judgements — a test claiming to make them would pass on every page ever written, which is the shape this repository treats as a failed control. Those two are a reviewer's, and a reviewer's alone.
 
 ---
 
