@@ -126,27 +126,34 @@ target-version = "py312"
 # not. Both were run over `convener_ops` (bandit 1.9.4, ruff 0.16.3):
 #
 #   bandit -q -r convener_ops        0 findings
-#   bandit --ignore-nosec           27  B404x3 B603x12 B607x9 B310x2 B506x1
-#   ruff --select S                 30  S603x10 S607x9 S310x4 S506x1 S105x6
+#   bandit --ignore-nosec           31  B603x14 B607x11 B404x3 B310x2 B506x1
+#   ruff --select S                 32  S607x11 S603x10 S105x6 S310x4 S506x1
 #
-# The zero is what eighteen `# nosec` comments in `convener_ops` account
+# The zero is what twenty `# nosec` comments in `convener_ops` account
 # for; the second line is the set the two tools have to be compared on.
+# Every count here is re-measured rather than carried forward: the
+# previous set said eighteen, twenty-seven and thirty, and each had gone
+# stale as the package grew subprocess call sites. The shape of the
+# argument did not move; the arithmetic under it did, twice, unnoticed.
 #
-# Five of those twenty-seven have no equivalent under `select = ["S"]`,
+# Seven of those thirty-one have no equivalent under `select = ["S"]`,
 # and that is what settles it. `B404` (`import subprocess`, in cli.py,
-# repository.py and derivation_guard.py) is `S404` in ruff, and `S404` is
-# a preview rule -- selecting it prints "has no effect because preview is
-# not enabled", and nothing in this project runs ruff in preview. `B603`
-# fires on every `subprocess.run`; `S603` deliberately does not fire when
-# every element of the argv is a string literal, which is exactly
-# `derivation_guard.py`'s two `git cat-file --batch` calls. Ruff is the
-# better-aimed rule on that pair and bandit is the only one that sees the
-# import at all, so neither tool contains the other.
+# repository.py and derivation_guard.py -- three) is `S404` in ruff, and
+# `S404` is a preview rule: selecting it prints "has no effect because
+# preview is not enabled", and nothing in this project runs ruff in
+# preview. `B603` fires on every `subprocess.run` -- fourteen; `S603`
+# deliberately does not fire when every element of the argv is a string
+# literal, which is exactly the four calls it passes over
+# (`derivation_guard.py`'s `git cat-file --batch-check` at 695 and 1235,
+# its `git cat-file --batch` at 1266, and its `git rev-parse --git-dir`
+# at 752). Ruff is the better-aimed rule on those four and bandit is the
+# only one that sees the import at all, so neither tool contains the
+# other.
 #
-# Ruff does see three things bandit misses, and none of them pays for the
-# swap. `S310` also flags `urllib.request.Request` (bandit's `B310`
-# blacklist names `urlopen` and `urlretrieve` only), which is two more
-# findings on `platform_fcc.py`'s existing pair. `S105` flags six
+# Ruff sees eight findings bandit misses, in two kinds, and neither pays
+# for the swap. `S310` also flags `urllib.request.Request` (bandit's
+# `B310` blacklist names `urlopen` and `urlretrieve` only), which is two
+# more findings on `platform_fcc.py`'s existing pair. `S105` flags six
 # `Final`-annotated constants -- `_TOKEN`, `_PASSWORD_ENV`, `TOKEN`,
 # `SECRET`, `TOKEN_ENV`, `SECRET_NAME` -- that hold a regex fragment, an
 # environment variable's *name* or a category label, never a password;
@@ -154,11 +161,11 @@ target-version = "py312"
 # them at all.
 #
 # The swap would also cost more than the step it removes. `# nosec` is
-# bandit's syntax and ruff reads `# noqa`, so all eighteen suppressions
-# would have to be rewritten and six more added for the false positives
+# bandit's syntax and ruff reads `# noqa`, so all twenty suppressions
+# would have to be rewritten and eight more added for the false positives
 # above. And `select` applies to everything CI lints (`ruff check .`
 # from `tools/`), not only to the package bandit is pointed at: `S` finds
-# 6,005 there, 5,888 of them `S101` -- `assert`, in this project's own
+# 6,302 there, 6,171 of them `S101` -- `assert`, in this project's own
 # tests -- so it would need a `per-file-ignores` block bandit never
 # needed.
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
