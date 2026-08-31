@@ -1,6 +1,6 @@
 # Content rules
 
-This is the contract the handbook and the app honour. Five rules.
+This is the contract the handbook and the app honour. Six rules.
 
 ## 1 · One source per piece of information
 
@@ -72,6 +72,16 @@ A single glossary at `docs/handbook/start-here/glossary.md` defines every term. 
 - **Architecte** — the system-design role (intentionally kept in French).
 - **Gate** — one of the two Board approvals (lowercase as a common noun).
 - **Lead / Approved / Invited / Confirmed / Scheduled / Delivered / Archived / Parked / Decline (board or speaker)** — pipeline statuses, lowercase in prose, kebab-cased in data. There is no *parking lot* and no bare *declined*: both were renamed and a page still using them sends a reader looking for a column that is not there.
+
+## 6 · Three trees under `docs/`, one reader each
+
+Which directory a page sits in says who it is written for.
+
+- **`handbook/`** — the volunteer's manual: how a webinar is run, from sourcing a speaker to the certificate that follows it. This is the tree the cockpit serves.
+- **`operating/`** — the operator's reference: standing an instance up, the settings each repository needs, the record schema, and the procedures a running instance is kept on. `operating/standing-up.md` is generated from `STANDING-UP.yml` and is the one page here written for somebody who does not have an instance yet.
+- **`engineering/`** — how the system is built and why: the architecture, the decision records, and this file.
+
+Nothing sits at the root of `docs/`, where an index written for a volunteer and a note written for a developer used to sit beside each other with nothing saying which was which. `tools/tests/test_docs_directory.py` refuses a tracked file under `docs/` that is in none of the three, and refuses an exception with no reason beside it. The exceptions are named in that module, and there are none today.
 
 ---
 
