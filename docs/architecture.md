@@ -38,17 +38,6 @@ did not produce. A repository nobody can read has nothing to leak; a
 repository that holds only reproducible output has nothing worth leaking
 either.
 
-| Directory | What it holds |
-|---|---|
-| `app/` | The cockpit (React + Vite): the board's and volunteers' application, gated by GitHub sign-in. Also builds the two public *islands* — registration and certificate verification — mounted on the showcase's static pages. |
-| `site/` | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
-| `tools/` | `convener_ops`, the Python package every automated workflow runs, in six sub-packages named after what each is about: `declaration/` (what this instance says it is, and which paths it owns), `journey/` (a proposal through to a delivered certificate), `governance/` (the voting rule, the register, and what reaches a volunteer), `publication/` (the charter, the announcement visuals, the feeds, the public-data filter), `maintenance/` (the scheduled sweeps and the evidence they still run) and `derivation/` (deriving the public product repository). `cli.py` sits beside them, because it is the way in and the only module that touches the disk. |
-| `services/` | Three small Cloudflare Workers with no server of their own to maintain: `auth-proxy` relays a volunteer's GitHub sign-in; `form-relay` turns a speaker-proposal submission into a commit; `signup-relay` does the same for a registration or a survey response. |
-| `instance/` | Everything this series owns rather than the code: the store itself under `data/` (speaker and event records, board configuration, and — per event — an encrypted registration file and an encrypted survey-response file), the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. `config/boundary.yml` is what says so, and `tools/tests/test_instance_directory.py` is what keeps it true. |
-| `config/` | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
-| `.github/workflows/` | The whole automation surface. Nothing in this system runs anywhere else. |
-| `docs/` | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
-
 Continuous integration in this repository builds both applications and
 pushes the *output* to the published repository's root — the same GitHub
 Pages setting ("branch `main`, folder root") already serves it, so nothing
@@ -68,6 +57,40 @@ One declaration decides all four: `instance/config.json`. Both halves of
 the address above come out of it, and so does the repository the two
 publishing workflows push into — see *Operations* for how an operator sets
 that up.
+
+## Every directory, and who owns it
+
+<!-- BEGIN GENERATED DIRECTORY MAP -- tools/scripts/generate_directory_map.py -->
+*The rows below are generated: every tracked top-level directory, with
+the owner `config/boundary.yml` gives it. Do not edit this block — run*
+`uv run python scripts/generate_directory_map.py`
+*from `tools/` and commit what it writes. What each directory holds is
+the one line nothing derives, and it is written in
+`tools/scripts/generate_directory_map.py`, beside the code that
+publishes it.*
+
+| Directory | Owner | What it holds |
+|---|---|---|
+| `.claude/` | product | The run sheet an agent follows to stand an instance up, generated from `STANDING-UP.yml` by `tools/scripts/generate_standing_up_skill.py`. |
+| `.github/` | product | The whole automation surface: data validation, the public-data filter, certificate issuance and revocation, the retention sweep, publishing the showcase and the cockpit, quality and security gates. Nothing in this system runs anywhere else. |
+| `app/` | product | The cockpit (React + Vite): the board's and volunteers' application, gated by GitHub sign-in. Also builds the two public *islands* — registration and certificate verification — mounted on the showcase's static pages. |
+| `brand/` | product | The product's own charter and marks, read by any duplicate that has measured no palette of its own yet. |
+| `config/` | product | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
+| `docs/` | product | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
+| `fonts/` | product | The two typefaces both interfaces are set in, self-hosted so that no page fetches a font from anybody else, each beside its licence. |
+| `instance/` | instance | Everything this series owns rather than the code: the store itself under `data/`, the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. |
+| `instances/` | product | The invented second instance this repository builds itself as on every test run: one file for each path the declaration hands over, at the same relative path. |
+| `services/` | product | Three small Cloudflare Workers with no server of their own to maintain: `auth-proxy` relays a volunteer's GitHub sign-in; `form-relay` turns a speaker-proposal submission into a commit; `signup-relay` does the same for a registration or a survey response. |
+| `site/` | product | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
+| `tools/` | product | Every operational tool, whatever the language: the `convener_ops` package every automated workflow runs, the generators under `scripts/`, the one-shot migrations under `migrations/`, the Node rendering harness under `visuals/`, and the tests for all of them. |
+
+`config/boundary.yml` also names paths sitting on the other side of the directory
+that holds them:
+
+- `docs/governance/register.md` — the instance's, inside a directory the product owns.
+- `instance/data/schema.md` — the product's, inside a directory the instance owns.
+- `instance/keys/signing/README.md` — the product's, inside a directory the instance owns.
+<!-- END GENERATED DIRECTORY MAP -- edit tools/scripts/generate_directory_map.py, not this block -->
 
 ## What this series owns, and what anybody duplicating it would keep
 
