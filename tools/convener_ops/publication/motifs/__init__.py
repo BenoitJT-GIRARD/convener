@@ -38,10 +38,11 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Final, Protocol
 
-from . import bracket, lattice, ribbon
+from . import bracket, chevrons, lattice, ribbon
 
 __all__ = [
     "BRACKET",
+    "CHEVRONS",
     "FAMILIES",
     "LATTICE",
     "RIBBON",
@@ -162,6 +163,18 @@ LATTICE: Final = Family(
     clearance_stroke_widths=lattice.CLEARANCE_STROKE_WIDTHS,
 )
 
+#: An angle repeated down each margin -- straight segments meeting at the
+#: opening the product's own mark is drawn with, stacked into a column. It
+#: is the one family here whose clearance is not a whole stroke width,
+#: because it is the one that draws a slanted segment (`chevrons.py`).
+CHEVRONS: Final = Family(
+    name="chevrons",
+    fields=("stroke", "width_ratio"),
+    path=chevrons.path,
+    outline=chevrons.outline,
+    clearance_stroke_widths=chevrons.CLEARANCE_STROKE_WIDTHS,
+)
+
 #: Every family, by the name a charter names it. Written out rather than
 #: discovered by walking the directory: a name a charter may write is part
 #: of the product's own contract, and `tests/publication/motifs/
@@ -171,6 +184,7 @@ FAMILIES: Final[dict[str, Family]] = {
     RIBBON.name: RIBBON,
     BRACKET.name: BRACKET,
     LATTICE.name: LATTICE,
+    CHEVRONS.name: CHEVRONS,
 }
 
 

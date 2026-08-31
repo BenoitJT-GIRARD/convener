@@ -1,0 +1,87 @@
+{
+  "_comment": "A charter this product ships, complete and ready to be chosen -- the same shape as `brand/convener/brand.json` and read by the same reader (`tools/convener_ops/publication/brand.py`). `brand/lattice/brand.json::_why_a_charter_it_can_choose` says why this directory holds more than the product's own default, and that argument is not restated here. An instance that wants this palette copies it into `instance/data/brand.json`; upstream never edits that file and an instance never edits this one. There is no README beside it: `brand/convener/README.md` documents artwork -- four drawings, and how the mark and the wordmark were built -- and this directory holds none. What each figure here is and where it comes from is written below, under the keys beginning with an underscore.",
+  "_source": "Nothing measured, because there is no artwork to measure: this charter has no mark of its own and asks for none. Two colours are chosen -- a mulberry #9e1450 and a mint #109352 -- and every other value in the file is worked out from those two by the rule in `derived._derivation`. The two were chosen against the four palettes this repository already held, by the ground each of them fills a page with: a turquoise, a coral, a gold and a sky. None of the four sets a green ground, and none draws its ink in a magenta dark, so a page built from this charter is not mistakable for any of them across a room -- which is what a charter a duplicate may choose is for.",
+  "_names": "The keys are the system's rather than this palette's, and each names the position a colour holds in the composition: `dominant` is the ink the headlines, the motif and the wordmark are drawn in, `field` the saturated ground that fills the page, `band` the full-width bands laid across it. `tools/scripts/generate_brand_css.py`, both stylesheets and the three downloadable templates read a colour by that name.",
+
+  "colour": {
+    "dominant": "#6c0d37",
+    "field": "#9ad2b5",
+    "band": "#e9eae8",
+    "ink": "#43403e",
+    "ink_muted": "#524e4c",
+    "rule": "#c8c5c5",
+    "white": "#ffffff",
+    "black": "#000000",
+
+    "_roles": {
+      "dominant": "Headlines, motif, wordmark. The dominant colour, not an accent. The mulberry axis, held at 12.00 against white.",
+      "field": "A ground. Never a text colour on white or on a band -- 1.71 there. The mint axis, lightened until the dominant on it measures AAA exactly.",
+      "band": "Full-width horizontal bands laid across the field. Text sits inside them.",
+      "ink": "Primary text. A warm grey rather than a black: it is this palette's own two colours in equal parts, taken down to the lightness the body copy is read at.",
+      "ink_muted": "Secondary text. Its lightness is decided by the field, which is the darker of the two grounds it appears on.",
+      "rule": "Rules, borders, dividers. Never text -- 1.71 on white, which is what it also measures against the field.",
+      "black": "Body copy on the coloured field, where the composition sets it directly on the ground rather than inside a band.",
+      "white": "Inside photographic frames only. Not a ground."
+    }
+  },
+
+  "derived": {
+    "_comment": "Values no choice supplies, needed because the web has states and links that a page of type does not. Each clears AA on the ground it can appear on.",
+    "_derivation": "One rule, applied to every value here and to every value in `colour` above: **not one lightness in this file is chosen. Twelve ratios are, and the lightnesses are what they force.** Three axes carry the hues -- the mulberry for the dominant, the mint for the field, and the two in equal parts for the neutrals (they sit close to opposite each other, so their blend is this palette's own grey, #575451). Each token is then its axis mixed toward white or toward black until the pairing that binds it lands on the figure `_targets` states beside it. Ten of the twelve land on that figure exactly; `ink_on_field` lands at 6.01 and the hover state at 13.99, which is what eight-bit colour costs. It is a different rule from the one `brand/lattice/brand.json` follows: that charter copies the luminance each role carries in another file, and this one names the ratio each role has to make and solves for the colour.",
+    "_targets": "White on the dominant, 12.00: the dominant inks the mark, every headline and the wordmark, and it has to hold at a favicon's size as well as at a poster's; the four charters this repository already holds sit between 10.37 and 14.19, and this is inside that. The dominant on the field, 7.00: AAA exactly, because a drawing that only cleared AA against the ground it is drawn on is a drawing that disappears in a photograph of a poster. The band on the field, 1.42: the one figure all four of those charters already agree on to two decimals, and a band is the ground lightened just enough to set type in. The ink on the field, 6.00: a whole point below the dominant's own figure, so the headline stays the darkest thing on the page. Every pairing that exists only to clear AA -- `ink_muted_on_field`, `ink_faint_on_band` -- is targeted at 4.80 rather than at 4.50, because eight-bit colour is worth a hundredth or two and a token measuring exactly the floor would be one rounding away from not building. Field text on white, 6.00: the ink's own figure, because a link is read at body size. The dominant on either tint, 9.00: a tint is a ground type sits on, held a point below the band so that it reads as a panel on the band rather than as the band. The rule against the field, 1.00: the quietest mark a page can draw weighs exactly what the ground weighs. `rule_strong` on white, 3.00: what WCAG 1.4.11 asks of a graphical object somebody has to make out. White on `dominant_hover`, 14.00: a hover state is a state, and two points of contrast is a step a reader sees.",
+    "ink_faint": "#676564",
+    "field_text": "#0d7241",
+    "field_tint": "#c8e6d6",
+    "dominant_hover": "#580b2d",
+    "dominant_tint": "#f0d9e4",
+    "rule_strong": "#989494",
+    "_dominant_hover": "The one value `brand/convener/brand.json` and `brand/lattice/brand.json` both had to except from their own rule, and here it is no exception at all: a hover state is a ratio like everything else, 14.00 against white where the dominant at rest is 12.00. It is only ever a filled background (`--dominant-hover`, `--accent-hover`), never text.",
+    "_axes": "Neither axis appears raw in this file except once. The mulberry #9e1450 is the source of `dominant`, `dominant_hover` and `dominant_tint` and is darkened or lightened out of all three; the mint #109352 is the source of `field`, `field_tint` and `field_text`, and appears unmixed only as `motif.logo_dots`, where at 3.95 on white it can be neither body text nor a light ground but is what a wordmark's squares want."
+  },
+
+  "contrast": {
+    "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not, for every charter this repository ships and not only the one in force: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The twelve pairings are the same twelve the system holds every palette to -- the composition creates them, not this palette.",
+    "dominant_on_field": 7.0,
+    "black_on_field": 12.26,
+    "ink_on_field": 6.01,
+    "dominant_on_band": 9.94,
+    "ink_on_band": 8.52,
+    "ink_muted_on_field": 4.8,
+    "ink_faint_on_band": 4.8,
+    "field_text_on_white": 6.0,
+    "white_on_dominant": 12.0,
+    "field_text_on_band": 4.97,
+    "ink_muted_on_band": 6.82,
+    "field_on_dominant": 7.0,
+    "_forbidden": "the field as text on white (1.71); rule as text on any ground (1.71 on white); white as text on the field (1.71) -- which is why a primary button fills with the dominant."
+  },
+
+  "typography": {
+    "display": "Archivo",
+    "display_weight": 800,
+    "body": "Archivo",
+    "body_weight": 400,
+    "mono": "JetBrains Mono",
+    "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
+    "licence": "SIL Open Font License 1.1",
+    "self_hosted": true,
+    "_faces": "The two faces the product itself ships, in `fonts/`, and serves from its own origin. A charter naming a face nobody ships builds a page that falls back to whatever the reader's machine happens to have, so this one names the shipped pair -- the same reason `instances/example/instance/data/brand.json` gives.",
+    "_weights": "The two weights the product's own measurement covers. `tools/convener_ops/publication/typeface.py` carries an advance table at 400 and at 900 and interpolates between them, and `tools/visuals/check-templates.mjs` re-measures both against the committed font file; a charter naming a weight outside that pair would be sized in Python against an estimate nothing re-measures.",
+    "_self_hosted": "Not negotiable, and not a preference of this palette's. A webfont request to a third party discloses every visitor's address -- D-17."
+  },
+
+  "motif": {
+    "family": "chevrons",
+    "stroke": "#6c0d37",
+    "width_ratio": 0.02145,
+    "logo_dots": "#109352",
+    "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the columns standing either side of the page. 7.00 on the field and 9.94 on the bands, so it reads wherever the composition puts it.",
+    "_logo_dots": "The mint axis, raw, in the one place its 3.95 on white does not disqualify it: the filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.27 -- weak for text, which it is not, and past the 3.0 WCAG asks of a graphical object that has to be made out.",
+    "_width_ratio": "Not a measurement of anybody's artwork -- this charter has none -- but the proportion that keeps a chevron an angle rather than a wedge. `motifs/chevrons.py` draws each arm 0.0858 of the composition's shorter side long, and 0.02145 is a quarter of that, so an arm is drawn four times as long as it is wide at every size this product renders. A heavier stroke fills the opening at the tip; a lighter one loses the drawing on a printed page, which is where a chevron column carries the most of the composition."
+  },
+
+  "layout": {
+    "_ground": "The field fills the page. White is not the ground.",
+    "_bands": "The bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18."
+  }
+}
