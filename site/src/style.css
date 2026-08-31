@@ -81,53 +81,54 @@
 
 :root {
 /* BEGIN GENERATED TOKENS -- tools/scripts/generate_brand_css.py */
-  /* Grounds: turquoise is the field, cream runs across it in bands, white
+  /* Grounds: the field fills the page, the bands run across it, white
    * appears only inside photographic frames. */
-  --paper:        #ffffff;
-  --surface:      #f4f0f1;
-  --surface-2:    #fecac1;
+  --paper:          #ffffff;
+  --surface:        #f4f0f1;
+  --surface-2:      #fecac1;
 
   /* Text: warm, never slate -- the warmth is the single thing that most
-   * distinguishes this identity from a generic purple-and-teal one. */
-  --ink:          #522f3c;
-  --ink-mute:     #794658;
-  --ink-faint:    #8a596b;
+   * distinguishes this identity from a palette assembled out of defaults. */
+  --ink:            #522f3c;
+  --ink-mute:       #794658;
+  --ink-faint:      #8a596b;
 
-  /* The plain turquoise value is a GROUND and must never carry text.
-   * turquoise-d is the readable variant, for links and text accents. */
-  --turquoise:    #fecac1;
-  --turquoise-d:  #a24535;
-  --turquoise-l:  #fedad4;
+  /* The plain field value is a GROUND and must never carry text.
+   * field-text is the readable variant, for links and text accents. */
+  --field:          #fecac1;
+  --field-text:     #a24535;
+  --field-tint:     #fedad4;
 
-  --purple:       #012765;
-  --purple-d:     #011f51;
-  --purple-l:     #d8dde7;
+  --dominant:       #012765;
+  --dominant-hover: #011f51;
+  --dominant-tint:  #d8dde7;
 
   /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. Measured against
-   * this file's own --surface (cream), the certificate-verification panel's
-   * ground: see instance/data/brand.json's contrast._comment for both numbers. */
-  --danger:       #9b2226;
-  --info:         #4a6c75;
+   * this file's own --surface (the band), the certificate-verification
+   * panel's ground: see instance/data/brand.json's contrast._comment for
+   * both numbers. */
+  --danger:         #9b2226;
+  --info:           #4a6c75;
 
   /* Rules and borders only -- never text. */
-  --rule:         #d0bbc3;
-  --rule-strong:  #b18f9b;
-  --select:       rgba(130, 219, 215, 0.35);
+  --rule:           #d0bbc3;
+  --rule-strong:    #b18f9b;
+  --select:         rgba(130, 219, 215, 0.35);
 
   /* White as a foreground/border role, distinct in name from --paper (the
    * ground) though currently the same value: text and a border drawn on a
    * coloured background need "white" as a role of its own. */
-  --white:        #ffffff;
-  --white-rgb:    255, 255, 255;
+  --white:          #ffffff;
+  --white-rgb:      255, 255, 255;
 /* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
 
-  --gutter:       clamp(1.25rem, 4vw, 2.5rem);
-  --content-w:    1100px;
+  --gutter:         clamp(1.25rem, 4vw, 2.5rem);
+  --content-w:      1100px;
 
-  --ff-display:   "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --ff-body:      "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --ff-mono:      "JetBrains Mono", ui-monospace, monospace;
+  --ff-display:     "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --ff-body:        "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --ff-mono:        "JetBrains Mono", ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -136,11 +137,11 @@
 html { -moz-osx-font-smoothing: grayscale; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 
 body {
-  /* Turquoise is the field -- D-18. The cream bands (masthead,
+  /* The field is the ground -- D-18. The bands (masthead,
    * section__head, colophon) sit on top of it; overflow-x is clipped here
    * because those bands bleed full-width off their own centred container
    * with a box-shadow spread that runs to 100vmax on either side. */
-  background: var(--turquoise);
+  background: var(--field);
   color: var(--ink);
   font-family: var(--ff-body);
   font-size: 17px;
@@ -150,11 +151,12 @@ body {
 }
 
 a {
-  /* Purple, not turquoise-d: turquoise is a ground now, and a plain link
-   * can land directly on it (prose in a future page's notice or abstract),
-   * where turquoise-d measures 3.81 -- below AA. Purple clears both grounds
-   * it can appear on (7.93 on turquoise, 11.26 on cream). */
-  color: var(--purple);
+  /* The dominant, not field-text: the field is a ground now, and a plain
+   * link can land directly on it (prose in a future page's notice or
+   * abstract), where field-text measures 3.81 -- below AA. The dominant
+   * clears both grounds it can appear on (7.93 on the field, 11.26 on a
+   * band). */
+  color: var(--dominant);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
   transition: color .15s, border-color .15s;
@@ -175,7 +177,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
  * empty, so a configured instance carries neither the markup nor a
  * reserved strip of page.
  *
- * Cream ground with a --danger rule, not a --danger ground: this is the
+ * A band ground with a --danger rule, not a --danger ground: this is the
  * one band that has to be readable before anything else on the page, and
  * --danger measures 7.00 against --surface (AA needs 4.5) where white on
  * --danger would have been the same colour doing less work. --ink for the
@@ -206,25 +208,25 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 
 /* ── Masthead ─────────────────────────────────────────────── */
-/* The identity band -- cream, full-bleed, the same role the logo band
- * carries at the top of the designer's own composition. Everything below it is
- * the turquoise field (D-18); this is the one place it is interrupted
- * before the page even begins its content. */
+/* The identity band -- one of the bands, full-bleed, the same role the
+ * logo band carries at the top of the designer's own composition.
+ * Everything below it is the field (D-18); this is the one place it is
+ * interrupted before the page even begins its content. */
 .masthead {
   position: relative;
   background: var(--surface);
-  border-bottom: 4px solid var(--purple);
+  border-bottom: 4px solid var(--dominant);
 }
 .masthead__loops {
   /* Same motif as .hero__loops / .coda__loops, extended to the one piece
    * of chrome every page shares (D-18's "other pages" have no hero of
    * their own yet). Deliberately allowed to run past the masthead's own
    * bottom edge into the field below -- the designer's own loop crosses from
-   * the cream band into the turquoise the same way, and .masthead has no
+   * the band into the field the same way, and .masthead has no
    * overflow:hidden of its own so it can. Kept to the left and low so it
    * does not compete with .hero__loops, which already owns the top-right
    * on this page. */
-  stroke: var(--purple);
+  stroke: var(--dominant);
   position: absolute;
   pointer-events: none;
   left: -3rem;
@@ -250,14 +252,14 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   align-items: baseline;
   gap: .65rem;
   border-bottom: 0;
-  color: var(--purple);
+  color: var(--dominant);
   text-transform: uppercase;
 }
-.masthead__brand:hover { color: var(--purple); border-bottom: 0; }
+.masthead__brand:hover { color: var(--dominant); border-bottom: 0; }
 .masthead__brand-mark {
   font-family: var(--ff-mono);
   text-transform: none;
-  color: var(--purple);
+  color: var(--dominant);
   font-size: .95rem;
 }
 .masthead__brand-name {
@@ -278,16 +280,16 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--purple);
-  border: 1px solid var(--purple);
+  color: var(--dominant);
+  border: 1px solid var(--dominant);
   background: transparent;
   padding: .45rem .9rem;
   transition: background .15s, border-color .15s, color .15s;
 }
 .masthead__access::after { content: " →"; margin-left: .25rem; }
 .masthead__access:hover {
-  background: var(--purple);
-  border-color: var(--purple);
+  background: var(--dominant);
+  border-color: var(--dominant);
   color: var(--white);
 }
 
@@ -302,10 +304,10 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   z-index: 1;
 }
 .hero__loops {
-  /* The ribbon motif -- instance/data/brand.json's motif.ribbon_stroke, i.e. purple.
-   * Never a hand-typed hex here: the SVG in index.njk carries no colour of
-   * its own and takes this rule's stroke instead. */
-  stroke: var(--purple);
+  /* The ribbon motif -- instance/data/brand.json's motif.ribbon_stroke,
+   * i.e. the dominant. Never a hand-typed hex here: the SVG in index.njk
+   * carries no colour of its own and takes this rule's stroke instead. */
+  stroke: var(--dominant);
   position: absolute;
   pointer-events: none;
   right: -3rem;
@@ -321,7 +323,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 800;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--purple);
+  color: var(--dominant);
   margin-bottom: 1.25rem;
   display: flex;
   align-items: center;
@@ -330,28 +332,27 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 .hero__eyebrow::before {
   content: "";
   height: 2px;
-  background: var(--purple);
+  background: var(--dominant);
   width: 2.5rem;
 }
 .hero__title {
-  /* Purple, not ink: brand.json names purple for "headlines... the
-   * dominant colour, not an accent", and the designer's own headline is solid
-   * purple on the turquoise field -- matches purple_on_turquoise, 7.93. */
+  /* The dominant, not ink: brand.json names the dominant for "headlines...
+   * the dominant colour, not an accent", and the designer's own headline is
+   * solid on the field -- matches dominant_on_field, 7.93. */
   font-family: var(--ff-display);
   font-weight: 900;
   font-size: clamp(2.8rem, 7vw, 5rem);
   line-height: .98;
   letter-spacing: -0.025em;
-  color: var(--purple);
+  color: var(--dominant);
   max-width: 14ch;
   margin-bottom: 1.5rem;
   text-transform: uppercase;
 }
 .hero__title em {
-  /* No colour of its own any more: turquoise-d on the turquoise field it
-   * now sits on measures 3.81, below AA. The originals never split a
-   * headline's colour either -- it inherits the same purple as the rest
-   * of .hero__title. */
+  /* No colour of its own any more: field-text on the field it now sits on
+   * measures 3.81, below AA. The originals never split a headline's colour
+   * either -- it inherits the same dominant as the rest of .hero__title. */
   font-style: normal;
 }
 .hero__lede {
@@ -377,7 +378,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--purple);
+  color: var(--dominant);
   margin-bottom: 2rem;
 }
 .event-lead__back a { border-bottom: 0; }
@@ -385,7 +386,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 
 /* The one-screen data-protection notice, which the event page carries
  * before the form -- surface, not paper, so it reads as a distinct panel against
- * the turquoise field, the same role .feature__rail's border plays. */
+ * the field, the same role .feature__rail's border plays. */
 .notice {
   border: 2px solid var(--rule-strong);
   background: var(--surface);
@@ -399,7 +400,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-size: .78rem;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--purple);
+  color: var(--dominant);
   margin-bottom: .85rem;
 }
 .notice p + p { margin-top: .85rem; }
@@ -451,8 +452,8 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .signup-form__field input:focus {
   outline: 0;
-  border-color: var(--purple);
-  box-shadow: 0 0 0 3px var(--turquoise-l);
+  border-color: var(--dominant);
+  box-shadow: 0 0 0 3px var(--field-tint);
 }
 .signup-form__checkbox {
   display: flex;
@@ -467,14 +468,14 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   cursor: not-allowed;
 }
 .signup-form__error {
-  /* `--purple`, not `--purple-d`: this text sits directly on the
-   * turquoise field, and `--purple` on turquoise is the pairing
-   * `instance/data/brand.json` already measures (7.93, AAA) -- `--purple-d` is
+  /* `--dominant`, not `--dominant-hover`: this text sits directly on the
+   * field, and `--dominant` on the field is the pairing
+   * `instance/data/brand.json` already measures (7.93, AAA) -- `--dominant-hover` is
    * used elsewhere only as a background or a hover border, never as text
    * on this ground, and introducing it here would be a new pairing no
    * measurement covers yet: every text-on-ground pairing introduced is
    * measured before it is used. */
-  color: var(--purple);
+  color: var(--dominant);
   font-weight: 700;
   margin-top: .85rem;
 }
@@ -486,13 +487,13 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
  * stylesheet, and pulling in the app's own Tailwind build here would leak
  * site-wide. `.notice` (above) is reused as the one panel shape for every
  * answer this page gives -- valid, revoked, not verifiable, state
- * unknown, and the token-less register-only answers -- one cream box
- * against the turquoise field, four accent colours, not five separate
+ * unknown, and the token-less register-only answers -- one band-coloured
+ * box against the field, four accent colours, not five separate
  * panel styles invented per state. */
 .verify { max-width: 42rem; }
 .verify__panel { border-left-width: 6px; }
-.verify__panel--primary { border-left-color: var(--turquoise-d); }
-.verify__panel--accent  { border-left-color: var(--purple); }
+.verify__panel--primary { border-left-color: var(--field-text); }
+.verify__panel--accent  { border-left-color: var(--dominant); }
 .verify__panel--danger  { border-left-color: var(--danger); }
 .verify__panel--info    { border-left-color: var(--info); }
 .verify__eyebrow {
@@ -503,16 +504,16 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   text-transform: uppercase;
   margin-bottom: .85rem;
 }
-/* `--purple` on `--surface` is `purple_on_cream`, already measured at
- * 11.26 (instance/data/brand.json). `--turquoise-d` on `--surface` is a new
- * newer pairing -- turquoise_text_on_cream, 5.41, recorded
+/* `--dominant` on `--surface` is `dominant_on_band`, already measured at
+ * 11.26 (instance/data/brand.json). `--field-text` on `--surface` is a
+ * newer pairing -- field_text_on_band, 5.41, recorded
  * in instance/data/brand.json alongside the rest of that table, under the standing
  * rule that every text-on-ground pairing introduced is measured and the
  * table updated. `--danger`/`--info` are measured on the same ground
  * too, recorded in instance/data/brand.json's contrast._comment rather than as a
  * recomputed pairing, since neither is a instance/data/brand.json colour. */
-.verify__eyebrow--primary { color: var(--turquoise-d); }
-.verify__eyebrow--accent  { color: var(--purple); }
+.verify__eyebrow--primary { color: var(--field-text); }
+.verify__eyebrow--accent  { color: var(--dominant); }
 .verify__eyebrow--danger  { color: var(--danger); }
 .verify__eyebrow--info    { color: var(--info); }
 .verify__panel p { margin-top: 0; }
@@ -592,8 +593,8 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .survey-form__textarea:focus {
   outline: 0;
-  border-color: var(--purple);
-  box-shadow: 0 0 0 3px var(--turquoise-l);
+  border-color: var(--dominant);
+  box-shadow: 0 0 0 3px var(--field-tint);
 }
 .survey-form__counter {
   display: block;
@@ -607,11 +608,11 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   cursor: not-allowed;
 }
 .survey-form__error {
-  /* `--purple`, not `--purple-d` -- the identical pairing rationale
+  /* `--dominant`, not `--dominant-hover` -- the identical pairing rationale
    * `.signup-form__error`'s own comment gives: this text sits directly on
-   * the turquoise field, and `--purple` on turquoise is the measured
-   * pairing (`instance/data/brand.json`), not `--purple-d`. */
-  color: var(--purple);
+   * the field, and `--dominant` on the field is the measured
+   * pairing (`instance/data/brand.json`), not `--dominant-hover`. */
+  color: var(--dominant);
   font-weight: 700;
   margin-top: .85rem;
 }
@@ -640,34 +641,34 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   text-transform: uppercase;
 }
 .btn--primary {
-  /* Purple, not turquoise: the field itself is turquoise now (D-18), and a
-   * turquoise-filled button on a turquoise field has no visible edge at
-   * all -- never mind that white text on turquoise measures 1.61. White on
-   * purple measures 12.74 (instance/data/brand.json). */
-  background: var(--purple);
+  /* The dominant, not the field: the field is the page's ground now
+   * (D-18), and a field-filled button on the field has no visible edge at
+   * all -- never mind that white text on the field measures 1.61. White on
+   * the dominant measures 12.74 (instance/data/brand.json). */
+  background: var(--dominant);
   color: var(--white);
-  border-color: var(--purple);
+  border-color: var(--dominant);
 }
 .btn--primary:hover {
-  background: var(--purple-d);
-  border-color: var(--purple-d);
+  background: var(--dominant-hover);
+  border-color: var(--dominant-hover);
   color: var(--white);
 }
 .btn--ghost {
   background: transparent;
-  color: var(--purple);
-  border-color: var(--purple);
+  color: var(--dominant);
+  border-color: var(--dominant);
 }
 .btn--ghost:hover {
-  background: var(--purple);
+  background: var(--dominant);
   color: var(--white);
 }
 a.btn { border-bottom-style: solid; border-bottom-width: 2px; }
 a.btn:hover { border-bottom-width: 2px; }
-a.btn--primary { border-color: var(--purple); }
-a.btn--primary:hover { border-color: var(--purple-d); }
-a.btn--ghost { border-color: var(--purple); }
-a.btn--ghost:hover { border-color: var(--purple); }
+a.btn--primary { border-color: var(--dominant); }
+a.btn--primary:hover { border-color: var(--dominant-hover); }
+a.btn--ghost { border-color: var(--dominant); }
+a.btn--ghost:hover { border-color: var(--dominant); }
 
 /* ── Section ──────────────────────────────────────────────── */
 .section {
@@ -676,8 +677,8 @@ a.btn--ghost:hover { border-color: var(--purple); }
   position: relative;
 }
 .section__head {
-  /* A cream band, full-bleed, the same role the designer's own "title" band
-   * plays mid-composition -- a labelled divider crossing the turquoise
+  /* A band, full-bleed, the same role the designer's own "title" band
+   * plays mid-composition -- a labelled divider crossing the
    * field. `.section` is both the outer section and the width-limiting
    * container on one element (merged in the markup), so there is no
    * separate full-width wrapper to paint a band behind; ::before paints
@@ -685,7 +686,8 @@ a.btn--ghost:hover { border-color: var(--purple); }
    * touching the markup. Constrained to top:0/bottom:0 so it fills only
    * this element's own height -- a spread box-shadow was tried first and
    * rejected, because a shadow spreads by its radius in every direction,
-   * flooding the whole page with cream rather than just this band. */
+   * flooding the whole page with the band's colour rather than just this
+   * band. */
   position: relative;
   display: flex;
   align-items: baseline;
@@ -708,7 +710,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 .section__num {
   font-family: var(--ff-mono);
   font-size: .85rem;
-  color: var(--purple);
+  color: var(--dominant);
   font-weight: 500;
   min-width: 1.5ch;
 }
@@ -743,24 +745,24 @@ a.btn--ghost:hover { border-color: var(--purple); }
   }
 }
 .feature__rail {
-  /* Purple, not turquoise: this rail now sits directly on the turquoise
-   * field (D-18), where a turquoise rule is invisible against its own
-   * ground. */
+  /* The dominant, not the field: this rail now sits directly on the
+   * field (D-18), where a rule in the field's own colour is invisible
+   * against its ground. */
   display: flex;
   flex-direction: column;
   gap: .35rem;
   padding-top: .35rem;
-  border-top: 3px solid var(--purple);
+  border-top: 3px solid var(--dominant);
 }
 .feature__vol {
-  /* Purple, not turquoise-d: turquoise-d on the turquoise field it now
-   * sits on measures 3.81, below AA. */
+  /* The dominant, not field-text: field-text on the field it now sits on
+   * measures 3.81, below AA. */
   font-family: var(--ff-display);
   font-size: .72rem;
   font-weight: 800;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--purple);
+  color: var(--dominant);
 }
 .feature__code {
   font-family: var(--ff-mono);
@@ -793,7 +795,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
   font-family: var(--ff-display);
   font-weight: 600;
   font-size: 1.05rem;
-  color: var(--purple);
+  color: var(--dominant);
   margin-bottom: 1rem;
 }
 .feature__speaker .feature__affil {
@@ -854,7 +856,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
   font-family: var(--ff-mono);
   font-size: .92rem;
   font-weight: 500;
-  color: var(--purple);
+  color: var(--dominant);
   letter-spacing: .03em;
   font-variant-numeric: tabular-nums;
 }
@@ -871,11 +873,11 @@ a.btn--ghost:hover { border-color: var(--purple); }
   color: var(--ink);
 }
 /* The row's own colour, inherited rather than left to the default link
- * purple: the title is a link to the edition's own page
+ * colour: the title is a link to the edition's own page
  * and must not change the row's visual weight -- only the hover signals
  * that it goes somewhere. */
 .archive__title a { color: inherit; }
-.archive__title a:hover { color: var(--purple); }
+.archive__title a:hover { color: var(--dominant); }
 .archive__meta {
   font-size: .88rem;
   color: var(--ink-mute);
@@ -886,13 +888,13 @@ a.btn--ghost:hover { border-color: var(--purple); }
 }
 .archive__meta strong {
   font-weight: 600;
-  color: var(--purple);
+  color: var(--dominant);
 }
 .archive__date {
-  /* ink-mute, not ink-faint: this row sits on the turquoise field by
+  /* ink-mute, not ink-faint: this row sits on the field by
    * default (D-18), where ink-faint measures 3.51, below AA; ink-mute
-   * clears both grounds it can appear on -- 4.62 on turquoise, 6.56 on the
-   * cream .archive__row:hover reveals. */
+   * clears both grounds it can appear on -- 4.62 on the field, 6.56 on the
+   * band .archive__row:hover reveals. */
   font-family: var(--ff-mono);
   font-variant-numeric: tabular-nums;
   color: var(--ink-mute);
@@ -912,40 +914,40 @@ a.btn--ghost:hover { border-color: var(--purple); }
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--turquoise-d);
+  color: var(--field-text);
   border-bottom: 0;
   padding: .35rem .6rem;
-  background: var(--turquoise-l);
+  background: var(--field-tint);
   transition: background .15s, color .15s;
 }
 .archive__action:hover {
   /* Carried for a long time as a known, recorded defect rather than
    * fixed on the spot -- a solid
-   * turquoise fill under white text measures 1.61 (instance/data/brand.json's
+   * field fill under white text measures 1.61 (instance/data/brand.json's
    * `_forbidden`), badly below the 4.5 floor for normal text; a browser's
-   * own rendering measured it at 2.54. Purple, not turquoise, for the
-   * identical reason `.btn--primary` already fills with purple rather
-   * than the page's own turquoise ground (see that rule's comment): white
-   * on purple is 12.74 (`instance/data/brand.json`'s `white_on_purple`, already
+   * own rendering measured it at 2.54. The dominant, not the field, for the
+   * identical reason `.btn--primary` already fills with the dominant rather
+   * than the page's own ground (see that rule's comment): white
+   * on the dominant is 12.74 (`instance/data/brand.json`'s `white_on_dominant`, already
    * measured -- no new pairing to add). `.archive__action--alt:hover`
    * already used this same fill; this now matches it rather than
    * disagreeing on hover while differing on the resting state above.
    */
-  background: var(--purple);
+  background: var(--dominant);
   color: var(--white);
   border-bottom: 0;
 }
 .archive__action--alt {
-  color: var(--purple);
-  background: var(--purple-l);
+  color: var(--dominant);
+  background: var(--dominant-tint);
 }
 .archive__action--alt:hover {
-  background: var(--purple);
+  background: var(--dominant);
   color: var(--white);
 }
 .archive__action--disabled {
   /* ink-mute, not ink-faint -- background is transparent, so this reads
-   * against the turquoise field by default; see .archive__date above. */
+   * against the field by default; see .archive__date above. */
   font-family: var(--ff-display);
   font-size: .74rem;
   font-weight: 600;
@@ -993,20 +995,21 @@ a.btn--ghost:hover { border-color: var(--purple); }
   border: 1px solid var(--rule-strong);
 }
 .archive-filters a {
-  /* ink-mute on turquoise (the field this bar sits on, same as
+  /* ink-mute on the field (the ground this bar sits on, same as
    * .archive__date and .archive__action--disabled) measures 4.62 --
-   * clears AA. Purple fill on hover/current is white_on_purple, 12.74. */
+   * clears AA. The dominant fill on hover/current is white_on_dominant,
+   * 12.74. */
   color: var(--ink-mute);
 }
 .archive-filters a:hover {
   color: var(--white);
-  background: var(--purple);
-  border-color: var(--purple);
+  background: var(--dominant);
+  border-color: var(--dominant);
 }
 .archive-filters__current {
   color: var(--white);
-  background: var(--purple);
-  border-color: var(--purple);
+  background: var(--dominant);
+  border-color: var(--dominant);
   cursor: default;
 }
 
@@ -1029,16 +1032,16 @@ a.btn--ghost:hover { border-color: var(--purple); }
   margin-top: 5rem;
   position: relative;
   padding: 4rem 0;
-  background: var(--purple);
+  background: var(--dominant);
   color: var(--white);
   overflow: hidden;
 }
 .coda__loops {
-  /* Turquoise here rather than the ribbon's usual purple: the coda's own
-   * background *is* purple (.coda below), and a purple ribbon on a purple
-   * ground would not be visible. Still a instance/data/brand.json colour, never a
-   * hand-typed hex. */
-  stroke: var(--turquoise);
+  /* The field here rather than the ribbon's usual dominant: the coda's own
+   * background *is* the dominant (.coda below), and a ribbon in that same
+   * colour would not be visible on it. Still a instance/data/brand.json
+   * colour, never a hand-typed hex. */
+  stroke: var(--field);
   position: absolute;
   pointer-events: none;
   left: -2rem;
@@ -1072,7 +1075,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 }
 .coda__text em {
   font-style: normal;
-  color: var(--turquoise);
+  color: var(--field);
 }
 .coda .btn--ghost {
   color: var(--white);
@@ -1081,7 +1084,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 }
 .coda .btn--ghost:hover {
   background: var(--white);
-  color: var(--purple);
+  color: var(--dominant);
   border-color: var(--white);
 }
 
@@ -1104,8 +1107,8 @@ a.btn--ghost:hover { border-color: var(--purple); }
   max-width: 48ch;
 }
 .colophon__credit a {
-  color: var(--turquoise-d);
-  border-bottom-color: var(--turquoise);
+  color: var(--field-text);
+  border-bottom-color: var(--field);
 }
 .colophon__credit em { color: var(--ink-faint); font-style: italic; }
 .colophon__nav {
@@ -1122,7 +1125,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
   color: var(--ink-mute);
   border-bottom: 0;
 }
-.colophon__nav a:hover { color: var(--purple); }
+.colophon__nav a:hover { color: var(--dominant); }
 /* The licence notice: a full-width row under the credit and the navigation,
    set on the same --ink-mute over --surface pairing .colophon__credit and
    .colophon__nav already use, so it introduces no colour and no contrast
@@ -1142,14 +1145,14 @@ a.btn--ghost:hover { border-color: var(--purple); }
   letter-spacing: .04em;
 }
 .colophon__legal a {
-  color: var(--turquoise-d);
-  border-bottom-color: var(--turquoise);
+  color: var(--field-text);
+  border-bottom-color: var(--field);
 }
 
 @media (max-width: 640px) {
   .hero { padding: 3.5rem 0 3rem; }
   .section { padding: 2.5rem 0 1.5rem; }
-  .feature__rail { border-top: 3px solid var(--purple); padding-top: .5rem; }
+  .feature__rail { border-top: 3px solid var(--dominant); padding-top: .5rem; }
   .hero__loops { width: 60vw; right: -4rem; top: 50%; transform: translateY(-50%); }
   .masthead__loops { width: 30vw; left: -2.5rem; }
   .coda { margin-top: 3.5rem; padding: 3rem 0; }

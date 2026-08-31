@@ -24,8 +24,8 @@ function Shell({ children }: { children: ReactNode }) {
       <svg
         aria-hidden="true"
         viewBox="0 0 400 400"
-        /* stroke-accent, not a hex literal: --accent is instance/data/brand.json's
-           purple, generated into tokens.css by generate_brand_css.py. */
+        /* stroke-accent, not a hex literal: --accent is the charter's
+           dominant, generated into tokens.css by generate_brand_css.py. */
         className="absolute -right-20 top-10 w-[420px] max-w-[55vw] pointer-events-none opacity-90 stroke-accent"
         fill="none"
         strokeWidth="9"

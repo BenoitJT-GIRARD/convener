@@ -68,7 +68,7 @@ from generate_brand_css import (
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand, brand_templates, ribbon
+from convener_ops.publication import brand, brand_templates, ribbon, visual
 from convener_ops.publication.brand import (
     contrast_ratio,
     hex_to_rgb,
@@ -257,9 +257,8 @@ def test_hex_to_rgb_and_the_css_literals_built_from_it() -> None:
 
 def test_the_page_ground_is_the_field_not_white() -> None:
     """D-18: the showcase's ground is the field, crossed by the bands --
-    the inverse of the white-ground design it replaced. `--turquoise` is
-    the stylesheet's own name for the field, and holds whatever colour the
-    charter in force gives it.
+    the inverse of the white-ground design it replaced. `--field` holds
+    whatever colour the charter in force gives that position.
     `body`'s own background is the one declaration that
     carries it; a reversion to `--paper` would put the whole composition
     back the wrong way round without any generated-token test noticing,
@@ -268,42 +267,42 @@ def test_the_page_ground_is_the_field_not_white() -> None:
     """
     css = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
     block = _rule_block(css, "body")
-    assert "background: var(--turquoise);" in block
+    assert "background: var(--field);" in block
     assert "var(--paper)" not in block
 
 
 def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> None:
-    """Turning the ground turquoise (D-18) made several selectors move off
-    the white/paper ground they were designed against, onto one where their
-    old colour fails AA: turquoise-d on turquoise measures 3.81, ink-faint
-    on turquoise measures 3.51, and white on a turquoise fill measures 1.61
+    """Making the field the ground (D-18) moved several selectors off the
+    white/paper ground they were designed against, onto one where their
+    old colour fails AA: field-text on the field measures 3.81, ink-faint
+    on the field measures 3.51, and white on a field fill measures 1.61
     -- all below the 4.5 floor for normal text (`instance/data/brand.json`'s
     `_forbidden` note). Each of these selectors was moved to a colour that
     clears AA on whichever ground it can now appear on; this pins that each
     one stays off the value that would fail there again.
 
     `.archive__action:hover` joined this dict late: it was found early
-    (a solid turquoise fill under white text, 1.61 -- measured at 2.54 by
+    (a solid field fill under white text, 1.61 -- measured at 2.54 by
     a real browser) and deliberately left it, out of its own scope, for
-    the accessibility task to fix. That task moved it to the same purple
+    the accessibility task to fix. That task moved it to the same dominant
     fill `.archive__action--alt:hover` already used; this is the guard
     that keeps it from reverting.
     """
     css = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
     risky: dict[str, str] = {
-        "a": "var(--turquoise-d)",
-        ".hero__title em": "var(--turquoise-d)",
-        ".feature__vol": "var(--turquoise-d)",
+        "a": "var(--field-text)",
+        ".hero__title em": "var(--field-text)",
+        ".feature__vol": "var(--field-text)",
         ".archive__date": "var(--ink-faint)",
         ".archive__action--disabled": "var(--ink-faint)",
-        ".btn--primary": "var(--turquoise)",
-        ".archive__action:hover": "var(--turquoise)",
+        ".btn--primary": "var(--field)",
+        ".archive__action:hover": "var(--field)",
     }
     for selector, bad_value in risky.items():
         block = _rule_block(css, selector)
         assert bad_value not in block, (
             f"{selector} carries {bad_value}, which fails AA on the "
-            "turquoise field that is now the page's ground"
+            "field that is now the page's ground"
         )
 
 
@@ -477,7 +476,7 @@ def test_a_hand_edited_generated_token_makes_check_fail(
     assert main([]) == 0
     css_path = fake_repo / SITE_CSS_PATH
     text = css_path.read_text(encoding="utf-8")
-    mutated = text.replace("--purple:       #012765;", "--purple:       #000000;")
+    mutated = text.replace("--dominant:       #012765;", "--dominant:       #000000;")
     assert mutated != text
     css_path.write_text(mutated, encoding="utf-8")
     assert main(["--check"]) == 1
@@ -1441,6 +1440,75 @@ def test_the_two_keys_that_do_name_a_hue_hold_it(rel: Path) -> None:
             f"{rel.as_posix()}: colour.{name} holds {colours[name]}, so the "
             "name no longer says what the value is"
         )
+
+
+# --------------------------------------------------------------------------
+# Nor does any custom property the stylesheets declare
+# --------------------------------------------------------------------------
+
+#: Every stylesheet this repository generates, read whole rather than
+#: between its markers: the generated block is part of the file, and a hue
+#: typed into the hand-authored half would be the same wrong name one
+#: splice away from the same reader.
+_GENERATED_STYLESHEETS = (SITE_CSS_PATH, APP_TOKENS_CSS_PATH)
+
+#: A custom property being declared -- `--name:` at the head of a
+#: declaration, not `var(--name)` where one is read.
+_DECLARED_PROPERTY = re.compile(r"(--[a-z][a-z0-9-]*)\s*:")
+
+#: `/* ... */`, dropped before the sweep so that a comment quoting a
+#: declaration is prose rather than a declaration.
+_CSS_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+
+
+def _declared_properties(css: str) -> list[str]:
+    return _DECLARED_PROPERTY.findall(_CSS_COMMENT.sub(" ", css))
+
+
+def _stylesheet_sources() -> dict[str, str]:
+    """The CSS this repository writes: the two committed stylesheets, and
+    the poster page's own `:root` block, which `visual.py` derives from the
+    same charter under the same names."""
+    sources = {
+        rel.as_posix(): (ROOT / rel).read_text(encoding="utf-8")
+        for rel in _GENERATED_STYLESHEETS
+    }
+    sources["convener_ops/publication/visual.py::_root_css_block"] = (
+        visual._root_css_block(brand.colours(brand.load(ROOT)))
+    )
+    return sources
+
+
+@pytest.mark.parametrize("name", sorted(_stylesheet_sources()))
+def test_no_custom_property_in_a_generated_stylesheet_names_a_hue(
+    name: str,
+) -> None:
+    """The same rule the charter keys are held to, one step downstream.
+
+    A stylesheet ships to every duplicate, and each duplicate reads it
+    against its own palette. `--purple` fed `colour.dominant` for as long
+    as one charter existed; the product's own charter holds a navy there
+    and the worked example a moss green, so the name told three readers
+    three different untruths from one line of CSS. The showcase says
+    `--field` and `--dominant` now, the cockpit `--primary` and
+    `--accent`: two vocabularies, both of positions, neither of hues.
+    """
+    properties = _declared_properties(_stylesheet_sources()[name])
+    assert properties, f"{name} declares no custom property to check"
+    for prop in properties:
+        for word in prop.lstrip("-").split("-"):
+            if word in _ACHROMATIC:
+                # `--white`, `--white-rgb`, `--black`. Exempt for the
+                # reason `test_the_two_keys_that_do_name_a_hue_hold_it`
+                # checks rather than asserts: each is fed the charter key
+                # of the same name, and that key holds the colour it names
+                # in every charter.
+                continue
+            assert word not in _HUE_WORDS, (
+                f"{name}: the custom property {prop!r} names the hue "
+                f"{word!r}; a duplicate reads this stylesheet against its "
+                "own palette, where the name holds a different colour"
+            )
 
 
 def test_a_charter_still_naming_its_colours_after_hues_is_refused(

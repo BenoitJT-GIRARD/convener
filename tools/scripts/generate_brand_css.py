@@ -226,45 +226,46 @@ def _splice(current: str, inner: str) -> str:
 #: was added here to avoid -- so they generate from `_DANGER`/`_INFO` below,
 #: same as `app/src/design/tokens.css`'s own two, rather than being retyped.
 _SITE_ROOT_TEMPLATE: Final = """\
-  /* Grounds: turquoise is the field, cream runs across it in bands, white
+  /* Grounds: the field fills the page, the bands run across it, white
    * appears only inside photographic frames. */
-  --paper:        {white};
-  --surface:      {band};
-  --surface-2:    {field};
+  --paper:          {white};
+  --surface:        {band};
+  --surface-2:      {field};
 
   /* Text: warm, never slate -- the warmth is the single thing that most
-   * distinguishes this identity from a generic purple-and-teal one. */
-  --ink:          {ink};
-  --ink-mute:     {ink_muted};
-  --ink-faint:    {ink_faint};
+   * distinguishes this identity from a palette assembled out of defaults. */
+  --ink:            {ink};
+  --ink-mute:       {ink_muted};
+  --ink-faint:      {ink_faint};
 
-  /* The plain turquoise value is a GROUND and must never carry text.
-   * turquoise-d is the readable variant, for links and text accents. */
-  --turquoise:    {field};
-  --turquoise-d:  {field_text};
-  --turquoise-l:  {field_tint};
+  /* The plain field value is a GROUND and must never carry text.
+   * field-text is the readable variant, for links and text accents. */
+  --field:          {field};
+  --field-text:     {field_text};
+  --field-tint:     {field_tint};
 
-  --purple:       {dominant};
-  --purple-d:     {dominant_hover};
-  --purple-l:     {dominant_tint};
+  --dominant:       {dominant};
+  --dominant-hover: {dominant_hover};
+  --dominant-tint:  {dominant_tint};
 
   /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. Measured against
-   * this file's own --surface (cream), the certificate-verification panel's
-   * ground: see instance/data/brand.json's contrast._comment for both numbers. */
-  --danger:       {danger};
-  --info:         {info};
+   * this file's own --surface (the band), the certificate-verification
+   * panel's ground: see instance/data/brand.json's contrast._comment for
+   * both numbers. */
+  --danger:         {danger};
+  --info:           {info};
 
   /* Rules and borders only -- never text. */
-  --rule:         {rule};
-  --rule-strong:  {rule_strong};
-  --select:       {select};
+  --rule:           {rule};
+  --rule-strong:    {rule_strong};
+  --select:         {select};
 
   /* White as a foreground/border role, distinct in name from --paper (the
    * ground) though currently the same value: text and a border drawn on a
    * coloured background need "white" as a role of its own. */
-  --white:        {white};
-  --white-rgb:    {white_rgb};
+  --white:          {white};
+  --white-rgb:      {white_rgb};
 """
 
 
@@ -299,9 +300,15 @@ def render_site_css(root: Path) -> str:
 
 
 #: `app/src/design/tokens.css`'s tokens. Same variable *names* the file
-#: already declared -- `tailwind.config.ts` reads them by name, and renaming
-#: would be a second change wearing this one's clothes -- but every value
-#: corrected from the reconstruction's palette to `instance/data/brand.json`'s.
+#: already declared, and every value read from the charter in force.
+#: The names differ from `site/src/style.css`'s: the cockpit says
+#: `--primary`/`--accent` where the showcase says `--field`/`--dominant`.
+#: Both are positions rather than hues, so neither can come to name a
+#: colour it does not hold, and the cockpit's pair is a Tailwind
+#: vocabulary as much as a CSS one -- `tailwind.config.ts` turns each into
+#: a colour key, and every `bg-primary` and `text-accent` across the
+#: application reads it. Bringing the two into one vocabulary is a change
+#: to the cockpit, not to the charter.
 _APP_ROOT_TEMPLATE: Final = """\
   --paper:         {white};
   --paper-soft:    {band};

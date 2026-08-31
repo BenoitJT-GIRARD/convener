@@ -36,7 +36,7 @@
     "dominant_hover": "#011f51",
     "dominant_tint": "#d8dde7",
     "rule_strong": "#b18f9b",
-    "_dominant_hover": "The one value not set by matching a luminance. The dominant's own hover state is barely a luminance step in the charter this rule was taken from (0.0324 to 0.0314), and copying that proportion onto a navy already at 0.0240 would have rounded to the navy itself -- a hover state indistinguishable from its rest state, which is not a state. It is the dominant a fifth of the way to black instead: 15.96 against white, against 14.19 at rest, and it is only ever a filled background (`--purple-d`, `--accent-hover`), never text.",
+    "_dominant_hover": "The one value not set by matching a luminance. The dominant's own hover state is barely a luminance step in the charter this rule was taken from (0.0324 to 0.0314), and copying that proportion onto a navy already at 0.0240 would have rounded to the navy itself -- a hover state indistinguishable from its rest state, which is not a state. It is the dominant a fifth of the way to black instead: 15.96 against white, against 14.19 at rest, and it is only ever a filled background (`--dominant-hover`, `--accent-hover`), never text.",
     "_coral": "The measured coral #fd6b52 is the source of `field`, `field_tint` and `field_text` and appears raw in none of them, which is not an oversight: at 2.84 on white it can be neither text nor a light ground, and every token in this system is one or the other. It keeps its own role where that role is safe -- the accent on the ink, in the mark itself (`brand/convener/convener-mark.svg`), in the `motif` below -- the only place in this file it appears unmixed -- and in whatever `motif` an instance writes in its place."
   },
 

@@ -2,10 +2,10 @@
 
 `docs/handbook/assets/example_and_template_initial_assets/announcement-template_initial.png`
 (gitignored -- it carries a real person's photograph) is the designer's
-own template. Reading it pixel by pixel, top to bottom: a cream band carrying the
-wordmark; the series title in heavy purple caps on turquoise; a two-line
-invitation to the discussion; a second cream band carrying the talk's own
-title; a purple date line; a "WHAT TO EXPECT?" block; a white, tilted
+own template. Reading it pixel by pixel, top to bottom: a band carrying the
+wordmark; the series title in heavy dominant caps on the field; a two-line
+invitation to the discussion; a second band carrying the talk's own
+title; a date line in the dominant; a "WHAT TO EXPECT?" block; a white, tilted
 photographic frame with the speaker's name along its lower edge; a
 "REGISTER HERE" label over a QR code; and the ribbon running over
 everything, off every edge.
@@ -37,7 +37,7 @@ site's and the app's own generators read, rather than importing either
 generator across a boundary this project does not build tooling to cross.
 The variable names below are deliberately the ones
 `generate_brand_css.render_site_root_block` already writes into
-`site/src/style.css` (`--purple`, `--surface`, `--turquoise-d`, ...) so
+`site/src/style.css` (`--dominant`, `--surface`, `--field-text`, ...) so
 that a reader who knows the showcase's own tokens recognises this page's
 CSS on sight -- not because the two are the same generated file (they are
 not: two independent readers of one JSON source, which is what D-16 asks
@@ -88,19 +88,19 @@ the code rather than in the abstract:
   independently: "dominant: Headlines, ribbon, wordmark. The dominant
   colour, **not an accent**."
 
-What is actually lost is one word: `.accent2` resolved to `var(--purple)`,
+What is actually lost is one word: `.accent2` resolved to `var(--dominant)`,
 which is the colour `.wordmark-text` already inherits, so the "two-tone"
-treatment rendered as a single turquoise `The` in an otherwise purple
+treatment rendered as a single `The` in the same colour as the rest of the
 line -- not two colours meeting. The device to its left (`_WORDMARK_LOGO_SVG`)
-is untouched: it is drawn from the charter's own `--purple` and
-`--turquoise` -- not from `motif`, which only the two downloadable
+is untouched: it is drawn from the charter's own `--dominant` and
+`--field` -- not from `motif`, which only the two downloadable
 templates read for their wordmark -- and it carries no name.
 
 The ribbon itself is never redrawn here. `ribbon_path`, `ribbon_stroke_colour`
 and `ribbon_stroke_width` (`ribbon.py`) are called with this
 composition's exact canvas size and painted as the last element in the
 document, so it always sits on top -- exactly what the reference shows:
-the purple stroke crosses over the lower "WHAT TO EXPECT?" text near the
+the stroke crosses over the lower "WHAT TO EXPECT?" text near the
 left edge in the designer's own poster, not behind it.
 
 Why a safe area, and why derived rather than hand-typed
@@ -418,22 +418,22 @@ def _load_colours(root: Path) -> dict[str, str]:
 #: `instance/data/brand.json`, not an import of the generator.
 def _root_css_block(colours: dict[str, str]) -> str:
     return f"""\
-  --paper:        {colours["white"]};
-  --surface:      {colours["band"]};
-  --surface-2:    {colours["field"]};
-  --ink:          {colours["ink"]};
-  --ink-mute:     {colours["ink_muted"]};
-  --ink-faint:    {colours["ink_faint"]};
-  --turquoise:    {colours["field"]};
-  --turquoise-d:  {colours["field_text"]};
-  --turquoise-l:  {colours["field_tint"]};
-  --purple:       {colours["dominant"]};
-  --purple-d:     {colours["dominant_hover"]};
-  --purple-l:     {colours["dominant_tint"]};
-  --rule:         {colours["rule"]};
-  --rule-strong:  {colours["rule_strong"]};
-  --white:        {colours["white"]};
-  --black:        {colours["black"]};
+  --paper:          {colours["white"]};
+  --surface:        {colours["band"]};
+  --surface-2:      {colours["field"]};
+  --ink:            {colours["ink"]};
+  --ink-mute:       {colours["ink_muted"]};
+  --ink-faint:      {colours["ink_faint"]};
+  --field:          {colours["field"]};
+  --field-text:     {colours["field_text"]};
+  --field-tint:     {colours["field_tint"]};
+  --dominant:       {colours["dominant"]};
+  --dominant-hover: {colours["dominant_hover"]};
+  --dominant-tint:  {colours["dominant_tint"]};
+  --rule:           {colours["rule"]};
+  --rule-strong:    {colours["rule_strong"]};
+  --white:          {colours["white"]};
+  --black:          {colours["black"]};
 """
 
 
@@ -615,19 +615,19 @@ def _num(value: float) -> str:
 #: was never named as the part of the identity that had drifted (D-16
 #: names the palette; the correction named the ribbon
 #: specifically as "the only part of the identity that was ever in
-#: doubt"), so it is redrawn here as a plain evocation -- two turquoise
-#: squares on a diagonal, two purple dots joined by a short curved
-#: lead -- rather than measured stroke by stroke.
+#: doubt"), so it is redrawn here as a plain evocation -- two squares in
+#: the field's colour on a diagonal, two dots in the dominant joined by a
+#: short curved lead -- rather than measured stroke by stroke.
 _WORDMARK_LOGO_SVG: Final = """\
 <svg class="wordmark-logo" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-  <rect x="1" y="1" width="14" height="14" fill="var(--turquoise)"/>
-  <rect x="17" y="17" width="14" height="14" fill="var(--turquoise)"/>
-  <path d="M9 15 V22 Q9 26 13 26 H24" fill="none" stroke="var(--purple)"
+  <rect x="1" y="1" width="14" height="14" fill="var(--field)"/>
+  <rect x="17" y="17" width="14" height="14" fill="var(--field)"/>
+  <path d="M9 15 V22 Q9 26 13 26 H24" fill="none" stroke="var(--dominant)"
         stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M24 26 V19 Q24 15 28 15 H33" fill="none" stroke="var(--purple)"
+  <path d="M24 26 V19 Q24 15 28 15 H33" fill="none" stroke="var(--dominant)"
         stroke-width="2.6" stroke-linecap="round"/>
-  <circle cx="9" cy="26" r="3.6" fill="var(--purple)"/>
-  <circle cx="24" cy="26" r="3.6" fill="var(--purple)"/>
+  <circle cx="9" cy="26" r="3.6" fill="var(--dominant)"/>
+  <circle cx="24" cy="26" r="3.6" fill="var(--dominant)"/>
   <circle cx="9" cy="26" r="1.2" fill="var(--surface)"/>
   <circle cx="24" cy="26" r="1.2" fill="var(--surface)"/>
 </svg>
@@ -1161,8 +1161,8 @@ def render_announcement(
     margin: 0;
     font-size: 2.6vw;
     font-weight: 800;
-    color: var(--purple);
-    border-bottom: 0.18vmin solid var(--purple);
+    color: var(--dominant);
+    border-bottom: 0.18vmin solid var(--dominant);
     padding-bottom: 0.4vmin;
   }}
 
@@ -1172,7 +1172,7 @@ def render_announcement(
     font-size: 4vw;
     line-height: 1.05;
     font-weight: 800;
-    color: var(--purple);
+    color: var(--dominant);
     text-transform: uppercase;
     text-align: center;
   }}
@@ -1192,7 +1192,7 @@ def render_announcement(
     margin: 0;
     text-align: center;
     font-weight: 800;
-    color: var(--purple);
+    color: var(--dominant);
     overflow-wrap: anywhere;
     line-height: 1.2;
   }}
@@ -1203,7 +1203,7 @@ def render_announcement(
     text-align: center;
     font-size: 2vw;
     font-weight: 800;
-    color: var(--purple);
+    color: var(--dominant);
   }}
 
   .content {{
@@ -1236,7 +1236,7 @@ def render_announcement(
     color: var(--black);
   }}
   .expect__row strong {{
-    color: var(--purple);
+    color: var(--dominant);
     text-transform: uppercase;
   }}
 
@@ -1257,7 +1257,7 @@ def render_announcement(
   .frame__photo {{
     width: 100%;
     aspect-ratio: 4 / 3;
-    background: var(--turquoise-l);
+    background: var(--field-tint);
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -1275,7 +1275,7 @@ def render_announcement(
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--purple);
+    color: var(--dominant);
   }}
   .frame__placeholder span {{ font-size: 9vmin; font-weight: 800; }}
   .frame__caption {{
