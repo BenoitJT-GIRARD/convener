@@ -11,6 +11,14 @@
   is the document — opened on its own, or loaded through `<img>`. Inlined into a
   page, it does not match, and inheritance decides.
 
+  The dark-scheme rule beside it is that same sentence for the one surface that
+  renders this file as a document and cannot be told what colour to use: a
+  browser tab. `app/scripts/copy-mark.mjs` makes this file the cockpit's own
+  favicon, and navy on a dark tab strip (#202124 in Chrome's own dark theme)
+  measures 1.13:1 — not low contrast, invisible. White there measures 16.1:1.
+  Nothing that inlines the mark is affected, because `svg:root` does not match
+  when it is inlined.
+
   The mark is measured, not traced: radii, stroke widths and one 81° opening read
   off the original raster and rebuilt as two arcs and a circle. It overlaid that
   raster exactly.
@@ -25,7 +33,10 @@
   Navy #012765 on white is 14.23:1. README.md carries both measurements.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
-  <style>svg:root { color: #012765 }</style>
+  <style>
+    svg:root { color: #012765 }
+    @media (prefers-color-scheme: dark) { svg:root { color: #fff } }
+  </style>
   <title id="t">Convener</title>
   <g fill="none" stroke="currentColor" stroke-linecap="butt">
     <path d="M 413.54 388.19 A 205.66 205.66 0 1 1 413.54 123.81" stroke-width="68.69"/>

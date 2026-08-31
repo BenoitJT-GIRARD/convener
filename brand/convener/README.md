@@ -36,10 +36,17 @@ in**, so one file serves a white page and a near-black one.
   inherits the page's text colour, usually black. That is the trade: it follows
   any ground, and in exchange the page has to say which.
 - **Opened on its own, or loaded through an image tag** — a
-  `svg:root { color: #012765 }` rule inside each file makes it navy.
+  `svg:root { color: #012765 }` rule inside each file makes it navy, and a
+  `prefers-color-scheme: dark` rule beside it makes it white.
 
 `svg:root` matches only when the file *is* the document. An attribute would win
 over inheritance instead, and the mark would stay navy on a dark ground.
+
+The dark-scheme half of that rule is there for the one surface that renders the
+file as a document and cannot be told what colour to use: a browser tab. The
+mark is the cockpit's own favicon (`app/scripts/copy-mark.mjs`), and navy on
+Chrome's own dark tab strip — `#202124` — measures **1.13:1**. White there
+measures **16.1:1**.
 
 ## The palette
 

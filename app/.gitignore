@@ -3,6 +3,7 @@ dist
 .vite
 coverage
 public/fonts
+public/favicon.svg
 public/docs
 public/keys
 public/certificates.json

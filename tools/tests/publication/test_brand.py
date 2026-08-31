@@ -333,6 +333,177 @@ def test_no_brand_colour_is_hand_typed_in_the_ribbon_templates() -> None:
         )
 
 
+#: A colour written out rather than read from somewhere: a hex literal, an
+#: `rgb()`/`hsl()` function, or one of the wide-gamut forms a design tool
+#: exports beside a hex. The last is not a curiosity -- the icon this sweep
+#: was written for carried `fill:#863bff` *and*
+#: `fill:color(display-p3 .5252 .23 1)` on the same element, so a sweep
+#: that read only the hex would have found half of it.
+_COLOUR_LITERAL = re.compile(
+    r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|color)\s*\(", re.IGNORECASE
+)
+
+#: The one directory whose `.svg` files may write a colour out: the
+#: product's own artwork. A mark's ink is not a copy of a declared value,
+#: it *is* the declaration -- `brand/convener/brand.json` reads its own
+#: `motif.logo_dots` off `convener-mark.svg`'s coral circle, and
+#: `brand/convener/README.md` carries the contrast measurements for both.
+#: There is nowhere further upstream for those two values to come from,
+#: which is exactly what makes every other `.svg` in the repository a copy
+#: of something if it carries one.
+_ARTWORK_DIR = Path("brand")
+
+#: And the three files a generator writes from the charter, whose every
+#: colour is a substituted value that `generate_brand_css.py --check` holds
+#: to `instance/data/brand.json` character for character. They are full of
+#: literals and none of them was typed.
+_GENERATED_SVGS = frozenset(
+    {ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH, BACKGROUND_SVG_PATH}
+)
+
+
+def _tracked_svgs() -> list[Path]:
+    """Every `.svg` this repository ships, as git holds them.
+
+    `git ls-files` rather than a directory walk, for two reasons that both
+    bite: a build copies the product's mark into `app/public/favicon.svg`,
+    which is ignored and would otherwise be swept as though it were a
+    committed file; and a scratch drawing in somebody's working copy is not
+    something this repository publishes.
+    """
+    listed = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", "*.svg"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    return sorted(Path(name) for name in listed)
+
+
+def test_the_sweep_over_committed_drawings_finds_the_drawings() -> None:
+    """A sweep that found nothing would pass for free."""
+    found = _tracked_svgs()
+    assert len(found) >= 4
+    assert Path("brand/convener/convener-mark.svg") in found
+
+
+@pytest.mark.parametrize("rel", _tracked_svgs(), ids=lambda rel: rel.as_posix())
+def test_no_committed_drawing_writes_a_colour_out(rel: Path) -> None:
+    """Every `.svg` this repository ships takes its colours from
+    somewhere, or is the place they come from.
+
+    The defect this closes had shipped in every duplicate's browser tab:
+    `app/public/favicon.svg` was a hand-drawn bolt carrying `#863bff` and
+    a `color(display-p3)` variant of it, in no charter, in nobody's
+    declaration, and invisible to every check in this repository --
+    `generate_brand_css.py --check` knows the two stylesheets it writes,
+    and the sweeps above knew a list of files nobody had added it to. The
+    same scaffold left `app/public/icons.svg` beside it, two of its six
+    symbols drawn in `#aa3bff` from the same undeclared purple, referenced
+    by nothing and built into every bundle. Both are gone; the cockpit's
+    tab shows the product's own mark, copied from `brand/` at build time
+    (`app/scripts/copy-mark.mjs`).
+
+    Reading a list of files is what let it hide, so this reads the
+    repository instead. Two exemptions, and each is a statement rather
+    than a hole:
+
+    * a drawing under `brand/` is the product's own artwork, and its ink
+      is the source a charter reads rather than a copy of one;
+    * a drawing a generator writes is the charter's own values, held to
+      the charter character for character by `--check`.
+
+    Anything else that writes a colour out is writing down a value that
+    lives somewhere else, and this is where that stops.
+    """
+    if rel.parts[0] == _ARTWORK_DIR.name or rel in _GENERATED_SVGS:
+        return
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    found = _COLOUR_LITERAL.findall(text)
+    assert not found, (
+        f"{rel.as_posix()} writes a colour out ({len(found)} literal(s)). A "
+        "drawing this product ships takes its colours from a generated "
+        "token or from the charter; only the artwork under brand/ is where "
+        "a colour comes from, and only a generated file may carry the "
+        "charter's own values"
+    )
+
+
+def test_the_rule_catches_both_forms_the_removed_icon_carried() -> None:
+    """The sweep above has nothing left to refuse -- every drawing this
+    repository ships is now either the artwork colours come from or a file
+    a generator writes -- so the rule itself is exercised here rather than
+    left to be proved by whatever happens to be committed.
+
+    Both forms, because the icon carried both on one element: a design
+    tool exports a wide-gamut `color(display-p3 ...)` beside the hex it
+    falls back to, and a sweep reading only the hex would have called that
+    file clean the moment somebody deleted six characters.
+    """
+    bolt = (
+        '<path fill="#863bff" d="M0 0z" style="fill:#863bff;'
+        'fill:color(display-p3 .5252 .23 1)"/>'
+    )
+    assert _COLOUR_LITERAL.findall(bolt) == ["#863bff", "#863bff", "color("]
+    for written in ("rgb(1 2 3)", "rgba(1,2,3,.5)", "hsl(210 50% 40%)", "#FFF"):
+        assert _COLOUR_LITERAL.search(written), written
+    for taken in (
+        'fill="currentColor"',
+        'stroke="var(--dominant)"',
+        'fill="url(#gradient)"',
+        'class="motif"',
+    ):
+        assert not _COLOUR_LITERAL.search(taken), taken
+
+
+def test_the_cockpits_tab_icon_is_the_products_own_mark() -> None:
+    """Copied at build time rather than committed twice, so a tab icon
+    cannot drift from the artwork it is meant to be
+    (`docs/engineering/content-rules.md`: one notion, one home)."""
+    mark = ROOT / "brand" / "convener" / "convener-mark.svg"
+    script = (ROOT / "app" / "scripts" / "copy-mark.mjs").read_text(encoding="utf-8")
+    assert "convener-mark.svg" in script
+    assert "favicon.svg" in script
+    package = json.loads((ROOT / "app" / "package.json").read_text(encoding="utf-8"))
+    for stage in ("prebuild", "predev"):
+        assert "scripts/copy-mark.mjs" in package["scripts"][stage]
+    ignored = (ROOT / "app" / ".gitignore").read_text(encoding="utf-8").split()
+    assert "public/favicon.svg" in ignored
+    assert mark.is_file()
+
+
+def test_nothing_points_at_an_icon_this_repository_no_longer_ships() -> None:
+    """The other half of removing a file: a `<link>` or a `<use>` left
+    behind would ship a build asking for something that is not there.
+
+    Searched in the markup and the sources a browser is actually served,
+    not in the whole repository -- naming a removed file in prose is how a
+    reader finds out it was removed, and both this module and
+    `app/scripts/copy-mark.mjs` do exactly that.
+    """
+    listed = subprocess.run(  # nosec B603 B607
+        [
+            "git",
+            "grep",
+            "-l",
+            "icons.svg",
+            "--",
+            "app/index.html",
+            "app/src",
+            "site/src",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.split()
+    assert listed == []
+    index = (ROOT / "app" / "index.html").read_text(encoding="utf-8")
+    assert index.count('rel="icon"') == 1
+    assert 'href="/favicon.svg"' in index
+
+
 def test_the_reconstructions_palette_never_reappears() -> None:
     """The mutation this module exists to catch: `stroke="#3D2D7C"`
     restored in a ribbon, or any of the reconstruction's three values typed
