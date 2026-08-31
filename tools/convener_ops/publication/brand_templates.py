@@ -143,7 +143,7 @@ What that check proves is worth stating exactly, because it is not
 these declarations derive, character for character -- the names, the
 address, the palette, the motif's own weight, and the string inside the
 code. What it does not prove is anything about a rendering: that no glyph
-collides with the ribbon, that no line overflows the plate. The first is
+collides with the motif, that no line overflows the plate. The first is
 answered by construction (`motifs.safe_margins` places the plate inside
 the corridor the stroke leaves, at every stroke weight the charter might
 declare); the second by fitting each line's size to the plate it is set in
@@ -533,9 +533,9 @@ _ANNOUNCEMENT: Final = """\
     <rect y="0" width="{w}" height="168" fill="{band}"/>
     <rect y="400" width="{w}" height="146" fill="{band}"/>
 
-    <!-- The ribbon: one continuous stroke, running off three edges and
-         turning back on itself, in the charter's own motif colour and at
-         its own weight so neither can drift from it. It carries no text
+    <!-- The motif: the drawing the charter names, in the charter's own
+         motif colour and at its own weight so neither can drift from it,
+         painted before the words rather than over them. It carries no text
          and every word on this page is placed clear of it. Move or delete
          it freely; if you move a word instead, keep it out of the stroke,
          because a heavy line behind dark type is unreadable type. -->
@@ -613,8 +613,9 @@ _ANNOUNCEMENT: Final = """\
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
          offline generator, or in the app; then drop it over this square.
-         It sits where the ribbon's tail leaves it room, which is why the
-         slot is 180 and not the width of the margin beside it. -->
+         It sits in ground every motif this product draws leaves free,
+         which is why the slot is 180 and not the width of the margin
+         beside it. -->
     <text x="24" y="898" font-size="32" font-weight="800"
           fill="{black}">REGISTER</text>
     <text x="24" y="936" font-size="32" font-weight="800"
@@ -646,9 +647,9 @@ _FLYER: Final = """\
     <rect y="700" width="{w}" height="470" fill="{band}"/>
     <rect y="2760" width="{w}" height="210" fill="{band}"/>
 
-    <!-- The ribbon: one continuous stroke, running off the edges and
-         turning back on itself, in the charter's own motif colour and at
-         its own weight. It carries no text and every word on this page is
+    <!-- The motif: the drawing the charter names, in the charter's own
+         motif colour and at its own weight, painted before the words
+         rather than over them. It carries no text and every word here is
          placed clear of it. Move or delete it freely; if you move a word
          instead, keep it out of the stroke. -->
     <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
@@ -729,8 +730,9 @@ _FLYER: Final = """\
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
-         offline generator, then drop it over this square. It sits east of
-         the ribbon's tail, which crosses the foot of this page. -->
+         offline generator, then drop it over this square. It sits east
+         of the ground every motif this product draws keeps to on this
+         side of the page. -->
     <text x="600" y="2360" font-size="56" font-weight="800"
           fill="{black}">REGISTER HERE</text>
     <rect x="600" y="2400" width="360" height="340" fill="{white}"/>
@@ -937,10 +939,10 @@ _BACKGROUND: Final = """\
 {generated_note}
   <rect width="{w}" height="{h}" fill="{field}"/>
 
-  <!-- The ribbon: one continuous stroke, running off the edges and
-       turning back on itself, in the charter's own motif colour and at its
-       own weight. The plate below sits inside the corridor the stroke
-       leaves free, so no word is ever drawn across it. -->
+  <!-- The motif: the drawing the charter names, in the charter's own
+       motif colour and at its own weight. The plate below sits inside the
+       corridor the drawing leaves free, so no word is ever drawn across
+       it. -->
   <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
      stroke-linecap="round" stroke-linejoin="round">
     <path d="{motif}"/>

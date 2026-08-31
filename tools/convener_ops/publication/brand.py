@@ -20,7 +20,7 @@ stylesheet drifting away from the values -- that is the part with the
 engineering in it, and it ships with the code.
 
 **The token names are positions in the composition.** `dominant` is the
-ink the headlines, the ribbon and the wordmark are drawn in; `field` is
+ink the headlines, the motif and the wordmark are drawn in; `field` is
 the saturated ground that fills the page; `band` is the full-width
 horizontal bands laid across it. Three of them used to be `purple`,
 `turquoise` and `cream`, after the hues of the first palette anybody

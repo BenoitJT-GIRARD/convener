@@ -14,10 +14,10 @@
   freely as you like. -->
   <rect width="1920" height="1080" fill="#fecac1"/>
 
-  <!-- The ribbon: one continuous stroke, running off the edges and
-       turning back on itself, in the charter's own motif colour and at its
-       own weight. The plate below sits inside the corridor the stroke
-       leaves free, so no word is ever drawn across it. -->
+  <!-- The motif: the drawing the charter names, in the charter's own
+       motif colour and at its own weight. The plate below sits inside the
+       corridor the drawing leaves free, so no word is ever drawn across
+       it. -->
   <g fill="none" stroke="#012765" stroke-width="25.92"
      stroke-linecap="round" stroke-linejoin="round">
     <path d="M 114.48 0

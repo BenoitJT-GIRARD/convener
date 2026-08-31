@@ -75,12 +75,16 @@ Two things follow:
   composition: `dominant` holds the navy, `field` the coral ground, `band` the
   bands across it — see `brand.json`'s own `_names`.
 - **It carries a `motif`, and the motif is this mark taken apart.** The
-  ribbon's stroke is the navy; the wordmark's dots are the coral of the dot
-  above; the stroke weight is the proportion the inner arc is drawn at — 25.86
-  on a radius of 131.72, 0.196 of its own radius — carried onto the ribbon's
-  curls, which `tools/convener_ops/publication/motifs/ribbon.py` builds at radius 0.105 and 0.103
-  of the shorter side. That gives 0.0204, and it means a curl on a poster is
-  drawn at the weight this mark's own line is drawn at, at any size.
+  drawing is `bracket`: each of the two arcs above is struck on a circle, and
+  a bracket is that circle's own box with the same opening left in the side
+  the dot faces — a spine, two arms, and a return on each arm, straight
+  segments throughout, one bracket standing against each vertical edge of the
+  page (`tools/convener_ops/publication/motifs/bracket.py`). The stroke is the
+  navy; the wordmark's dots are the coral of the dot above; the stroke weight
+  is the proportion the outer arc is drawn at — 68.69 on a radius of 205.66,
+  0.334 of its own radius — carried onto the left bracket's own half-width,
+  0.061 of the shorter side. That gives 0.0204, and it means a bracket on a
+  poster is drawn at the weight this mark's own arc is drawn at, at any size.
 
 A duplicate that has configured no charter therefore builds against this one.
 What a duplicate has to supply is identity — an organisation's name, its

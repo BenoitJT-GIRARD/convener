@@ -8,15 +8,21 @@ charter can ask for, which reads at a glance as a family that exists; and a
 answered by drawing whichever family happens to be first, because a
 duplicate would then ship a mark it never asked for with nothing on the
 page to say so.
+
+A third rule sits at the foot of this file and is about the drawings
+themselves: one family is a continuous curve, and it is the one traced off
+an instance's own poster.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
+from typing import Final
 
 import pytest
 
-from convener_ops.publication import motifs
+from convener_ops.publication import brand_templates, formats, motifs
 
 #: The directory the registry is a table of.
 DIRECTORY = Path(motifs.__file__).parent
@@ -152,4 +158,79 @@ def test_safe_margins_hands_the_family_the_clearance_it_asked_for() -> None:
     for name, drawn in motifs.FAMILIES.items():
         assert motifs.safe_margins(name, 1200, 900, ratio=ratio) == drawn.margins(
             1200, 900, clearance=motifs.clearance(name, 1200, 900, ratio=ratio)
+        )
+
+
+# ---------------------------------------------------------------------------
+# One family is a continuous curve, and it is the one traced off a poster
+# ---------------------------------------------------------------------------
+
+#: Every SVG path command that draws a curve: cubic and smooth cubic,
+#: quadratic and smooth quadratic, and elliptical arc, in both cases.
+CURVE_COMMANDS: Final = frozenset("CSQTAcsqta")
+
+#: What a drawing made of straight segments may use instead: a move, a
+#: line, and the close that ends a subpath.
+STRAIGHT_COMMANDS: Final = frozenset("MLZmlz")
+
+#: The one family that is a continuous curve, and the reason the rule
+#: below has an exception at all. `ribbon.py` is traced pixel by pixel off
+#: one instance's own announcement poster, and being a single unbroken
+#: meandering stroke is the property of that trace -- so a second drawing
+#: built as a curve would read as a variant of somebody else's mark rather
+#: than as a charter of its own. Every other family is drawn from the
+#: product's own artwork, and none of them may be one.
+THE_TRACED_FAMILY: Final = motifs.RIBBON.name
+
+#: Every canvas this product actually draws a motif on: the three named
+#: publication formats, and the video-call background's own frame. The
+#: rule below is checked at each of them, because a drawing's own
+#: commands are a function of the canvas it is asked for.
+CANVASES: Final[tuple[tuple[float, float], ...]] = (
+    *((named.width, named.height) for named in formats.FORMATS),
+    (brand_templates._BACKGROUND_WIDTH, brand_templates._BACKGROUND_HEIGHT),
+)
+
+
+def commands(drawn: str) -> list[str]:
+    """Every path command letter in an SVG path `d`, in order."""
+    return re.findall(r"[A-Za-z]", drawn)
+
+
+def test_no_family_but_the_traced_one_draws_a_curve() -> None:
+    """The rule, at every canvas and on every family the registry holds.
+
+    A path whose only commands are `M` and `L` contains no curve: that is
+    what makes this checkable rather than a sentence in a plan. The
+    families this repository ships publicly are drawn from the product's
+    own artwork, and a curve is the one shape they may not take.
+    """
+    for name in sorted(motifs.FAMILIES):
+        if name == THE_TRACED_FAMILY:
+            continue
+        for width, height in CANVASES:
+            drawn = commands(motifs.path(name, width, height))
+            curves = sorted(set(drawn) & CURVE_COMMANDS)
+            assert curves == [], (
+                f"{name} draws {curves} on a {width:.0f}x{height:.0f} canvas. "
+                f"{THE_TRACED_FAMILY} is the only family that may be a curve, "
+                "because it is the only one traced off an instance's own mark"
+            )
+            unknown = sorted(set(drawn) - STRAIGHT_COMMANDS)
+            assert unknown == [], (
+                f"{name} draws {unknown} on a {width:.0f}x{height:.0f} canvas, "
+                f"which is neither a move nor a line. Only "
+                f"{sorted(STRAIGHT_COMMANDS)} say a segment is straight"
+            )
+
+
+def test_the_traced_family_does_draw_a_curve() -> None:
+    """The anchor under the rule above: with no family drawing a curve at
+    all, that rule would pass over a directory of empty paths and prove
+    nothing."""
+    for width, height in CANVASES:
+        drawn = set(commands(motifs.path(THE_TRACED_FAMILY, width, height)))
+        assert drawn & CURVE_COMMANDS, (
+            f"{THE_TRACED_FAMILY} is the family the rule above excepts, and "
+            f"it draws {sorted(drawn)} on a {width:.0f}x{height:.0f} canvas"
         )

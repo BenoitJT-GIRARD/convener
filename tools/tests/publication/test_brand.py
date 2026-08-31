@@ -76,6 +76,7 @@ from convener_ops.publication.brand import (
     rgb_triplet,
     rgba,
 )
+from convener_ops.publication.motifs import bracket
 
 ROOT = repo_root()
 
@@ -606,9 +607,9 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
 
     Every value is read back out of a file this repository already
     ships -- the two colours off `convener-mark.svg`, and the stroke
-    weight the same file draws its inner arc at, carried onto the two
-    curls `motifs/ribbon.py` builds. A default motif nobody can trace is exactly
-    what the refusal it replaced was afraid of.
+    weight the same file draws its outer arc at, carried onto the half-width
+    `motifs/bracket.py` draws the left bracket at. A default motif nobody
+    can trace is exactly what the refusal it replaced was afraid of.
     """
     section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
     instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
@@ -624,23 +625,22 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
     )
     colours = _charter_colours(brand.DEFAULT_PATH)
     assert section["stroke"] == colours["dominant"], (
-        "the ribbon is drawn in the charter's own dominant ink, which "
-        "`colour._roles` already names as the ribbon's colour"
+        "the motif is drawn in the charter's own dominant ink, which "
+        "`colour._roles` already names as the motif's colour"
     )
     assert str(section["logo_dots"]) in mark, (
         "the wordmark's dots are the colour of the dot in the mark itself"
     )
 
-    inner_stroke, inner_radius = 25.86, 131.72
-    for radius in (0.105, 0.103):
-        carried = inner_stroke / inner_radius * radius
-        assert abs(section["width_ratio"] - carried) / carried < 0.011, (
-            "the stroke weight is the mark's inner arc, at the size the "
-            "ribbon draws it: the midpoint of what the two curls give, "
-            "1.0 percent from one and 0.9 percent from the other"
-        )
-    assert f'stroke-width="{inner_stroke}"' in mark
-    assert f"A {inner_radius} " in mark
+    outer_stroke, outer_radius = 68.69, 205.66
+    carried = outer_stroke / outer_radius * bracket._OUTER_HALF_WIDTH
+    assert abs(section["width_ratio"] - carried) / carried < 0.005, (
+        "the stroke weight is the mark's outer arc, at the size the motif "
+        "draws it: 0.334 of a radius, carried onto the left bracket's own "
+        "half-width, within half a percent"
+    )
+    assert f'stroke-width="{outer_stroke}"' in mark
+    assert f"A {outer_radius} " in mark
 
 
 def test_the_default_palette_is_not_this_instances_wearing_a_new_name() -> None:
@@ -1298,16 +1298,20 @@ def test_a_long_name_on_the_background_shrinks_instead_of_overflowing() -> None:
 _LABEL_BAND = brand_templates._CODE_LABEL_BASELINES[0] + brand_templates._CODE_LABEL_CAP
 
 
-def _sampled_ribbon(width: float, height: float) -> list[tuple[float, float]]:
-    """Points on the rendered ribbon, not the waypoints it is fitted to.
+def _sampled_motif(
+    family: str, width: float, height: float
+) -> list[tuple[float, float]]:
+    """Points on the rendered drawing, not the waypoints it is fitted to.
 
     `motifs.safe_margins` answers from the waypoints, which is the right
-    place to *derive* a margin from; this walks the cubics that are
-    actually drawn, so the test below is a check on the composition rather
-    than a restatement of the arithmetic that placed it.
+    place to *derive* a margin from; this walks the segments that are
+    actually drawn, so the tests below are a check on the composition
+    rather than a restatement of the arithmetic that placed it. Both kinds
+    of segment this product draws are walked: the ribbon's cubics, and the
+    straight lines every other family is made of.
     """
     commands: list[tuple[str, list[float]]] = []
-    for line in motifs.path(motifs.RIBBON.name, width, height).splitlines():
+    for line in motifs.path(family, width, height).splitlines():
         parts = line.split()
         commands.append((parts[0], [float(value) for value in parts[1:]]))
     points: list[tuple[float, float]] = []
@@ -1316,6 +1320,18 @@ def _sampled_ribbon(width: float, height: float) -> list[tuple[float, float]]:
         if kind == "M":
             current = (numbers[0], numbers[1])
             points.append(current)
+            continue
+        if kind == "L":
+            end = (numbers[0], numbers[1])
+            for step in range(1, 41):
+                t = step / 40
+                points.append(
+                    (
+                        current[0] + (end[0] - current[0]) * t,
+                        current[1] + (end[1] - current[1]) * t,
+                    )
+                )
+            current = end
             continue
         c1 = (numbers[0], numbers[1])
         c2 = (numbers[2], numbers[3])
@@ -1387,11 +1403,43 @@ def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
         for box in boxes
     ]
 
-    for x, y in _sampled_ribbon(width, height):
+    for x, y in _sampled_motif(brand.motif_family(ROOT), width, height):
         for x0, y0, x1, y1 in boxes:
             assert not (x0 - half < x < x1 + half and y0 - half < y < y1 + half), (
-                f"the ribbon crosses ({x0:.0f}, {y0:.0f})-({x1:.0f}, {y1:.0f}) "
+                f"the motif crosses ({x0:.0f}, {y0:.0f})-({x1:.0f}, {y1:.0f}) "
                 f"at ({x:.1f}, {y:.1f})"
+            )
+
+
+def test_no_family_draws_across_the_code_this_background_sets() -> None:
+    """The plate moves with the margins the family gives, so a family can
+    never be drawn across it. The code's slot does not: it sits at a fixed
+    distance from the bottom right corner, measured off the original, and
+    nothing about it is derived from the drawing beside it.
+
+    So the clearance the slot has is a property of each family rather than
+    of the composition, and every family a charter may name is held to it
+    here -- a stroke across a symbol whose whole job is to be scanned
+    destroys modules no error correction was sized for.
+    """
+    width, height = (
+        brand_templates._BACKGROUND_WIDTH,
+        brand_templates._BACKGROUND_HEIGHT,
+    )
+    box = (
+        width - brand_templates._CODE_RIGHT_GAP - brand_templates._CODE_SIDE,
+        height - brand_templates._CODE_BOTTOM_GAP - brand_templates._CODE_SIDE,
+    )
+    top = box[1] - _LABEL_BAND
+
+    for name in sorted(motifs.FAMILIES):
+        half = motifs.stroke_width(width, height, ratio=0.03) / 2
+        for x, y in _sampled_motif(name, width, height):
+            if not (0.0 <= x <= width and 0.0 <= y <= height):
+                continue  # the ribbon's connector, drawn well off the page
+            assert not (x > box[0] - half and y > top - half), (
+                f"{name} reaches ({x:.1f}, {y:.1f}), inside the corner the "
+                f"code and its label occupy from ({box[0]:.0f}, {top:.0f})"
             )
 
 

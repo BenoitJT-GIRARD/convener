@@ -19,9 +19,9 @@
     <rect y="700" width="2100" height="470" fill="#f4f0f1"/>
     <rect y="2760" width="2100" height="210" fill="#f4f0f1"/>
 
-    <!-- The ribbon: one continuous stroke, running off the edges and
-         turning back on itself, in the charter's own motif colour and at
-         its own weight. It carries no text and every word on this page is
+    <!-- The motif: the drawing the charter names, in the charter's own
+         motif colour and at its own weight, painted before the words
+         rather than over them. It carries no text and every word here is
          placed clear of it. Move or delete it freely; if you move a word
          instead, keep it out of the stroke. -->
     <g fill="none" stroke="#012765" stroke-width="50.4"
@@ -144,8 +144,9 @@
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
-         offline generator, then drop it over this square. It sits east of
-         the ribbon's tail, which crosses the foot of this page. -->
+         offline generator, then drop it over this square. It sits east
+         of the ground every motif this product draws keeps to on this
+         side of the page. -->
     <text x="600" y="2360" font-size="56" font-weight="800"
           fill="#000000">REGISTER HERE</text>
     <rect x="600" y="2400" width="360" height="340" fill="#ffffff"/>

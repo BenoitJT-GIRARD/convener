@@ -14,7 +14,7 @@
     "black": "#000000",
 
     "_roles": {
-      "dominant": "Headlines, ribbon, wordmark. The dominant colour, not an accent.",
+      "dominant": "Headlines, motif, wordmark. The dominant colour, not an accent.",
       "field": "A ground. Never a text colour on white or on a band.",
       "band": "Full-width horizontal bands laid across the field.",
       "ink": "Primary text.",
@@ -64,11 +64,11 @@
   },
 
   "motif": {
-    "family": "ribbon",
+    "family": "bracket",
     "stroke": "#0a4a2a",
     "width_ratio": 0.03,
     "logo_dots": "#e8ca6f",
-    "_motif": "A drawing named, and the ink it is drawn in: which family the composition wants, a stroke colour, how wide that stroke is drawn as a fraction of the composition's shorter side, and the colour of the wordmark's dots. The product ships a set of its own, so no duplicate has to write these; this one writes them because it stands for a duplicate that did."
+    "_motif": "A drawing named, and the ink it is drawn in: which family the composition wants, a stroke colour, how wide that stroke is drawn as a fraction of the composition's shorter side, and the colour of the wordmark's dots. The product ships a set of its own, so no duplicate has to write these; this one writes them because it stands for a duplicate that did. The family is the product's -- `bracket`, the product's own mark drawn in straight segments -- because the drawing is the one part of a motif a duplicate has nothing of its own to put in: `ribbon` is traced off the poster of the instance that runs this repository and stays with it."
   },
 
   "layout": {}

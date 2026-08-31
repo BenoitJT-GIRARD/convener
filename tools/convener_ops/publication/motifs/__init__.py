@@ -37,9 +37,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-from . import ribbon
+from . import bracket, ribbon
 
 __all__ = [
+    "BRACKET",
     "FAMILIES",
     "RIBBON",
     "Family",
@@ -104,7 +105,10 @@ class Family:
     clearance_stroke_widths: float
 
 
-#: The charter's ribbon, and until now the only drawing there was.
+#: The ribbon: one continuous stroke, traced off one instance's own
+#: announcement poster. A charter naming it is drawn with that instance's
+#: mark, which is why the charters this repository ships publicly name the
+#: family below instead.
 RIBBON: Final = Family(
     name="ribbon",
     fields=("stroke", "width_ratio"),
@@ -113,12 +117,26 @@ RIBBON: Final = Family(
     clearance_stroke_widths=ribbon.CLEARANCE_STROKE_WIDTHS,
 )
 
+#: The product's own mark in straight segments -- what `brand/convener/
+#: brand.json` and `instances/example/` are drawn with, and what a
+#: duplicate that has chosen no charter of its own gets.
+BRACKET: Final = Family(
+    name="bracket",
+    fields=("stroke", "width_ratio"),
+    path=bracket.path,
+    margins=bracket.margins,
+    clearance_stroke_widths=bracket.CLEARANCE_STROKE_WIDTHS,
+)
+
 #: Every family, by the name a charter names it. Written out rather than
 #: discovered by walking the directory: a name a charter may write is part
 #: of the product's own contract, and `tests/publication/motifs/
 #: test_registry.py` is what holds this table and the directory to each
 #: other.
-FAMILIES: Final[dict[str, Family]] = {RIBBON.name: RIBBON}
+FAMILIES: Final[dict[str, Family]] = {
+    RIBBON.name: RIBBON,
+    BRACKET.name: BRACKET,
+}
 
 
 def names() -> str:

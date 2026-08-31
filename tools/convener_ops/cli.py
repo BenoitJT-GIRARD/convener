@@ -5513,7 +5513,7 @@ def render_visual_fixtures() -> int:
 
     - **the images carry no real instance's identity.** They pin what
       `visual.py` *renders* -- the geometry, the glyph shapes, the QR
-      modules, the ribbon's stroke against its ground -- and an invented
+      modules, the motif's stroke against its ground -- and an invented
       charter pins all of that exactly as well as a real one. The
       designer of this instance's charter declined to have it ship with
       the product; this is the byte-level half of honouring that.

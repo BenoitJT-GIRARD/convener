@@ -471,7 +471,7 @@ _FONT_FACE_CSS: Final = """\
 #: is rendered exactly once, to a screenshot, by a renderer that already
 #: waits for it to finish loading (the pinned engine) -- there is
 #: no visitor for a swap to matter to, and `block` guarantees the glyphs
-#: the ribbon shares a canvas with are never captured mid-swap in a
+#: the motif shares a canvas with are never captured mid-swap in a
 #: fallback face.
 
 _FONT_STACK: Final = (
@@ -652,7 +652,7 @@ def _series_html(strapline: str, forum_host: str) -> str:
     *this* series' motto above *its* talks. `published.Identity`'s own
     docstring records why it is not `tagline` -- that one is a sentence,
     and a sentence set at `4vw` in heavy capitals wraps to three lines
-    and walks the composition into the ribbon.
+    and walks the composition into the motif.
     """
     return f"""\
 <section class="hero">
@@ -811,31 +811,33 @@ def _motif_safe_margins(width: float, height: float, root: Path) -> tuple[float,
 
 def _motif_content_right_margin(width: float, height: float, root: Path) -> float:
     """The right-hand safe-area margin for `.content` alone, in `vw` --
-    narrower than `_motif_safe_margins`'s own right margin, because
-    `.content` never actually shares a row with the right motif.
+    narrower than `_motif_safe_margins`'s own right margin, and the one
+    margin in this composition that is not a drawing's own reach.
 
-    `waypoints`'s own right-side points never reach lower than
-    `right_tail_exit`, the last of them -- see `motifs/ribbon.py::waypoints`'s own
-    docstring for the fitted `0.475`-of-height fraction that point sits at.
-    `.content` is this composition's last band: it renders after the
-    wordmark band and the hero section (both fixed text of a fixed
-    height), and after the talk-title band and date line -- so even at a
-    title's shortest, one line at `_TITLE_FONT_MAX_MRG`, `.content` still
-    begins at essentially that same fraction of the page (checked by
-    rendering a one-character title and reading where `.content` actually
-    starts, not merely assumed; the small residual gap that check found is
-    well inside the tail's own approach to the edge in that band, in turn
-    well inside the ribbon's own `CLEARANCE_STROKE_WIDTHS` buffer, applied
-    below unchanged). Reusing `_motif_safe_margins`'s own full-height right
-    margin here would cost `.content` -- the "what to expect" copy and the
-    photo frame beside it -- width the right motif was never going to
-    reach: this fix's own first attempt did exactly that, and it was that
-    copy re-wrapping into the "register" label beneath it, not the ribbon,
-    that gave the mistake away. `.content`'s own *left* margin still uses
+    What it rests on, measured rather than assumed. `.content` is this
+    composition's last band before the register band, and in the pinned
+    engine it begins at 0.317 of a square canvas and 0.224 of an A4 print
+    -- higher up the page than `0.475`, the fraction the ribbon's own
+    `right_tail_exit` sits at (`motifs/ribbon.py::waypoints`). So that
+    band and the right motif do share rows, and what keeps the ribbon off
+    the words is its shape row by row: its right side runs along the
+    canvas edge over most of that range and comes closest at
+    `right_tail_bulge`, 0.047 short sides in at 0.392 of the height, where
+    the photo frame beside it still clears the stroke -- a few units of
+    field between the two on the rendered square. A family drawn some
+    other way clears the band by finishing above it instead:
+    `motifs/bracket.py::_INNER_TOP` states the rows it fits in and
+    `tests/publication/motifs/test_bracket.py` holds it there.
+
+    Reusing `_motif_safe_margins`'s own full-height right margin here
+    would cost `.content` -- the "what to expect" copy and the photo frame
+    beside it -- width the right motif was never going to reach: this
+    fix's own first attempt did exactly that, and it was that copy
+    re-wrapping into the "register" label beneath it, not the ribbon, that
+    gave the mistake away. `.content`'s own *left* margin still uses
     `_motif_safe_margins`'s full corridor unchanged (see
     `render_announcement`) -- the left tail's own fitted bulge sits at
-    `0.747` of the page, well inside `.content`'s own vertical range, not
-    above it the way the right motif's reach is.
+    `0.747` of the page, well inside `.content`'s own vertical range.
     """
     clearance = motifs.clearance(
         brand.motif_family(root), width, height, ratio=brand.motif_width_ratio(root)

@@ -17,9 +17,9 @@
     <rect y="0" width="1200" height="168" fill="#f4f0f1"/>
     <rect y="400" width="1200" height="146" fill="#f4f0f1"/>
 
-    <!-- The ribbon: one continuous stroke, running off three edges and
-         turning back on itself, in the charter's own motif colour and at
-         its own weight so neither can drift from it. It carries no text
+    <!-- The motif: the drawing the charter names, in the charter's own
+         motif colour and at its own weight so neither can drift from it,
+         painted before the words rather than over them. It carries no text
          and every word on this page is placed clear of it. Move or delete
          it freely; if you move a word instead, keep it out of the stroke,
          because a heavy line behind dark type is unreadable type. -->
@@ -139,8 +139,9 @@
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
          offline generator, or in the app; then drop it over this square.
-         It sits where the ribbon's tail leaves it room, which is why the
-         slot is 180 and not the width of the margin beside it. -->
+         It sits in ground every motif this product draws leaves free,
+         which is why the slot is 180 and not the width of the margin
+         beside it. -->
     <text x="24" y="898" font-size="32" font-weight="800"
           fill="#000000">REGISTER</text>
     <text x="24" y="936" font-size="32" font-weight="800"
