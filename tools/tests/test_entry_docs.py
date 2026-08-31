@@ -249,16 +249,16 @@ def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     `app/tests/decisions-records.test.ts` already holds this of
     `docs/engineering/decisions/`: a published record may not send a reader into the
     working record. The same sentence is true of every other page that
-    ships, and nothing held them to it -- so `README.md` and
-    `docs/README.md` both pointed a public reader at a design
-    specification no clone would ever hold, `site/README.md` at a decision
-    whose published form sits in `docs/engineering/decisions/`, and
-    `docs/operating/operations.md` at four such paths plus one under
-    `.superpowers/`, which `.gitignore` keeps out of *every* clone and
-    which was therefore already unfollowable here.
+    ships, and nothing held them to it -- so `README.md` pointed a public
+    reader at a design specification no clone would ever hold,
+    `site/README.md` at a decision whose published form sits in
+    `docs/engineering/decisions/`, and `docs/operating/operations.md` at
+    four such paths plus one under `.superpowers/`, which `.gitignore`
+    keeps out of *every* clone and which was therefore already
+    unfollowable here.
 
-    Prose or link makes no difference: none of those five was a link, and
-    every one of them was a dead end for the reader who met it.
+    Prose or link makes no difference: none of them was a link, and every
+    one of them was a dead end for the reader who met it.
     """
     offending = {
         path.relative_to(ROOT).as_posix(): prefix

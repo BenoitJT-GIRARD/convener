@@ -15,9 +15,10 @@ repository has existed, in three shapes:
   go, because the document it came from is not in this repository and
   never will be;
 * a **false attribution** -- `D-26` cited, in quotation marks, saying
-  something in French, when `docs/decisions/d-26-verify-deployed-shape.md`
-  is published in English and says "Verify the shape that will actually be
-  deployed, never a convenient local one";
+  something in French, when
+  `docs/engineering/decisions/d-26-verify-deployed-shape.md` is published
+  in English and says "Verify the shape that will actually be deployed,
+  never a convenient local one";
 * a whole **docstring** in French, and written without its accents at
   that, so that even as French it was degraded.
 
