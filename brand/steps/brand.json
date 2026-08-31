@@ -1,0 +1,87 @@
+{
+  "_comment": "A charter this product ships, complete and ready to be chosen -- the same shape as `brand/convener/brand.json` and read by the same reader (`tools/convener_ops/publication/brand.py`). `brand/lattice/brand.json::_why_a_charter_it_can_choose` says why this directory holds more than the product's own default, and that argument is not restated here. An instance that wants this palette copies it into `instance/data/brand.json`; upstream never edits that file and an instance never edits this one. There is no README beside it: `brand/convener/README.md` documents artwork -- four drawings, and how the mark and the wordmark were built -- and this directory holds none. What each figure here is and where it comes from is written below, under the keys beginning with an underscore.",
+  "_source": "Nothing measured, because there is no artwork to measure: this charter has no mark of its own and asks for none. Two colours are chosen -- a teal #0d7f8a and a lilac #7b5fd6 -- and every other value in the file is worked out from those two by the rule in `derived._derivation`. The two were chosen against the five palettes this repository already held, by the ground each of them fills a page with: a turquoise, a coral, a gold, a sky and a mint. None of the five sets a violet ground, and none draws its ink in a teal, so a page built from this charter is not mistakable for any of them across a room -- which is what a charter a duplicate may choose is for.",
+  "_names": "The keys are the system's rather than this palette's, and each names the position a colour holds in the composition: `dominant` is the ink the headlines, the motif and the wordmark are drawn in, `field` the saturated ground that fills the page, `band` the full-width bands laid across it. `tools/scripts/generate_brand_css.py`, both stylesheets and the three downloadable templates read a colour by that name.",
+
+  "colour": {
+    "dominant": "#05393e",
+    "field": "#ccc3f1",
+    "band": "#e8ecf4",
+    "ink": "#253f62",
+    "ink_muted": "#345486",
+    "rule": "#a7bada",
+    "white": "#ffffff",
+    "black": "#000000",
+
+    "_roles": {
+      "dominant": "Headlines, motif, wordmark. The dominant colour, not an accent. The teal axis on rung 3, twelve rungs below the field: 12.64 against white.",
+      "field": "A ground. Never a text colour on white or on a band -- 1.66 there. The lilac axis on rung 15, two rungs below the band.",
+      "band": "Full-width horizontal bands laid across the field. Text sits inside them. Rung 17, the lightest rung that is not white.",
+      "ink": "Primary text. An indigo rather than a black: the two axes sit either side of blue, so their blend is this palette's own dark (#446fb0), taken to rung 4.",
+      "ink_muted": "Secondary text. Rung 6, the lightest rung that stays nine rungs from the field.",
+      "rule": "Rules, borders, dividers. Never text -- 1.97 on white. Rung 14, one rung below the field.",
+      "black": "Body copy on the coloured field, where the composition sets it directly on the ground rather than inside a band.",
+      "white": "Inside photographic frames only. Not a ground."
+    }
+  },
+
+  "derived": {
+    "_comment": "Values no choice supplies, needed because the web has states and links that a page of type does not. Each clears AA on the ground it can appear on.",
+    "_derivation": "One rule, applied to every value here and to every value in `colour` above: **there is a ladder from black to white with eighteen rungs, every colour in this file sits on a rung, and no colour sits between two.** A rung is a step of 21^(1/18) = 1.1843 in WCAG's own `(luminance + 0.05)`, so black is rung 0, white is rung 18, and the contrast between any two colours here is a whole power of that step -- which makes every one of the twelve pairings below a *count* rather than a measurement. Nine rungs, half the ladder, is 4.58 and clears AA; eight is 3.87 and does not, so a pairing here is legible if and only if it spans half the ladder. Three axes carry the hues -- the teal for the dominant, the lilac for the field, and the two in equal parts for the neutrals -- and each token is that axis mixed toward white or toward black until its luminance lands on its rung. Every pairing below is within 0.008 of the count it is, which is what eight-bit colour costs. It is a different rule from the two charters before it: `brand/convener/brand.json` and `brand/lattice/brand.json` both copy the luminance each role carries in another file, and `brand/chevrons/brand.json` names a ratio per role and solves for the colour. This one names no ratio at all -- it names a rung, and the ratios follow.",
+    "_rungs": "Each rung, and what fixes it. `band` 17: the lightest rung that is not white, because white in this system is not a ground. `field` 15: two rungs below the band, and two rungs is 1.40 -- the separation between band and field that all four charters this repository already held measure, to two decimals. `dominant` 3: twelve rungs below the field, which is 7.61 and past AAA, where nine rungs would be a drawing that merely cleared AA against the ground it is drawn on. `dominant_hover` 2: one rung below the dominant, because a hover state is a state and a rung is the smallest step this ladder has. `ink` 4: one rung above the dominant, so the headline stays the darkest ink on the page. `ink_muted` 6 and `ink_faint` 8: the lightest rung that stays nine rungs from the darkest ground each of them appears on -- the field for the first, the band for the second. `field_text` 8: the same rule, on the band. `rule` 14: one rung below the field, the smallest step that shows a divider against the ground it is drawn on. `rule_strong` 11: seven rungs below white, 3.27, the lightest rung at which a graphical object on white still clears the 3.0 WCAG 1.4.11 asks; six rungs is 2.76 and does not. `field_tint` and `dominant_tint` 16: one rung below the band, so a tinted panel reads as a panel laid on the band.",
+    "ink_faint": "#416aaa",
+    "field_text": "#7157c5",
+    "field_tint": "#dcd6f4",
+    "dominant_hover": "#032c2e",
+    "dominant_tint": "#c3dfe2",
+    "rule_strong": "#6e90c2",
+    "_dominant_hover": "The one value `brand/convener/brand.json` and `brand/lattice/brand.json` both had to except from their own rule, and here it is a rung like everything else: one below the dominant, 14.96 against white where the dominant at rest is 12.64. It is only ever a filled background (`--dominant-hover`, `--accent-hover`), never text.",
+    "_axes": "Neither axis appears raw in this file except once. The teal #0d7f8a is the source of `dominant`, `dominant_hover` and `dominant_tint`; the lilac #7b5fd6 is the source of `field`, `field_tint` and `field_text`, and appears unmixed only as `motif.logo_dots`, where its 4.72 on white belongs to no rung and so to no role in this system."
+  },
+
+  "contrast": {
+    "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not, for every charter this repository ships and not only the one in force: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The twelve pairings are the same twelve the system holds every palette to -- the composition creates them, not this palette.",
+    "dominant_on_field": 7.61,
+    "black_on_field": 12.64,
+    "ink_on_field": 6.43,
+    "dominant_on_band": 10.68,
+    "ink_on_band": 9.02,
+    "ink_muted_on_field": 4.58,
+    "ink_faint_on_band": 4.59,
+    "field_text_on_white": 5.42,
+    "white_on_dominant": 12.64,
+    "field_text_on_band": 4.58,
+    "ink_muted_on_band": 6.43,
+    "field_on_dominant": 7.61,
+    "_forbidden": "the field as text on white (1.66); rule as text on any ground (1.97 on white); white as text on the field (1.66) -- which is why a primary button fills with the dominant."
+  },
+
+  "typography": {
+    "display": "Archivo",
+    "display_weight": 800,
+    "body": "Archivo",
+    "body_weight": 400,
+    "mono": "JetBrains Mono",
+    "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
+    "licence": "SIL Open Font License 1.1",
+    "self_hosted": true,
+    "_faces": "The two faces the product itself ships, in `fonts/`, and serves from its own origin. A charter naming a face nobody ships builds a page that falls back to whatever the reader's machine happens to have, so this one names the shipped pair -- the same reason `instances/example/instance/data/brand.json` gives.",
+    "_weights": "The two weights the product's own measurement covers. `tools/convener_ops/publication/typeface.py` carries an advance table at 400 and at 900 and interpolates between them, and `tools/visuals/check-templates.mjs` re-measures both against the committed font file; a charter naming a weight outside that pair would be sized in Python against an estimate nothing re-measures.",
+    "_self_hosted": "Not negotiable, and not a preference of this palette's. A webfont request to a third party discloses every visitor's address -- D-17."
+  },
+
+  "motif": {
+    "family": "steps",
+    "stroke": "#05393e",
+    "width_ratio": 0.0125,
+    "logo_dots": "#7b5fd6",
+    "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the line crossing the page. 7.61 on the field and 10.68 on the bands, so it reads wherever the composition puts it.",
+    "_logo_dots": "The lilac axis, raw, in the one place a colour belonging to no rung may go: the filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.99 -- past the 3.0 WCAG asks of a graphical object that has to be made out, and the strongest any charter here gives its own squares.",
+    "_width_ratio": "Not a measurement of anybody's artwork -- this charter has none -- but the proportion that keeps a ledge a ledge. `motifs/steps.py` lays each ledge 0.0625 of the composition's shorter side deep, and 0.0125 is a fifth of that, so a ledge is drawn five times as long as it is thick at every size this product renders. A heavier stroke closes the ground between one level and the next, and the drawing stops being sixteen levels and becomes a band."
+  },
+
+  "layout": {
+    "_ground": "The field fills the page. White is not the ground.",
+    "_bands": "The bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18."
+  }
+}

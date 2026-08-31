@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Final, Protocol
 
-from . import bracket, chevrons, lattice, ribbon
+from . import bracket, chevrons, lattice, ribbon, steps
 
 __all__ = [
     "BRACKET",
@@ -46,6 +46,7 @@ __all__ = [
     "FAMILIES",
     "LATTICE",
     "RIBBON",
+    "STEPS",
     "CoveredCanvasError",
     "Family",
     "Point",
@@ -175,6 +176,17 @@ CHEVRONS: Final = Family(
     clearance_stroke_widths=chevrons.CLEARANCE_STROKE_WIDTHS,
 )
 
+#: One orthogonal line laid across a page as levels -- ledges at two
+#: depths joined by right-angled risers, and the one drawing here besides
+#: the ribbon that leaves the canvas and comes back (`steps.py`).
+STEPS: Final = Family(
+    name="steps",
+    fields=("stroke", "width_ratio"),
+    path=steps.path,
+    outline=steps.outline,
+    clearance_stroke_widths=steps.CLEARANCE_STROKE_WIDTHS,
+)
+
 #: Every family, by the name a charter names it. Written out rather than
 #: discovered by walking the directory: a name a charter may write is part
 #: of the product's own contract, and `tests/publication/motifs/
@@ -185,6 +197,7 @@ FAMILIES: Final[dict[str, Family]] = {
     BRACKET.name: BRACKET,
     LATTICE.name: LATTICE,
     CHEVRONS.name: CHEVRONS,
+    STEPS.name: STEPS,
 }
 
 
