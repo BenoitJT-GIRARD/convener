@@ -23,7 +23,8 @@
          and every word on this page is placed clear of it. Move or delete
          it freely; if you move a word instead, keep it out of the stroke,
          because a heavy line behind dark type is unreadable type. -->
-    <g fill="none" stroke="#012765" stroke-width="28.8"
+    <g id="motif" fill="none" stroke="#012765"
+       stroke-width="28.8"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M 127.2 0
                C 127.2 127.5 63.6 255 0 255
@@ -75,9 +76,9 @@
         <path d="M 83.5 60 C 89 59.5 92.5 57 92.5 53.5 C 92.5 47 88.5 41 83.5 38 C 78.5 41 74.5 47 74.5 53.5 C 74.5 57 78 59.5 83.5 60 Z M 86 49 A 2.5 2.5 0 1 1 81 49 A 2.5 2.5 0 1 1 86 49 Z"/>
       </g>
     </g>
-    <text x="282" y="112" font-size="50"
+    <text x="282" y="112" font-size="41.23"
           font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
-    <rect x="190" y="138" width="774" height="4"
+    <rect x="190" y="138" width="775.79" height="4"
           fill="#012765"/>
 
     <text x="600" y="272" text-anchor="middle" font-size="50"
@@ -91,7 +92,7 @@
 
   <g id="variable">
     <!-- TALK TITLE. Two lines, split by hand — SVG does not wrap text. A
-         very long title: drop the font-size to 40 and use three lines. -->
+         very long title: drop the font-size and use three lines. -->
     <text text-anchor="middle" font-size="44" font-weight="700"
           fill="#012765">
       <tspan x="600" y="458">{{speaker.title}}</tspan>
@@ -107,14 +108,15 @@
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
-    <g transform="rotate(4 900 900)">
-      <rect x="700" y="690" width="420" height="470" fill="#ffffff"/>
-      <rect x="722" y="712" width="376" height="376" fill="#fedad4"/>
-      <text x="910" y="912" text-anchor="middle" font-size="26"
+    <g transform="rotate(4 885.89 900)">
+      <rect x="685.89" y="690" width="420" height="470" fill="#ffffff"/>
+      <rect x="707.89" y="712" width="376" height="376"
+            fill="#fedad4"/>
+      <text x="895.89" y="912" text-anchor="middle" font-size="26"
             fill="#794658">speaker photo</text>
-      <text x="1098" y="1128" text-anchor="end" font-size="30"
+      <text x="1083.89" y="1128" text-anchor="end" font-size="30"
             font-weight="800" fill="#522f3c">{{speaker.name}}</text>
-      <text x="1098" y="1152" text-anchor="end" font-size="19"
+      <text x="1083.89" y="1152" text-anchor="end" font-size="19"
             fill="#522f3c">{{speaker.affiliation}}</text>
     </g>
   </g>
@@ -122,7 +124,7 @@
   <g id="fixed-what-to-expect">
     <text x="240" y="730" font-size="34" font-weight="800"
           fill="#000000">WHAT TO EXPECT?</text>
-    <text font-size="27" fill="#000000">
+    <text font-size="23.23" fill="#000000">
       <tspan x="320" y="796" font-weight="800"
              fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="320" y="832">questions to the speaker</tspan>
@@ -139,17 +141,20 @@
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
          offline generator, or in the app; then drop it over this square.
-         It sits in ground every motif this product draws leaves free,
-         which is why the slot is 180 and not the width of the margin
-         beside it. -->
-    <text x="24" y="898" font-size="32" font-weight="800"
+         It is the one block on this page that stands on the far side of
+         the motif rather than inside the corridor with the words: it
+         takes whatever ground the drawing leaves between it and the left
+         edge, over its own rows, and is as wide as that ground allows. -->
+    <text x="24" y="898" font-size="31.5" font-weight="800"
           fill="#000000">REGISTER</text>
-    <text x="24" y="936" font-size="32" font-weight="800"
+    <text x="24" y="936" font-size="31.5" font-weight="800"
           fill="#000000">HERE</text>
-    <rect x="24" y="960" width="180" height="180" fill="#ffffff"/>
-    <rect x="42" y="978" width="144" height="144" fill="none"
+    <rect x="24" y="960" width="180" height="180"
+          fill="#ffffff"/>
+    <rect x="42" y="978" width="144"
+          height="144" fill="none"
           stroke="#b18f9b" stroke-width="3" stroke-dasharray="10 8"/>
-    <text x="114" y="1058" text-anchor="middle" font-size="22"
-          fill="#794658">QR code</text>
+    <text x="114" y="1058" text-anchor="middle"
+          font-size="22" fill="#794658">QR code</text>
   </g>
 </svg>

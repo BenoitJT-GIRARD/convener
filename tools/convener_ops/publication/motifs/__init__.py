@@ -35,6 +35,7 @@ stroked drawing and none of them measures its weight differently.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Final, Protocol
 
 from . import bracket, ribbon
@@ -43,15 +44,26 @@ __all__ = [
     "BRACKET",
     "FAMILIES",
     "RIBBON",
+    "CoveredCanvasError",
     "Family",
+    "Point",
+    "Span",
     "UnknownMotifFamilyError",
     "clearance",
     "family",
+    "free_spans",
     "names",
+    "outline",
     "path",
     "safe_margins",
     "stroke_width",
 ]
+
+
+#: A point in the canvas's own units, and a range of x in them. A `Span`
+#: is always `(start, end)` with `start <= end`.
+Point = tuple[float, float]
+Span = tuple[float, float]
 
 
 class UnknownMotifFamilyError(RuntimeError):
@@ -70,18 +82,23 @@ class Drawing(Protocol):
     def __call__(self, width: float, height: float) -> str: ...
 
 
-class Margins(Protocol):
-    """How far in from the left and the right a word has to start.
+class Shape(Protocol):
+    """The same drawing as a polyline, for the corridor arithmetic below.
 
-    `clearance` is the room a text block keeps beyond the drawing's own
-    deepest reach, already in the canvas's units -- the registry computes it
-    from the family's own `clearance_stroke_widths` and the charter's
-    `width_ratio`, so a family never reads a charter to answer this.
+    One tuple of points per continuous run of the drawing -- one for the
+    ribbon, which is a single stroke; two for the bracket, one per
+    bracket. A straight segment joins each consecutive pair, so a family
+    that draws curves flattens them finely enough that the polyline's own
+    reach is the curve's (`ribbon._FLATTEN_STEPS` measures how finely).
+
+    Points outside the canvas are welcome and expected: a drawing that
+    runs off an edge says so here, and the clipping below is the
+    registry's job rather than each family's.
     """
 
     def __call__(
-        self, width: float, height: float, *, clearance: float
-    ) -> tuple[float, float]: ...
+        self, width: float, height: float
+    ) -> tuple[tuple[Point, ...], ...]: ...
 
 
 @dataclass(frozen=True)
@@ -97,8 +114,12 @@ class Family:
     fields: tuple[str, ...]
     #: The geometry, as an SVG path `d`.
     path: Drawing
-    #: The text safe area, in the canvas's own units.
-    margins: Margins
+    #: The same geometry as a polyline, which is what every corridor on
+    #: this page is measured against. A family declares its drawing twice
+    #: and in two notations, but never twice over: each module below
+    #: derives both from one list of points, and its own tests hold them
+    #: to each other.
+    outline: Shape
     #: How much clearance a block of text keeps from this drawing's reach,
     #: in stroke widths. The family's own measurement -- see `ribbon.py`'s
     #: own constant for what the ribbon's two halves cover.
@@ -113,7 +134,7 @@ RIBBON: Final = Family(
     name="ribbon",
     fields=("stroke", "width_ratio"),
     path=ribbon.path,
-    margins=ribbon.margins,
+    outline=ribbon.outline,
     clearance_stroke_widths=ribbon.CLEARANCE_STROKE_WIDTHS,
 )
 
@@ -124,7 +145,7 @@ BRACKET: Final = Family(
     name="bracket",
     fields=("stroke", "width_ratio"),
     path=bracket.path,
-    margins=bracket.margins,
+    outline=bracket.outline,
     clearance_stroke_widths=bracket.CLEARANCE_STROKE_WIDTHS,
 )
 
@@ -182,6 +203,11 @@ def path(name: str, width: float, height: float) -> str:
     return family(name).path(width, height)
 
 
+def outline(name: str, width: float, height: float) -> tuple[tuple[Point, ...], ...]:
+    """The named family's drawing as a polyline, in the canvas's units."""
+    return family(name).outline(width, height)
+
+
 def clearance(name: str, width: float, height: float, *, ratio: float) -> float:
     """The room a block of text keeps beyond the named family's own reach,
     in the canvas's units."""
@@ -190,17 +216,176 @@ def clearance(name: str, width: float, height: float, *, ratio: float) -> float:
     )
 
 
+def _rows(
+    height: float, top: float | None, bottom: float | None
+) -> tuple[float, float]:
+    """The band of rows a corridor is being asked about, defaulted to all
+    of them and refused if it is upside down."""
+    first = 0.0 if top is None else top
+    last = height if bottom is None else bottom
+    if last < first:
+        raise ValueError(
+            f"a band runs from its first row to its last: {first} is below {last}"
+        )
+    return first, last
+
+
+def _crosses(
+    start: Point, end: Point, first: float, last: float
+) -> tuple[float, float] | None:
+    """The x-range one straight segment occupies between two rows.
+
+    `None` when the segment never enters the band at all. A segment lying
+    flat inside it contributes both its ends; one crossing it contributes
+    the two points where it enters and where it leaves, computed rather
+    than stood in for by its own endpoints -- which is the whole reason a
+    band is worth asking about. The ribbon's tail runs from x 280 down to
+    x 210 over three hundred rows of the announcement, and answering "280"
+    for every one of those rows would cost the page seventy units of
+    ground the stroke is nowhere near.
+    """
+    (x0, y0), (x1, y1) = start, end
+    if y0 == y1:
+        return (min(x0, x1), max(x0, x1)) if first <= y0 <= last else None
+    low, high = (y0, y1) if y0 < y1 else (y1, y0)
+    if high < first or low > last:
+        return None
+    xs = [
+        x0 + (x1 - x0) * (row - y0) / (y1 - y0)
+        for row in (max(low, first), min(high, last))
+    ]
+    return min(xs), max(xs)
+
+
+def _merge(spans: list[Span]) -> tuple[Span, ...]:
+    """Overlapping and touching x-ranges joined into as few as say it."""
+    merged: list[Span] = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return tuple(merged)
+
+
+def covered(
+    name: str,
+    width: float,
+    height: float,
+    *,
+    ratio: float,
+    top: float | None = None,
+    bottom: float | None = None,
+) -> tuple[Span, ...]:
+    """The ground the named family's drawing takes, over a band of rows.
+
+    A tuple of x-ranges in the canvas's own units, each already widened by
+    the family's own `clearance` on both sides and clipped to the canvas,
+    left to right and never overlapping. `top` and `bottom` default to the
+    whole canvas, which is what a caller wanting one corridor for a whole
+    page passes.
+
+    This is the one measurement on this page. `safe_margins` and
+    `free_spans` below are both readings of it, `visual.py` and all three
+    generated templates reach it through one of those two, and a family
+    supplies the polyline it is taken from and nothing else.
+    """
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must both be positive")
+    first, last = _rows(height, top, bottom)
+    room = clearance(name, width, height, ratio=ratio)
+    spans: list[Span] = []
+    for run in outline(name, width, height):
+        for start, end in pairwise(run):
+            crossing = _crosses(start, end, first, last)
+            if crossing is None:
+                continue
+            low = max(0.0, crossing[0] - room)
+            high = min(width, crossing[1] + room)
+            if low < high:
+                spans.append((low, high))
+    return _merge(spans)
+
+
+def free_spans(
+    name: str,
+    width: float,
+    height: float,
+    *,
+    ratio: float,
+    top: float | None = None,
+    bottom: float | None = None,
+) -> tuple[Span, ...]:
+    """Every strip of the canvas a word may occupy over a band of rows.
+
+    The complement of `covered` inside the canvas, left to right. Usually
+    one strip; two when the drawing runs down the middle of the band with
+    ground either side of it, which is the announcement's own lower left
+    -- the ribbon's tail crosses it diagonally, the "what to expect"
+    column sits east of the stroke and the registration slot sits west of
+    it, and no single margin measured from an edge can describe that.
+    """
+    free: list[Span] = []
+    edge = 0.0
+    for start, end in covered(name, width, height, ratio=ratio, top=top, bottom=bottom):
+        if start > edge:
+            free.append((edge, start))
+        edge = max(edge, end)
+    if edge < width:
+        free.append((edge, width))
+    return tuple(free)
+
+
+class CoveredCanvasError(RuntimeError):
+    """A drawing that leaves no ground across the middle of the canvas.
+
+    Carries the whole message rather than a code, for the reason
+    `UnknownMotifFamilyError` gives. It is a family's defect and not a
+    caller's: every drawing this product ships stands in the margins, and
+    one that paints across the middle of a band has no safe area to report
+    there -- so it says so and stops, rather than handing back a margin no
+    word could honour.
+    """
+
+
+def _size(number: float) -> str:
+    """A length, for a message -- a whole number without a trailing zero."""
+    return f"{number:g}"
+
+
 def safe_margins(
-    name: str, width: float, height: float, *, ratio: float
+    name: str,
+    width: float,
+    height: float,
+    *,
+    ratio: float,
+    top: float | None = None,
+    bottom: float | None = None,
 ) -> tuple[float, float]:
     """How far in from each side a word has to start to clear the named
     family's drawing, in the canvas's units.
 
-    Two readers, one arithmetic: `visual._motif_safe_margins` turns these
-    into the `vw` its own CSS is written in, and
-    `brand_templates.render_video_call_background` places a plate of text
-    between them.
+    The strip of `free_spans` holding the middle of the canvas, read as
+    two margins: how far its left edge sits from the canvas's left, and
+    how far its right edge sits from the canvas's right. With no band
+    given that is the whole page's corridor, which is what
+    `visual._motif_safe_margins` turns into the `vw` its own CSS is
+    written in and what `brand_templates.render_video_call_background`
+    places a plate of text between. With a band given it is the corridor
+    over those rows alone, which is what the two downloadable templates
+    ask for, once per block of type.
     """
-    return family(name).margins(
-        width, height, clearance=clearance(name, width, height, ratio=ratio)
+    for start, end in free_spans(
+        name, width, height, ratio=ratio, top=top, bottom=bottom
+    ):
+        if start <= width / 2 <= end:
+            return start, width - end
+    first, last = _rows(height, top, bottom)
+    raise CoveredCanvasError(
+        f"the {name!r} motif leaves no ground across the middle of a "
+        f"{_size(width)}x{_size(height)} canvas between rows {_size(first)} "
+        f"and {_size(last)}: its drawing, plus the clearance a word keeps "
+        "from it, covers the whole width there, so there is no safe area to "
+        "report. A drawing this product ships stands in the margins of a "
+        "page, not across it."
     )

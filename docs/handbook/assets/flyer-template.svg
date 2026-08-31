@@ -24,7 +24,8 @@
          rather than over them. It carries no text and every word here is
          placed clear of it. Move or delete it freely; if you move a word
          instead, keep it out of the stroke. -->
-    <g fill="none" stroke="#012765" stroke-width="50.4"
+    <g id="motif" fill="none" stroke="#012765"
+       stroke-width="50.4"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="M 222.6 0
                C 222.6 315.56 111.3 631.12 0 631.12
@@ -74,12 +75,12 @@
         <path d="M 83.5 60 C 89 59.5 92.5 57 92.5 53.5 C 92.5 47 88.5 41 83.5 38 C 78.5 41 74.5 47 74.5 53.5 C 74.5 57 78 59.5 83.5 60 Z M 86 49 A 2.5 2.5 0 1 1 81 49 A 2.5 2.5 0 1 1 86 49 Z"/>
       </g>
     </g>
-    <text x="485" y="188" font-size="88"
+    <text x="485" y="188" font-size="72.68"
           font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
-    <rect x="323.75" y="233.75" width="1366.25" height="7"
+    <rect x="323.75" y="233.75" width="1365.52" height="7"
           fill="#012765"/>
 
-    <text x="1050" y="430" text-anchor="middle" font-size="86"
+    <text x="1050" y="430" text-anchor="middle" font-size="82.16"
           font-weight="900" letter-spacing="2"
           fill="#012765">MONTHLY READING GROUP</text>
     <text x="1050" y="530" text-anchor="middle" font-size="50"
@@ -91,7 +92,7 @@
 
   <g id="variable">
     <!-- TALK TITLE. Up to three lines, split by hand — SVG does not wrap
-         text. A short title: use one line and raise the font-size to 96. -->
+         text. A short title: use one line and raise the font-size. -->
     <text text-anchor="middle" font-size="80" font-weight="700"
           fill="#012765">
       <tspan x="1050" y="840">{{speaker.title}}</tspan>
@@ -101,22 +102,22 @@
 
     <!-- DATE AND TIME. The app holds {{speaker.date}} as 2026-11-12 and
          {{speaker.time}} as 12:30; write them out the way they are said. -->
-    <text x="1050" y="1290" text-anchor="middle" font-size="72"
+    <text x="1050" y="1290" text-anchor="middle" font-size="62.29"
           font-weight="700"
           fill="#012765">{{speaker.date}} at {{speaker.time}} (CET)</text>
 
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
-    <g transform="rotate(4 1520 1900)">
-      <rect x="1250" y="1440" width="700" height="810" fill="#ffffff"/>
-      <rect x="1288" y="1478" width="624" height="624"
+    <g transform="rotate(4 1488.96 1900)">
+      <rect x="1218.96" y="1440" width="700" height="810" fill="#ffffff"/>
+      <rect x="1256.96" y="1478" width="624" height="624"
             fill="#fedad4"/>
-      <text x="1600" y="1800" text-anchor="middle" font-size="44"
+      <text x="1568.96" y="1800" text-anchor="middle" font-size="44"
             fill="#794658">speaker photo</text>
-      <text x="1912" y="2180" text-anchor="end" font-size="56"
+      <text x="1880.96" y="2180" text-anchor="end" font-size="56"
             font-weight="800" fill="#522f3c">{{speaker.name}}</text>
-      <text x="1912" y="2226" text-anchor="end" font-size="34"
+      <text x="1880.96" y="2226" text-anchor="end" font-size="34"
             fill="#522f3c">{{speaker.affiliation}}</text>
     </g>
 
@@ -128,7 +129,7 @@
   <g id="fixed-what-to-expect">
     <text x="480" y="1470" font-size="62" font-weight="800"
           fill="#000000">WHAT TO EXPECT?</text>
-    <text font-size="50" fill="#000000">
+    <text font-size="42.64" fill="#000000">
       <tspan x="560" y="1590" font-weight="800"
              fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="560" y="1652">questions to the speaker</tspan>
@@ -144,19 +145,21 @@
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
-         offline generator, then drop it over this square. It sits east
-         of the ground every motif this product draws keeps to on this
-         side of the page. -->
+         offline generator, then drop it over this square. Unlike the
+         announcement's, this slot stands inside the same corridor as the
+         words above it: on a page this tall the drawing is nowhere near
+         this corner, and the slot keeps the column's own indent. -->
     <text x="600" y="2360" font-size="56" font-weight="800"
           fill="#000000">REGISTER HERE</text>
     <rect x="600" y="2400" width="360" height="340" fill="#ffffff"/>
-    <rect x="630" y="2430" width="300" height="280" fill="none"
+    <rect x="630" y="2430" width="300" height="280"
+          fill="none"
           stroke="#b18f9b" stroke-width="5" stroke-dasharray="18 14"/>
-    <text x="780" y="2595" text-anchor="middle" font-size="40"
-          fill="#794658">QR code</text>
-    <text x="1180" y="2872" text-anchor="middle" font-size="46"
-          fill="#000000">Free · online · everyone welcome</text>
-    <text x="1180" y="2928" text-anchor="middle" font-size="46"
-          fill="#000000">Register at forum.example.test</text>
+    <text x="780" y="2595" text-anchor="middle"
+          font-size="40" fill="#794658">QR code</text>
+    <text x="1180" y="2872" text-anchor="middle"
+          font-size="46" fill="#000000">Free · online · everyone welcome</text>
+    <text x="1180" y="2928" text-anchor="middle"
+          font-size="46" fill="#000000">Register at forum.example.test</text>
   </g>
 </svg>

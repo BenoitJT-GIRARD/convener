@@ -155,8 +155,7 @@ def test_edge_gap_stays_outside_the_canvas_except_at_its_two_ends() -> None:
     # edge. Every point this segment passes through must stay at x <= 0.
     start: Point = (0.0, 100.0)
     end: Point = (0.0, 250.0)
-    fragment = _edge_gap(start, end, bulge=40.0)
-    xs = [p[0] for p in _points(fragment)]
+    xs = [x for x, _y in _edge_gap(start, end, bulge=40.0)]
     assert all(x <= 0.0 for x in xs)
     assert min(xs) < 0.0, "a bulge that never goes negative would render as a seam"
 
@@ -171,8 +170,11 @@ def test_connector_never_crosses_back_into_the_canvas_rectangle() -> None:
     for width, height in [(1000, 1000), (3000, 800), (900, 2600)]:
         start: Point = (width * 0.2, height)
         end: Point = (width, height * 0.1)
-        fragment = _connector(start, end, width=width, height=height)
-        points = _points(fragment)
+        points = [
+            point
+            for segment in _connector(start, end, width=width, height=height)
+            for point in segment
+        ]
         # Every point is outside the rectangle, or sits on `end` itself
         # (the one point this segment is allowed to touch the canvas).
         for x, y in points:

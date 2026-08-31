@@ -68,7 +68,13 @@ from generate_brand_css import (
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand, brand_templates, motifs, visual
+from convener_ops.publication import (
+    brand,
+    brand_templates,
+    motifs,
+    typeface,
+    visual,
+)
 from convener_ops.publication.brand import (
     contrast_ratio,
     hex_to_rgb,
@@ -1276,17 +1282,21 @@ def test_a_long_name_on_the_background_shrinks_instead_of_overflowing() -> None:
     as a real, lived failure. A name twice the length of this instance's
     has to come back smaller, and small enough to fit the plate it is set
     in -- not merely smaller."""
+    heavy = typeface.HEAVY
     short = brand_templates._fitted_font_size(
-        "READING ROOM", cap_height=76.0, available=1000.0
+        "READING ROOM", cap_height=76.0, weight=heavy, available=1000.0
     )
     long = brand_templates._fitted_font_size(
-        "READING ROOM AND LENDING LIBRARY TRUST", cap_height=76.0, available=1000.0
+        "READING ROOM AND LENDING LIBRARY TRUST",
+        cap_height=76.0,
+        weight=heavy,
+        available=1000.0,
     )
     assert long < short
     assert (
-        len("READING ROOM AND LENDING LIBRARY TRUST")
-        * long
-        * (brand_templates._ADVANCE_EM)
+        typeface.width(
+            "READING ROOM AND LENDING LIBRARY TRUST", size=long, weight=heavy
+        )
         <= 1000.0
     )
     # And a name that already fits is never shrunk merely for existing.
@@ -1374,8 +1384,8 @@ def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
     centreline and the stroke is painted either side of it.
     """
     width, height = (
-        brand_templates._BACKGROUND_WIDTH,
-        brand_templates._BACKGROUND_HEIGHT,
+        brand_templates.BACKGROUND_WIDTH,
+        brand_templates.BACKGROUND_HEIGHT,
     )
     half = motifs.stroke_width(width, height, ratio=brand.motif_width_ratio(ROOT)) / 2
 
@@ -1423,8 +1433,8 @@ def test_no_family_draws_across_the_code_this_background_sets() -> None:
     destroys modules no error correction was sized for.
     """
     width, height = (
-        brand_templates._BACKGROUND_WIDTH,
-        brand_templates._BACKGROUND_HEIGHT,
+        brand_templates.BACKGROUND_WIDTH,
+        brand_templates.BACKGROUND_HEIGHT,
     )
     box = (
         width - brand_templates._CODE_RIGHT_GAP - brand_templates._CODE_SIDE,

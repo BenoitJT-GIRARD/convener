@@ -1,0 +1,189 @@
+name: Templates
+
+# Renders the three files a volunteer downloads -- the announcement, the
+# flyer and the video-call background -- for every charter this repository
+# holds crossed with every motif family it draws, and measures whether any
+# stroke of the drawing crosses any word of the type. See
+# `tools/visuals/check-templates.mjs`'s own module comment for what is
+# measured and why it needs a browser at all: how much room a line of type
+# takes is a property of the face, the weight and the string, and this
+# repository has no way to know it in Python.
+#
+# Why this is not a job inside `visuals.yml`, which already installs the
+# same pinned engine: that workflow deliberately does *not* react to this
+# instance's own declaration or charter, because it renders the example's
+# and a duplicate that had done nothing but choose its own colours went red
+# against images of somebody else's poster
+# (`test_visuals_workflow.py::test_the_path_filter_never_reacts_to_this_
+# instances_own_charter`). This check is the opposite case: it renders
+# every charter in the repository, this instance's included, and a
+# duplicate's own charter is exactly what it has to react to -- a stroke
+# weight nobody has drawn before is how a word ends up behind a drawing.
+# One filter cannot be both, so there are two workflows.
+#
+# Why a path filter, and why this exact list (D-25: a filter that silently
+# omits a path means a real defect ships green, so every entry below names
+# the thing that made it necessary):
+#
+# - `tools/convener_ops/publication/brand_templates.py` -- the three
+#   compositions themselves: every block of type, the rows it sits on and
+#   the corridor it is placed against.
+# - `tools/convener_ops/publication/typeface.py` -- the advance tables that
+#   decide how wide a line is reckoned to be, and which this job
+#   re-measures against the committed font file.
+# - `tools/convener_ops/publication/motifs/**` -- the registry, each
+#   family's drawing, and the corridor arithmetic every block reads.
+# - `tools/convener_ops/publication/brand.py` -- which charter is in force
+#   and what its `motif` says.
+# - `tools/convener_ops/publication/formats.py` -- the square's own canvas
+#   and the print paper the flyer is drawn on.
+# - `tools/convener_ops/publication/registration_code.py` -- the code drawn
+#   into the background, whose own box shares a canvas with the drawing.
+# - `tools/convener_ops/declaration/published.py` -- the reader that turns
+#   a declaration into the names these files set. A longer name is a wider
+#   line, and a wider line is how one reaches a stroke.
+# - `tools/convener_ops/journey/registration.py` -- what the background's
+#   code encodes.
+# - `tools/convener_ops/cli.py` -- `render_template_fixtures` lives here,
+#   so a bug in how the eighteen renderings are written to disk is a real
+#   way this check could start measuring the wrong thing. Accepted even
+#   though most of that file has nothing to do with rendering, because a
+#   path filter has no finer grain than a file.
+# - `instance/config.json`, `instance/data/brand.json` -- this instance's
+#   declaration and charter, one of the three swept.
+# - `instances/example/instance/config.json`,
+#   `instances/example/instance/data/brand.json` -- the example's, the
+#   second.
+# - `brand/convener/brand.json` -- the product's own charter, the third:
+#   what a duplicate that has written none of its own is drawn with.
+# - `fonts/**` -- the face every advance in this check is measured in.
+#   Replacing the file replaces the measurement.
+# - `tools/uv.lock` -- pins `segno`, whose modules are drawn into the
+#   background beside the code's own label.
+# - `tools/visuals/**` -- the checker itself and its pinned `puppeteer`.
+# - `.github/workflows/templates.yml` -- this file.
+#
+# Deliberately absent: `instance/data/speakers.yml` and
+# `tools/convener_ops/publication/public_data.py`. These three files carry
+# `{{speaker.*}}` placeholders rather than an edition -- that is what makes
+# them templates -- so no real speaker record and no consent gate has
+# anything for this job to see.
+#
+# example-cockpit is private (D-15): Actions minutes are metered. The path
+# filter plus the `actions/cache` step below (keyed on
+# `tools/visuals/package-lock.json`, the same key `visuals.yml` uses, so
+# the two jobs share one Chrome-for-Testing download) is what keeps a job
+# this heavy affordable at zero cost.
+on:
+  push:
+    branches: [main]
+    # Written out again for `pull_request` below, not shared through a
+    # YAML anchor and alias: GitHub Actions' own workflow parser does not
+    # support them, and PyYAML expands one without complaint -- so an
+    # anchored filter parses clean in every local check and fails to
+    # *trigger* the first time it runs for real. `test_templates_workflow.
+    # py::test_the_two_path_filters_are_identical_lists` binds the two
+    # copies instead.
+    paths:
+      - 'tools/convener_ops/publication/brand_templates.py'
+      - 'tools/convener_ops/publication/typeface.py'
+      - 'tools/convener_ops/publication/motifs/**'
+      - 'tools/convener_ops/publication/brand.py'
+      - 'tools/convener_ops/publication/formats.py'
+      - 'tools/convener_ops/publication/registration_code.py'
+      - 'tools/convener_ops/declaration/published.py'
+      - 'tools/convener_ops/journey/registration.py'
+      - 'tools/convener_ops/cli.py'
+      - 'instance/config.json'
+      - 'instance/data/brand.json'
+      - 'instances/example/instance/config.json'
+      - 'instances/example/instance/data/brand.json'
+      - 'brand/convener/brand.json'
+      - 'fonts/**'
+      - 'tools/uv.lock'
+      - 'tools/visuals/**'
+      - '.github/workflows/templates.yml'
+  pull_request:
+    # Kept identical to push's own list above, by hand, for the reason
+    # that list's own comment gives.
+    paths:
+      - 'tools/convener_ops/publication/brand_templates.py'
+      - 'tools/convener_ops/publication/typeface.py'
+      - 'tools/convener_ops/publication/motifs/**'
+      - 'tools/convener_ops/publication/brand.py'
+      - 'tools/convener_ops/publication/formats.py'
+      - 'tools/convener_ops/publication/registration_code.py'
+      - 'tools/convener_ops/declaration/published.py'
+      - 'tools/convener_ops/journey/registration.py'
+      - 'tools/convener_ops/cli.py'
+      - 'instance/config.json'
+      - 'instance/data/brand.json'
+      - 'instances/example/instance/config.json'
+      - 'instances/example/instance/data/brand.json'
+      - 'brand/convener/brand.json'
+      - 'fonts/**'
+      - 'tools/uv.lock'
+      - 'tools/visuals/**'
+      - '.github/workflows/templates.yml'
+
+# A newer push to a pull request supersedes the commit an older run is
+# still checking, so that run is cancelled -- grouped by the source
+# branch, `github.head_ref`. That field is empty for anything that is not
+# a pull request, so a push to `main` falls through to `github.run_id`,
+# which is unique per run: nothing else can join that group, so nothing
+# can cancel it, and every commit reaching production stays verified for
+# itself. See quality.yml's own copy of this block for the full reasoning.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  templates:
+    runs-on: ubuntu-latest
+    # Eighteen renderings measure in a few seconds on a warm machine; this
+    # allowance covers a cold cache miss that has to fetch the ~430MB
+    # Chrome-for-Testing build besides.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Render the template fixtures (pure Python/SVG, no browser yet)
+        run: |
+          uv run --project tools convener-render-template-fixtures "${{ runner.temp }}/template-fixtures"
+      # Restored *before* `npm ci` so its own postinstall download can be
+      # skipped entirely on a cache hit -- the same key `visuals.yml` uses,
+      # so whichever of the two runs first pays for the download.
+      - name: Cache the pinned Chrome-for-Testing download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('tools/visuals/package-lock.json') }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: tools/visuals/package-lock.json
+      - name: Install the pinned renderer
+        working-directory: tools/visuals
+        run: npm ci
+      - name: Measure every block of type against the drawing behind it
+        working-directory: tools/visuals
+        run: |
+          node check-templates.mjs \
+            --fixtures "${{ runner.temp }}/template-fixtures" \
+            --report "${{ runner.temp }}/template-clearance.json"
+      # Only on a failing measurement -- the offending block, its extent
+      # and the nearest point on the stroke are already in the log; this is
+      # for somebody who wants every block's number rather than the ones
+      # that failed.
+      - name: Upload the measurement for inspection
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: template-clearance
+          path: ${{ runner.temp }}/template-clearance.json
+          retention-days: 14

@@ -24,7 +24,7 @@ from typing import Final
 import pytest
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand_templates, formats
+from convener_ops.publication import brand_templates, formats, motifs
 from convener_ops.publication.motifs.bracket import (
     _INNER_OVER_OUTER,
     _MARK_INNER_RADIUS,
@@ -34,7 +34,7 @@ from convener_ops.publication.motifs.bracket import (
     Point,
     _fmt,
     _short_side,
-    margins,
+    outline,
     path,
     waypoints,
 )
@@ -43,7 +43,7 @@ from convener_ops.publication.motifs.bracket import (
 #: publication formats, and the video-call background's own frame.
 CANVASES: Final[tuple[tuple[float, float], ...]] = (
     *((named.width, named.height) for named in formats.FORMATS),
-    (brand_templates._BACKGROUND_WIDTH, brand_templates._BACKGROUND_HEIGHT),
+    (brand_templates.BACKGROUND_WIDTH, brand_templates.BACKGROUND_HEIGHT),
 )
 
 #: The artwork every measurement in the family is read off.
@@ -213,9 +213,19 @@ def test_path_rejects_a_non_positive_canvas() -> None:
         path(-1.0, 100.0)
 
 
-def test_margins_reject_a_non_positive_canvas() -> None:
+def test_the_outline_rejects_a_non_positive_canvas() -> None:
     with pytest.raises(ValueError, match="positive"):
-        margins(100.0, 0.0, clearance=1.0)
+        outline(100.0, 0.0)
+
+
+def test_the_outline_is_the_two_brackets_and_nothing_else() -> None:
+    """Straight segments join the six points of each bracket and reach
+    past none of them, so this family's outline is its waypoints -- which
+    is what lets `path` and the corridor arithmetic describe one drawing
+    in two notations without either being an approximation of the other."""
+    for width, height in CANVASES:
+        marks = waypoints(width, height)
+        assert outline(width, height) == (marks.left, marks.right)
 
 
 def test_short_side_is_the_minimum_of_the_two() -> None:
@@ -248,8 +258,9 @@ def test_the_safe_area_clears_the_drawing_at_every_canvas() -> None:
     ratio = 0.0204
     for width, height in CANVASES:
         stroke = ratio * min(width, height)
-        clearance = stroke * CLEARANCE_STROKE_WIDTHS
-        left_margin, right_margin = margins(width, height, clearance=clearance)
+        left_margin, right_margin = motifs.safe_margins(
+            "bracket", width, height, ratio=ratio
+        )
         marks = waypoints(width, height)
         for x, _y in marks.left:
             assert x + stroke / 2 <= left_margin
@@ -262,9 +273,12 @@ def test_the_safe_area_is_the_drawings_own_reach_and_nothing_more() -> None:
     that cannot fail, and one wider than the drawing costs the composition
     width for nothing. Each margin sits exactly one clearance outside the
     deepest point of its own bracket."""
-    clearance = 25.0
+    ratio = 0.0204
     for width, height in CANVASES:
-        left_margin, right_margin = margins(width, height, clearance=clearance)
+        clearance = ratio * min(width, height) * CLEARANCE_STROKE_WIDTHS
+        left_margin, right_margin = motifs.safe_margins(
+            "bracket", width, height, ratio=ratio
+        )
         marks = waypoints(width, height)
         assert left_margin == pytest.approx(max(x for x, _y in marks.left) + clearance)
         assert right_margin == pytest.approx(

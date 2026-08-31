@@ -17,6 +17,8 @@ an instance's own poster.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
+from itertools import pairwise
 from pathlib import Path
 from typing import Final
 
@@ -151,14 +153,97 @@ def test_the_clearance_a_family_keeps_is_read_off_that_family() -> None:
         )
 
 
-def test_safe_margins_hands_the_family_the_clearance_it_asked_for() -> None:
+def test_safe_margins_leave_the_drawing_outside_and_waste_nothing() -> None:
     """The registry is the only thing that turns a ratio into a clearance,
-    so a family never reads a charter to answer where a word may start."""
+    so a family never reads a charter to answer where a word may start --
+    and what it widens is the family's own outline.
+
+    Two halves, because either alone is trivially satisfiable: no point of
+    the drawing lies in the corridor at all (a margin that let one in
+    would be no margin), and the corridor is not one unit wider than it
+    has to be (a margin derived from a point the drawing never reaches
+    would be a control that cannot fail, and would cost a composition
+    width for nothing).
+    """
     ratio = 0.02
-    for name, drawn in motifs.FAMILIES.items():
-        assert motifs.safe_margins(name, 1200, 900, ratio=ratio) == drawn.margins(
-            1200, 900, clearance=motifs.clearance(name, 1200, 900, ratio=ratio)
-        )
+    for name in motifs.FAMILIES:
+        room = motifs.clearance(name, 1200, 900, ratio=ratio)
+        left, right = motifs.safe_margins(name, 1200, 900, ratio=ratio)
+        inside = [
+            x
+            for run in motifs.outline(name, 1200, 900)
+            for x, y in run
+            if 0 <= x <= 1200 and 0 <= y <= 900
+        ]
+        assert not any(left < x < 1200 - right for x in inside)
+        assert min(abs(x - (left - room)) for x in inside) < 0.5
+        assert min(abs(x - (1200 - right + room)) for x in inside) < 0.5
+
+
+def test_a_band_never_claims_more_ground_than_the_whole_canvas_does() -> None:
+    """The corridor over any band of rows is at least as wide as the
+    corridor over the whole page: a drawing cannot reach further into a
+    slice of itself than into all of itself. The property that makes it
+    safe for a block to ask about its own rows rather than the page."""
+    ratio = 0.024
+    for name in motifs.FAMILIES:
+        whole = motifs.safe_margins(name, 1200, 1200, ratio=ratio)
+        for top in range(0, 1200, 100):
+            band = motifs.safe_margins(
+                name, 1200, 1200, ratio=ratio, top=top, bottom=top + 100
+            )
+            assert band[0] <= whole[0] + 1e-9
+            assert band[1] <= whole[1] + 1e-9
+
+
+def test_covered_and_free_spans_partition_the_canvas() -> None:
+    """Every strip of the page is either ground a word may use or ground
+    the drawing has taken, and no unit is both."""
+    ratio = 0.024
+    for name in motifs.FAMILIES:
+        taken = motifs.covered(name, 1200, 1200, ratio=ratio, top=200, bottom=600)
+        free = motifs.free_spans(name, 1200, 1200, ratio=ratio, top=200, bottom=600)
+        edges = sorted([*taken, *free])
+        assert edges[0][0] == 0.0
+        assert edges[-1][1] == 1200.0
+        for (_start, end), (next_start, _next_end) in pairwise(edges):
+            assert end == pytest.approx(next_start)
+
+
+def test_a_band_the_drawing_never_enters_leaves_the_whole_page_free() -> None:
+    """A row band with no part of the drawing in it reports no margins at
+    all, which is what lets a block keep its own design indent rather than
+    being pushed aside by a stroke that is nowhere near it."""
+    for name in motifs.FAMILIES:
+        empty = motifs.covered(name, 1200, 1200, ratio=0.024, top=599.9, bottom=600.0)
+        if empty:
+            continue
+        assert motifs.safe_margins(
+            name, 1200, 1200, ratio=0.024, top=599.9, bottom=600.0
+        ) == (0.0, 0.0)
+
+
+def test_a_band_that_runs_backwards_is_refused() -> None:
+    with pytest.raises(ValueError, match="runs from its first row"):
+        motifs.safe_margins("ribbon", 1200, 1200, ratio=0.024, top=800, bottom=200)
+
+
+def test_a_drawing_across_the_middle_of_a_band_refuses_to_report_a_margin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A family painting right across the page leaves no safe area, and
+    says so rather than handing back a margin no word could honour."""
+    monkeypatch.setitem(
+        motifs.FAMILIES,
+        "wall",
+        replace(
+            motifs.BRACKET,
+            name="wall",
+            outline=lambda w, h: (((0.0, h / 2), (w, h / 2)),),
+        ),
+    )
+    with pytest.raises(motifs.CoveredCanvasError, match="no ground across the middle"):
+        motifs.safe_margins("wall", 1200, 1200, ratio=0.024)
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +273,7 @@ THE_TRACED_FAMILY: Final = motifs.RIBBON.name
 #: commands are a function of the canvas it is asked for.
 CANVASES: Final[tuple[tuple[float, float], ...]] = (
     *((named.width, named.height) for named in formats.FORMATS),
-    (brand_templates._BACKGROUND_WIDTH, brand_templates._BACKGROUND_HEIGHT),
+    (brand_templates.BACKGROUND_WIDTH, brand_templates.BACKGROUND_HEIGHT),
 )
 
 

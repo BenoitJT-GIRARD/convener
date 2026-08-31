@@ -149,6 +149,31 @@ the corridor the stroke leaves, at every stroke weight the charter might
 declare); the second by fitting each line's size to the plate it is set in
 rather than typing three sizes and hoping (`_fitted_font_size`).
 
+All three answer it that way now, and one of them did not
+--------------------------------------------------------
+The paragraph above was true of the background and of nothing else. The
+announcement and the flyer hand-placed every block of type: each x was a
+number fitted, by eye, to where *one* drawing happened to run, and the
+drawing they were fitted to was the ribbon. Nothing said so, and nothing
+could fail when it stopped being true -- so when a second family arrived,
+it was the family that was fitted to the layout rather than the layout
+that read the family, and the layout's own numbers stayed exactly as
+wrong as they had always been. Rendered and measured for the first time
+(`tools/visuals/check-templates.mjs`), that cost two things nobody knew
+about: the example instance's flyer drew its motif **11.9 units through
+its own tagline**, and this instance's flyer cleared its headline by
+**1.6 units** on a 2100-unit page.
+
+Every horizontal coordinate in both files comes from `motifs` now, over
+the rows the block it places actually occupies -- see "Where a block of
+type may stand" below for the rule and for what stays a literal. The
+vertical ones do not: a baseline, a band's own depth, the proportion of
+the page a photograph takes are the composition's, and they would not
+change if the charter named a different drawing. That is the test, and it
+is the only one: a number that would have to move for another family is
+the drawing's and is derived; a number that would not is the design's and
+stays written down.
+
 What it costs a volunteer is one export, and that cost is named on the
 page rather than hidden: `docs/handbook/toolkit/visual-kit.md` already asks for
 exactly that export from the other two files, and this is the one of the
@@ -157,18 +182,22 @@ three that needs no editing first.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
 from ..declaration import published
-from . import brand, formats, motifs, registration_code
+from . import brand, formats, motifs, registration_code, typeface
 
 __all__ = [
     "ANNOUNCEMENT_PATH",
+    "BACKGROUND_HEIGHT",
     "BACKGROUND_PATH",
+    "BACKGROUND_WIDTH",
     "FLYER_PATH",
+    "UNITS_PER_MM",
     "render_announcement_template",
     "render_flyer_template",
     "render_video_call_background",
@@ -185,7 +214,7 @@ BACKGROUND_PATH: Final = ASSETS_DIR / "video-call-background.svg"
 #: The flyer's user-unit grid: ten units per millimetre of A4, so a
 #: coordinate reads as a tenth of a millimetre and the physical size comes
 #: from `formats.PRINT_PAPER_MM` rather than from 210 and 297 typed again.
-_UNITS_PER_MM: Final = 10
+UNITS_PER_MM: Final = 10
 
 #: The placeholders both files carry into the volunteer's editor, spelled
 #: exactly as `app/src/content/render.ts::substitute` resolves them -- an
@@ -244,6 +273,185 @@ def _num(value: float) -> str:
     """A coordinate, without a trailing `.0` on a whole number."""
     text = f"{value:.2f}".rstrip("0").rstrip(".")
     return text if text else "0"
+
+
+# --------------------------------------------------------------------------
+# Where a block of type may stand
+# --------------------------------------------------------------------------
+#
+# Every horizontal coordinate in the two compositions below comes from one
+# of the four functions in this section, and each of them asks the family
+# in force where its drawing actually is over that block's own rows. What
+# stays a literal is the *design*: which rows a block sits on, how far in
+# from the page's edge the composition sets it when nothing is in the way,
+# how large it is, the axis it centres on. What is derived is the one thing
+# a hand-placed number cannot survive -- a change of family.
+#
+# The rule, stated once because every block below follows it: a block sits
+# at its own design indent, or at the corridor's own edge when the drawing
+# reaches past that indent, whichever is further from the drawing. So a
+# family that reaches nowhere near a block leaves the composition exactly
+# as it was designed, and a family that reaches into it pushes it aside
+# rather than being fitted around it.
+
+
+#: How far the ink of a line of type reaches above and below its own
+#: baseline, as a fraction of the font size. Measured in the pinned engine
+#: across every line these three files set, in the face the charter names:
+#: the deepest ascender ran to 0.902 of the size above the baseline and the
+#: deepest descender to 0.234 below it. Rounded up, because these two turn
+#: a baseline into the band of rows a corridor is asked about, and a band
+#: read a shade too tall asks for a shade more room than the glyphs need.
+_INK_ABOVE_BASELINE_EM: Final = 0.95
+_INK_BELOW_BASELINE_EM: Final = 0.25
+
+
+@dataclass(frozen=True)
+class _Canvas:
+    """One page, and the drawing the charter in force puts on it.
+
+    Carries the family's name and the charter's own stroke ratio so that
+    the layout below asks `motifs` a question per block rather than
+    threading four arguments through every call. It reads no file: the two
+    renderers load the charter once and hand it here, the same separation
+    `motifs.stroke_width` keeps.
+    """
+
+    family: str
+    width: float
+    height: float
+    ratio: float
+
+    def rows(self, baseline: float, size: float) -> tuple[float, float]:
+        """The band of rows a line set at `size` on `baseline` occupies."""
+        return (
+            baseline - _INK_ABOVE_BASELINE_EM * size,
+            baseline + _INK_BELOW_BASELINE_EM * size,
+        )
+
+    def corridor(self, top: float, bottom: float) -> tuple[float, float]:
+        """The first and last x a word may use, over those rows.
+
+        `motifs.safe_margins` in the units the page is drawn in rather than
+        as two margins, because every coordinate below is an x.
+        """
+        left, right = motifs.safe_margins(
+            self.family,
+            self.width,
+            self.height,
+            ratio=self.ratio,
+            top=top,
+            bottom=bottom,
+        )
+        return left, self.width - right
+
+    def free(self, top: float, bottom: float) -> tuple[motifs.Span, ...]:
+        """Every strip of the page a word may occupy, over those rows."""
+        return motifs.free_spans(
+            self.family,
+            self.width,
+            self.height,
+            ratio=self.ratio,
+            top=top,
+            bottom=bottom,
+        )
+
+
+def _starts_at(canvas: _Canvas, *, indent: float, top: float, bottom: float) -> float:
+    """Where a block set from the left begins: its own design indent, or
+    the corridor's own left edge when the drawing reaches past it."""
+    first, _last = canvas.corridor(top, bottom)
+    return max(indent, first)
+
+
+def _ends_at(canvas: _Canvas, *, inset: float, top: float, bottom: float) -> float:
+    """Where a block set to the right ends: the page's own design inset,
+    or the corridor's own right edge when the drawing reaches past it."""
+    _first, last = canvas.corridor(top, bottom)
+    return min(canvas.width - inset, last)
+
+
+def _fitted(
+    text: str,
+    *,
+    size: float,
+    weight: int,
+    available: float,
+    letter_spacing: float = 0.0,
+) -> float:
+    """`size`, unless the line would then run wider than `available`, in
+    which case the largest size that fits.
+
+    The design's own size is what a page is set at; the corridor is what it
+    may not exceed. So a family that leaves a block alone leaves its size
+    alone too, and only a family that crowds it makes it smaller -- the
+    same rule the placement above follows, applied to the one property a
+    placement cannot fix for a line set on a fixed axis.
+
+    `typeface.width` is the estimate, for the reason that module gives.
+    """
+    if not text:
+        return size
+    room = available - len(text) * letter_spacing
+    if room <= 0:
+        raise ValueError(
+            f"no room to set {text!r} at all: {_num(available)} units of "
+            "corridor cannot even hold its letter spacing"
+        )
+    ems = typeface.width(text, size=1.0, weight=weight)
+    return min(size, room / ems)
+
+
+def _at_most(*, size: float, ems: float, available: float) -> float:
+    """`size`, or the size at which a line `ems` wide fits `available`.
+
+    The same rule `_fitted` applies, for a line whose width has already
+    been worked out -- one set in more than a single weight, which
+    `typeface.width` measures a run at a time.
+    """
+    if ems <= 0:
+        return size
+    return min(size, available / ems)
+
+
+def _centred(
+    canvas: _Canvas,
+    text: str,
+    *,
+    axis: float,
+    baseline: float,
+    size: float,
+    weight: int,
+    letter_spacing: float = 0.0,
+    limit: float | None = None,
+) -> float:
+    """The size a line centred on `axis` is set at, so that it stays inside
+    the corridor its own rows leave.
+
+    The axis is the page's own, a design decision and a literal: a
+    composition has one vertical axis, and letting each centred line find
+    the middle of its own corridor would make the stack wander from row to
+    row. So the corridor decides the size rather than the position, and the
+    line stays where the design put it. `limit` bounds the half-width
+    further, for a line the composition itself keeps clear of something --
+    the flyer's foot band is the one case.
+
+    The rows are taken at the *design* size, before any shrinking. That is
+    deliberate rather than approximate: a line set smaller occupies fewer
+    rows, and fewer rows can only leave a corridor at least as wide, so the
+    answer stays true for the size it produces.
+    """
+    first, last = canvas.corridor(*canvas.rows(baseline, size))
+    half = min(axis - first, last - axis)
+    if limit is not None:
+        half = min(half, limit)
+    return _fitted(
+        text,
+        size=size,
+        weight=weight,
+        available=2 * half,
+        letter_spacing=letter_spacing,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -474,11 +682,16 @@ def _values(root: Path) -> dict[str, str]:
         raise ValueError("; ".join(problems))
     identity = published.load_identity(root)
     motif = brand.motif(root)
+    runs = _wordmark_runs(identity)
     return {
         **_SPEAKER,
         **colours,
+        # The address exactly as the wordmark sets it, without the tones it
+        # is set in: `_wordmark_values` sizes that line to the room it has,
+        # and a size is a property of the string and not of its colours.
+        "wordmark_text": "".join(text for text, _accent in runs),
         "wordmark": _wordmark(
-            _wordmark_runs(identity),
+            runs,
             ink=colours["dominant"],
             accent=colours["field_text"],
         ),
@@ -539,7 +752,8 @@ _ANNOUNCEMENT: Final = """\
          and every word on this page is placed clear of it. Move or delete
          it freely; if you move a word instead, keep it out of the stroke,
          because a heavy line behind dark type is unreadable type. -->
-    <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
+    <g id="motif" fill="none" stroke="{motif_stroke}"
+       stroke-width="{stroke_weight}"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="{motif}"/>
     </g>
@@ -549,82 +763,86 @@ _ANNOUNCEMENT: Final = """\
          an external logo file is an SVG that travels broken. The rule
          under the address is the same line, continuing east. -->
 {mark}
-    <text x="282" y="112" font-size="50"
+    <text x="{wordmark_x}" y="112" font-size="{wordmark_size}"
           font-weight="500">{wordmark}</text>
     <rect x="{rule_x}" y="{rule_y}" width="{rule_w}" height="{rule_h}"
           fill="{dominant}"/>
 
-    <text x="600" y="272" text-anchor="middle" font-size="50"
+    <text x="{axis}" y="272" text-anchor="middle" font-size="{series_size}"
           font-weight="900" letter-spacing="1"
           fill="{dominant}">{series_caps}</text>
-    <text x="600" y="330" text-anchor="middle" font-size="31"
-          fill="{black}">Join the discussion before and after the talk at</text>
-    <text x="600" y="372" text-anchor="middle" font-size="31"
+    <text x="{axis}" y="330" text-anchor="middle" font-size="{invitation_size}"
+          fill="{black}">{invitation}</text>
+    <text x="{axis}" y="372" text-anchor="middle" font-size="{address_size}"
           font-weight="700" fill="{black}">{forum_host}</text>
   </g>
 
   <g id="variable">
     <!-- TALK TITLE. Two lines, split by hand — SVG does not wrap text. A
-         very long title: drop the font-size to 40 and use three lines. -->
-    <text text-anchor="middle" font-size="44" font-weight="700"
+         very long title: drop the font-size and use three lines. -->
+    <text text-anchor="middle" font-size="{title_size}" font-weight="700"
           fill="{dominant}">
-      <tspan x="600" y="458">{speaker_title}</tspan>
-      <tspan x="600" y="512"></tspan>
+      <tspan x="{axis}" y="458">{speaker_title}</tspan>
+      <tspan x="{axis}" y="512"></tspan>
     </text>
 
     <!-- DATE AND TIME. Written out the way it is said aloud; the app holds
          {speaker_date} as 2026-11-12 and {speaker_time} as 12:30 (CET). -->
-    <text x="600" y="600" text-anchor="middle" font-size="40"
+    <text x="{axis}" y="600" text-anchor="middle" font-size="{date_size}"
           font-weight="700"
           fill="{dominant}">{speaker_date} at {speaker_time} (CET)</text>
 
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
-    <g transform="rotate(4 900 900)">
-      <rect x="700" y="690" width="420" height="470" fill="{white}"/>
-      <rect x="722" y="712" width="376" height="376" fill="{field_tint}"/>
-      <text x="910" y="912" text-anchor="middle" font-size="26"
+    <g transform="rotate(4 {frame_pivot_x} 900)">
+      <rect x="{frame_x}" y="690" width="420" height="470" fill="{white}"/>
+      <rect x="{frame_photo_x}" y="712" width="376" height="376"
+            fill="{field_tint}"/>
+      <text x="{frame_caption_x}" y="912" text-anchor="middle" font-size="26"
             fill="{ink_muted}">speaker photo</text>
-      <text x="1098" y="1128" text-anchor="end" font-size="30"
+      <text x="{frame_end_x}" y="1128" text-anchor="end" font-size="30"
             font-weight="800" fill="{ink}">{speaker_name}</text>
-      <text x="1098" y="1152" text-anchor="end" font-size="19"
+      <text x="{frame_end_x}" y="1152" text-anchor="end" font-size="19"
             fill="{ink}">{speaker_affiliation}</text>
     </g>
   </g>
 
   <g id="fixed-what-to-expect">
-    <text x="240" y="730" font-size="34" font-weight="800"
+    <text x="{heading_x}" y="730" font-size="{heading_size}" font-weight="800"
           fill="{black}">WHAT TO EXPECT?</text>
-    <text font-size="27" fill="{black}">
-      <tspan x="320" y="796" font-weight="800"
+    <text font-size="{column_size}" fill="{black}">
+      <tspan x="{column_x}" y="796" font-weight="800"
              fill="{dominant}">BEFORE: </tspan><tspan>Ask your</tspan>
-      <tspan x="320" y="832">questions to the speaker</tspan>
-      <tspan x="320" y="868">at {forum_host}</tspan>
-      <tspan x="320" y="944" font-weight="800"
+      <tspan x="{column_x}" y="832">questions to the speaker</tspan>
+      <tspan x="{column_x}" y="868">at {forum_host}</tspan>
+      <tspan x="{column_x}" y="944" font-weight="800"
              fill="{dominant}">D-DAY: </tspan><tspan>Presentation</tspan>
-      <tspan x="320" y="980">followed by a discussion</tspan>
-      <tspan x="320" y="1016">with the audience</tspan>
-      <tspan x="320" y="1092" font-weight="800"
+      <tspan x="{column_x}" y="980">followed by a discussion</tspan>
+      <tspan x="{column_x}" y="1016">with the audience</tspan>
+      <tspan x="{column_x}" y="1092" font-weight="800"
              fill="{dominant}">AFTER: </tspan><tspan>Continue the</tspan>
-      <tspan x="320" y="1128">discussion and connect</tspan>
-      <tspan x="320" y="1164">with peers</tspan>
+      <tspan x="{column_x}" y="1128">discussion and connect</tspan>
+      <tspan x="{column_x}" y="1164">with peers</tspan>
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
          offline generator, or in the app; then drop it over this square.
-         It sits in ground every motif this product draws leaves free,
-         which is why the slot is 180 and not the width of the margin
-         beside it. -->
-    <text x="24" y="898" font-size="32" font-weight="800"
+         It is the one block on this page that stands on the far side of
+         the motif rather than inside the corridor with the words: it
+         takes whatever ground the drawing leaves between it and the left
+         edge, over its own rows, and is as wide as that ground allows. -->
+    <text x="{slot_x}" y="898" font-size="{register_size}" font-weight="800"
           fill="{black}">REGISTER</text>
-    <text x="24" y="936" font-size="32" font-weight="800"
+    <text x="{slot_x}" y="936" font-size="{register_size}" font-weight="800"
           fill="{black}">HERE</text>
-    <rect x="24" y="960" width="180" height="180" fill="{white}"/>
-    <rect x="42" y="978" width="144" height="144" fill="none"
+    <rect x="{slot_x}" y="960" width="{slot_side}" height="{slot_side}"
+          fill="{white}"/>
+    <rect x="{slot_dash_x}" y="{slot_dash_y}" width="{slot_dash_side}"
+          height="{slot_dash_side}" fill="none"
           stroke="{rule_strong}" stroke-width="3" stroke-dasharray="10 8"/>
-    <text x="114" y="1058" text-anchor="middle" font-size="22"
-          fill="{ink_muted}">QR code</text>
+    <text x="{slot_mid_x}" y="1058" text-anchor="middle"
+          font-size="{slot_label_size}" fill="{ink_muted}">QR code</text>
   </g>
 </svg>
 """
@@ -652,7 +870,8 @@ _FLYER: Final = """\
          rather than over them. It carries no text and every word here is
          placed clear of it. Move or delete it freely; if you move a word
          instead, keep it out of the stroke. -->
-    <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
+    <g id="motif" fill="none" stroke="{motif_stroke}"
+       stroke-width="{stroke_weight}"
        stroke-linecap="round" stroke-linejoin="round">
       <path d="{motif}"/>
     </g>
@@ -660,90 +879,92 @@ _FLYER: Final = """\
     <!-- Wordmark: five squares, two markers and the line joining them,
          drawn rather than embedded. The rule is that line, continuing. -->
 {mark}
-    <text x="485" y="188" font-size="88"
+    <text x="{wordmark_x}" y="188" font-size="{wordmark_size}"
           font-weight="500">{wordmark}</text>
     <rect x="{rule_x}" y="{rule_y}" width="{rule_w}" height="{rule_h}"
           fill="{dominant}"/>
 
-    <text x="1050" y="430" text-anchor="middle" font-size="86"
+    <text x="{axis}" y="430" text-anchor="middle" font-size="{series_size}"
           font-weight="900" letter-spacing="2"
           fill="{dominant}">{series_caps}</text>
-    <text x="1050" y="530" text-anchor="middle" font-size="50"
+    <text x="{axis}" y="530" text-anchor="middle" font-size="{tagline_size}"
           fill="{black}">{tagline}</text>
-    <text x="1050" y="600" text-anchor="middle" font-size="50"
+    <text x="{axis}" y="600" text-anchor="middle" font-size="{invitation_size}"
           font-weight="700"
-          fill="{black}">Join the discussion at {forum_host}</text>
+          fill="{black}">{invitation}</text>
   </g>
 
   <g id="variable">
     <!-- TALK TITLE. Up to three lines, split by hand — SVG does not wrap
-         text. A short title: use one line and raise the font-size to 96. -->
-    <text text-anchor="middle" font-size="80" font-weight="700"
+         text. A short title: use one line and raise the font-size. -->
+    <text text-anchor="middle" font-size="{title_size}" font-weight="700"
           fill="{dominant}">
-      <tspan x="1050" y="840">{speaker_title}</tspan>
-      <tspan x="1050" y="940"></tspan>
-      <tspan x="1050" y="1040"></tspan>
+      <tspan x="{axis}" y="840">{speaker_title}</tspan>
+      <tspan x="{axis}" y="940"></tspan>
+      <tspan x="{axis}" y="1040"></tspan>
     </text>
 
     <!-- DATE AND TIME. The app holds {speaker_date} as 2026-11-12 and
          {speaker_time} as 12:30; write them out the way they are said. -->
-    <text x="1050" y="1290" text-anchor="middle" font-size="72"
+    <text x="{axis}" y="1290" text-anchor="middle" font-size="{date_size}"
           font-weight="700"
           fill="{dominant}">{speaker_date} at {speaker_time} (CET)</text>
 
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
-    <g transform="rotate(4 1520 1900)">
-      <rect x="1250" y="1440" width="700" height="810" fill="{white}"/>
-      <rect x="1288" y="1478" width="624" height="624"
+    <g transform="rotate(4 {frame_pivot_x} 1900)">
+      <rect x="{frame_x}" y="1440" width="700" height="810" fill="{white}"/>
+      <rect x="{frame_photo_x}" y="1478" width="624" height="624"
             fill="{field_tint}"/>
-      <text x="1600" y="1800" text-anchor="middle" font-size="44"
+      <text x="{frame_caption_x}" y="1800" text-anchor="middle" font-size="44"
             fill="{ink_muted}">speaker photo</text>
-      <text x="1912" y="2180" text-anchor="end" font-size="56"
+      <text x="{frame_end_x}" y="2180" text-anchor="end" font-size="56"
             font-weight="800" fill="{ink}">{speaker_name}</text>
-      <text x="1912" y="2226" text-anchor="end" font-size="34"
+      <text x="{frame_end_x}" y="2226" text-anchor="end" font-size="34"
             fill="{ink}">{speaker_affiliation}</text>
     </g>
 
     <!-- EDITION CODE. The series number this event carries in the data. -->
-    <text x="1050" y="2812" text-anchor="middle" font-size="40"
+    <text x="{axis}" y="2812" text-anchor="middle" font-size="{edition_size}"
           font-weight="700" fill="{dominant}">{speaker_edition_code}</text>
   </g>
 
   <g id="fixed-what-to-expect">
-    <text x="480" y="1470" font-size="62" font-weight="800"
+    <text x="{heading_x}" y="1470" font-size="{heading_size}" font-weight="800"
           fill="{black}">WHAT TO EXPECT?</text>
-    <text font-size="50" fill="{black}">
-      <tspan x="560" y="1590" font-weight="800"
+    <text font-size="{column_size}" fill="{black}">
+      <tspan x="{column_x}" y="1590" font-weight="800"
              fill="{dominant}">BEFORE: </tspan><tspan>Ask your</tspan>
-      <tspan x="560" y="1652">questions to the speaker</tspan>
-      <tspan x="560" y="1714">at {forum_host}</tspan>
-      <tspan x="560" y="1846" font-weight="800"
+      <tspan x="{column_x}" y="1652">questions to the speaker</tspan>
+      <tspan x="{column_x}" y="1714">at {forum_host}</tspan>
+      <tspan x="{column_x}" y="1846" font-weight="800"
              fill="{dominant}">D-DAY: </tspan><tspan>Presentation</tspan>
-      <tspan x="560" y="1908">followed by a discussion</tspan>
-      <tspan x="560" y="1970">with the audience</tspan>
-      <tspan x="560" y="2102" font-weight="800"
+      <tspan x="{column_x}" y="1908">followed by a discussion</tspan>
+      <tspan x="{column_x}" y="1970">with the audience</tspan>
+      <tspan x="{column_x}" y="2102" font-weight="800"
              fill="{dominant}">AFTER: </tspan><tspan>Continue the</tspan>
-      <tspan x="560" y="2164">discussion and connect</tspan>
-      <tspan x="560" y="2226">with peers</tspan>
+      <tspan x="{column_x}" y="2164">discussion and connect</tspan>
+      <tspan x="{column_x}" y="2226">with peers</tspan>
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
-         offline generator, then drop it over this square. It sits east
-         of the ground every motif this product draws keeps to on this
-         side of the page. -->
-    <text x="600" y="2360" font-size="56" font-weight="800"
+         offline generator, then drop it over this square. Unlike the
+         announcement's, this slot stands inside the same corridor as the
+         words above it: on a page this tall the drawing is nowhere near
+         this corner, and the slot keeps the column's own indent. -->
+    <text x="{slot_x}" y="2360" font-size="{register_size}" font-weight="800"
           fill="{black}">REGISTER HERE</text>
-    <rect x="600" y="2400" width="360" height="340" fill="{white}"/>
-    <rect x="630" y="2430" width="300" height="280" fill="none"
+    <rect x="{slot_x}" y="2400" width="{slot_w}" height="340" fill="{white}"/>
+    <rect x="{slot_dash_x}" y="2430" width="{slot_dash_w}" height="280"
+          fill="none"
           stroke="{rule_strong}" stroke-width="5" stroke-dasharray="18 14"/>
-    <text x="780" y="2595" text-anchor="middle" font-size="40"
-          fill="{ink_muted}">QR code</text>
-    <text x="1180" y="2872" text-anchor="middle" font-size="46"
-          fill="{black}">Free · online · everyone welcome</text>
-    <text x="1180" y="2928" text-anchor="middle" font-size="46"
-          fill="{black}">Register at {forum_host}</text>
+    <text x="{slot_mid_x}" y="2595" text-anchor="middle"
+          font-size="{slot_label_size}" fill="{ink_muted}">QR code</text>
+    <text x="{foot_axis}" y="2872" text-anchor="middle"
+          font-size="{foot_size}" fill="{black}">{foot_top}</text>
+    <text x="{foot_axis}" y="2928" text-anchor="middle"
+          font-size="{foot_size}" fill="{black}">{foot_bottom}</text>
   </g>
 </svg>
 """
@@ -762,47 +983,364 @@ def _stroke_weight(width: float, height: float, ratio: float) -> str:
 
 @dataclass(frozen=True)
 class _Wordmark:
-    """Where one file sets the mark, and how far east its rule runs.
+    """The mark, the address beside it, and the rule that runs on east.
 
-    `x`, `y` and `size` place the mark's own hundred-unit box; `rule_end`
-    is the only number here a page decides rather than the mark, and it is
-    where the right curl comes down: the rule stops short of the stroke
-    instead of running into it, which is the one thing the reference does
-    that this does not (its own rule and its own curl touch).
+    `indent`, `top` and `size` place the mark's own hundred-unit box: the
+    first is the design's own indent, and where the mark actually lands is
+    that or the corridor's own edge, whichever is further in. `gap` is the
+    air between the mark and the address, `baseline` and `text_size` set
+    the address, and `rule_weight` is how heavy the rule is drawn.
+
+    How far east the rule runs is not here, because it is not the mark's:
+    it stops at the page's own inset or where the drawing comes down,
+    whichever is nearer. It used to be a literal -- 964 on the square --
+    and that number was the ribbon's right curl measured by hand, which is
+    exactly the class of coordinate this file no longer keeps.
     """
 
-    x: float
-    y: float
+    indent: float
+    top: float
     size: float
-    rule_end: float
+    gap: float
+    baseline: float
+    text_size: float
     rule_weight: float
 
 
-#: The square sets the mark at the size the reference poster sets it at:
-#: a hundred units of twelve hundred, its top-left corner at 165, 57. The
-#: flyer sets it at the same fraction of its own width, which is what keeps
-#: the two reading as one series at two sizes, and further east than the
-#: square does because the ribbon runs deeper into an A4 page's own margin.
-_ANNOUNCEMENT_WORDMARK: Final = _Wordmark(165.0, 57.0, 100.0, 964.0, 4.0)
-_FLYER_WORDMARK: Final = _Wordmark(280.0, 92.0, 175.0, 1690.0, 7.0)
+#: The square sets the mark at the size the reference poster sets it at: a
+#: hundred units of twelve hundred, its top edge at 57 and its own indent
+#: at 165. The flyer sets it at the same fraction of its own width, which
+#: is what keeps the two reading as one series at two sizes.
+_ANNOUNCEMENT_WORDMARK: Final = _Wordmark(165.0, 57.0, 100.0, 17.0, 112.0, 50.0, 4.0)
+_FLYER_WORDMARK: Final = _Wordmark(280.0, 92.0, 175.0, 30.0, 188.0, 88.0, 7.0)
+
+#: The weight each wordmark's address is set at, and the weight the two
+#: `font-weight="800"` labels and headings are. Named because
+#: `typeface.width` is charged per weight and a number typed twice, once
+#: in the markup and once in the call that sizes it, is a number that can
+#: drift.
+_WORDMARK_WEIGHT: Final = 500
+_HEADING_WEIGHT: Final = 800
+_DISPLAY_WEIGHT: Final = 900
+_BODY_WEIGHT: Final = 400
+_STRONG_WEIGHT: Final = 700
 
 
-def _wordmark_values(mark: _Wordmark, values: dict[str, str]) -> dict[str, str]:
-    """The mark, and the rule that continues its own tail east."""
-    tail_x = _mark_tail_x(mark.x, mark.size)
-    tail_y = _mark_tail_y(mark.y, mark.size)
+def _wordmark_values(
+    canvas: _Canvas, mark: _Wordmark, values: dict[str, str], *, inset: float
+) -> dict[str, str]:
+    """The mark, the address, and the rule that continues the mark's own
+    tail east -- all three placed against the corridor their own rows leave.
+    """
+    rows = (mark.top, mark.top + mark.size)
+    mark_x = _starts_at(canvas, indent=mark.indent, top=rows[0], bottom=rows[1])
+    text_x = mark_x + mark.size + mark.gap
+    text_rows = canvas.rows(mark.baseline, mark.text_size)
+    _first, text_last = canvas.corridor(*text_rows)
+    address = values["wordmark_text"]
+    tail_x = _mark_tail_x(mark_x, mark.size)
+    tail_y = _mark_tail_y(mark.top, mark.size)
+    rule_end = _ends_at(
+        canvas,
+        inset=inset,
+        top=tail_y - mark.rule_weight / 2,
+        bottom=tail_y + mark.rule_weight / 2,
+    )
     return {
         "mark": _mark(
-            mark.x,
-            mark.y,
+            mark_x,
+            mark.top,
             mark.size,
             dots=values["logo_dots"],
             ink=values["motif_stroke"],
         ),
+        "wordmark_x": _num(text_x),
+        "wordmark_size": _num(
+            _fitted(
+                address,
+                size=mark.text_size,
+                weight=_WORDMARK_WEIGHT,
+                available=text_last - text_x,
+            )
+        ),
         "rule_x": _num(tail_x),
         "rule_y": _num(tail_y - mark.rule_weight / 2),
-        "rule_w": _num(mark.rule_end - tail_x),
+        "rule_w": _num(rule_end - tail_x),
         "rule_h": _num(mark.rule_weight),
+    }
+
+
+@dataclass(frozen=True)
+class _Frame:
+    """The tilted white plate a volunteer drops the speaker's photo into.
+
+    Every field is a design decision and stays one: the plate's own size,
+    the tilt, where the photo sits inside it and where the two lines of
+    credit are set against its lower right. The one thing derived is how
+    far east the whole assembly may stand, and it moves as one piece --
+    `x` is where the design puts it, and a drawing that reaches into those
+    rows slides it west rather than being fitted around it.
+    """
+
+    x: float
+    y: float
+    width: float
+    height: float
+    tilt: float
+    pivot: motifs.Point
+    photo_inset: float
+    caption_offset: float
+    end_offset: float
+
+
+def _tilted(frame: _Frame, shift: float) -> tuple[motifs.Point, ...]:
+    """The plate's four corners once it is tilted and moved by `shift`."""
+    angle = math.radians(frame.tilt)
+    pivot_x, pivot_y = frame.pivot[0] + shift, frame.pivot[1]
+    corners = (
+        (frame.x + shift, frame.y),
+        (frame.x + shift + frame.width, frame.y),
+        (frame.x + shift + frame.width, frame.y + frame.height),
+        (frame.x + shift, frame.y + frame.height),
+    )
+    return tuple(
+        (
+            pivot_x + (x - pivot_x) * math.cos(angle) - (y - pivot_y) * math.sin(angle),
+            pivot_y + (x - pivot_x) * math.sin(angle) + (y - pivot_y) * math.cos(angle),
+        )
+        for x, y in corners
+    )
+
+
+def _frame_values(canvas: _Canvas, frame: _Frame, *, inset: float) -> dict[str, str]:
+    """The plate, moved west if the drawing reaches into its own rows."""
+    corners = _tilted(frame, 0.0)
+    rows = (min(y for _x, y in corners), max(y for _x, y in corners))
+    limit = _ends_at(canvas, inset=inset, top=rows[0], bottom=rows[1])
+    shift = min(0.0, limit - max(x for x, _y in corners))
+    return {
+        "frame_x": _num(frame.x + shift),
+        "frame_photo_x": _num(frame.x + shift + frame.photo_inset),
+        "frame_caption_x": _num(frame.x + shift + frame.caption_offset),
+        "frame_end_x": _num(frame.x + shift + frame.end_offset),
+        "frame_pivot_x": _num(frame.pivot[0] + shift),
+    }
+
+
+def _frame_west(canvas: _Canvas, frame: _Frame, *, inset: float) -> float:
+    """The plate's own westmost point, which is what the column beside it
+    may not run into."""
+    corners = _tilted(frame, 0.0)
+    rows = (min(y for _x, y in corners), max(y for _x, y in corners))
+    limit = _ends_at(canvas, inset=inset, top=rows[0], bottom=rows[1])
+    shift = min(0.0, limit - max(x for x, _y in corners))
+    return min(x for x, _y in _tilted(frame, shift))
+
+
+@dataclass(frozen=True)
+class _Column:
+    """The "what to expect" heading and the rows indented under it.
+
+    `heading_indent` and `indent` are the design's own two indents, `top`
+    and `bottom` the rows the whole block occupies, and `gap` the air the
+    composition keeps between the column and whatever stands east of it.
+    """
+
+    heading_indent: float
+    heading_baseline: float
+    heading_size: float
+    indent: float
+    top: float
+    bottom: float
+    size: float
+    gap: float
+
+
+def _column_values(
+    canvas: _Canvas, column: _Column, *, east: float, lines: tuple[_Line, ...]
+) -> dict[str, str]:
+    """The column, indented past the drawing and sized to the air it has."""
+    heading_rows = canvas.rows(column.heading_baseline, column.heading_size)
+    heading_x = _starts_at(
+        canvas,
+        indent=column.heading_indent,
+        top=heading_rows[0],
+        bottom=heading_rows[1],
+    )
+    column_x = _starts_at(
+        canvas, indent=column.indent, top=column.top, bottom=column.bottom
+    )
+    _first, heading_last = canvas.corridor(*heading_rows)
+    _first, column_last = canvas.corridor(column.top, column.bottom)
+    return {
+        "heading_x": _num(heading_x),
+        "heading_size": _num(
+            _fitted(
+                _HEADING,
+                size=column.heading_size,
+                weight=_HEADING_WEIGHT,
+                available=min(heading_last, east) - column.gap - heading_x,
+            )
+        ),
+        "column_x": _num(column_x),
+        "column_size": _num(
+            _at_most(
+                size=column.size,
+                ems=max(_ems(line) for line in lines),
+                available=min(column_last, east) - column.gap - column_x,
+            )
+        ),
+    }
+
+
+#: The heading both columns carry. Product prose, in English, like
+#: "REGISTER HERE" below it -- not an instance's words, and so not
+#: something a declaration could supply. Named because it is measured.
+_HEADING: Final = "WHAT TO EXPECT?"
+
+#: The line the square sets under its series name, and the one the flyer
+#: sets under its tagline. Both name the forum, which is a declared value,
+#: which is why the second is composed rather than typed into the markup.
+_ANNOUNCEMENT_INVITATION: Final = "Join the discussion before and after the talk at"
+
+#: What the flyer's foot band says. The first line is product prose; the
+#: second names the forum.
+_FLYER_FOOT_TOP: Final = "Free \u00b7 online \u00b7 everyone welcome"
+
+
+#: One line of the column, as the runs it is actually set in: a line that
+#: opens with a bold label and continues in the body weight is two runs,
+#: and charging the whole of it at either weight would be measuring a line
+#: this file does not set.
+_Line = tuple[tuple[str, int], ...]
+
+
+def _ems(line: _Line) -> float:
+    """How wide one line is, in ems of the size it will be set at."""
+    return sum(typeface.width(text, size=1.0, weight=weight) for text, weight in line)
+
+
+def _column_lines(forum_host: str) -> tuple[_Line, ...]:
+    """Every line the "what to expect" column sets, longest one included.
+
+    Written out here rather than parsed back out of the markup: the size
+    the column is set at is decided by whichever of these needs the most
+    room, and the one that does is the one naming the forum, whose length
+    is the instance's. `tests/publication/test_brand.py` holds this list
+    and the markup to each other.
+    """
+    return (
+        (("BEFORE: ", _HEADING_WEIGHT), ("Ask your", _BODY_WEIGHT)),
+        (("questions to the speaker", _BODY_WEIGHT),),
+        ((f"at {forum_host}", _BODY_WEIGHT),),
+        (("D-DAY: ", _HEADING_WEIGHT), ("Presentation", _BODY_WEIGHT)),
+        (("followed by a discussion", _BODY_WEIGHT),),
+        (("with the audience", _BODY_WEIGHT),),
+        (("AFTER: ", _HEADING_WEIGHT), ("Continue the", _BODY_WEIGHT)),
+        (("discussion and connect", _BODY_WEIGHT),),
+        (("with peers", _BODY_WEIGHT),),
+    )
+
+
+# --------------------------------------------------------------------------
+# The square announcement
+# --------------------------------------------------------------------------
+
+#: The page's own vertical axis, its own inset from the right edge, and the
+#: gutter the registration block keeps from whatever edge it ends up
+#: against. All three are the composition's, not the drawing's.
+_ANNOUNCEMENT_AXIS: Final = 600.0
+_ANNOUNCEMENT_INSET: Final = 80.0
+_ANNOUNCEMENT_GUTTER: Final = 24.0
+
+_ANNOUNCEMENT_FRAME: Final = _Frame(
+    x=700.0,
+    y=690.0,
+    width=420.0,
+    height=470.0,
+    tilt=4.0,
+    pivot=(900.0, 900.0),
+    photo_inset=22.0,
+    caption_offset=210.0,
+    end_offset=398.0,
+)
+
+_ANNOUNCEMENT_COLUMN: Final = _Column(
+    heading_indent=240.0,
+    heading_baseline=730.0,
+    heading_size=34.0,
+    indent=320.0,
+    top=770.0,
+    bottom=1175.0,
+    size=27.0,
+    gap=24.0,
+)
+
+#: The registration block: the two label baselines, the size they are set
+#: at, the slot's own top edge and design side, how far the dashed
+#: placeholder sits inside it, and where its caption is set. The slot is
+#: the one block on this page that stands on the far side of the drawing,
+#: so it is the one that reads `free_spans` rather than a corridor.
+_ANNOUNCEMENT_REGISTER_TOP: Final = 870.0
+_ANNOUNCEMENT_REGISTER_SIZE: Final = 32.0
+_ANNOUNCEMENT_SLOT_TOP: Final = 960.0
+_ANNOUNCEMENT_SLOT_SIDE: Final = 180.0
+_ANNOUNCEMENT_SLOT_DASH: Final = 0.1
+_ANNOUNCEMENT_SLOT_LABEL_SIZE: Final = 22.0
+
+#: The smallest slot this page will draw. Below it the placeholder stops
+#: being something a volunteer can drop a code into, and a build that
+#: quietly drew a stamp-sized one would be shipping a poster nobody can
+#: register from -- so it stops instead and says which family left no room.
+_ANNOUNCEMENT_SLOT_FLOOR: Final = 120.0
+
+
+def _register_values(canvas: _Canvas) -> dict[str, str]:
+    """The registration slot, in whatever ground the drawing leaves it.
+
+    It takes the free strip nearest the left edge over its own rows --
+    which for a drawing that runs down the middle of this page's lower
+    left is the notch between the stroke and the edge, and for one that is
+    nowhere near is the whole page. Either way the slot keeps the page's
+    own gutter from the strip's own left edge and is as wide as the strip
+    allows, up to its design size.
+    """
+    bottom = _ANNOUNCEMENT_SLOT_TOP + _ANNOUNCEMENT_SLOT_SIDE
+    strip = canvas.free(_ANNOUNCEMENT_REGISTER_TOP, bottom)[0]
+    slot_x = strip[0] + _ANNOUNCEMENT_GUTTER
+    side = min(_ANNOUNCEMENT_SLOT_SIDE, strip[1] - slot_x)
+    if side < _ANNOUNCEMENT_SLOT_FLOOR:
+        raise ValueError(
+            f"the {canvas.family!r} motif leaves {_num(max(side, 0.0))} units "
+            f"for the announcement's registration slot between rows "
+            f"{_num(_ANNOUNCEMENT_REGISTER_TOP)} and {_num(bottom)}, and a "
+            f"slot under {_num(_ANNOUNCEMENT_SLOT_FLOOR)} is not a "
+            "placeholder anybody can drop a code into"
+        )
+    dash = _ANNOUNCEMENT_SLOT_DASH * side
+    return {
+        "slot_x": _num(slot_x),
+        "slot_side": _num(side),
+        "slot_mid_x": _num(slot_x + side / 2),
+        "slot_dash_x": _num(slot_x + dash),
+        "slot_dash_y": _num(_ANNOUNCEMENT_SLOT_TOP + dash),
+        "slot_dash_side": _num(side - 2 * dash),
+        "register_size": _num(
+            _fitted(
+                "REGISTER",
+                size=_ANNOUNCEMENT_REGISTER_SIZE,
+                weight=_HEADING_WEIGHT,
+                available=strip[1] - slot_x,
+            )
+        ),
+        "slot_label_size": _num(
+            _fitted(
+                "QR code",
+                size=_ANNOUNCEMENT_SLOT_LABEL_SIZE,
+                weight=_BODY_WEIGHT,
+                available=side,
+            )
+        ),
     }
 
 
@@ -810,32 +1348,285 @@ def render_announcement_template(root: Path) -> str:
     """`docs/handbook/assets/announcement-template.svg` in full."""
     values = _values(root)
     width, height = formats.SQUARE.width, formats.SQUARE.height
+    canvas = _Canvas(
+        values["motif_family"], width, height, float(values["motif_ratio"])
+    )
+    axis = _ANNOUNCEMENT_AXIS
+    frame_west = _frame_west(canvas, _ANNOUNCEMENT_FRAME, inset=_ANNOUNCEMENT_INSET)
     return _ANNOUNCEMENT.format(
         **values,
-        **_wordmark_values(_ANNOUNCEMENT_WORDMARK, values),
+        **_wordmark_values(
+            canvas, _ANNOUNCEMENT_WORDMARK, values, inset=_ANNOUNCEMENT_INSET
+        ),
+        **_frame_values(canvas, _ANNOUNCEMENT_FRAME, inset=_ANNOUNCEMENT_INSET),
+        **_column_values(
+            canvas,
+            _ANNOUNCEMENT_COLUMN,
+            east=frame_west,
+            lines=_column_lines(values["forum_host"]),
+        ),
+        **_register_values(canvas),
         w=_num(width),
         h=_num(height),
+        axis=_num(axis),
         generated_note=_GENERATED_NOTE,
         stroke_weight=_stroke_weight(width, height, float(values["motif_ratio"])),
         motif=_motif_path(values["motif_family"], width, height),
+        invitation=_ANNOUNCEMENT_INVITATION,
+        series_size=_num(
+            _centred(
+                canvas,
+                values["series_caps"],
+                axis=axis,
+                baseline=272.0,
+                size=50.0,
+                weight=_DISPLAY_WEIGHT,
+                letter_spacing=1.0,
+            )
+        ),
+        invitation_size=_num(
+            _centred(
+                canvas,
+                _ANNOUNCEMENT_INVITATION,
+                axis=axis,
+                baseline=330.0,
+                size=31.0,
+                weight=_BODY_WEIGHT,
+            )
+        ),
+        address_size=_num(
+            _centred(
+                canvas,
+                values["forum_host"],
+                axis=axis,
+                baseline=372.0,
+                size=31.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
+        title_size=_num(
+            _centred(
+                canvas,
+                values["speaker_title"],
+                axis=axis,
+                baseline=458.0,
+                size=44.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
+        date_size=_num(
+            _centred(
+                canvas,
+                f"{values['speaker_date']} at {values['speaker_time']} (CET)",
+                axis=axis,
+                baseline=600.0,
+                size=40.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
     )
+
+
+# --------------------------------------------------------------------------
+# The A4 flyer
+# --------------------------------------------------------------------------
+
+_FLYER_AXIS: Final = 1050.0
+_FLYER_INSET: Final = 150.0
+
+#: The foot band's own axis, which is not the page's: the band is read as
+#: a line under the registration slot beside it rather than as part of the
+#: centred stack above, and it sits east of the page's middle for that
+#: reason. A design decision, and one no family moves.
+_FLYER_FOOT_AXIS: Final = 1180.0
+
+_FLYER_FRAME: Final = _Frame(
+    x=1250.0,
+    y=1440.0,
+    width=700.0,
+    height=810.0,
+    tilt=4.0,
+    pivot=(1520.0, 1900.0),
+    photo_inset=38.0,
+    caption_offset=350.0,
+    end_offset=662.0,
+)
+
+_FLYER_COLUMN: Final = _Column(
+    heading_indent=480.0,
+    heading_baseline=1470.0,
+    heading_size=62.0,
+    indent=560.0,
+    top=1540.0,
+    bottom=2240.0,
+    size=50.0,
+    gap=40.0,
+)
+
+#: The flyer's own registration block. Unlike the square's it stands
+#: inside the same corridor as the words above it -- on a page this tall
+#: no drawing this product has comes near that corner -- so it is placed
+#: like any other left-set block, from its own design indent.
+_FLYER_SLOT_INDENT: Final = 600.0
+_FLYER_SLOT_TOP: Final = 2400.0
+_FLYER_SLOT_LABEL_BASELINE: Final = 2360.0
+_FLYER_SLOT_WIDTH: Final = 360.0
+_FLYER_SLOT_HEIGHT: Final = 340.0
+_FLYER_SLOT_DASH: Final = 30.0
+_FLYER_REGISTER_SIZE: Final = 56.0
+_FLYER_SLOT_LABEL_SIZE: Final = 40.0
 
 
 def render_flyer_template(root: Path) -> str:
     """`docs/handbook/assets/flyer-template.svg` in full."""
     values = _values(root)
     paper_w, paper_h = formats.PRINT_PAPER_MM
-    width, height = paper_w * _UNITS_PER_MM, paper_h * _UNITS_PER_MM
+    width, height = paper_w * UNITS_PER_MM, paper_h * UNITS_PER_MM
+    canvas = _Canvas(
+        values["motif_family"], width, height, float(values["motif_ratio"])
+    )
+    axis = _FLYER_AXIS
+    frame_west = _frame_west(canvas, _FLYER_FRAME, inset=_FLYER_INSET)
+    invitation = f"Join the discussion at {values['forum_host']}"
+    foot_bottom = f"Register at {values['forum_host']}"
+    slot_x = _starts_at(
+        canvas,
+        indent=_FLYER_SLOT_INDENT,
+        top=_FLYER_SLOT_LABEL_BASELINE - _INK_ABOVE_BASELINE_EM * _FLYER_REGISTER_SIZE,
+        bottom=_FLYER_SLOT_TOP + _FLYER_SLOT_HEIGHT,
+    )
     return _FLYER.format(
         **values,
-        **_wordmark_values(_FLYER_WORDMARK, values),
+        **_wordmark_values(canvas, _FLYER_WORDMARK, values, inset=_FLYER_INSET),
+        **_frame_values(canvas, _FLYER_FRAME, inset=_FLYER_INSET),
+        **_column_values(
+            canvas,
+            _FLYER_COLUMN,
+            east=frame_west,
+            lines=_column_lines(values["forum_host"]),
+        ),
         w=_num(width),
         h=_num(height),
         paper_w=_num(paper_w),
         paper_h=_num(paper_h),
+        axis=_num(axis),
         generated_note=_GENERATED_NOTE,
         stroke_weight=_stroke_weight(width, height, float(values["motif_ratio"])),
         motif=_motif_path(values["motif_family"], width, height),
+        invitation=invitation,
+        series_size=_num(
+            _centred(
+                canvas,
+                values["series_caps"],
+                axis=axis,
+                baseline=430.0,
+                size=86.0,
+                weight=_DISPLAY_WEIGHT,
+                letter_spacing=2.0,
+            )
+        ),
+        tagline_size=_num(
+            _centred(
+                canvas,
+                values["tagline"],
+                axis=axis,
+                baseline=530.0,
+                size=50.0,
+                weight=_BODY_WEIGHT,
+            )
+        ),
+        invitation_size=_num(
+            _centred(
+                canvas,
+                invitation,
+                axis=axis,
+                baseline=600.0,
+                size=50.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
+        title_size=_num(
+            _centred(
+                canvas,
+                values["speaker_title"],
+                axis=axis,
+                baseline=840.0,
+                size=80.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
+        date_size=_num(
+            _centred(
+                canvas,
+                f"{values['speaker_date']} at {values['speaker_time']} (CET)",
+                axis=axis,
+                baseline=1290.0,
+                size=72.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
+        edition_size=_num(
+            _centred(
+                canvas,
+                values["speaker_edition_code"],
+                axis=axis,
+                baseline=2812.0,
+                size=40.0,
+                weight=_STRONG_WEIGHT,
+            )
+        ),
+        slot_x=_num(slot_x),
+        slot_w=_num(_FLYER_SLOT_WIDTH),
+        slot_mid_x=_num(slot_x + _FLYER_SLOT_WIDTH / 2),
+        slot_dash_x=_num(slot_x + _FLYER_SLOT_DASH),
+        slot_dash_w=_num(_FLYER_SLOT_WIDTH - 2 * _FLYER_SLOT_DASH),
+        register_size=_num(
+            _fitted(
+                "REGISTER HERE",
+                size=_FLYER_REGISTER_SIZE,
+                weight=_HEADING_WEIGHT,
+                available=_ends_at(
+                    canvas,
+                    inset=_FLYER_INSET,
+                    top=_FLYER_SLOT_LABEL_BASELINE
+                    - _INK_ABOVE_BASELINE_EM * _FLYER_REGISTER_SIZE,
+                    bottom=_FLYER_SLOT_LABEL_BASELINE
+                    + _INK_BELOW_BASELINE_EM * _FLYER_REGISTER_SIZE,
+                )
+                - slot_x,
+            )
+        ),
+        slot_label_size=_num(
+            _fitted(
+                "QR code",
+                size=_FLYER_SLOT_LABEL_SIZE,
+                weight=_BODY_WEIGHT,
+                available=_FLYER_SLOT_WIDTH,
+            )
+        ),
+        foot_axis=_num(_FLYER_FOOT_AXIS),
+        foot_top=_FLYER_FOOT_TOP,
+        foot_bottom=foot_bottom,
+        foot_size=_num(
+            min(
+                _centred(
+                    canvas,
+                    _FLYER_FOOT_TOP,
+                    axis=_FLYER_FOOT_AXIS,
+                    baseline=2872.0,
+                    size=46.0,
+                    weight=_BODY_WEIGHT,
+                ),
+                _centred(
+                    canvas,
+                    foot_bottom,
+                    axis=_FLYER_FOOT_AXIS,
+                    baseline=2928.0,
+                    size=46.0,
+                    weight=_BODY_WEIGHT,
+                ),
+            )
+        ),
     )
 
 
@@ -848,8 +1639,8 @@ def render_flyer_template(root: Path) -> str:
 #: replaces was drawn at -- the designer's own vector original
 #: (`host-background_initial.pdf`, gitignored local reference material) is
 #: the same composition exported at 1440x810, the same 16:9 frame.
-_BACKGROUND_WIDTH: Final = 1920.0
-_BACKGROUND_HEIGHT: Final = 1080.0
+BACKGROUND_WIDTH: Final = 1920.0
+BACKGROUND_HEIGHT: Final = 1080.0
 
 #: The plate's own vertical geometry, in canvas units, read straight off
 #: the original at this size: it runs from 24 to 376, drawn with a 3-unit
@@ -863,28 +1654,23 @@ _PLATE_BOTTOM: Final = 376.0
 _PLATE_RULE: Final = 3.0
 _PLATE_PADDING: Final = 28.0
 
-#: Each line's baseline and the capital height it is set at, in canvas
-#: units, measured off the original: the name at 76 units of cap height,
-#: the strapline at 45, the address at 25.
-_PLATE_LINES: Final = ((152.0, 76.0), (241.0, 45.0), (311.0, 25.0))
+#: Each line's baseline, the capital height it is set at and the weight it
+#: is set in, the first two measured off the original: the name at 76 units
+#: of cap height, the strapline at 45, the address at 25. The weight is
+#: here because `typeface.width` is charged per weight and the markup below
+#: sets one on each of the three -- a number typed in two places is a
+#: number that can drift.
+_PLATE_LINES: Final = (
+    (152.0, 76.0, 900),
+    (241.0, 45.0, 800),
+    (311.0, 25.0, 700),
+)
 
 #: Cap height as a fraction of the font size, for the heavy grotesques
 #: this charter names and for every fallback in `_FALLBACK`. Used one way
 #: only -- to turn a measured capital height back into the `font-size` that
 #: produces it.
 _CAP_HEIGHT_EM: Final = 0.72
-
-#: The average advance of one capital, as a fraction of the font size, for
-#: fitting a line to the plate it is set in. Measured on the original's own
-#: two lines whose glyph mix is what these three actually are -- a name
-#: (1346 units across 19 characters at 105.6) and a domain (587 across 25
-#: at 34.7) -- which give 0.671 and 0.677; rounded *up*, so a line of
-#: narrower letters is shrunk slightly sooner than it needs to be rather
-#: than one unit too late. SVG does not wrap and cannot measure, so this is
-#: what stands between a long organisation's name and the overflowing
-#: poster D-08 names -- the same job `visual._scaled_font_size` does for a
-#: talk title, done against a real box instead of against a soft limit.
-_ADVANCE_EM: Final = 0.68
 
 #: The code's own box and where it sits: 202 units square, 86 in from the
 #: right edge and 24 up from the bottom, all measured off the original. Its
@@ -910,21 +1696,30 @@ _CODE_LABEL_CAP: Final = 20.0
 _CODE_LABEL: Final = ("SCAN TO JOIN", "THE DISCUSSION")
 
 
-def _fitted_font_size(text: str, *, cap_height: float, available: float) -> float:
+def _fitted_font_size(
+    text: str, *, cap_height: float, weight: int, available: float
+) -> float:
     """A font size that sets `text` at `cap_height` unless it would then
     run wider than `available`, in which case as large as fits.
 
-    A pure function of the string's length, deliberately:
+    A pure function of the string, deliberately:
     `visual._scaled_font_size`'s own argument applies unchanged -- the same
     declaration asks for the same size on any machine, before a glyph is
     drawn, where a browser measurement could differ between two builds
     that agree on every design decision.
+
+    What it is a function *of* is what changed. It used to be the string's
+    own length times one average advance, and that average was measured on
+    two lines and wrong for the rest: it under-charged this plate's own
+    name line by 22 units on one of the two charters this repository ships,
+    which is 22 units of the padding the design asked for, spent without
+    anything saying so. `typeface.width` charges each character what the
+    face actually gives it, at the weight the line is set in.
     """
     by_height = cap_height / _CAP_HEIGHT_EM
     if not text:
         return by_height
-    by_width = available / (len(text) * _ADVANCE_EM)
-    return min(by_height, by_width)
+    return _fitted(text, size=by_height, weight=weight, available=available)
 
 
 _BACKGROUND: Final = """\
@@ -943,7 +1738,8 @@ _BACKGROUND: Final = """\
        motif colour and at its own weight. The plate below sits inside the
        corridor the drawing leaves free, so no word is ever drawn across
        it. -->
-  <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
+  <g id="motif" fill="none" stroke="{motif_stroke}"
+     stroke-width="{stroke_weight}"
      stroke-linecap="round" stroke-linejoin="round">
     <path d="{motif}"/>
   </g>
@@ -984,7 +1780,7 @@ _BACKGROUND: Final = """\
 def render_video_call_background(root: Path) -> str:
     """`docs/handbook/assets/video-call-background.svg` in full."""
     values = _values(root)
-    width, height = _BACKGROUND_WIDTH, _BACKGROUND_HEIGHT
+    width, height = BACKGROUND_WIDTH, BACKGROUND_HEIGHT
     ratio = float(values["motif_ratio"])
     left, right = motifs.safe_margins(
         values["motif_family"], width, height, ratio=ratio
@@ -999,8 +1795,8 @@ def render_video_call_background(root: Path) -> str:
         values["address_caps"],
     )
     sizes = [
-        _fitted_font_size(text, cap_height=cap, available=available)
-        for text, (_baseline, cap) in zip(lines, _PLATE_LINES, strict=True)
+        _fitted_font_size(text, cap_height=cap, weight=weight, available=available)
+        for text, (_baseline, cap, weight) in zip(lines, _PLATE_LINES, strict=True)
     ]
 
     code_x = width - _CODE_RIGHT_GAP - _CODE_SIDE
@@ -1029,7 +1825,14 @@ def render_video_call_background(root: Path) -> str:
         code_y=_num(code_y),
         code_side=_num(_CODE_SIDE),
         code_mid=_num(code_x + _CODE_SIDE / 2),
-        label_size=_num(_CODE_LABEL_CAP / _CAP_HEIGHT_EM),
+        label_size=_num(
+            _fitted_font_size(
+                max(_CODE_LABEL, key=len),
+                cap_height=_CODE_LABEL_CAP,
+                weight=_HEADING_WEIGHT,
+                available=_CODE_SIDE,
+            )
+        ),
         label_top_y=_num(code_y - _CODE_LABEL_BASELINES[0]),
         label_bottom_y=_num(code_y - _CODE_LABEL_BASELINES[1]),
         label_top=_CODE_LABEL[0],

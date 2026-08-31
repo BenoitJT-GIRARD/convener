@@ -11,6 +11,7 @@ import shutil
 # One fixed git invocation, in `_git_log` and nowhere else; see its docstring.
 import subprocess  # nosec B404
 import sys
+import tempfile
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -133,7 +134,16 @@ from convener_ops.maintenance import (
 )
 from convener_ops.maintenance.sweep import expire_votes, sweep_inactive_members
 from convener_ops.maintenance.sweep import sweep as sweep_speakers
-from convener_ops.publication import agenda, announce, formats, visual
+from convener_ops.publication import (
+    agenda,
+    announce,
+    brand,
+    brand_templates,
+    formats,
+    motifs,
+    typeface,
+    visual,
+)
 from convener_ops.publication.public_data import to_public, to_survey_status
 
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
@@ -5564,6 +5574,172 @@ def render_visual_fixtures() -> int:
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(manifest)} visual fixture(s) to {out}")
+    return 0
+
+
+#: Every charter this repository holds, under the name its fixtures are
+#: written with, and the declaration whose names and address the templates
+#: are rendered from beside it. Three, and each is a real file rather than
+#: an invented one:
+#:
+#: - `instance` -- this instance's own charter and its own declaration.
+#: - `example` -- `instances/example/`, the worked example a duplicate
+#:   copies, charter and declaration both.
+#: - `product` -- `brand/convener/brand.json`, the charter a duplicate that
+#:   has written none of its own is drawn with. It has no declaration of
+#:   its own, because a charter is not an identity: it is rendered against
+#:   this instance's names, which is what a duplicate on its first build
+#:   actually gets.
+_TEMPLATE_CHARTERS: Final = (
+    ("instance", brand.INSTANCE_PATH, published.INSTANCE_PATH),
+    (
+        "example",
+        published.EXAMPLE_INSTANCE_ROOT / brand.INSTANCE_PATH,
+        published.EXAMPLE_INSTANCE_PATH,
+    ),
+    ("product", brand.DEFAULT_PATH, published.INSTANCE_PATH),
+)
+
+#: The three files `brand_templates` writes, under the name each fixture
+#: is written with, and the canvas each is drawn on. The sizes are read off
+#: the module that draws them rather than typed again -- `formats.SQUARE`
+#: for the square, A4 at ten units a millimetre for the flyer, and the
+#: background's own frame -- so a change to any of them moves the fixture
+#: with it.
+_TEMPLATE_FILES: Final = (
+    (
+        "announcement",
+        brand_templates.render_announcement_template,
+        formats.SQUARE.width,
+        formats.SQUARE.height,
+    ),
+    (
+        "flyer",
+        brand_templates.render_flyer_template,
+        formats.PRINT_PAPER_MM[0] * brand_templates.UNITS_PER_MM,
+        formats.PRINT_PAPER_MM[1] * brand_templates.UNITS_PER_MM,
+    ),
+    (
+        "background",
+        brand_templates.render_video_call_background,
+        brand_templates.BACKGROUND_WIDTH,
+        brand_templates.BACKGROUND_HEIGHT,
+    ),
+)
+
+
+def _template_fixture_root(
+    scratch: Path, root: Path, charter: Path, declaration: Path, family: str
+) -> Path:
+    """A repository root holding one charter, drawn with one family.
+
+    Two files and nothing else, because that is all the three templates
+    read: a declaration (the names, the address, the forum the code points
+    at) and a charter (the palette and the motif). The charter is copied
+    with its `motif.family` replaced, which is how the sweep asks a
+    question no committed file asks -- what this charter's own colours and
+    this instance's own name look like drawn with *that* family -- without
+    inventing a charter and committing it.
+    """
+    made = scratch / f"{charter.stem}-{family}"
+    (made / brand.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
+    (made / published.INSTANCE_PATH).write_bytes((root / declaration).read_bytes())
+    values = json.loads((root / charter).read_text(encoding="utf-8"))
+    values["motif"][brand.MOTIF_FAMILY] = family
+    (made / brand.INSTANCE_PATH).write_text(
+        json.dumps(values, indent=2) + "\n", encoding="utf-8"
+    )
+    return made
+
+
+def render_template_fixtures() -> int:
+    """`convener-render-template-fixtures OUTPUT_DIR`: writes the pinned
+    clearance check its input -- the three files `brand_templates` writes,
+    rendered for every charter this repository holds crossed with every
+    family `motifs` draws, plus a `manifest.json` and a copy of `fonts/`.
+
+    The opposite number of `render_visual_fixtures` above in one respect
+    and its twin in every other. That command renders one composition at
+    three canvases and compares the pixels; this one renders three
+    compositions at every charter and every family and measures whether
+    any stroke crosses any word. Neither re-derives a page in JavaScript:
+    both write the bytes and let `tools/visuals/` read them, which is
+    D-14's own shape (the fixture is the boundary).
+
+    **The cross product is the point.** A charter names one family, so a
+    sweep over the charters alone would only ever exercise the drawings
+    somebody has already chosen -- which is exactly how a family gets
+    fitted to one committed layout by hand and nothing notices. Rendering
+    every charter with every family asks the question a new family
+    actually has to answer: not "does the ribbon still clear the words"
+    but "does *this* drawing clear them, at every stroke weight and every
+    string length this repository can produce". A family added to
+    `motifs.FAMILIES` is swept the moment it is registered, with no entry
+    to add here.
+
+    Deterministic, and reads nothing an event changes: the templates carry
+    `{{speaker.*}}` placeholders rather than a talk, so the same
+    declaration and the same charter always produce the same bytes.
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-template-fixtures OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+    out.mkdir(parents=True, exist_ok=True)
+
+    manifest: list[dict[str, Any]] = []
+    with tempfile.TemporaryDirectory() as scratch:
+        for label, charter, declaration in _TEMPLATE_CHARTERS:
+            for family in sorted(motifs.FAMILIES):
+                made = _template_fixture_root(
+                    Path(scratch), root, charter, declaration, family
+                )
+                ratio = brand.motif_width_ratio(made)
+                for template, render, width, height in _TEMPLATE_FILES:
+                    name = f"{label}-{family}-{template}"
+                    (out / f"{name}.svg").write_text(render(made), encoding="utf-8")
+                    manifest.append(
+                        {
+                            "name": name,
+                            "file": f"{name}.svg",
+                            "charter": label,
+                            "family": family,
+                            "template": template,
+                            "width": width,
+                            "height": height,
+                            "ratio": ratio,
+                        }
+                    )
+
+    fonts_dest = out / "fonts"
+    if fonts_dest.exists():
+        shutil.rmtree(fonts_dest)
+    shutil.copytree(root / "fonts", fonts_dest)
+
+    (out / "advances.json").write_text(
+        json.dumps(
+            {
+                "light": typeface.LIGHT,
+                "heavy": typeface.HEAVY,
+                "em": {
+                    character: {
+                        str(weight): typeface.advance_em(character, weight=weight)
+                        for weight in (typeface.LIGHT, typeface.HEAVY)
+                    }
+                    for character in map(chr, range(32, 127))
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(manifest)} template fixture(s) to {out}")
     return 0
 
 

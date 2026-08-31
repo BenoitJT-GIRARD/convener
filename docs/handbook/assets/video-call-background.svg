@@ -18,7 +18,8 @@
        motif colour and at its own weight. The plate below sits inside the
        corridor the drawing leaves free, so no word is ever drawn across
        it. -->
-  <g fill="none" stroke="#012765" stroke-width="25.92"
+  <g id="motif" fill="none" stroke="#012765"
+     stroke-width="25.92"
      stroke-linecap="round" stroke-linejoin="round">
     <path d="M 114.48 0
                C 114.48 114.75 57.24 229.5 0 229.5
@@ -54,14 +55,14 @@
        it. All three lines are declared values set in capitals, and each is
        sized to fit this plate rather than at a fixed size, so a longer
        name shrinks instead of running off the edge. -->
-  <rect x="279.06" y="25.5" width="1427.76" height="349"
+  <rect x="285.87" y="25.5" width="1420.95" height="349"
         fill="#ffffff" stroke="#000000" stroke-width="3"/>
   <g text-anchor="middle" fill="#000000">
-    <text x="992.94" y="152" font-size="105.56"
+    <text x="996.35" y="152" font-size="100.66"
           font-weight="900">THE EXAMPLE COLLECTIVE</text>
-    <text x="992.94" y="241" font-size="62.5"
+    <text x="996.35" y="241" font-size="62.5"
           font-weight="800">READ TOGETHER</text>
-    <text x="992.94" y="311" font-size="34.72"
+    <text x="996.35" y="311" font-size="34.72"
           font-weight="700">FORUM.EXAMPLE.TEST</text>
   </g>
 
@@ -70,7 +71,7 @@
        so there is nothing here for a volunteer to generate. That address
        is in the title element below, in the clear, so what a code points
        at can be read without scanning it. -->
-  <g text-anchor="middle" fill="#000000" font-size="27.78"
+  <g text-anchor="middle" fill="#000000" font-size="21.04"
      font-weight="800">
     <text x="1733" y="801">SCAN TO JOIN</text>
     <text x="1733" y="830">THE DISCUSSION</text>

@@ -111,16 +111,14 @@ it keeps its full gesture, exactly as above. What it must never do is pass
 *through* the words this page sets: the reference's own content sits inside
 margins the ribbon lives outside of on both sides, nothing it sets ever
 crosses the stroke. `_motif_safe_margins` computes the same two margins
-for this composition by asking the family the charter names -- for the
-ribbon, the loop centres, the left tail's own fitted bulge, the points
-where the stroke crosses each edge -- and taking the deepest on-curve
-reach into the canvas on each side,
-plus the stroke's own width as clearance (half of it for the stroke's own
-physical extent either side of its centreline, the other half as a
-documented buffer for the small overshoot a Catmull-Rom curve makes past an
-interior anchor on its way to the next one -- `motifs/ribbon.py`'s own
-`_LEFT_TAIL_BULGE_X` comment measures this at ~8px on a 1200px canvas
-against a ~29px stroke there, comfortably inside one full stroke width).
+for this composition by asking the family the charter names where its
+drawing actually goes -- `motifs.safe_margins`, which measures the
+family's own outline (for the ribbon the curve itself, flattened; for a
+family of straight segments its own points) and takes the deepest reach
+into the canvas on each side, plus the stroke's own width as clearance:
+half of it for the stroke's physical extent either side of its
+centreline, the other half a gutter, so a word set at the safe area's own
+edge is not set against the drawing.
 Every band and the hero section and the date line all read the same two
 margins (`--safe-l`/`--safe-r`, `vw`-relative custom properties on
 `.poster`) for their own horizontal padding, rather than each guessing its
@@ -128,11 +126,11 @@ own clearance the way `.expect`'s own hand-typed `padding-left: 22vmin`
 used to (a number that, worked out independently here, turns out close to
 what `_motif_safe_margins` derives for a square canvas -- a useful sanity
 check, not a coincidence worth relying on for the next aspect ratio).
-Deriving the margins from the family's own waypoints rather than typing two numbers
-is what makes them survive a change of aspect ratio: `waypoints`
-already expresses every loop and bulge as a fraction of the canvas's own
-short side, width or height (see that module's own docstring), so a margin
-computed from it adapts the same way the ribbon itself does, at any
+Deriving the margins from the family's own drawing rather than typing two
+numbers is what makes them survive a change of aspect ratio: a family
+expresses every loop and bulge as a fraction of the canvas's own short
+side, width or height (see each module's own docstring), so a margin
+computed from it adapts the same way the drawing itself does, at any
 `width`/`height` this function is called with.
 
 `.content` is the one exception, and reads a third variable,
@@ -784,21 +782,28 @@ def _frame_html(
     )
 
 
-#: Clearance beyond the motif's own deepest on-curve reach, expressed as a
+#: Clearance beyond the drawing's own deepest reach, expressed as a
 #: multiple of its own stroke width -- see the module docstring's
 #: "Why a safe area, and why derived rather than hand-typed" for the two
 #: halves this covers (the stroke's own physical extent either side of its
-#: centreline, and a documented buffer for Catmull-Rom overshoot).
+#: centreline, and the gutter that keeps a word off it).
 def _motif_safe_margins(width: float, height: float, root: Path) -> tuple[float, float]:
     """The left and right text safe-area margins, in `vw` (of the canvas
     *width* -- the axis every margin below is subtracted from).
 
     `motifs.safe_margins` is the arithmetic and this is the unit
     conversion: the two numbers are "how far into the canvas does this
-    side's motif reach", plus the clearance the family it names keeps, read
-    off that family's own on-curve points rather than sampled from the
-    rendered drawing -- see `motifs.safe_margins`, and the module docstring
-    here for what the margins are for.
+    side's motif reach", plus the clearance the family it names keeps,
+    measured against that family's own outline -- see
+    `motifs.safe_margins`, and the module docstring here for what the
+    margins are for.
+
+    Asked for the whole canvas, which is what a page whose bands run edge
+    to edge needs. `motifs.safe_margins` answers per band of rows as well,
+    and the two downloadable templates ask it that way; nothing here has
+    rows known before a browser has laid the page out, which is why
+    `_motif_content_right_margin` below is a measured constant rather than
+    a second call.
     """
     left, right = motifs.safe_margins(
         brand.motif_family(root),

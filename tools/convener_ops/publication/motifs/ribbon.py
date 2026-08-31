@@ -300,14 +300,25 @@ def _fmt(number: float) -> str:
     return text if text and text != "-0" else "0"
 
 
-def _cubic(c1: Point, c2: Point, end: Point) -> str:
+#: One cubic segment, as the four points that define it: where it starts,
+#: its two control points, and where it ends. `path` formats these into
+#: `C` commands and `outline` flattens this same list into a polyline, so
+#: the drawing a consumer inks and the drawing a corridor is measured
+#: against cannot come to be two different curves.
+Cubic = tuple[Point, Point, Point, Point]
+
+
+def _cubic(segment: Cubic) -> str:
+    """One segment as its `C` command -- the start point is where the
+    previous command already left the pen, so it is not written again."""
+    _start, c1, c2, end = segment
     return (
         f"C {_fmt(c1[0])} {_fmt(c1[1])} {_fmt(c2[0])} {_fmt(c2[1])} "
         f"{_fmt(end[0])} {_fmt(end[1])}"
     )
 
 
-def _corner(start: Point, end: Point) -> str:
+def _corner(start: Point, end: Point) -> Cubic:
     """A smooth quarter-turn between a vertical and a horizontal tangent.
 
     Used once, for the segment that crosses the top-left corner: the stroke
@@ -318,10 +329,10 @@ def _corner(start: Point, end: Point) -> str:
     """
     c1 = (start[0], start[1] + (end[1] - start[1]) * 0.5)
     c2 = (start[0] + (end[0] - start[0]) * 0.5, end[1])
-    return _cubic(c1, c2, end)
+    return (start, c1, c2, end)
 
 
-def _edge_gap(start: Point, end: Point, *, bulge: float) -> str:
+def _edge_gap(start: Point, end: Point, *, bulge: float) -> Cubic:
     """The invisible span where the stroke runs off the left edge and back.
 
     Both `start` and `end` sit on the canvas boundary (`x == 0`); a straight
@@ -334,10 +345,10 @@ def _edge_gap(start: Point, end: Point, *, bulge: float) -> str:
     """
     c1 = (-bulge, start[1] + (end[1] - start[1]) / 3.0)
     c2 = (-bulge, start[1] + (end[1] - start[1]) * 2.0 / 3.0)
-    return _cubic(c1, c2, end)
+    return (start, c1, c2, end)
 
 
-def _connector(start: Point, end: Point, *, width: float, height: float) -> str:
+def _connector(start: Point, end: Point, *, width: float, height: float) -> list[Cubic]:
     """The long invisible span from the left motif to the right one.
 
     Three segments, each provably outside the `[0, width] x [0, height]`
@@ -363,18 +374,20 @@ def _connector(start: Point, end: Point, *, width: float, height: float) -> str:
     margin = 2 * max(width, height)
     beyond = (width + margin, height + margin)
 
-    seg1 = _cubic((start[0], height + margin), beyond, beyond)
-    seg2 = _cubic(
+    seg1 = (start, (start[0], height + margin), beyond, beyond)
+    seg2 = (
+        beyond,
         (width + margin, height * 0.5),
         (width + margin, end[1]),
         (width + margin, end[1]),
     )
-    seg3 = _cubic(
+    seg3 = (
+        (width + margin, end[1]),
         (width + margin * 0.7, end[1]),
         (width + margin * 0.3, end[1]),
         end,
     )
-    return "\n".join((seg1, seg2, seg3))
+    return [seg1, seg2, seg3]
 
 
 #: How far outside the left edge the invisible gap between the top segment
@@ -382,6 +395,55 @@ def _connector(start: Point, end: Point, *, width: float, height: float) -> str:
 #: comfortable margin; tied to the short side so it scales with the ribbon
 #: itself rather than sitting still while everything around it resizes.
 _GAP_BULGE_FACTOR: Final = 0.25
+
+
+def segments(width: float, height: float) -> list[Cubic]:
+    """Every cubic of the ribbon, in the order the stroke draws them.
+
+    One list, read twice: `path` formats it into `C` commands for whoever
+    inks the drawing, and `outline` flattens it into the polyline the
+    registry measures a corridor against. Two readers of one derivation,
+    for the reason `Waypoints` is exposed rather than folded into `path` --
+    except that here the reason is sharper, because the two readings have
+    to agree about where the curve actually goes: a corridor measured off
+    the waypoints alone would miss the small overshoot a Catmull-Rom curve
+    makes past an interior anchor, and that overshoot is real paint.
+    """
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must both be positive")
+
+    w = waypoints(width, height)
+    s = _short_side(width, height)
+    gap_bulge = _GAP_BULGE_FACTOR * s
+
+    drawn: list[Cubic] = [
+        _corner(w.left_top_entry, w.left_top_exit),
+        _edge_gap(w.left_top_exit, w.left_loop_entry, bulge=gap_bulge),
+    ]
+
+    left_chain = [*w.left_loop_arc, w.left_tail_bulge, w.left_bottom_exit]
+    start = w.left_loop_entry
+    for c1, c2, end in _catmull_rom(left_chain):
+        drawn.append((start, c1, c2, end))
+        start = end
+
+    drawn.extend(
+        _connector(w.left_bottom_exit, w.right_loop_entry, width=width, height=height)
+    )
+
+    right_chain = [
+        *w.right_loop_arc,
+        w.right_loop_out,
+        w.right_tail_start,
+        w.right_tail_bulge,
+        w.right_tail_exit,
+    ]
+    start = w.right_loop_entry
+    for c1, c2, end in _catmull_rom(right_chain):
+        drawn.append((start, c1, c2, end))
+        start = end
+
+    return drawn
 
 
 def path(width: float, height: float) -> str:
@@ -393,90 +455,69 @@ def path(width: float, height: float) -> str:
     `stroke` and `width_ratio` say what a consumer inks it with
     (`motifs.stroke_width`); this function only ever returns geometry.
     """
-    if width <= 0 or height <= 0:
-        raise ValueError("width and height must both be positive")
-
-    w = waypoints(width, height)
-    s = _short_side(width, height)
-    gap_bulge = _GAP_BULGE_FACTOR * s
-
-    commands: list[str] = [f"M {_fmt(w.left_top_entry[0])} {_fmt(w.left_top_entry[1])}"]
-    commands.append(_corner(w.left_top_entry, w.left_top_exit))
-    commands.append(_edge_gap(w.left_top_exit, w.left_loop_entry, bulge=gap_bulge))
-
-    left_chain = [*w.left_loop_arc, w.left_tail_bulge, w.left_bottom_exit]
-    for c1, c2, end in _catmull_rom(left_chain):
-        commands.append(_cubic(c1, c2, end))
-
-    commands.append(
-        _connector(w.left_bottom_exit, w.right_loop_entry, width=width, height=height)
-    )
-
-    right_chain = [
-        *w.right_loop_arc,
-        w.right_loop_out,
-        w.right_tail_start,
-        w.right_tail_bulge,
-        w.right_tail_exit,
-    ]
-    for c1, c2, end in _catmull_rom(right_chain):
-        commands.append(_cubic(c1, c2, end))
-
-    return "\n".join(commands)
+    drawn = segments(width, height)
+    start = drawn[0][0]
+    commands = [f"M {_fmt(start[0])} {_fmt(start[1])}"]
+    commands.extend(_cubic(segment) for segment in drawn)
+    return chr(10).join(commands)
 
 
-#: How much clearance a block of text keeps from this drawing's own reach,
-#: in stroke widths. Half of it is the stroke's physical extent either side
-#: of its centreline; the other half is a documented buffer for the small
-#: overshoot a Catmull-Rom curve makes past an interior anchor on its way
-#: to the next one -- `_LEFT_TAIL_BULGE_X`'s own comment measures that at
-#: about 8 units on a 1200-unit canvas against a ~29-unit stroke there,
-#: comfortably inside one full stroke width. A family drawn some other way
-#: measures its own, which is why the registry reads this off the family
-#: rather than holding one figure for all of them.
-CLEARANCE_STROKE_WIDTHS: Final = 1.0
+#: How many straight steps each cubic is flattened into for `outline`.
+#:
+#: The number is a measurement, not a taste: the property that matters is
+#: that the polyline's own deepest reach into the canvas agrees with the
+#: curve's, and `tests/publication/motifs/test_ribbon.py` holds the two to
+#: within a tenth of a unit on a 1200-unit canvas by halving the step and
+#: showing the answer stops moving. Sixteen is where it has stopped --
+#: the arcs are already sampled into eight chords apiece before this
+#: (`_ARC_STEPS`), so no single cubic here spans much curvature.
+_FLATTEN_STEPS: Final = 16
 
 
-def margins(width: float, height: float, *, clearance: float) -> tuple[float, float]:
-    """How far in from each side a word has to start to clear this drawing.
+def _flatten(segment: Cubic) -> list[Point]:
+    """One cubic as `_FLATTEN_STEPS + 1` points along it, start included."""
+    (x0, y0), (x1, y1), (x2, y2), (x3, y3) = segment
+    points = []
+    for step in range(_FLATTEN_STEPS + 1):
+        t = step / _FLATTEN_STEPS
+        u = 1.0 - t
+        a, b, c, d = u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t
+        points.append(
+            (a * x0 + b * x1 + c * x2 + d * x3, a * y0 + b * y1 + c * y2 + d * y3)
+        )
+    return points
 
-    Two lengths in the canvas's own units -- left and right -- computed
-    from `waypoints` rather than sampled off the rendered curve:
-    `_catmull_rom` interpolates every one of those points exactly, so the
-    curve's own extremes cannot fall short of them, only overshoot
-    slightly past the tail bulge, which `clearance` covers.
 
-    Pure geometry, and `clearance` is threaded in by the registry for the
-    same reason `motifs.stroke_width` takes a ratio: this module draws one
-    family, it does not decide whose charter is in force.
+def outline(width: float, height: float) -> tuple[tuple[Point, ...], ...]:
+    """This family's drawing as a polyline, for the registry to measure.
 
-    Two readers, one arithmetic: `visual._motif_safe_margins` turns these
-    into the `vw` its own CSS is written in, and
-    `brand_templates.render_video_call_background` places a plate of text
-    between them. They used to be one reader, and the second one arriving
-    is exactly when a measurement gets copied instead of called.
+    One polyline, because the ribbon is one continuous stroke: every cubic
+    `segments` returns, flattened, end to end. The spans that run outside
+    the canvas are in it exactly as they are in the path -- the registry
+    clips to the canvas rather than each family deciding for itself what
+    counts, which is what lets a family draw off the edge without also
+    having to reason about corridors.
     """
-    if width <= 0 or height <= 0:
-        raise ValueError("width and height must both be positive")
-    marks = waypoints(width, height)
-    left_reach = max(
-        x
-        for x, _y in (
-            marks.left_top_entry,
-            marks.left_top_exit,
-            *marks.left_loop_arc,
-            marks.left_tail_bulge,
-            marks.left_bottom_exit,
-        )
-    )
-    right_reach = width - min(
-        x
-        for x, _y in (
-            *marks.right_loop_arc,
-            marks.right_loop_out,
-            marks.right_tail_start,
-            marks.right_tail_bulge,
-            marks.right_tail_exit,
-        )
-    )
-    return left_reach + clearance, right_reach + clearance
+    points: list[Point] = []
+    for segment in segments(width, height):
+        step = _flatten(segment)
+        points.extend(step[1:] if points else step)
+    return (tuple(points),)
+
+
+#: How much clearance a block of text keeps from this drawing, in stroke
+#: widths. Half of it is the stroke's own physical extent either side of
+#: its centreline; the other half is a gutter, so a word set at the safe
+#: area's own edge is not set against the drawing.
+#:
+#: It used to be half stroke and half *buffer* -- an allowance for the
+#: small overshoot a Catmull-Rom curve makes past an interior anchor,
+#: because the reach was read off `waypoints` and the curve goes a little
+#: further than they do. `outline` above flattens the curve itself, so the
+#: overshoot is measured rather than allowed for, and this figure buys a
+#: gutter now instead of paying a debt. That is why the ribbon's own safe
+#: margin moved by about eight units on a 1200-unit canvas when the two
+#: swapped places. A family drawn some other way measures its own, which is
+#: why the registry reads this off the family rather than holding one
+#: figure for all of them.
+CLEARANCE_STROKE_WIDTHS: Final = 1.0

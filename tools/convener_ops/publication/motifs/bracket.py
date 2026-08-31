@@ -62,17 +62,22 @@ page it is given is the whole of its job.
 
 Where it may stand
 -------------------
-The generated posters (`visual.py`) and the video-call background place
-their text from `margins` below, so any drawing this module returns is
-clear of their words by construction. The two downloadable templates
-(`brand_templates.py`) do not: they hand-place every block of type against
-the ribbon's own curve, so the ground a second family may occupy is
-decided by them. The placement constants below are a fit to it, measured
-in the pinned engine against both committed files. At the three stroke
-weights the charters in this repository carry, the drawing clears every
-block of the announcement by at least 29 units on its 1200 canvas and
-every block of the flyer by at least 38 on its 2100 one, where the ribbon
-itself clears them by 9 and 18.
+Every surface this product draws asks the registry where its words may go
+-- the generated posters (`visual.py`), the video-call background and,
+since the two downloadable templates stopped hand-placing their type,
+those as well (`brand_templates.py`). So the placement constants below
+are no longer a fit to one committed layout: a block of type that this
+drawing reaches is moved by the layout, not accommodated by the drawing.
+What they still are is a fit to the *reference poster's own proportions*
+-- how deep a mark stands in a margin, how far down a page it runs -- and
+`tests/publication/motifs/test_bracket.py` holds them to the mark they
+are taken from rather than to a page they happen to clear.
+
+`tools/visuals/check-templates.mjs` is what measures the result, in a
+browser, for every charter this repository holds: at the three stroke
+weights those charters carry, this drawing clears every block of the
+announcement by at least 18 units on its 1200 canvas and every block of
+the flyer by at least 47 on its 2100 one.
 """
 
 from __future__ import annotations
@@ -128,19 +133,23 @@ _RETURN_OF_HALF_WIDTH: Final = math.tan(math.radians(_OPENING_HALF_ANGLE_DEGREES
 #: and it is what `brand/convener/brand.json::motif.width_ratio` carries
 #: the mark's own outer-arc proportion onto: 0.334 of 0.061 is 0.0204.
 #:
-#: The figure itself is a fit to the ground the product's own two
-#: downloadable templates leave free. Those templates
-#: (`brand_templates.py`) hand-place every block of type against the
-#: ribbon's own curve rather than reading a family's margins, so what a
-#: second family may occupy is decided by them: measured in a browser
-#: against both committed files, a drawing reaching past roughly 0.16 of
-#: the shorter side crosses the announcement's date line and the flyer's.
+#: The figure itself was a fit to the ground the two downloadable
+#: templates left free while they still hand-placed their type -- measured
+#: in a browser against both committed files, a drawing reaching past
+#: roughly 0.16 of the shorter side crossed the announcement's date line
+#: and the flyer's. Those templates read a family's own corridor now, so
+#: the constraint that produced this number is gone and the number stays:
+#: it is a mark standing a twelfth of the page deep in a margin, which is
+#: the proportion the product's own artwork has, and there is no longer a
+#: layout it has to be small enough for.
 _OUTER_HALF_WIDTH: Final = 0.061
 
 #: The left bracket's top arm and half-height, in heights: its spine runs
-#: from 0.17 of the page to 0.458. The top is a fit to the ground the two
-#: downloadable templates leave -- the wordmark's own squares and the rule
-#: beside them sit above it. The height is set from the other end: the
+#: from 0.17 of the page to 0.458. The top clears the band both
+#: downloadable templates set their wordmark in -- the mark's own squares
+#: and the rule beside them -- which is a property of those compositions'
+#: own top band and not of any drawing. The height is set from the other
+#: end: the
 #: right bracket is this one at `_INNER_OVER_OUTER`, and what that one has
 #: to fit inside is stated at `_INNER_TOP`.
 _OUTER_TOP: Final = 0.17
@@ -264,6 +273,20 @@ def path(width: float, height: float) -> str:
     return "\n".join(commands)
 
 
+def outline(width: float, height: float) -> tuple[tuple[Point, ...], ...]:
+    """This family's drawing as a polyline, for the registry to measure.
+
+    Two polylines, one per bracket, and for this family they are the
+    drawing itself rather than an approximation of it: straight segments
+    join the points `waypoints` returns and reach past none of them, so
+    `path` above and this function describe the same six-point run twice
+    in two notations. `ribbon.outline` has to flatten a curve to say the
+    same thing.
+    """
+    marks = waypoints(width, height)
+    return (marks.left, marks.right)
+
+
 #: How much clearance a block of text keeps from this drawing, in stroke
 #: widths. Half of it is the stroke's own physical extent either side of
 #: its centreline: straight segments join the points `waypoints` returns
@@ -274,23 +297,3 @@ def path(width: float, height: float) -> str:
 #: own edge is not set against the drawing. A family drawn some other way
 #: measures its own, which is why the registry reads this off the family.
 CLEARANCE_STROKE_WIDTHS: Final = 1.0
-
-
-def margins(width: float, height: float, *, clearance: float) -> tuple[float, float]:
-    """How far in from each side a word has to start to clear this drawing.
-
-    Two lengths in the canvas's own units -- left and right -- computed
-    from `waypoints`, which for this family is the drawing: the deepest
-    point of each bracket is one of the six points it is drawn through,
-    and a straight segment between two of them reaches past neither.
-
-    Pure geometry, and `clearance` is threaded in by the registry for the
-    same reason `motifs.stroke_width` takes a ratio: this module draws one
-    family, it does not decide whose charter is in force.
-    """
-    if width <= 0 or height <= 0:
-        raise ValueError("width and height must both be positive")
-    marks = waypoints(width, height)
-    left_reach = max(x for x, _y in marks.left)
-    right_reach = width - min(x for x, _y in marks.right)
-    return left_reach + clearance, right_reach + clearance
