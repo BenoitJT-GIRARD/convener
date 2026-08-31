@@ -202,6 +202,20 @@ from `config/boundary.yml` and from the repository's own tracked files by
 `tools/scripts/generate_directory_map.py`, so a directory added without a
 row fails the build.
 
+### Which documentation is yours
+
+`docs/` is three trees, one reader each:
+
+- [**`docs/handbook/`**](docs/handbook/index.md) — for a volunteer running
+  a webinar for this series.
+- [**`docs/operating/`**](docs/operating/index.md) — for the operator
+  standing an instance up and keeping it running.
+- [**`docs/engineering/`**](docs/engineering/index.md) — for somebody
+  changing this code, or deciding whether to build on it.
+
+Each of the three opens with what it holds and what it does not, so a
+reader who picked the wrong one finds out on the first screen.
+
 ## How to work on it
 
 ```bash

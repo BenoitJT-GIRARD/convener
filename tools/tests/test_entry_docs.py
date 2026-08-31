@@ -45,10 +45,18 @@ DOCS = ROOT / "docs"
 #: for a reader browsing the repository itself, not the app -- see
 #: `app/tests/copy-handbook.test.ts`'s own test naming it.
 #: `docs/engineering/architecture.md`, the second of the two files above,
-#: joins it for the identical reason (and lets README.md link to it).
-#: Anything else under `docs/` must be in the registry to be a safe link
-#: target.
-UNREGISTERED_BUT_SAFE = {"handbook/index.md", "engineering/architecture.md"}
+#: joins it for the identical reason (and lets README.md link to it), and
+#: so do the other two trees' indexes: each is the way into a tree for a
+#: reader of the repository, and the cockpit renders none of the three.
+#: `tools/tests/test_docs_entry_points.py` is what holds one to every
+#: tree. Anything else under `docs/` must be in the registry to be a safe
+#: link target.
+UNREGISTERED_BUT_SAFE = {
+    "handbook/index.md",
+    "operating/index.md",
+    "engineering/index.md",
+    "engineering/architecture.md",
+}
 
 #: The path this repository's own convention names in prose rather than as
 #: a link -- see `docs/engineering/content-rules.md` and `site/README.md` for the

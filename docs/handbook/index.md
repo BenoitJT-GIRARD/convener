@@ -13,6 +13,16 @@ Welcome. This handbook holds everything our volunteers need to run the series' o
 - **[Contacts](../operating/contacts.md)** — how to reach the Board, and why there is nobody outside the team to reach.
 - **[The workspace](../operating/the-workspace.md)** — what each screen of this app is for, and what runs in it on its own.
 
+## What is not here
+
+**Standing an instance of this software up, and keeping it running.** The
+accounts, the secrets, the settings each repository needs:
+[`operating/`](../operating/index.md). Nothing there is a volunteer's to
+do.
+
+**How the software is built, and why.** The architecture and the decision
+records: [`engineering/`](../engineering/index.md).
+
 ## How we work — three ideas
 
 - **You are trusted to act.** Pick up a task and move it forward; you do not need permission for everyday steps.
