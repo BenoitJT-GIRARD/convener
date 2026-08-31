@@ -415,29 +415,47 @@ def main(argv: list[str] | None = None) -> int:
     # fall back to whichever drawing this product happens to have.
     try:
         charter = brand.load(root)
+        others = [
+            (rel.as_posix(), brand.charter(root, rel))
+            for rel in brand.shipped(root)
+            if rel != brand.source(root)
+        ]
     except (brand.SupersededCharterError, motifs.UnknownMotifFamilyError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
-    # The palette first, and unconditionally -- writing or checking. A
+    # The palettes first, and unconditionally -- writing or checking. A
     # measurement that no longer recomputes, or one that recomputes below
     # AA, is not a file that needs regenerating: it is a palette that must
-    # not build, whichever of the two files it came from. The
+    # not build, whichever file it came from. The
     # `--check` is here precisely so that a default palette could ship at all
     # (see brand/convener/brand.json's own `_why_a_default`), and a check
     # that only compared files against a JSON document would have carried
     # none of that promise.
-    contrast = brand.contrast_problems(charter, named=named)
-    if contrast:
+    #
+    # Every charter under `brand/` is measured here and not only the one
+    # in force, which is what a directory of palettes a duplicate may
+    # *choose* costs: a charter nobody has chosen yet derives no file, so
+    # nothing else in this run would ever open it, and it would ship
+    # failing AA with every gate green. The list is read off the directory
+    # (`brand.shipped`), so a charter added there is measured on the commit
+    # that adds it.
+    failed = False
+    for shown, values in [(named, charter), *others]:
+        contrast = brand.contrast_problems(values, named=shown)
+        if not contrast:
+            print(f"every measured contrast in {shown} recomputes and clears AA")
+            continue
+        failed = True
         for problem in contrast:
             print(problem, file=sys.stderr)
+    if failed:
         print(
             "A palette that does not clear AA does not build. Fix the "
-            f"colours in {named}, or the ratio beside them.",
+            "colours in the charter named above, or the ratio beside them.",
             file=sys.stderr,
         )
         return 1
-    print(f"every measured contrast in {named} recomputes and clears AA")
 
     problems: list[str] = []
     for target in _TARGETS:

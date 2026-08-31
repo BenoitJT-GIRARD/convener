@@ -107,10 +107,13 @@ __all__ = [
     "MOTIF_FIELDS",
     "MOTIF_KEY",
     "MOTIF_MIGRATION",
+    "SHIPPED_DIR",
+    "SHIPPED_FILE",
     "SUPERSEDED_COLOURS",
     "SUPERSEDED_MOTIF_FIELDS",
     "MissingMotifError",
     "SupersededCharterError",
+    "charter",
     "colours",
     "contrast_problems",
     "contrast_ratio",
@@ -123,6 +126,7 @@ __all__ = [
     "relative_luminance",
     "rgb_triplet",
     "rgba",
+    "shipped",
     "source",
 ]
 
@@ -132,11 +136,20 @@ __all__ = [
 #: instance so that upstream never edits it.
 INSTANCE_PATH: Final = DATA_DIR / "brand.json"
 
+#: Where the charters this product ships live, one directory each. The
+#: product's own is `brand/convener/`, beside the mark it belongs to; the
+#: rest are palettes a duplicate with nobody to draw for it may choose
+#: instead of writing its own.
+SHIPPED_DIR: Final = Path("brand")
+
+#: The file each of those directories holds.
+SHIPPED_FILE: Final = "brand.json"
+
 #: The product's own, shipped with the code and never edited by an
 #: instance. Beside the mark it belongs to (`brand/convener/`) rather than
 #: in a directory of its own, so the product's default and the product's
 #: mark are one identity instead of two.
-DEFAULT_PATH: Final = Path("brand") / "convener" / "brand.json"
+DEFAULT_PATH: Final = SHIPPED_DIR / "convener" / SHIPPED_FILE
 
 #: The design section. `brand/convener/brand.json` carries one, so an
 #: instance never has to; what it may not do is write half of one.
@@ -239,6 +252,24 @@ class MissingMotifError(RuntimeError):
     """
 
 
+def shipped(root: Path) -> tuple[Path, ...]:
+    """Every charter this product ships, root-relative, in name order.
+
+    Read off `brand/` rather than written down, for the reason
+    `motifs.FAMILIES` gives about the directory beside it: a charter that
+    has to be added to a list somewhere is a charter somebody forgets to
+    add, and what it is forgotten by is the sweep that would have caught
+    it. `cli.render_template_fixtures` renders every one of these against
+    every family, and `generate_brand_css.py` recomputes every one of
+    their contrasts, both with no entry to make anywhere.
+
+    A directory under `brand/` holding no `brand.json` is artwork rather
+    than a charter and is passed over; `brand/convener/` holds both.
+    """
+    found = sorted((root / SHIPPED_DIR).glob(f"*/{SHIPPED_FILE}"))
+    return tuple(path.relative_to(root) for path in found)
+
+
 def source(root: Path) -> Path:
     """Which of the two files `load` will read, root-relative.
 
@@ -262,6 +293,19 @@ def load(root: Path) -> dict[str, Any]:
     measured against a palette that exists in no file.
     """
     return _checked(root, source(root))
+
+
+def charter(root: Path, rel: Path) -> dict[str, Any]:
+    """One named charter, parsed, with every superseded spelling refused.
+
+    `load` above answers "which values is this build drawn from"; this
+    answers "what does that file say", for the one caller that has to read
+    a charter no build is drawn from -- `generate_brand_css.py`, which
+    recomputes the contrasts of every palette this product ships and not
+    only of the one in force. A palette a duplicate may choose has to
+    clear AA before anybody chooses it.
+    """
+    return _checked(root, rel)
 
 
 def _checked(root: Path, rel: Path) -> dict[str, Any]:

@@ -85,14 +85,31 @@ def test_a_family_is_looked_up_by_the_name_a_charter_writes() -> None:
     assert motifs.RIBBON.name == "ribbon"
 
 
+#: A name no family has, for the two refusals below. A constant held
+#: against the registry rather than a word typed into each assertion, and
+#: the reason is that the word typed there used to be `lattice`: a drawing
+#: nobody had made on the day it was written, and one this product ships
+#: now. A placeholder that quietly becomes real turns a test that proves a
+#: refusal into a test that proves a lookup, and nothing says so.
+NOT_A_FAMILY: Final = "no-such-drawing"
+
+
+def test_the_name_the_refusals_are_proved_with_is_not_a_family() -> None:
+    """The guard the constant above exists for."""
+    assert NOT_A_FAMILY not in motifs.FAMILIES, (
+        f"{NOT_A_FAMILY!r} is a family this product draws now, so the two "
+        "tests below are asking the registry for something it has"
+    )
+
+
 def test_an_unknown_family_is_refused_and_the_known_ones_are_named() -> None:
     """The refusal, and what it has to say: never a fall back to whichever
     drawing exists."""
     with pytest.raises(motifs.UnknownMotifFamilyError) as raised:
-        motifs.family("lattice")
+        motifs.family(NOT_A_FAMILY)
 
     message = str(raised.value)
-    assert "'lattice'" in message
+    assert f"{NOT_A_FAMILY!r}" in message
     for name in motifs.FAMILIES:
         assert name in message, (
             f"{name} exists and the refusal does not offer it, so a person "
@@ -105,9 +122,9 @@ def test_every_entry_point_refuses_an_unknown_family() -> None:
     asks for goes through it, so none of them can grow a fall back of its
     own."""
     for call in (
-        lambda: motifs.path("lattice", 1200, 1200),
-        lambda: motifs.safe_margins("lattice", 1200, 1200, ratio=0.02),
-        lambda: motifs.clearance("lattice", 1200, 1200, ratio=0.02),
+        lambda: motifs.path(NOT_A_FAMILY, 1200, 1200),
+        lambda: motifs.safe_margins(NOT_A_FAMILY, 1200, 1200, ratio=0.02),
+        lambda: motifs.clearance(NOT_A_FAMILY, 1200, 1200, ratio=0.02),
     ):
         with pytest.raises(motifs.UnknownMotifFamilyError):
             call()

@@ -50,12 +50,17 @@ name: Templates
 #   though most of that file has nothing to do with rendering, because a
 #   path filter has no finer grain than a file.
 # - `instance/config.json`, `instance/data/brand.json` -- this instance's
-#   declaration and charter, one of the three swept.
+#   declaration and charter, one of those swept.
 # - `instances/example/instance/config.json`,
-#   `instances/example/instance/data/brand.json` -- the example's, the
-#   second.
-# - `brand/convener/brand.json` -- the product's own charter, the third:
-#   what a duplicate that has written none of its own is drawn with.
+#   `instances/example/instance/data/brand.json` -- the example's,
+#   another.
+# - `brand/*/brand.json` -- every charter the product itself ships: its
+#   own default, which a duplicate that has written none is drawn with,
+#   and each palette a duplicate may choose instead. A glob and not a
+#   list, because `convener_ops.publication.brand.shipped` reads that same
+#   directory to decide what is swept -- a charter added there is rendered
+#   against every family without an entry being made anywhere, and a
+#   filter naming them one by one is the entry somebody forgets.
 # - `fonts/**` -- the face every advance in this check is measured in.
 #   Replacing the file replaces the measurement.
 # - `tools/uv.lock` -- pins `segno`, whose modules are drawn into the
@@ -98,7 +103,7 @@ on:
       - 'instance/data/brand.json'
       - 'instances/example/instance/config.json'
       - 'instances/example/instance/data/brand.json'
-      - 'brand/convener/brand.json'
+      - 'brand/*/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
@@ -120,7 +125,7 @@ on:
       - 'instance/data/brand.json'
       - 'instances/example/instance/config.json'
       - 'instances/example/instance/data/brand.json'
-      - 'brand/convener/brand.json'
+      - 'brand/*/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
@@ -140,9 +145,11 @@ concurrency:
 jobs:
   templates:
     runs-on: ubuntu-latest
-    # Eighteen renderings measure in a few seconds on a warm machine; this
-    # allowance covers a cold cache miss that has to fetch the ~430MB
-    # Chrome-for-Testing build besides.
+    # Thirty-six renderings -- four charters, three families, three
+    # templates -- measure in a few seconds on a warm machine, and the
+    # count grows with each charter committed under `brand/` and each
+    # family registered. This allowance covers a cold cache miss that has
+    # to fetch the ~430MB Chrome-for-Testing build besides.
     timeout-minutes: 10
     permissions:
       contents: read

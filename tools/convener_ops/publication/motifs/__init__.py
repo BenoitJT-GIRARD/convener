@@ -38,11 +38,12 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Final, Protocol
 
-from . import bracket, ribbon
+from . import bracket, lattice, ribbon
 
 __all__ = [
     "BRACKET",
     "FAMILIES",
+    "LATTICE",
     "RIBBON",
     "CoveredCanvasError",
     "Family",
@@ -149,6 +150,18 @@ BRACKET: Final = Family(
     clearance_stroke_widths=bracket.CLEARANCE_STROKE_WIDTHS,
 )
 
+#: A field of short marks, offset row to row -- a texture rather than a
+#: mark, and the one drawing here that is nobody's artwork squared off. It
+#: reaches less far into a page than the bracket does and says where every
+#: figure it is built from comes from (`lattice.py`).
+LATTICE: Final = Family(
+    name="lattice",
+    fields=("stroke", "width_ratio"),
+    path=lattice.path,
+    outline=lattice.outline,
+    clearance_stroke_widths=lattice.CLEARANCE_STROKE_WIDTHS,
+)
+
 #: Every family, by the name a charter names it. Written out rather than
 #: discovered by walking the directory: a name a charter may write is part
 #: of the product's own contract, and `tests/publication/motifs/
@@ -157,6 +170,7 @@ BRACKET: Final = Family(
 FAMILIES: Final[dict[str, Family]] = {
     RIBBON.name: RIBBON,
     BRACKET.name: BRACKET,
+    LATTICE.name: LATTICE,
 }
 
 

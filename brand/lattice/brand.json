@@ -1,0 +1,87 @@
+{
+  "_comment": "A charter this product ships, complete and ready to be chosen -- the same shape as `brand/convener/brand.json` and read by the same reader (`tools/convener_ops/publication/brand.py`). It is not the default: `brand/convener/` is what a duplicate that has chosen nothing is drawn with, and this is one of the palettes a duplicate may choose instead of writing its own. Nothing in this file is anybody's identity. An instance that wants it copies it into `instance/data/brand.json`; upstream never edits that file and this one is never edited by an instance. There is no README beside this file, and `brand/convener/README.md` is why there is one there: that page documents artwork -- four drawings, how their ink follows whatever page they are placed in, how the mark and the wordmark were built -- and this directory holds no artwork. What a charter is, and where each of its figures comes from, is written here under the keys beginning with an underscore; a page restating them would be the copy `docs/engineering/content-rules.md` refuses.",
+  "_why_a_charter_it_can_choose": "The product ships a default so that a fresh duplicate looks finished rather than grey (`brand/convener/brand.json::_why_a_default`). What it did not ship was an *alternative*: every duplicate that had no designer got the same navy, the same coral and the same brackets, so a room of instances built from this product would all wear the product's own face. A charter here is the other half of that answer -- design ships complete, and it also ships in more than one. What a duplicate must never do is wear somebody's mark, which is why the drawing this charter names is a texture built from measurements rather than a shape traced off anybody's artwork, and why `ribbon` cannot be named here or in any charter but the one instance whose poster it was traced from.",
+  "_source": "Nothing measured, because there is no artwork to measure: this charter has no mark of its own and asks for none. Two colours are chosen -- a brick and a sky -- and every other value in the file is worked out from those two by the rule in `derived._derivation`. The two were chosen against the three palettes this repository already holds rather than for their own sake: this instance's is a purple on a turquoise ground, the product's a navy on a coral one, the worked example's a dark green on a gold one. None of the three sets its ground in blue and none draws its ink in a warm dark, so a page built from this charter is not mistakable for any of them at a glance, which is the whole of what a second charter is for.",
+  "_names": "The keys are the system's, not this palette's, and each names the position a colour holds in the composition: `dominant` is the ink the headlines, the motif and the wordmark are drawn in, `field` the saturated ground that fills the page, `band` the full-width bands laid across it. `tools/scripts/generate_brand_css.py`, both stylesheets and the three downloadable templates read a colour by that name.",
+
+  "colour": {
+    "dominant": "#5c1e0f",
+    "field": "#a1d3ed",
+    "band": "#eff1f3",
+    "ink": "#293c4b",
+    "ink_muted": "#3d586f",
+    "rule": "#b8c2ca",
+    "white": "#ffffff",
+    "black": "#000000",
+
+    "_roles": {
+      "dominant": "Headlines, motif, wordmark. The dominant colour, not an accent. The brick axis at the dominant's own luminance: 12.75 on white, AAA with room.",
+      "field": "A ground. Never a text colour on white or on a band -- 1.61 on white, exactly as unusable there as every other palette's field. The sky axis, lightened to the field's luminance.",
+      "band": "Full-width horizontal bands laid across the field. Text sits inside them.",
+      "ink": "Primary text. A slate rather than a black -- it carries this palette's own two colours in equal parts rather than a neutral grey borrowed from nowhere.",
+      "ink_muted": "Secondary text. Clears AA on the field and on the bands, which is what decides how light it may be.",
+      "rule": "Rules, borders, dividers. Never text -- 1.81 on white.",
+      "black": "Body copy on the coloured field, where the composition sets it directly on the ground rather than inside a band.",
+      "white": "Inside photographic frames only. Not a ground."
+    }
+  },
+
+  "derived": {
+    "_comment": "Values no choice supplies, needed because the web has states and links that a page of type does not. Each clears AA on the ground it can appear on.",
+    "_derivation": "One rule, applied to every value in this file and to every value in `colour` above, so that not one of them is a taste: **two axes, at the lightness the system measures each role at.** The axes are the brick #6e2412 and the sky #0f8fd0 -- the two colours this charter chooses -- plus the two in equal parts for the neutrals (#3e5a71, this palette's own slate). Each token is then its axis mixed toward white or toward black until its WCAG relative luminance matches the luminance that role carries in `instance/data/brand.json`, the charter the system's twelve contrast obligations were written against. That is why every one of the twelve pairings below lands within 0.05 of the figure the same pairing gives there -- a contrast ratio is a function of two luminances, and the luminances were matched on purpose. Unlike `brand/convener/brand.json`, nothing here is exempt from the rule: that charter holds its dominant at the navy somebody measured off the product's own mark, and this charter has no artwork to be faithful to, so its dominant is derived like everything else. `dominant_hover` is the one value the rule cannot set, and says why.",
+    "ink_faint": "#516a7f",
+    "field_text": "#0b6897",
+    "field_tint": "#cbe6f5",
+    "dominant_hover": "#4a180c",
+    "dominant_tint": "#e7dad7",
+    "rule_strong": "#899aa9",
+    "_dominant_hover": "The one value not set by matching a luminance, and for the reason `brand/convener/brand.json` already gives: the dominant's own hover state is barely a luminance step in the charter this rule is taken from (0.0324 to 0.0314), and copying that proportion would round to the dominant itself -- a hover state indistinguishable from its rest state, which is not a state. It is the dominant a fifth of the way to black instead: 14.71 against white, against 12.75 at rest, and it is only ever a filled background (`--dominant-hover`, `--accent-hover`), never text.",
+    "_axes": "Neither axis appears raw in this file except once. The brick #6e2412 is the source of `dominant`, `dominant_hover` and `dominant_tint` and is darkened out of all three; the sky #0f8fd0 is the source of `field`, `field_tint` and `field_text` and appears unmixed only as `motif.logo_dots`, where at 3.58 on white it can be neither body text nor a light ground but is exactly what a wordmark's squares want."
+  },
+
+  "contrast": {
+    "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not, for every charter this repository ships and not only the one in force: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The twelve pairings are the same twelve the system holds every palette to -- the composition creates them, not this palette.",
+    "dominant_on_field": 7.92,
+    "black_on_field": 13.06,
+    "ink_on_field": 7.09,
+    "dominant_on_band": 11.26,
+    "ink_on_band": 10.07,
+    "ink_muted_on_field": 4.62,
+    "ink_faint_on_band": 4.99,
+    "field_text_on_white": 6.1,
+    "white_on_dominant": 12.75,
+    "field_text_on_band": 5.39,
+    "ink_muted_on_band": 6.57,
+    "field_on_dominant": 7.92,
+    "_forbidden": "the field as text on white (1.61); rule as text on any ground (1.81 on white); white as text on the field (1.61) -- which is why a primary button fills with the dominant."
+  },
+
+  "typography": {
+    "display": "Archivo",
+    "display_weight": 800,
+    "body": "Archivo",
+    "body_weight": 400,
+    "mono": "JetBrains Mono",
+    "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
+    "licence": "SIL Open Font License 1.1",
+    "self_hosted": true,
+    "_faces": "The two faces the product itself ships, in `fonts/`, and serves from its own origin. A charter naming a face nobody ships builds a page that silently falls back to whatever the reader's machine happens to have, so this one names the shipped pair rather than inventing a third -- the same reason `instances/example/instance/data/brand.json` gives.",
+    "_weights": "The two weights the product's own measurement covers. `tools/convener_ops/publication/typeface.py` carries an advance table at 400 and at 900 and interpolates between them, and `tools/visuals/check-templates.mjs` re-measures both against the committed font file; a charter that named a weight outside that pair would be sized in Python against an estimate nothing re-measures.",
+    "_self_hosted": "Not negotiable, and not a preference of this palette's. A webfont request to a third party discloses every visitor's address -- D-17."
+  },
+
+  "motif": {
+    "family": "lattice",
+    "stroke": "#5c1e0f",
+    "width_ratio": 0.015,
+    "logo_dots": "#0f8fd0",
+    "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the field standing either side of the page. 7.92 on the field and 11.26 on the bands, so it reads wherever the composition puts it.",
+    "_logo_dots": "The sky axis, raw, in the one place its 3.58 on white does not disqualify it: the filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.16 -- weak for text, which it is not, and past the 3.0 WCAG asks of a graphical object that has to be made out, which no charter here had managed before (the product's coral measures 2.51 in the same place and leans on the exemption alone).",
+    "_width_ratio": "Not a measurement of anybody's artwork -- this charter has none -- but the proportion that makes a mark a mark. `motifs/lattice.py` draws each mark one step long, and a step is 0.045 of the composition's shorter side; at 0.015 a mark is drawn three times as long as it is wide, which is what separates a short stroke from a round dot at every size this product renders. It is the finest weight any charter here carries, and deliberately: the drawing is a texture of thirty-six marks rather than one stroke crossing a page, and a texture drawn at a poster stroke's weight is a smudge."
+  },
+
+  "layout": {
+    "_ground": "The field fills the page. White is not the ground.",
+    "_bands": "The bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18."
+  }
+}

@@ -74,7 +74,7 @@ publishes it.*
 | `.claude/` | product | The run sheet an agent follows to stand an instance up, generated from `STANDING-UP.yml` by `tools/scripts/generate_standing_up_skill.py`. |
 | `.github/` | product | The whole automation surface: data validation, the public-data filter, certificate issuance and revocation, the retention sweep, publishing the showcase and the cockpit, quality and security gates. Nothing in this system runs anywhere else. |
 | `app/` | product | The cockpit (React + Vite): the board's and volunteers' application, gated by GitHub sign-in. Also builds the two public *islands* — registration and certificate verification — mounted on the showcase's static pages. |
-| `brand/` | product | The product's own charter and marks, read by any duplicate that has measured no palette of its own yet. |
+| `brand/` | product | The product's own marks, and one directory per charter it ships: the default a duplicate that has measured no palette of its own is drawn with, and the palettes it may choose instead. |
 | `config/` | product | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
 | `docs/` | product | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
 | `fonts/` | product | The two typefaces both interfaces are set in, self-hosted so that no page fetches a font from anybody else, each beside its licence. |

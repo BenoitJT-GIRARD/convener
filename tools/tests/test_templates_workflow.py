@@ -21,11 +21,13 @@ here.
 from __future__ import annotations
 
 import re
+from fnmatch import fnmatch
 from typing import Final
 
 import yaml
 from conftest import workflow_triggers
 
+from convener_ops.cli import _template_charters
 from convener_ops.declaration.paths import repo_root
 
 _ROOT: Final = repo_root()
@@ -89,16 +91,34 @@ def test_the_path_filter_names_every_module_the_three_templates_read() -> None:
 
 
 def test_the_path_filter_reacts_to_every_charter_swept() -> None:
-    """All three, and this instance's own among them -- the opposite of
-    `visuals.yml`, and for the opposite reason: this job renders every
-    charter in the repository, so a duplicate editing its own `motif` is
-    exactly the change it exists to measure."""
+    """Every charter the job actually renders, this instance's own among
+    them -- the opposite of `visuals.yml`, and for the opposite reason:
+    this job renders every charter in the repository, so a duplicate
+    editing its own `motif` is exactly the change it exists to measure.
+
+    Read off `cli._template_charters` rather than listed here, because
+    that function reads `brand/` rather than a list of its own: a charter
+    committed there is swept on the commit that adds it, and this is what
+    says the filter noticed. `fnmatch` because the filter's own entry for
+    those is a glob, for the same reason.
+    """
     paths = set(_TRIGGERS["push"]["paths"])
-    assert "instance/data/brand.json" in paths
     assert "instance/config.json" in paths
-    assert "instances/example/instance/data/brand.json" in paths
     assert "instances/example/instance/config.json" in paths
-    assert "brand/convener/brand.json" in paths
+
+    swept = {
+        charter.as_posix() for _label, charter, _declared in _template_charters(_ROOT)
+    }
+    assert len(swept) >= 4, (
+        f"the sweep renders {sorted(swept)}, which is fewer charters than "
+        "this repository holds -- a filter checked against an empty sweep "
+        "would pass for free"
+    )
+    for charter in sorted(swept):
+        assert any(fnmatch(charter, pattern) for pattern in paths), (
+            f"{charter} is rendered by this job and no entry in the path "
+            "filter names it, so a change to it runs nothing"
+        )
 
 
 def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:

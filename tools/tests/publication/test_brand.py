@@ -927,6 +927,18 @@ def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> N
         brand.motif(fake_repo)
 
 
+#: A `motif.family` naming a drawing this product does not have. Held
+#: against the registry below rather than typed into each test: the word
+#: that stood here was `lattice`, and `motifs/lattice.py` draws one now.
+_NOT_A_FAMILY = "no-such-drawing"
+
+
+def test_the_name_these_refusals_are_proved_with_is_not_a_family() -> None:
+    """A placeholder that quietly becomes a real family turns a test that
+    proves a refusal into one that proves a lookup."""
+    assert _NOT_A_FAMILY not in motifs.FAMILIES
+
+
 def test_a_charter_still_writing_the_ribbons_own_field_names_is_refused(
     fake_repo: Path,
 ) -> None:
@@ -980,7 +992,7 @@ def test_a_family_this_product_cannot_draw_is_refused_by_name(
     """Never a fall back to the drawing that happens to exist: the file
     and the name it wrote, and every family it could have written."""
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    data[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = "lattice"
+    data[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = _NOT_A_FAMILY
     _write_json(fake_repo / BRAND_PATH, data)
 
     with pytest.raises(motifs.UnknownMotifFamilyError) as raised:
@@ -988,7 +1000,7 @@ def test_a_family_this_product_cannot_draw_is_refused_by_name(
 
     message = str(raised.value)
     assert brand.INSTANCE_PATH.as_posix() in message
-    assert "lattice" in message
+    assert _NOT_A_FAMILY in message
     for name in motifs.FAMILIES:
         assert name in message
 
@@ -1013,12 +1025,12 @@ def test_the_command_refuses_a_family_it_cannot_draw(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    data[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = "lattice"
+    data[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = _NOT_A_FAMILY
     _write_json(fake_repo / BRAND_PATH, data)
 
     assert main([]) == 1
     captured = capsys.readouterr()
-    assert "lattice" in captured.err
+    assert _NOT_A_FAMILY in captured.err
     assert motifs.RIBBON.name in captured.err
 
 

@@ -5577,28 +5577,53 @@ def render_visual_fixtures() -> int:
     return 0
 
 
-#: Every charter this repository holds, under the name its fixtures are
+#: The two charters an *instance* holds, under the name their fixtures are
 #: written with, and the declaration whose names and address the templates
-#: are rendered from beside it. Three, and each is a real file rather than
-#: an invented one:
+#: are rendered from beside each:
 #:
 #: - `instance` -- this instance's own charter and its own declaration.
 #: - `example` -- `instances/example/`, the worked example a duplicate
 #:   copies, charter and declaration both.
-#: - `product` -- `brand/convener/brand.json`, the charter a duplicate that
-#:   has written none of its own is drawn with. It has no declaration of
-#:   its own, because a charter is not an identity: it is rendered against
-#:   this instance's names, which is what a duplicate on its first build
-#:   actually gets.
-_TEMPLATE_CHARTERS: Final = (
+#:
+#: The charters the *product* ships are not here. They are read off
+#: `brand/` by `_template_charters` below, because a palette a duplicate
+#: may choose is swept the moment it is committed rather than the moment
+#: somebody remembers to name it.
+_INSTANCE_CHARTERS: Final = (
     ("instance", brand.INSTANCE_PATH, published.INSTANCE_PATH),
     (
         "example",
         published.EXAMPLE_INSTANCE_ROOT / brand.INSTANCE_PATH,
         published.EXAMPLE_INSTANCE_PATH,
     ),
-    ("product", brand.DEFAULT_PATH, published.INSTANCE_PATH),
 )
+
+
+def _template_charters(root: Path) -> tuple[tuple[str, Path, Path], ...]:
+    """Every charter this repository holds, and the declaration each is
+    rendered against.
+
+    The two above, then one per directory under `brand/`, named for that
+    directory: `brand/convener/` is the charter a duplicate that has
+    written none of its own is drawn with, and every other one is a
+    palette it may choose instead. None of them has a declaration of its
+    own, because a charter is not an identity -- each is rendered against
+    this instance's names, which is what a duplicate actually gets the
+    first time it builds.
+
+    Read off the directory rather than listed, the way `motifs.FAMILIES`
+    is read off the directory beside it: a charter added here is measured
+    against every family on the commit that adds it, with no entry to
+    make in this file, in `templates.yml`'s filter or anywhere else.
+    """
+    return (
+        *_INSTANCE_CHARTERS,
+        *(
+            (rel.parent.name, rel, published.INSTANCE_PATH)
+            for rel in brand.shipped(root)
+        ),
+    )
+
 
 #: The three files `brand_templates` writes, under the name each fixture
 #: is written with, and the canvas each is drawn on. The sizes are read off
@@ -5673,9 +5698,10 @@ def render_template_fixtures() -> int:
     every charter with every family asks the question a new family
     actually has to answer: not "does the ribbon still clear the words"
     but "does *this* drawing clear them, at every stroke weight and every
-    string length this repository can produce". A family added to
-    `motifs.FAMILIES` is swept the moment it is registered, with no entry
-    to add here.
+    string length this repository can produce". Neither side of the
+    product is a list here: a family added to `motifs.FAMILIES` and a
+    charter committed under `brand/` are both swept the moment they
+    exist, with no entry to add anywhere.
 
     Deterministic, and reads nothing an event changes: the templates carry
     `{{speaker.*}}` placeholders rather than a talk, so the same
@@ -5690,7 +5716,7 @@ def render_template_fixtures() -> int:
 
     manifest: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory() as scratch:
-        for label, charter, declaration in _TEMPLATE_CHARTERS:
+        for label, charter, declaration in _template_charters(root):
             for family in sorted(motifs.FAMILIES):
                 made = _template_fixture_root(
                     Path(scratch), root, charter, declaration, family

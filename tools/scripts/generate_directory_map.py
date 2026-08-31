@@ -181,8 +181,9 @@ PURPOSE: Final[Mapping[str, str]] = {
         "on the showcase's static pages."
     ),
     "brand": (
-        "The product's own charter and marks, read by any duplicate that "
-        "has measured no palette of its own yet."
+        "The product's own marks, and one directory per charter it ships: "
+        "the default a duplicate that has measured no palette of its own "
+        "is drawn with, and the palettes it may choose instead."
     ),
     "config": (
         "The product's own declarations, which the cockpit never reads: the "
