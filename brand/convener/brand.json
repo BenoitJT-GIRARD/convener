@@ -3,12 +3,12 @@
   "_why_a_default": "So that a duplicate looks finished at its first build rather than grey. The objection this project already paid for once is D-16: an *invented* palette that measured worse than the one it replaced, and cost accessibility for months because nobody rechecked the numbers. The parade is below and in `tools/scripts/generate_brand_css.py`: every pairing in `contrast` is recomputed from the two colours beside it at every run of `--check`, and a pairing under 4.5 stops the build. A default that cannot clear AA does not ship.",
   "_why_a_motif": "The section that used to refuse. `motif` is the ribbon's stroke, how wide that stroke is drawn, and the colour of the wordmark's dots -- three values, no drawing. It carried no default here at first, so that no duplicate could wear a mark somebody else had drawn; what replaced that is a rule separating two things which had been treated as one. **Identity has to be supplied** -- the organisation's name, the published address, the title of the series -- and refusing there is right, because nothing can guess them. **Design never has to be.** Palette, faces and motif ship complete and coherent; an instance replaces them when it wants to and never has to write them in order to start. What keeps a duplicate from passing for somebody else is not a refusal but `tools/convener_ops/declaration/published.py::unconfigured`, which compares the declaration value by value and says on the public pages that this instance is not configured yet -- the better guard of the two, because it lets a person watch the product work while they configure it. The three values below are the product's own mark taken apart (`brand/convener/convener-mark.svg`): its navy, its coral dot, and the proportion its inner arc is drawn at.",
   "_source": "brand/convener/README.md -- the product's mark, and the two colours measured off the original artwork: navy #012765 and coral #fd6b52. Those two are the only values here that were measured rather than derived; everything else below is worked out from them by the rule in `derived._derivation`.",
-  "_names": "The keys are the system's, not this palette's: `purple` names the role the dominant ink plays (headlines, ribbon, wordmark), `turquoise` the role the saturated field plays, `cream` the bands laid across it. They are inherited from the instance that first measured them, and they are what `tools/scripts/generate_brand_css.py` and both stylesheets already read, so renaming them here would be a second change wearing this one's clothes. Read them as positions in the composition, never as hues -- `purple` is navy here, and `turquoise` is a coral field.",
+  "_names": "The keys are the system's, not this palette's, and each names the position a colour holds in the composition: `dominant` is the ink the headlines, the ribbon and the wordmark are drawn in, `field` the saturated ground that fills the page, `band` the full-width bands laid across it. `tools/scripts/generate_brand_css.py`, both stylesheets and the three downloadable templates read a colour by that name, so an instance writes its own values under these keys and never its own keys. Three of them were `purple`, `turquoise` and `cream` until `tools/migrations/migrate_charter_colour_names.py` renamed them: this palette holds a navy under the first and a coral under the second, which is what a name taken from one palette does to the next.",
 
   "colour": {
-    "purple": "#012765",
-    "turquoise": "#febcb1",
-    "cream": "#f4f0f1",
+    "dominant": "#012765",
+    "field": "#febcb1",
+    "band": "#f4f0f1",
     "ink": "#522f3c",
     "ink_muted": "#794658",
     "rule": "#d0bbc3",
@@ -16,9 +16,9 @@
     "black": "#000000",
 
     "_roles": {
-      "purple": "Headlines, ribbon, wordmark. The dominant colour, not an accent. Navy, measured off the mark: 14.19 on white, AAA with room.",
-      "turquoise": "A ground. Never a text colour on white or cream -- 1.61 on white, exactly as unusable there as the other palette's own field. The product's coral, lightened to the field's luminance.",
-      "cream": "Full-width horizontal bands laid across the field. Text sits inside them.",
+      "dominant": "Headlines, ribbon, wordmark. The dominant colour, not an accent. Navy, measured off the mark: 14.19 on white, AAA with room.",
+      "field": "A ground. Never a text colour on white or on a band -- 1.61 on white, exactly as unusable there as the other palette's own field. The product's coral, lightened to the field's luminance.",
+      "band": "Full-width horizontal bands laid across the field. Text sits inside them.",
       "ink": "Primary text. Warm, not black -- it carries the palette's own hue rather than being a neutral grey borrowed from nowhere.",
       "ink_muted": "Secondary text. Clears AA on the field and on the bands, which is what decides how light it may be.",
       "rule": "Rules, borders, dividers. Never text -- 1.81 on white.",
@@ -29,32 +29,32 @@
 
   "derived": {
     "_comment": "Values no measurement supplies, needed because the web has states and links that a mark does not. Each clears AA on the ground it can appear on.",
-    "_derivation": "One rule, applied to every value here and to four in `colour` above, so that none of them is a taste: **the product's own hues, at the lightness the system measures each role at.** The two measured colours give three axes -- navy for the dominant, coral for the field, and the two in equal parts for the neutrals (they sit near enough to opposite each other that their blend is this palette's own grey, #7f495c). Each token is then its axis mixed toward white or toward black until its WCAG relative luminance matches the luminance that role carries in the charter the system's contrast obligations were written against. That is why nine of the twelve pairings below land within 0.03 of the figure the same pairing gives there; the other three are the ones the navy simply wins (purple_on_turquoise and turquoise_on_purple at +0.89, purple_on_cream at +1.30, white_on_purple at +1.45). A contrast ratio is a function of two luminances, and the luminances were matched on purpose. `purple_hover` is the one exception and says so.",
+    "_derivation": "One rule, applied to every value here and to four in `colour` above, so that none of them is a taste: **the product's own hues, at the lightness the system measures each role at.** The two measured colours give three axes -- navy for the dominant, coral for the field, and the two in equal parts for the neutrals (they sit near enough to opposite each other that their blend is this palette's own grey, #7f495c). Each token is then its axis mixed toward white or toward black until its WCAG relative luminance matches the luminance that role carries in the charter the system's contrast obligations were written against. That is why nine of the twelve pairings below land within 0.03 of the figure the same pairing gives there; the other three are the ones the navy simply wins (dominant_on_field and field_on_dominant at +0.89, dominant_on_band at +1.30, white_on_dominant at +1.45). A contrast ratio is a function of two luminances, and the luminances were matched on purpose. `dominant_hover` is the one exception and says so.",
     "ink_faint": "#8a596b",
-    "turquoise_text": "#a24535",
-    "turquoise_tint": "#fedad4",
-    "purple_hover": "#011f51",
-    "purple_tint": "#d8dde7",
+    "field_text": "#a24535",
+    "field_tint": "#fedad4",
+    "dominant_hover": "#011f51",
+    "dominant_tint": "#d8dde7",
     "rule_strong": "#b18f9b",
-    "_purple_hover": "The one value not set by matching a luminance. The dominant's own hover state is barely a luminance step in the charter this rule was taken from (0.0324 to 0.0314), and copying that proportion onto a navy already at 0.0240 would have rounded to the navy itself -- a hover state indistinguishable from its rest state, which is not a state. It is the dominant a fifth of the way to black instead: 15.96 against white, against 14.19 at rest, and it is only ever a filled background (`--purple-d`, `--accent-hover`), never text.",
-    "_coral": "The measured coral #fd6b52 is the source of `turquoise`, `turquoise_tint` and `turquoise_text` and appears raw in none of them, which is not an oversight: at 2.84 on white it can be neither text nor a light ground, and every token in this system is one or the other. It keeps its own role where that role is safe -- the accent on the ink, in the mark itself (`brand/convener/convener-mark.svg`), in the `motif` below -- the only place in this file it appears unmixed -- and in whatever `motif` an instance writes in its place."
+    "_dominant_hover": "The one value not set by matching a luminance. The dominant's own hover state is barely a luminance step in the charter this rule was taken from (0.0324 to 0.0314), and copying that proportion onto a navy already at 0.0240 would have rounded to the navy itself -- a hover state indistinguishable from its rest state, which is not a state. It is the dominant a fifth of the way to black instead: 15.96 against white, against 14.19 at rest, and it is only ever a filled background (`--purple-d`, `--accent-hover`), never text.",
+    "_coral": "The measured coral #fd6b52 is the source of `field`, `field_tint` and `field_text` and appears raw in none of them, which is not an oversight: at 2.84 on white it can be neither text nor a light ground, and every token in this system is one or the other. It keeps its own role where that role is safe -- the accent on the ink, in the mark itself (`brand/convener/convener-mark.svg`), in the `motif` below -- the only place in this file it appears unmixed -- and in whatever `motif` an instance writes in its place."
   },
 
   "contrast": {
     "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The twelve pairings are the same twelve the system holds every palette to -- the composition creates them, not this palette.",
-    "purple_on_turquoise": 8.82,
-    "black_on_turquoise": 13.04,
-    "ink_on_turquoise": 7.12,
-    "purple_on_cream": 12.56,
-    "ink_on_cream": 10.15,
-    "ink_muted_on_turquoise": 4.61,
-    "ink_faint_on_cream": 4.99,
-    "turquoise_text_on_white": 6.11,
-    "white_on_purple": 14.19,
-    "turquoise_text_on_cream": 5.4,
-    "ink_muted_on_cream": 6.57,
-    "turquoise_on_purple": 8.82,
-    "_forbidden": "turquoise as text on white (1.61); rule as text on any ground (1.81 on white); white as text on turquoise (1.61) -- which is why a primary button fills with the dominant, not with the field."
+    "dominant_on_field": 8.82,
+    "black_on_field": 13.04,
+    "ink_on_field": 7.12,
+    "dominant_on_band": 12.56,
+    "ink_on_band": 10.15,
+    "ink_muted_on_field": 4.61,
+    "ink_faint_on_band": 4.99,
+    "field_text_on_white": 6.11,
+    "white_on_dominant": 14.19,
+    "field_text_on_band": 5.4,
+    "ink_muted_on_band": 6.57,
+    "field_on_dominant": 8.82,
+    "_forbidden": "the field as text on white (1.61); rule as text on any ground (1.81 on white); white as text on the field (1.61) -- which is why a primary button fills with the dominant."
   },
 
   "typography": {
@@ -74,13 +74,13 @@
     "ribbon_stroke": "#012765",
     "ribbon_width_ratio": 0.0204,
     "logo_dots": "#fd6b52",
-    "_ribbon_stroke": "`colour.purple`, which `_roles` above already names as the ribbon's own colour: the dominant ink draws the headlines, the wordmark and the stroke that runs across the field. 8.82 on the field and 12.56 on the bands, so it reads wherever the composition puts it.",
-    "_logo_dots": "The measured coral, raw, in the one place its 2.84 on white does not disqualify it: the four filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. It is the colour of the dot in `convener-mark.svg`, and both templates set the wordmark inside a cream band, where it measures 2.51 -- weak for text, which it is not, and stronger than the field would give it (1.76).",
+    "_ribbon_stroke": "`colour.dominant`, which `_roles` above already names as the ribbon's own colour: the dominant ink draws the headlines, the wordmark and the stroke that runs across the field. 8.82 on the field and 12.56 on the bands, so it reads wherever the composition puts it.",
+    "_logo_dots": "The measured coral, raw, in the one place its 2.84 on white does not disqualify it: the four filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. It is the colour of the dot in `convener-mark.svg`, and both templates set the wordmark inside a band, where it measures 2.51 -- weak for text, which it is not, and stronger than the field would give it (1.76).",
     "_ribbon_width_ratio": "Not a measurement of a poster -- the product has none to measure -- but the mark's own line, at the size the ribbon draws it. `ribbon.py` builds each curl as a true circular arc, radius 0.105 and 0.103 of the composition's shorter side; `convener-mark.svg`'s inner arc is 25.86 wide on a radius of 131.72, that is 0.196 of its own radius. Carried onto the two curls that gives 0.0206 and 0.0202, and 0.0204 is the midpoint of the two -- 1.0 percent from one, 0.9 percent from the other -- so a curl reads at the weight the mark's own line reads at, whatever the size and whatever the aspect ratio. The *inner* arc and not the outer, which is 0.334 of its radius: the outer arc is the mark's mass, what keeps it legible at 16 px, and the ribbon is a line crossing a page rather than a mark."
   },
 
   "layout": {
     "_ground": "The field fills the page. White is not the ground.",
-    "_bands": "Cream bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18."
+    "_bands": "The bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18."
   }
 }

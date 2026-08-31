@@ -18,7 +18,7 @@ arithmetic:
 
 - `#3D2D7C` on `#3FB1C2` -- the headline on the page's ground -- **4.44**,
   which is the exact number D-16 was decided over, still shipping;
-- `#3FB1C2` on `#F4F1E6` -- the wordmark's second colour on the cream band
+- `#3FB1C2` on `#F4F1E6` -- the wordmark's second colour on the band
   -- **2.24**;
 - `#3FB1C2` on `#3FB1C2` -- the forum's address in the "what to expect"
   block, set in the page's own ground colour -- **1.00**. Invisible. It had
@@ -86,15 +86,15 @@ because the right curl crosses the rows it occupies. That is a return
 rather than a loss: at 66 it measured 1064 units wide on a 1200 canvas,
 where the reference's own headline measures 868.
 
-The wordmark's second word takes `turquoise_text` and not the field's own
-turquoise, which is what the reference sets it in. `colour._roles` in the
-charter forbids that colour as text on white or cream by name, and on the
-cream band the reference's pairing measures 1.42 -- against the 4.5 WCAG
-AA asks. `turquoise_text` is the charter's own readable variant of it,
-5.41 on the same band, and it carries the two-tone split the reference
-draws without creating the one pairing the charter refuses. Restoring the
-field's turquoise there would be a change to the charter's own rules, and
-that is not a decision a generator gets to take on its own.
+The wordmark's second word takes `field_text` and not the field itself,
+which is what the reference sets it in. `colour._roles` in the charter
+forbids the field as text on white or on a band by name, and on the band
+the reference's pairing measures 1.42 -- against the 4.5 WCAG AA asks.
+`field_text` is the charter's own readable variant of it, 5.41 on the same
+band, and it carries the two-tone split the reference draws without
+creating the one pairing the charter refuses. Restoring the field there
+would be a change to the charter's own rules, and that is not a decision a
+generator gets to take on its own.
 
 The third file, and why it is vector where it used to be a bitmap
 -------------------------------------------------------------------
@@ -218,29 +218,25 @@ class _Pairing:
 #: non-text contrast rule outright, and a dashed placeholder border is
 #: decoration around content that replaces it.
 _LEGIBILITY: Final = (
-    _Pairing("the wordmark's address, in the top cream band", "purple", "cream"),
+    _Pairing("the wordmark's address, in the top band", "dominant", "band"),
     _Pairing(
-        "the wordmark's second word, in the top cream band",
-        "turquoise_text",
-        "cream",
+        "the wordmark's second word, in the top band",
+        "field_text",
+        "band",
     ),
-    _Pairing("the series' name, on the field", "purple", "turquoise"),
-    _Pairing("the invitation lines, on the field", "black", "turquoise"),
-    _Pairing("the talk's title, in the cream band", "purple", "cream"),
-    _Pairing("the date line, on the field", "purple", "turquoise"),
-    _Pairing(
-        "the 'what to expect' heading and rows, on the field", "black", "turquoise"
-    ),
-    _Pairing("the before/during/after labels, on the field", "purple", "turquoise"),
-    _Pairing(
-        "the caption inside the photographic frame", "ink_muted", "turquoise_tint"
-    ),
+    _Pairing("the series' name, on the field", "dominant", "field"),
+    _Pairing("the invitation lines, on the field", "black", "field"),
+    _Pairing("the talk's title, in the band", "dominant", "band"),
+    _Pairing("the date line, on the field", "dominant", "field"),
+    _Pairing("the 'what to expect' heading and rows, on the field", "black", "field"),
+    _Pairing("the before/during/after labels, on the field", "dominant", "field"),
+    _Pairing("the caption inside the photographic frame", "ink_muted", "field_tint"),
     _Pairing("the speaker's name and affiliation, on the frame", "ink", "white"),
     _Pairing("the label in the QR slot", "ink_muted", "white"),
-    _Pairing("the flyer's edition code, in the foot band", "purple", "cream"),
-    _Pairing("the flyer's closing line, in the foot band", "black", "cream"),
+    _Pairing("the flyer's edition code, in the foot band", "dominant", "band"),
+    _Pairing("the flyer's closing line, in the foot band", "black", "band"),
     _Pairing("the background's three lines, on its white plate", "black", "white"),
-    _Pairing("the background's code label, on the field", "black", "turquoise"),
+    _Pairing("the background's code label, on the field", "black", "field"),
 )
 
 
@@ -483,8 +479,8 @@ def _values(root: Path) -> dict[str, str]:
         **colours,
         "wordmark": _wordmark(
             _wordmark_runs(identity),
-            ink=colours["purple"],
-            accent=colours["turquoise_text"],
+            ink=colours["dominant"],
+            accent=colours["field_text"],
         ),
         "ribbon_stroke": str(motif["ribbon_stroke"]),
         "logo_dots": str(motif["logo_dots"]),
@@ -532,9 +528,9 @@ _ANNOUNCEMENT: Final = """\
 
 {generated_note}
   <g id="fixed">
-    <rect width="{w}" height="{h}" fill="{turquoise}"/>
-    <rect y="0" width="{w}" height="168" fill="{cream}"/>
-    <rect y="400" width="{w}" height="146" fill="{cream}"/>
+    <rect width="{w}" height="{h}" fill="{field}"/>
+    <rect y="0" width="{w}" height="168" fill="{band}"/>
+    <rect y="400" width="{w}" height="146" fill="{band}"/>
 
     <!-- The ribbon: one continuous stroke, running off three edges and
          turning back on itself, in the charter's own motif colour and at
@@ -555,11 +551,11 @@ _ANNOUNCEMENT: Final = """\
     <text x="282" y="112" font-size="50"
           font-weight="500">{wordmark}</text>
     <rect x="{rule_x}" y="{rule_y}" width="{rule_w}" height="{rule_h}"
-          fill="{purple}"/>
+          fill="{dominant}"/>
 
     <text x="600" y="272" text-anchor="middle" font-size="50"
           font-weight="900" letter-spacing="1"
-          fill="{purple}">{series_caps}</text>
+          fill="{dominant}">{series_caps}</text>
     <text x="600" y="330" text-anchor="middle" font-size="31"
           fill="{black}">Join the discussion before and after the talk at</text>
     <text x="600" y="372" text-anchor="middle" font-size="31"
@@ -570,7 +566,7 @@ _ANNOUNCEMENT: Final = """\
     <!-- TALK TITLE. Two lines, split by hand — SVG does not wrap text. A
          very long title: drop the font-size to 40 and use three lines. -->
     <text text-anchor="middle" font-size="44" font-weight="700"
-          fill="{purple}">
+          fill="{dominant}">
       <tspan x="600" y="458">{speaker_title}</tspan>
       <tspan x="600" y="512"></tspan>
     </text>
@@ -579,14 +575,14 @@ _ANNOUNCEMENT: Final = """\
          {speaker_date} as 2026-11-12 and {speaker_time} as 12:30 (CET). -->
     <text x="600" y="600" text-anchor="middle" font-size="40"
           font-weight="700"
-          fill="{purple}">{speaker_date} at {speaker_time} (CET)</text>
+          fill="{dominant}">{speaker_date} at {speaker_time} (CET)</text>
 
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
     <g transform="rotate(4 900 900)">
       <rect x="700" y="690" width="420" height="470" fill="{white}"/>
-      <rect x="722" y="712" width="376" height="376" fill="{turquoise_tint}"/>
+      <rect x="722" y="712" width="376" height="376" fill="{field_tint}"/>
       <text x="910" y="912" text-anchor="middle" font-size="26"
             fill="{ink_muted}">speaker photo</text>
       <text x="1098" y="1128" text-anchor="end" font-size="30"
@@ -601,15 +597,15 @@ _ANNOUNCEMENT: Final = """\
           fill="{black}">WHAT TO EXPECT?</text>
     <text font-size="27" fill="{black}">
       <tspan x="320" y="796" font-weight="800"
-             fill="{purple}">BEFORE: </tspan><tspan>Ask your</tspan>
+             fill="{dominant}">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="320" y="832">questions to the speaker</tspan>
       <tspan x="320" y="868">at {forum_host}</tspan>
       <tspan x="320" y="944" font-weight="800"
-             fill="{purple}">D-DAY: </tspan><tspan>Presentation</tspan>
+             fill="{dominant}">D-DAY: </tspan><tspan>Presentation</tspan>
       <tspan x="320" y="980">followed by a discussion</tspan>
       <tspan x="320" y="1016">with the audience</tspan>
       <tspan x="320" y="1092" font-weight="800"
-             fill="{purple}">AFTER: </tspan><tspan>Continue the</tspan>
+             fill="{dominant}">AFTER: </tspan><tspan>Continue the</tspan>
       <tspan x="320" y="1128">discussion and connect</tspan>
       <tspan x="320" y="1164">with peers</tspan>
     </text>
@@ -644,10 +640,10 @@ _FLYER: Final = """\
 
 {generated_note}
   <g id="fixed">
-    <rect width="{w}" height="{h}" fill="{turquoise}"/>
-    <rect y="0" width="{w}" height="290" fill="{cream}"/>
-    <rect y="700" width="{w}" height="470" fill="{cream}"/>
-    <rect y="2760" width="{w}" height="210" fill="{cream}"/>
+    <rect width="{w}" height="{h}" fill="{field}"/>
+    <rect y="0" width="{w}" height="290" fill="{band}"/>
+    <rect y="700" width="{w}" height="470" fill="{band}"/>
+    <rect y="2760" width="{w}" height="210" fill="{band}"/>
 
     <!-- The ribbon: one continuous stroke, running off the edges and
          turning back on itself, in the charter's own motif colour and at
@@ -665,11 +661,11 @@ _FLYER: Final = """\
     <text x="485" y="188" font-size="88"
           font-weight="500">{wordmark}</text>
     <rect x="{rule_x}" y="{rule_y}" width="{rule_w}" height="{rule_h}"
-          fill="{purple}"/>
+          fill="{dominant}"/>
 
     <text x="1050" y="430" text-anchor="middle" font-size="86"
           font-weight="900" letter-spacing="2"
-          fill="{purple}">{series_caps}</text>
+          fill="{dominant}">{series_caps}</text>
     <text x="1050" y="530" text-anchor="middle" font-size="50"
           fill="{black}">{tagline}</text>
     <text x="1050" y="600" text-anchor="middle" font-size="50"
@@ -681,7 +677,7 @@ _FLYER: Final = """\
     <!-- TALK TITLE. Up to three lines, split by hand — SVG does not wrap
          text. A short title: use one line and raise the font-size to 96. -->
     <text text-anchor="middle" font-size="80" font-weight="700"
-          fill="{purple}">
+          fill="{dominant}">
       <tspan x="1050" y="840">{speaker_title}</tspan>
       <tspan x="1050" y="940"></tspan>
       <tspan x="1050" y="1040"></tspan>
@@ -691,7 +687,7 @@ _FLYER: Final = """\
          {speaker_time} as 12:30; write them out the way they are said. -->
     <text x="1050" y="1290" text-anchor="middle" font-size="72"
           font-weight="700"
-          fill="{purple}">{speaker_date} at {speaker_time} (CET)</text>
+          fill="{dominant}">{speaker_date} at {speaker_time} (CET)</text>
 
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
          File &gt; Import, then send the image behind this white frame. Keep
@@ -699,7 +695,7 @@ _FLYER: Final = """\
     <g transform="rotate(4 1520 1900)">
       <rect x="1250" y="1440" width="700" height="810" fill="{white}"/>
       <rect x="1288" y="1478" width="624" height="624"
-            fill="{turquoise_tint}"/>
+            fill="{field_tint}"/>
       <text x="1600" y="1800" text-anchor="middle" font-size="44"
             fill="{ink_muted}">speaker photo</text>
       <text x="1912" y="2180" text-anchor="end" font-size="56"
@@ -710,7 +706,7 @@ _FLYER: Final = """\
 
     <!-- EDITION CODE. The series number this event carries in the data. -->
     <text x="1050" y="2812" text-anchor="middle" font-size="40"
-          font-weight="700" fill="{purple}">{speaker_edition_code}</text>
+          font-weight="700" fill="{dominant}">{speaker_edition_code}</text>
   </g>
 
   <g id="fixed-what-to-expect">
@@ -718,15 +714,15 @@ _FLYER: Final = """\
           fill="{black}">WHAT TO EXPECT?</text>
     <text font-size="50" fill="{black}">
       <tspan x="560" y="1590" font-weight="800"
-             fill="{purple}">BEFORE: </tspan><tspan>Ask your</tspan>
+             fill="{dominant}">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="560" y="1652">questions to the speaker</tspan>
       <tspan x="560" y="1714">at {forum_host}</tspan>
       <tspan x="560" y="1846" font-weight="800"
-             fill="{purple}">D-DAY: </tspan><tspan>Presentation</tspan>
+             fill="{dominant}">D-DAY: </tspan><tspan>Presentation</tspan>
       <tspan x="560" y="1908">followed by a discussion</tspan>
       <tspan x="560" y="1970">with the audience</tspan>
       <tspan x="560" y="2102" font-weight="800"
-             fill="{purple}">AFTER: </tspan><tspan>Continue the</tspan>
+             fill="{dominant}">AFTER: </tspan><tspan>Continue the</tspan>
       <tspan x="560" y="2164">discussion and connect</tspan>
       <tspan x="560" y="2226">with peers</tspan>
     </text>
@@ -939,7 +935,7 @@ _BACKGROUND: Final = """\
   the session runs on.</desc>
 
 {generated_note}
-  <rect width="{w}" height="{h}" fill="{turquoise}"/>
+  <rect width="{w}" height="{h}" fill="{field}"/>
 
   <!-- The ribbon: one continuous stroke, running off the edges and
        turning back on itself, in the charter's own motif colour and at its

@@ -229,8 +229,8 @@ _SITE_ROOT_TEMPLATE: Final = """\
   /* Grounds: turquoise is the field, cream runs across it in bands, white
    * appears only inside photographic frames. */
   --paper:        {white};
-  --surface:      {cream};
-  --surface-2:    {turquoise};
+  --surface:      {band};
+  --surface-2:    {field};
 
   /* Text: warm, never slate -- the warmth is the single thing that most
    * distinguishes this identity from a generic purple-and-teal one. */
@@ -240,13 +240,13 @@ _SITE_ROOT_TEMPLATE: Final = """\
 
   /* The plain turquoise value is a GROUND and must never carry text.
    * turquoise-d is the readable variant, for links and text accents. */
-  --turquoise:    {turquoise};
-  --turquoise-d:  {turquoise_text};
-  --turquoise-l:  {turquoise_tint};
+  --turquoise:    {field};
+  --turquoise-d:  {field_text};
+  --turquoise-l:  {field_tint};
 
-  --purple:       {purple};
-  --purple-d:     {purple_hover};
-  --purple-l:     {purple_tint};
+  --purple:       {dominant};
+  --purple-d:     {dominant_hover};
+  --purple-l:     {dominant_tint};
 
   /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. Measured against
@@ -273,21 +273,21 @@ def render_site_root_block(charter: dict[str, Any]) -> str:
     colours = _colours(charter)
     return _SITE_ROOT_TEMPLATE.format(
         white=colours["white"],
-        cream=colours["cream"],
-        turquoise=colours["turquoise"],
+        band=colours["band"],
+        field=colours["field"],
         ink=colours["ink"],
         ink_muted=colours["ink_muted"],
         ink_faint=colours["ink_faint"],
-        turquoise_text=colours["turquoise_text"],
-        turquoise_tint=colours["turquoise_tint"],
-        purple=colours["purple"],
-        purple_hover=colours["purple_hover"],
-        purple_tint=colours["purple_tint"],
+        field_text=colours["field_text"],
+        field_tint=colours["field_tint"],
+        dominant=colours["dominant"],
+        dominant_hover=colours["dominant_hover"],
+        dominant_tint=colours["dominant_tint"],
         danger=_DANGER,
         info=_INFO,
         rule=colours["rule"],
         rule_strong=colours["rule_strong"],
-        select=rgba(colours["turquoise"], _SITE_SELECT_ALPHA),
+        select=rgba(colours["field"], _SITE_SELECT_ALPHA),
         white_rgb=rgb_triplet(colours["white"]),
     )
 
@@ -304,18 +304,18 @@ def render_site_css(root: Path) -> str:
 #: corrected from the reconstruction's palette to `instance/data/brand.json`'s.
 _APP_ROOT_TEMPLATE: Final = """\
   --paper:         {white};
-  --paper-soft:    {cream};
+  --paper-soft:    {band};
   --surface:       {white};
-  --surface-mute:  {turquoise_tint};
+  --surface-mute:  {field_tint};
   --ink:           {ink};
   --ink-muted:     {ink_muted};
   --ink-faint:     {ink_faint};
-  --primary:       {turquoise};
-  --primary-hover: {turquoise_text};
-  --primary-soft:  {turquoise_tint};
-  --accent:        {purple};
-  --accent-hover:  {purple_hover};
-  --accent-soft:   {purple_tint};
+  --primary:       {field};
+  --primary-hover: {field_text};
+  --primary-soft:  {field_tint};
+  --accent:        {dominant};
+  --accent-hover:  {dominant_hover};
+  --accent-soft:   {dominant_tint};
   --border:        {rule};
   --border-strong: {rule_strong};
   /* No instance/data/brand.json equivalent: no original the designer drew ever
@@ -331,21 +331,21 @@ def render_app_root_block(charter: dict[str, Any]) -> str:
     colours = _colours(charter)
     return _APP_ROOT_TEMPLATE.format(
         white=colours["white"],
-        cream=colours["cream"],
-        turquoise_tint=colours["turquoise_tint"],
+        band=colours["band"],
+        field_tint=colours["field_tint"],
         ink=colours["ink"],
         ink_muted=colours["ink_muted"],
         ink_faint=colours["ink_faint"],
-        turquoise=colours["turquoise"],
-        turquoise_text=colours["turquoise_text"],
-        purple=colours["purple"],
-        purple_hover=colours["purple_hover"],
-        purple_tint=colours["purple_tint"],
+        field=colours["field"],
+        field_text=colours["field_text"],
+        dominant=colours["dominant"],
+        dominant_hover=colours["dominant_hover"],
+        dominant_tint=colours["dominant_tint"],
         rule=colours["rule"],
         rule_strong=colours["rule_strong"],
         danger=_DANGER,
         info=_INFO,
-        select=rgba(colours["turquoise"], _APP_SELECT_ALPHA),
+        select=rgba(colours["field"], _APP_SELECT_ALPHA),
     )
 
 
@@ -398,6 +398,16 @@ def main(argv: list[str] | None = None) -> int:
     root = repo_root()
     named = brand.source(root).as_posix()
 
+    # A charter still naming its colours after hues, before anything is
+    # measured: it answers none of the names the templates below ask for,
+    # so the one useful thing to print is which file it is and which
+    # migration renames it.
+    try:
+        charter = brand.load(root)
+    except brand.SupersededCharterError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
     # The palette first, and unconditionally -- writing or checking. A
     # measurement that no longer recomputes, or one that recomputes below
     # AA, is not a file that needs regenerating: it is a palette that must
@@ -406,7 +416,7 @@ def main(argv: list[str] | None = None) -> int:
     # (see brand/convener/brand.json's own `_why_a_default`), and a check
     # that only compared files against a JSON document would have carried
     # none of that promise.
-    contrast = brand.contrast_problems(brand.load(root), named=named)
+    contrast = brand.contrast_problems(charter, named=named)
     if contrast:
         for problem in contrast:
             print(problem, file=sys.stderr)

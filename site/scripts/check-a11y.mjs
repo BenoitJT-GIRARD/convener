@@ -340,13 +340,13 @@ async function runAxe(page, axeSource) {
  *  each flagged node (`node.any[].data.messageKey`), not assumed from the
  *  rule's name:
  *
- *  - `pseudoContent` -- `.section__head`'s cream band is painted by a
+ *  - `pseudoContent` -- `.section__head`'s band is painted by a
  *    `::before` pseudo-element (`site/src/style.css`), not a `background`
  *    on the text's own ancestor, so axe cannot resolve it statically. The
- *    real pairings it is asking about are `.section__num` (purple on
- *    cream, `instance/data/brand.json`'s `purple_on_cream`, 11.26), `.section__label`
- *    (ink on cream, `ink_on_cream`, 10.12) and `.section__count` (ink-faint
- *    on cream, `ink_faint_on_cream`, 4.99) -- all three already measured,
+ *    real pairings it is asking about are `.section__num` (the dominant on
+ *    the band, `instance/data/brand.json`'s `dominant_on_band`, 11.26), `.section__label`
+ *    (ink on the band, `ink_on_band`, 10.12) and `.section__count` (ink-faint
+ *    on the band, `ink_faint_on_band`, 4.99) -- all three already measured,
  *    all AA or better, on every page they appear on (bare class where
  *    `.section` is unique on the page, `:nth-child`-qualified on `/` and
  *    `/data/`, which each render more than one `.section`).
@@ -356,19 +356,19 @@ async function runAxe(page, axeSource) {
  *    deliberately positioned to run into a page's own text -- and at some
  *    widths its thin stroke visually grazes real text:
  *    `.masthead__brand-mark` at 390px (confirmed by rendering and
- *    screenshotting the actual pixels, not assumed -- a purple line a few
+ *    screenshotting the actual pixels, not assumed -- a line a few
  *    screen pixels wide crossing part of a glyph, the rest of the word
  *    untouched) and, on the homepage, `.coda__text > em`. Neither is a
  *    real reduction in legibility -- the text's own colour against its
  *    *designed* background clears AA with room to spare either way:
- *    purple on cream (`purple_on_cream`, 11.26) for the masthead;
- *    turquoise on purple (`turquoise_on_purple`, 7.93 -- added to
+ *    the dominant on the band (`dominant_on_band`, 11.26) for the masthead;
+ *    the field on the dominant (`field_on_dominant`, 7.93 -- added to
  *    `instance/data/brand.json` on review, since the pairing had
  *    existed unmeasured by name) for `.coda__text em`.
  *  - `elmPartiallyObscuring` -- `.coda__text` itself (the element `em`
  *    sits inside, not the `em` alone), where `.coda__loops` sits in a
  *    lower stacking position than `.coda__inner` (`z-index: 1`): white on
- *    purple (`white_on_purple`, 12.74).
+ *    the dominant (`white_on_dominant`, 12.74).
  */
 const REVIEWED_INCOMPLETE_NODES = [
   { messageKey: 'pseudoContent', selector: '.section__num' },

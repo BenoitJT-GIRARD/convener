@@ -345,7 +345,7 @@ async function stageTheBanner(served) {
 <style>
   html, body { margin: 0; height: 100%; }
   body {
-    background: ${charter.purple};
+    background: ${charter.dominant};
     color: ${charter.white};
     display: flex; align-items: center; justify-content: center;
   }

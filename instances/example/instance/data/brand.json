@@ -4,9 +4,9 @@
   "_synthetic": "Chosen for this example, and nobody's identity: a moss green and a warm gold, at the luminances the system measures for each role, so the twelve pairings below land where the roles need them rather than where a hue happened to fall. `motif` is a stroke colour, a width ratio and a dot colour -- three values, no drawing -- and these three are this example's, not a copy of anybody's.",
 
   "colour": {
-    "purple": "#0a4a2a",
-    "turquoise": "#e8ca6f",
-    "cream": "#f7f2e4",
+    "dominant": "#0a4a2a",
+    "field": "#e8ca6f",
+    "band": "#f7f2e4",
     "ink": "#2f3a34",
     "ink_muted": "#4a5a52",
     "rule": "#cbc3ac",
@@ -14,41 +14,41 @@
     "black": "#000000",
 
     "_roles": {
-      "purple": "Headlines, ribbon, wordmark. The dominant colour, not an accent.",
-      "turquoise": "A ground. Never a text colour on white or cream -- the token names are the product's, and they describe the role, not the hue.",
-      "cream": "Full-width horizontal bands laid across the ground.",
+      "dominant": "Headlines, ribbon, wordmark. The dominant colour, not an accent.",
+      "field": "A ground. Never a text colour on white or on a band.",
+      "band": "Full-width horizontal bands laid across the field.",
       "ink": "Primary text.",
       "ink_muted": "Secondary text.",
       "rule": "Rules, borders, dividers. Never text.",
-      "black": "Body copy on the ground.",
+      "black": "Body copy on the field.",
       "white": "Inside photographic frames only. Not a ground."
     }
   },
 
   "derived": {
-    "_comment": "Values no chosen colour supplies, needed because the web has states and links. Each clears AA on cream and on white.",
+    "_comment": "Values no chosen colour supplies, needed because the web has states and links. Each clears AA on the band and on white.",
     "ink_faint": "#5c6d64",
-    "turquoise_text": "#8b5520",
-    "turquoise_tint": "#f0e4c2",
-    "purple_hover": "#07351e",
-    "purple_tint": "#d4e0d8",
+    "field_text": "#8b5520",
+    "field_tint": "#f0e4c2",
+    "dominant_hover": "#07351e",
+    "dominant_tint": "#d4e0d8",
     "rule_strong": "#a3997c"
   },
 
   "contrast": {
     "_comment": "Measured, WCAG 2.1 relative luminance, and recomputed by `brand.contrast_problems` at every run of `generate_brand_css.py` -- a claim here that no longer recomputes, or one that recomputes below 4.5, stops this instance's build exactly as it stops the other one's. The names are the product's, one per pairing the shipped stylesheets and the two downloadable templates actually draw.",
-    "purple_on_turquoise": 6.47,
-    "black_on_turquoise": 13.11,
-    "ink_on_turquoise": 7.38,
-    "purple_on_cream": 9.27,
-    "ink_on_cream": 10.57,
-    "ink_muted_on_turquoise": 4.56,
-    "ink_faint_on_cream": 4.91,
-    "turquoise_text_on_white": 6.14,
-    "white_on_purple": 10.37,
-    "turquoise_text_on_cream": 5.49,
-    "ink_muted_on_cream": 6.53,
-    "turquoise_on_purple": 6.47
+    "dominant_on_field": 6.47,
+    "black_on_field": 13.11,
+    "ink_on_field": 7.38,
+    "dominant_on_band": 9.27,
+    "ink_on_band": 10.57,
+    "ink_muted_on_field": 4.56,
+    "ink_faint_on_band": 4.91,
+    "field_text_on_white": 6.14,
+    "white_on_dominant": 10.37,
+    "field_text_on_band": 5.49,
+    "ink_muted_on_band": 6.53,
+    "field_on_dominant": 6.47
   },
 
   "typography": {

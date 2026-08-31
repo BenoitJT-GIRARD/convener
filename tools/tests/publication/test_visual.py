@@ -317,17 +317,17 @@ def test_withheld_consent_reaches_the_composition_as_no_portrait_end_to_end() ->
 #: duplication).
 _ROOT_VAR_SOURCES = {
     "--paper": ("colour", "white"),
-    "--surface": ("colour", "cream"),
-    "--surface-2": ("colour", "turquoise"),
+    "--surface": ("colour", "band"),
+    "--surface-2": ("colour", "field"),
     "--ink": ("colour", "ink"),
     "--ink-mute": ("colour", "ink_muted"),
     "--ink-faint": ("derived", "ink_faint"),
-    "--turquoise": ("colour", "turquoise"),
-    "--turquoise-d": ("derived", "turquoise_text"),
-    "--turquoise-l": ("derived", "turquoise_tint"),
-    "--purple": ("colour", "purple"),
-    "--purple-d": ("derived", "purple_hover"),
-    "--purple-l": ("derived", "purple_tint"),
+    "--turquoise": ("colour", "field"),
+    "--turquoise-d": ("derived", "field_text"),
+    "--turquoise-l": ("derived", "field_tint"),
+    "--purple": ("colour", "dominant"),
+    "--purple-d": ("derived", "dominant_hover"),
+    "--purple-l": ("derived", "dominant_tint"),
     "--rule": ("colour", "rule"),
     "--rule-strong": ("derived", "rule_strong"),
     "--white": ("colour", "white"),
@@ -931,10 +931,10 @@ def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
 
 
 # ---------------------------------------------------------------------------
-# The banner's own title band was once a cream band in name only --
+# The banner's own title band was once a band in name only --
 # flush at the left edge, stopping short of the right (the "heading" grid
 # area is only `.wide-heading`'s own column, beside the frame's own
-# column), reading as a rendering accident rather than the "cream bands run
+# column), reading as a rendering accident rather than the "bands run
 # the full width" rule `instance/data/brand.json`'s own `layout._bands` states
 # outright. The square and the print poster never had this defect
 # (`.band--talk-title` is a plain flex child of `.poster`'s own flex
@@ -944,7 +944,7 @@ def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
 #
 # The fix is two boxes, not one: `.band--talk-title__backdrop` (wide-only
 # markup, a sibling of `.band--talk-title` inside the new `.wide-title-row`
-# wrapper) breaks out to the canvas's own full width and paints the cream;
+# wrapper) breaks out to the canvas's own full width and paints the band;
 # `.band--talk-title` itself keeps exactly the width it always had, so the
 # talk title's own text never reaches the frame's own column. The first
 # attempt at this fix widened `.band--talk-title` itself instead, and the

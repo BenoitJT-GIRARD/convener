@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
@@ -179,7 +180,7 @@ def test_the_generated_files_say_so() -> None:
 
 def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
     """`instance/data/brand.json`'s `contrast` section names a foreground and a
-    ground in its own key (`purple_on_turquoise`); this looks both up and
+    ground in its own key (`dominant_on_field`); this looks both up and
     recomputes the ratio from the colours themselves, rather than trusting
     the number already written beside them.
     """
@@ -201,13 +202,13 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
     # Every entry instance/data/brand.json currently carries -- a change to that
     # section without a matching change here would otherwise pass silently.
     # Nine at first, plus two the verify page's own
-    # panel needed (turquoise_text_on_cream, ink_muted_on_cream), plus one
-    # (turquoise_on_purple) the accessibility sweep found had gone
+    # panel needed (field_text_on_band, ink_muted_on_band), plus one
+    # (field_on_dominant) the accessibility sweep found had gone
     # unnamed.
     assert checked == 12
 
 
-def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
+def test_the_dominant_on_the_field_is_the_measurement_d16_turned_on() -> None:
     """The one number this whole task exists over: a reconstruction that
     darkened the ground under dark text shipped 4.44, below AA for normal
     text, and the measured charter that replaced it clears it.
@@ -226,8 +227,8 @@ def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
     """
     charter = brand.load(ROOT)
     palette = brand.colours(charter)
-    computed = round(contrast_ratio(palette["purple"], palette["turquoise"]), 2)
-    assert computed == charter["contrast"]["purple_on_turquoise"]
+    computed = round(contrast_ratio(palette["dominant"], palette["field"]), 2)
+    assert computed == charter["contrast"]["dominant_on_field"]
     assert computed >= 4.5
     # And the arithmetic itself, against a pair that is nobody's: black on
     # white is 21 by definition, and 21 is the only value it can be.
@@ -254,9 +255,11 @@ def test_hex_to_rgb_and_the_css_literals_built_from_it() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_the_page_ground_is_turquoise_not_white() -> None:
-    """D-18: the showcase's ground is turquoise, crossed by cream bands --
-    the inverse of the white-ground/turquoise-accent design it replaced.
+def test_the_page_ground_is_the_field_not_white() -> None:
+    """D-18: the showcase's ground is the field, crossed by the bands --
+    the inverse of the white-ground design it replaced. `--turquoise` is
+    the stylesheet's own name for the field, and holds whatever colour the
+    charter in force gives it.
     `body`'s own background is the one declaration that
     carries it; a reversion to `--paper` would put the whole composition
     back the wrong way round without any generated-token test noticing,
@@ -490,11 +493,11 @@ def test_brand_json_changed_without_regenerating_makes_check_fail(
     assert main([]) == 0
     brand_path = fake_repo / BRAND_PATH
     data = json.loads(brand_path.read_text(encoding="utf-8"))
-    # `purple_tint` and not `purple`, deliberately: no pairing in the
+    # `dominant_tint` and not `dominant`, deliberately: no pairing in the
     # `contrast` table names it, so the run reaches the file comparison
     # this test is about rather than stopping one step earlier at the
     # contrast gate, which has mutations of its own below.
-    data["derived"]["purple_tint"] = "#000000"
+    data["derived"]["dominant_tint"] = "#000000"
     _write_json(brand_path, data)
     assert main(["--check"]) == 1
 
@@ -617,7 +620,7 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
         encoding="utf-8"
     )
     colours = _charter_colours(brand.DEFAULT_PATH)
-    assert section["ribbon_stroke"] == colours["purple"], (
+    assert section["ribbon_stroke"] == colours["dominant"], (
         "the ribbon is drawn in the charter's own dominant ink, which "
         "`colour._roles` already names as the ribbon's colour"
     )
@@ -799,8 +802,8 @@ def test_a_duplicate_that_has_configured_nothing_builds_every_file(
         assert str(instance["logo_dots"]) not in svg
 
     written = (default_repo / SITE_CSS_PATH).read_text(encoding="utf-8")
-    assert _charter_colours(brand.DEFAULT_PATH)["turquoise"] in written
-    assert _charter_colours(BRAND_PATH)["turquoise"] not in written
+    assert _charter_colours(brand.DEFAULT_PATH)["field"] in written
+    assert _charter_colours(BRAND_PATH)["field"] not in written
 
 
 def test_the_command_refuses_a_half_written_mark_and_says_what_is_missing(
@@ -844,7 +847,7 @@ def test_a_duplicate_that_brings_only_its_own_mark_builds_completely(
     svg = (default_repo / ANNOUNCEMENT_SVG_PATH).read_text(encoding="utf-8")
     assert _SYNTHETIC_STROKE in svg
     assert _SYNTHETIC_DOTS in svg
-    assert _charter_colours(BRAND_PATH)["purple"] not in svg
+    assert _charter_colours(BRAND_PATH)["dominant"] not in svg
 
 
 # --------------------------------------------------------------------------
@@ -856,7 +859,7 @@ def test_a_palette_whose_measurement_no_longer_recomputes_does_not_build(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    data["contrast"]["purple_on_turquoise"] = 21.0
+    data["contrast"]["dominant_on_field"] = 21.0
     _write_json(fake_repo / BRAND_PATH, data)
     assert main([]) == 1
     assert "computes to" in capsys.readouterr().err
@@ -870,7 +873,7 @@ def test_a_measurement_of_a_colour_that_does_not_exist_does_not_build(
     are how a reader finds which colour was renamed or dropped.
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    data["contrast"]["saffron_on_cream"] = 4.6
+    data["contrast"]["saffron_on_band"] = 4.6
     _write_json(fake_repo / BRAND_PATH, data)
     assert main([]) == 1
     assert "names no such colour" in capsys.readouterr().err
@@ -888,10 +891,10 @@ def test_a_palette_that_measures_below_aa_does_not_build(
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
     ground = "#3fb1c2"
-    data["colour"]["turquoise"] = ground
+    data["colour"]["field"] = ground
     # Recomputed against the charter in force rather than written out.
     # The five figures used to be literals, and they were
-    # honest only for one instance's purple and ink: under another's the
+    # honest only for one instance's dominant and ink: under another's the
     # generator reported a *mismatch* first and this test lost its
     # subject, which is not the failure it exists to provoke.
     colours = brand.colours(data)
@@ -899,15 +902,15 @@ def test_a_palette_that_measures_below_aa_does_not_build(
         {
             name: round(contrast_ratio(colours[over], ground), 2)
             for name, over in (
-                ("purple_on_turquoise", "purple"),
-                ("black_on_turquoise", "black"),
-                ("ink_on_turquoise", "ink"),
-                ("ink_muted_on_turquoise", "ink_muted"),
+                ("dominant_on_field", "dominant"),
+                ("black_on_field", "black"),
+                ("ink_on_field", "ink"),
+                ("ink_muted_on_field", "ink_muted"),
             )
         }
     )
-    data["contrast"]["turquoise_on_purple"] = data["contrast"]["purple_on_turquoise"]
-    assert data["contrast"]["ink_muted_on_turquoise"] < 4.5, (
+    data["contrast"]["field_on_dominant"] = data["contrast"]["dominant_on_field"]
+    assert data["contrast"]["ink_muted_on_field"] < 4.5, (
         "the palette this test is about has to be one that fails AA"
     )
     _write_json(fake_repo / BRAND_PATH, data)
@@ -1046,7 +1049,7 @@ def test_a_template_refuses_a_palette_whose_own_pairings_fail_aa(
     renderer measures its own, whatever palette it is handed.
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    data["colour"]["cream"] = data["colour"]["purple"]
+    data["colour"]["band"] = data["colour"]["dominant"]
     data["contrast"] = {"_comment": "emptied so the palette gate is not what bites"}
     _write_json(fake_repo / BRAND_PATH, data)
     with pytest.raises(ValueError, match=r"below the 4\.5"):
@@ -1245,7 +1248,7 @@ def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
     with the waypoints while the drawn curve went further.
 
     Neither block may be crossed. The plate carries three lines of type,
-    and heavy purple behind dark type is unreadable type; the code carries
+    and a heavy stroke behind dark type is unreadable type; the code carries
     a symbol whose whole job is to be scanned, and a stroke across it
     destroys modules no error correction was sized for. Half the stroke's
     own width is added to every box, because a `d` attribute describes a
@@ -1290,3 +1293,194 @@ def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
                 f"the ribbon crosses ({x0:.0f}, {y0:.0f})-({x1:.0f}, {y1:.0f}) "
                 f"at ({x:.1f}, {y:.1f})"
             )
+
+
+# --------------------------------------------------------------------------
+# The keys name positions, and no key names a hue
+# --------------------------------------------------------------------------
+
+#: Colour words a charter key may not be built from. Not a complete
+#: vocabulary of English colours: the three the charter used to carry, the
+#: hues those three actually held in each of the palettes this repository
+#: ships, and the common neighbours of both. A key named after a hue is
+#: wrong whichever palette it is read in, because the next palette chooses
+#: its own colours and inherits the name.
+_HUE_WORDS = frozenset(
+    [
+        "amber",
+        "beige",
+        "black",
+        "blue",
+        "bronze",
+        "brown",
+        "coral",
+        "cream",
+        "crimson",
+        "cyan",
+        "emerald",
+        "fuchsia",
+        "gold",
+        "green",
+        "grey",
+        "indigo",
+        "ivory",
+        "jade",
+        "lilac",
+        "lime",
+        "magenta",
+        "maroon",
+        "mauve",
+        "moss",
+        "navy",
+        "ochre",
+        "olive",
+        "orange",
+        "peach",
+        "pink",
+        "plum",
+        "purple",
+        "red",
+        "rose",
+        "ruby",
+        "saffron",
+        "salmon",
+        "sand",
+        "scarlet",
+        "sepia",
+        "silver",
+        "slate",
+        "stone",
+        "tan",
+        "teal",
+        "turquoise",
+        "violet",
+        "white",
+        "yellow",
+    ]
+)
+
+#: The two keys that do name a hue, and the value each has to hold for the
+#: name to be true. They are exempt from the rule above for one reason and
+#: it is checked rather than asserted: `white` is white and `black` is
+#: black in every charter, so neither name can put a colour in a reader's
+#: head that the file does not hold.
+_ACHROMATIC = {"white": "#ffffff", "black": "#000000"}
+
+
+def _tracked_charters() -> tuple[Path, ...]:
+    """Every `brand.json` this repository tracks, from `git ls-files`.
+
+    Listed rather than written down here, so that a charter added later --
+    another worked example, another instance -- is held to the same rule
+    without anybody remembering to add it.
+    """
+    listed = subprocess.run(
+        ["git", "ls-files", "*brand.json"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    return tuple(Path(path) for path in listed)
+
+
+def _charter_key_names(charter: dict[str, Any]) -> list[str]:
+    """Every key in a charter that names a colour: the palette, the roles
+    written beside it, the derived values and the contrast pairings."""
+    names = list(charter["colour"]) + list(charter["derived"])
+    names += list(charter["colour"].get("_roles", {}))
+    names += list(charter["contrast"])
+    return names
+
+
+def test_every_charter_the_repository_tracks_is_held_to_the_naming_rule() -> None:
+    """A sweep that found no charter would pass for free."""
+    tracked = _tracked_charters()
+    assert set(tracked) >= {brand.DEFAULT_PATH, BRAND_PATH}, (
+        f"git ls-files found {[p.as_posix() for p in tracked]}, which does not "
+        "include the product's own charter and this instance's"
+    )
+
+
+@pytest.mark.parametrize("rel", _tracked_charters(), ids=lambda p: p.as_posix())
+def test_no_colour_key_in_a_charter_names_a_hue(rel: Path) -> None:
+    """The keys are positions in the composition: `dominant` is the ink the
+    headlines, the ribbon and the wordmark are drawn in, `field` is the
+    ground that fills the page, `band` is what runs across it.
+
+    They used to be `purple`, `turquoise` and `cream`, and the product's
+    own charter holds a navy under the first and a coral under the second.
+    Every template reads a colour by name, so one palette's hue became
+    every later palette's key, and a reader who trusted the key had the
+    wrong colour in their head each time.
+    """
+    charter = _charter(rel)
+    for key in _charter_key_names(charter):
+        if key.startswith("_"):
+            # Commentary. `derived._coral` is a note about a colour that
+            # really is a coral, and a note is prose about the palette
+            # rather than a name anything reads a colour by.
+            continue
+        for word in key.split("_"):
+            if word in _ACHROMATIC:
+                continue
+            assert word not in _HUE_WORDS, (
+                f"{rel.as_posix()}: the key {key!r} names the hue {word!r}; "
+                "a charter key names the position a colour holds in the "
+                "composition, which is true of every palette"
+            )
+
+
+@pytest.mark.parametrize("rel", _tracked_charters(), ids=lambda p: p.as_posix())
+def test_the_two_keys_that_do_name_a_hue_hold_it(rel: Path) -> None:
+    """`white` and `black` keep their names, and this is the whole reason:
+    each holds the colour it names, in every charter."""
+    colours = _charter_colours(rel)
+    for name, value in _ACHROMATIC.items():
+        assert colours[name].lower() == value, (
+            f"{rel.as_posix()}: colour.{name} holds {colours[name]}, so the "
+            "name no longer says what the value is"
+        )
+
+
+def test_a_charter_still_naming_its_colours_after_hues_is_refused(
+    fake_repo: Path,
+) -> None:
+    """What a duplicate meets if it upgrades without running the migration.
+
+    Every reader looks a colour up by name, so a charter under the old
+    names answers none of them. The refusal names the file and the command
+    that renames it; a `KeyError` raised from inside a format string names
+    neither.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data["colour"] = {
+        old: data["colour"][new] for old, new in brand.SUPERSEDED_COLOURS.items()
+    }
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    with pytest.raises(brand.SupersededCharterError) as raised:
+        brand.load(fake_repo)
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert brand.COLOUR_MIGRATION in message
+    for old in brand.SUPERSEDED_COLOURS:
+        assert old in message
+
+
+def test_the_command_stops_on_a_charter_that_still_names_hues(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The same refusal where a person meets it, and before any file is
+    written: nothing this charter names can be measured, so there is
+    nothing to say about contrast yet."""
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data["colour"] = {
+        old: data["colour"][new] for old, new in brand.SUPERSEDED_COLOURS.items()
+    }
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert brand.COLOUR_MIGRATION in captured.err
+    assert "clears AA" not in captured.out

@@ -81,11 +81,11 @@ the code rather than in the abstract:
   the one this project already made: `brand_templates.py` writes exactly
   this wordmark into `docs/handbook/assets/announcement-template.svg` and
   `flyer-template.svg` -- the two files a collaborator downloads -- as
-  `<text ... fill="{purple}">{forum_host}</text>`, plain and lower case,
+  `<text ... fill="{dominant}">{forum_host}</text>`, plain and lower case,
   derived from this same declaration. Two renderings of one poster
   disagreeing about their own wordmark is precisely the second source
   this project keeps deleting. `instance/data/brand.json`'s own `_roles` agrees
-  independently: "purple: Headlines, ribbon, wordmark. The dominant
+  independently: "dominant: Headlines, ribbon, wordmark. The dominant
   colour, **not an accent**."
 
 What is actually lost is one word: `.accent2` resolved to `var(--purple)`,
@@ -419,17 +419,17 @@ def _load_colours(root: Path) -> dict[str, str]:
 def _root_css_block(colours: dict[str, str]) -> str:
     return f"""\
   --paper:        {colours["white"]};
-  --surface:      {colours["cream"]};
-  --surface-2:    {colours["turquoise"]};
+  --surface:      {colours["band"]};
+  --surface-2:    {colours["field"]};
   --ink:          {colours["ink"]};
   --ink-mute:     {colours["ink_muted"]};
   --ink-faint:    {colours["ink_faint"]};
-  --turquoise:    {colours["turquoise"]};
-  --turquoise-d:  {colours["turquoise_text"]};
-  --turquoise-l:  {colours["turquoise_tint"]};
-  --purple:       {colours["purple"]};
-  --purple-d:     {colours["purple_hover"]};
-  --purple-l:     {colours["purple_tint"]};
+  --turquoise:    {colours["field"]};
+  --turquoise-d:  {colours["field_text"]};
+  --turquoise-l:  {colours["field_tint"]};
+  --purple:       {colours["dominant"]};
+  --purple-d:     {colours["dominant_hover"]};
+  --purple-l:     {colours["dominant_tint"]};
   --rule:         {colours["rule"]};
   --rule-strong:  {colours["rule_strong"]};
   --white:        {colours["white"]};
@@ -635,7 +635,7 @@ _WORDMARK_LOGO_SVG: Final = """\
 
 
 def _wordmark_html(forum_host: str) -> str:
-    """The top cream band: the device, then the forum's own address.
+    """The top band: the device, then the forum's own address.
 
     Plain, one colour, and lower case -- see the module docstring's "The
     wordmark: derived plainly, not refused and not reconstructed" for the
@@ -733,7 +733,7 @@ def _frame_photo_html(portrait_data_uri: str | None, speaker_name: str) -> str:
     state rather than something to work around, and why this
     function never reaches for a network request to fill it in itself. A
     `None` renders a composed placeholder (the speaker's own first
-    initial, on the same turquoise tint the rest of this identity already
+    initial, on the same field tint the rest of this identity already
     uses for a soft fill) instead of an empty box or an `<img>` whose `src`
     would be missing or empty -- a browser renders a *broken-image* icon
     for exactly that second case, which is a worse failure than simply
@@ -1081,7 +1081,7 @@ def render_announcement(
         # branch below, unchanged) is wrapped in one extra element here,
         # `.wide-title-row` -- wide-only, never emitted outside this
         # branch. `.band--talk-title__backdrop`, the first child, is what
-        # actually paints the band's cream full-width -- see
+        # actually paints the band full-width -- see
         # `.poster--wide .wide-title-row`'s own CSS comment for the full
         # mechanism and why it lives on a sibling rather than on
         # `.band--talk-title` itself.
@@ -1339,8 +1339,8 @@ def render_announcement(
 
      The grid's own two columns (`heading`'s "1fr" beside
      `frame`'s own "auto" width) are exactly the shape `.band--talk-title`
-     needs to *not* have -- a cream band confined to one column reads as a
-     truncated accident, not the "cream bands run full width" rule
+     needs to *not* have -- a band confined to one column reads as a
+     truncated accident, not the "bands run full width" rule
      `instance/data/brand.json`'s own `layout._bands` states outright. See
      `.poster--wide .wide-title-row`'s own comment below for the fix. */
   .poster--wide {{
@@ -1373,7 +1373,7 @@ def render_announcement(
   }}
   /* `.wide-title-row` (wide-only markup, wrapping the shared
      `title_band` -- see `render_announcement`'s own wide branch) is what
-     lets the band's cream *background* run the full canvas width while
+     lets the band's own *background* run the full canvas width while
      its *text* stays exactly where it was, clear of the frame's own
      column -- two different boxes doing two different jobs, rather than
      one box trying to be both.
@@ -1417,7 +1417,7 @@ def render_announcement(
      (below, later in this page's own DOM order, outside this stacking
      context entirely) still paints over whatever part of the backdrop
      its own column overlaps -- white border and drop shadow on top of
-     cream, read as layered rather than colliding, exactly like the
+     the band, read as layered rather than colliding, exactly like the
      wordmark band above it (whose "wordmark wordmark" grid area already
      spans both columns) and like this same band on the square and print
      formats (there, a plain flex child stretched to `.poster`'s own full

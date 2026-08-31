@@ -133,7 +133,7 @@ def test_the_fixture_is_rendered_as_the_example_instance(
     assert signup_url(FIXTURE_ANNOUNCEMENT.event_id, root=EXAMPLE) in page
 
     colours = brand.colours(brand.load(EXAMPLE))
-    assert colours["purple"] in page
+    assert colours["dominant"] in page
     assert brand.motif(EXAMPLE)["ribbon_stroke"] in page
 
 
@@ -164,7 +164,7 @@ def test_no_value_of_the_instance_running_this_repository_reaches_the_page(
     assert signup_url(FIXTURE_ANNOUNCEMENT.event_id) not in page
     assert published.load(ROOT).host not in page
 
-    assert brand.colours(brand.load(ROOT))["purple"] not in page
+    assert brand.colours(brand.load(ROOT))["dominant"] not in page
     assert brand.motif(ROOT)["ribbon_stroke"] not in page
 
 
@@ -178,8 +178,8 @@ def test_the_two_charters_this_test_compares_are_actually_different() -> None:
     mean anything -- the second would be asserting the absence of a string
     the first had just found."""
     assert (
-        brand.colours(brand.load(EXAMPLE))["purple"]
-        != brand.colours(brand.load(ROOT))["purple"]
+        brand.colours(brand.load(EXAMPLE))["dominant"]
+        != brand.colours(brand.load(ROOT))["dominant"]
     )
     assert published.load_identity(EXAMPLE).forum_host != (
         published.load_identity(ROOT).forum_host

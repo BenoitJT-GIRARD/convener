@@ -14,10 +14,21 @@ disagree. So the fallback is decided here, once, and the three read it.
 What is the product's and what is the instance's
 -------------------------------------------------
 **The system is the product's.** The token names, the written roles ("the
-turquoise is a ground, never a text colour on white"), the obligation that
+field is a ground, never a text colour on white"), the obligation that
 every measured pairing clears AA, and the `--check` that stops a
 stylesheet drifting away from the values -- that is the part with the
 engineering in it, and it ships with the code.
+
+**The token names are positions in the composition.** `dominant` is the
+ink the headlines, the ribbon and the wordmark are drawn in; `field` is
+the saturated ground that fills the page; `band` is the full-width
+horizontal bands laid across it. Three of them used to be `purple`,
+`turquoise` and `cream`, after the hues of the first palette anybody
+measured -- and the product's own charter holds a navy under `purple` and
+a coral under `turquoise`. `SUPERSEDED_COLOURS` below still knows those
+three spellings, so that a charter written before the rename is answered
+by name and pointed at the migration rather than raising a `KeyError`
+inside a template.
 
 **A default palette is the product's too**, `brand/convener/brand.json`,
 so that a duplicate looks finished at its first build rather than grey. It
@@ -75,11 +86,14 @@ from ..declaration.paths import DATA_DIR
 
 __all__ = [
     "AA_NORMAL_TEXT",
+    "COLOUR_MIGRATION",
     "DEFAULT_PATH",
     "INSTANCE_PATH",
     "MOTIF_FIELDS",
     "MOTIF_KEY",
+    "SUPERSEDED_COLOURS",
     "MissingMotifError",
+    "SupersededCharterError",
     "colours",
     "contrast_problems",
     "contrast_ratio",
@@ -117,6 +131,37 @@ AA_NORMAL_TEXT: Final = 4.5
 #: The two sections that hold colours. Everything else in the file is
 #: commentary, measurement or typography.
 _COLOUR_SECTIONS: Final = ("colour", "derived")
+
+#: The three colour names a charter carried before the keys named
+#: positions, and the position each became. Every reader looks a colour up
+#: by name, so a charter still under the old names is a charter nothing
+#: here can draw from; this is what lets `load` say that in one sentence.
+#: `tools/migrations/migrate_charter_colour_names.py` renames from this
+#: same table, so the migration and the refusal can never disagree about
+#: which names moved where.
+SUPERSEDED_COLOURS: Final = {
+    "purple": "dominant",
+    "turquoise": "field",
+    "cream": "band",
+}
+
+#: The command that renames them, quoted in the refusal, as it is run from
+#: `tools/`.
+COLOUR_MIGRATION: Final = "uv run python migrations/migrate_charter_colour_names.py"
+
+
+class SupersededCharterError(RuntimeError):
+    """A charter whose colours are still named after hues.
+
+    The keys are the system's, and every template reads a colour by name,
+    so a file under the old names answers none of the names anything asks
+    for. A duplicate that upgrades without running the migration would
+    otherwise meet a `KeyError` raised from inside a format string, which
+    names neither the file to open nor the command to run.
+
+    Carries the whole message rather than a code, for the reason
+    `MissingMotifError` gives.
+    """
 
 
 class MissingMotifError(RuntimeError):
@@ -156,7 +201,37 @@ def load(root: Path) -> dict[str, Any]:
     an instance that overrode two colours and inherited six would be
     measured against a palette that exists in no file.
     """
-    return _read(root, source(root))
+    named = source(root)
+    charter = _read(root, named)
+    _refuse_superseded_names(charter, named=named.as_posix())
+    return charter
+
+
+def _refuse_superseded_names(charter: dict[str, Any], *, named: str) -> None:
+    """Stop on a charter whose colours still name hues, and say what to run.
+
+    Checked at the load rather than at each lookup: the alternative is one
+    `KeyError` per template, each of them the first thing a duplicate sees
+    after an upgrade and none of them naming the migration.
+    """
+    section = charter.get("colour")
+    if not isinstance(section, dict):
+        return
+    found = sorted(
+        key
+        for key in section
+        for old in SUPERSEDED_COLOURS
+        if key == old or key.startswith(f"{old}_")
+    )
+    if not found:
+        return
+    moved = ", ".join(f"{old} -> {new}" for old, new in SUPERSEDED_COLOURS.items())
+    raise SupersededCharterError(
+        f"{named} names its colours after hues ({', '.join(found)}). The "
+        f"charter names positions in the composition now ({moved}), and every "
+        "template reads a colour by that name. Run "
+        f"`{COLOUR_MIGRATION}` from `tools/` to rename them; no value changes."
+    )
 
 
 def _read(root: Path, rel: Path) -> dict[str, Any]:

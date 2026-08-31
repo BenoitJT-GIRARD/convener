@@ -5,10 +5,11 @@
  * has not (tools/convener_ops/publication/brand.py::source) -- by
  * tools/scripts/generate_brand_css.py, whose --check fails on a stylesheet that
  * has drifted from it. The token *names* are the product's and describe a
- * role rather than a hue: `primary` is the dominant colour, `turquoise` is
- * a ground, and which colours those are is the instance's answer, not this
- * file's. Archivo for display and body, JetBrains Mono for IDs / dates /
- * metadata. Hairline rules, sharp rectangles, generous whitespace.
+ * role rather than a hue: `--primary` is the charter's field, the ground the
+ * composition is built on, and `--accent` its dominant ink -- the headlines,
+ * the ribbon, the wordmark. Which colours those are is the instance's answer,
+ * not this file's. Archivo for display and body, JetBrains Mono for IDs /
+ * dates / metadata. Hairline rules, sharp rectangles, generous whitespace.
  */
 
 /* Self-hosted, and that is a requirement rather than a preference: this

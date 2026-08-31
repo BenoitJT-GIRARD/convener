@@ -91,7 +91,7 @@ def _load_motif(root: Path) -> dict[str, Any]:
 
 
 def ribbon_stroke_colour(root: Path) -> str:
-    """The one purple the ribbon is ever drawn in -- never hand-typed."""
+    """The one colour the ribbon is ever drawn in -- never hand-typed."""
     return str(_load_motif(root)["ribbon_stroke"])
 
 

@@ -71,9 +71,9 @@ grey.
 
 Two things follow:
 
-- **The token names are the system's.** `purple` holds the navy, `turquoise` a
-  coral field. They name positions in the composition rather than hues — see
-  `brand.json`'s own `_names`.
+- **The token names are the system's**, and each names a position in the
+  composition: `dominant` holds the navy, `field` the coral ground, `band` the
+  bands across it — see `brand.json`'s own `_names`.
 - **It carries a `motif`, and the motif is this mark taken apart.** The
   ribbon's stroke is the navy; the wordmark's dots are the coral of the dot
   above; the stroke weight is the proportion the inner arc is drawn at — 25.86
