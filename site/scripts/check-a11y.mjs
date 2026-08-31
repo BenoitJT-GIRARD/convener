@@ -350,9 +350,9 @@ async function runAxe(page, axeSource) {
  *    all AA or better, on every page they appear on (bare class where
  *    `.section` is unique on the page, `:nth-child`-qualified on `/` and
  *    `/data/`, which each render more than one `.section`).
- *  - `imgNode` -- the ribbon motif (D-16's "one continuous meandering
- *    stroke"; `.masthead__loops` on every page, `.hero__loops` on
- *    several, `.coda__loops` on the homepage) is `aria-hidden` and
+ *  - `imgNode` -- the charter's motif (`.masthead__motif` on every page,
+ *    `.hero__motif` on several, `.coda__motif` on the homepage, all three
+ *    drawn from `site/src/_data/motif.json`) is `aria-hidden` and
  *    deliberately positioned to run into a page's own text -- and at some
  *    widths its thin stroke visually grazes real text:
  *    `.masthead__brand-mark` at 390px (confirmed by rendering and
@@ -366,9 +366,22 @@ async function runAxe(page, axeSource) {
  *    `instance/data/brand.json` on review, since the pairing had
  *    existed unmeasured by name) for `.coda__text em`.
  *  - `elmPartiallyObscuring` -- `.coda__text` itself (the element `em`
- *    sits inside, not the `em` alone), where `.coda__loops` sits in a
+ *    sits inside, not the `em` alone), where `.coda__motif` sits in a
  *    lower stacking position than `.coda__inner` (`z-index: 1`): white on
  *    the dominant (`white_on_dominant`, 12.74).
+ *  - `elmPartiallyObscuring` on the colophon's own tagline
+ *    (`em:nth-child(3)`, the second `em` in `.colophon__credit`), which
+ *    is ink-faint on the band (`ink_faint_on_band`, 4.99) and has nothing
+ *    drawn over it. What overlaps it is a rectangle rather than any ink.
+ *    A motif runs off the edges of the canvas it is drawn on -- the
+ *    ribbon's own connector travels twice the canvas's longer side past
+ *    two of them -- and an `<svg>` clips what it *paints* to its viewBox
+ *    while the `<path>` inside keeps its whole geometry as its own
+ *    element rectangle. That rectangle is three canvases across, and it
+ *    is what this check's grid measures, so `.coda__motif`'s path reads
+ *    as covering the top of the footer that follows the coda. Nothing is
+ *    painted there: `.coda` clips at its own edge (`overflow: hidden`)
+ *    and `.colophon` states its own layer above it.
  */
 const REVIEWED_INCOMPLETE_NODES = [
   { messageKey: 'pseudoContent', selector: '.section__num' },
@@ -393,6 +406,7 @@ const REVIEWED_INCOMPLETE_NODES = [
   { messageKey: 'imgNode', selector: '.masthead__brand-mark' },
   { messageKey: 'elmPartiallyObscuring', selector: '.coda__text' },
   { messageKey: 'imgNode', selector: '.coda__text > em' },
+  { messageKey: 'elmPartiallyObscuring', selector: 'em:nth-child(3)' },
 ];
 
 /** The `color-contrast` check's own `messageKey` for one axe `incomplete`

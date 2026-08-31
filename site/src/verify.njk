@@ -16,9 +16,10 @@ eleventyComputed:
 ---
 
 <section class="hero">
-  <svg class="hero__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
-    <path d="M 320 60 C 380 60 400 130 340 150 C 280 170 270 90 330 90 C 380 90 370 180 300 200" opacity=".85"/>
-    <path d="M 250 230 C 320 220 360 290 290 310 C 230 326 220 250 280 250 C 340 250 330 350 250 350" opacity=".9"/>
+  {# The charter's motif, the same one the home page's hero draws -- see
+     src/_data/motif.json and tools/scripts/generate_motif.py. #}
+  <svg class="hero__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
+    <path d="{{ motif.path }}"/>
   </svg>
 
   <div class="container hero__inner">

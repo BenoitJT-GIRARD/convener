@@ -310,6 +310,17 @@ jobs:
         # That last clause is what lets the product ship a default palette
         # at all, so it has to run here and not only in pytest.
         run: uv run python scripts/generate_brand_css.py --check
+      - name: Chrome motif
+        working-directory: tools
+        # site/src/_data/motif.json and app/src/design/motif.ts carry the
+        # drawing the showcase's chrome and the cockpit's sign-in screen
+        # set. Four templates hand-wrote the same three cubic-Bezier paths
+        # and the same stroke width between them, in two languages, so a
+        # charter naming a different motif family changed the posters and
+        # left every public page drawing the old one. Same assertion-only
+        # run as the checks around it: writes nothing, fails if either
+        # committed file is not what the charter's family derives.
+        run: uv run python scripts/generate_motif.py --check
       - name: Directory map
         working-directory: tools
         # `docs/engineering/architecture.md` and `README.md` each carried a

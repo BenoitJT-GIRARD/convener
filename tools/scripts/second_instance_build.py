@@ -208,6 +208,12 @@ def publish(root: Path) -> None:
         what="generate_brand_css.py",
     )
     run(
+        [sys.executable, str(root / "tools" / "scripts" / "generate_motif.py")],
+        cwd=root,
+        env=env,
+        what="generate_motif.py",
+    )
+    run(
         [sys.executable, "-c", CLI_RUNNER, "render_visuals", str(root / POSTERS)],
         cwd=root,
         env=env,

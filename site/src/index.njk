@@ -10,10 +10,11 @@ layout: layout.njk
 {% endfor %}
 
 <section class="hero">
-  <svg class="hero__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
-    <path d="M 320 60 C 380 60 400 130 340 150 C 280 170 270 90 330 90 C 380 90 370 180 300 200" opacity=".85"/>
-    <path d="M 250 230 C 320 220 360 290 290 310 C 230 326 220 250 280 250 C 340 250 330 350 250 350" opacity=".9"/>
-    <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".75"/>
+  {# The charter's motif -- src/_data/motif.json, written by
+     tools/scripts/generate_motif.py from the family `motif.family` names.
+     The stroke is .hero__motif's in style.css, the generated --dominant. #}
+  <svg class="hero__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
+    <path d="{{ motif.path }}"/>
   </svg>
 
   {#
@@ -137,9 +138,10 @@ layout: layout.njk
 {% endif %}
 
 <section class="coda">
-  <svg class="coda__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
-    <path d="M 60 80 C 130 70 170 150 100 170 C 40 186 30 100 90 100 C 150 100 150 200 70 200" opacity=".7"/>
-    <path d="M 130 250 C 200 240 240 320 170 340 C 110 356 100 280 160 280 C 220 280 220 360 140 360" opacity=".75"/>
+  {# The same drawing again, in the field rather than the dominant -- see
+     .coda__motif in style.css for why the coda inverts the ink. #}
+  <svg class="coda__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
+    <path d="{{ motif.path }}"/>
   </svg>
   <div class="container coda__inner">
     <p class="coda__text">

@@ -6,6 +6,7 @@ import { authEnv, availableStrategy } from './strategy';
 import { requestDeviceCode, pollForToken, DeviceFlowError } from './device';
 import type { DeviceCode } from './device';
 import { instanceIdentity } from '../instance';
+import { MOTIF } from '../design/motif';
 import { UnconfiguredBanner } from '../components/UnconfiguredBanner';
 
 function realSleep(ms: number): Promise<void> {
@@ -21,19 +22,22 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      {/* The charter's motif. The drawing and its weight come from
+          design/motif.ts, which generate_motif.py writes from the family
+          `motif.family` names -- the showcase's chrome reads the same two
+          values out of site/src/_data/motif.json. Nothing here derives
+          geometry, and stroke-accent rather than a hex literal keeps the
+          colour where it already was: --accent is the charter's dominant,
+          generated into tokens.css by generate_brand_css.py. */}
       <svg
         aria-hidden="true"
-        viewBox="0 0 400 400"
-        /* stroke-accent, not a hex literal: --accent is the charter's
-           dominant, generated into tokens.css by generate_brand_css.py. */
+        viewBox={MOTIF.view_box}
         className="absolute -right-20 top-10 w-[420px] max-w-[55vw] pointer-events-none opacity-90 stroke-accent"
         fill="none"
-        strokeWidth="9"
+        strokeWidth={MOTIF.stroke_width}
         strokeLinecap="round"
       >
-        <path d="M 320 60 C 380 60 400 130 340 150 C 280 170 270 90 330 90 C 380 90 370 180 300 200" opacity=".85" />
-        <path d="M 250 230 C 320 220 360 290 290 310 C 230 326 220 250 280 250 C 340 250 330 350 250 350" opacity=".9" />
-        <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".7" />
+        <path d={MOTIF.path} />
       </svg>
 
       {/* The one screen of this bundle a visitor with no account

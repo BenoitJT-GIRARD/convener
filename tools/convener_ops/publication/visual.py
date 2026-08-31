@@ -858,7 +858,7 @@ def _motif_overlay_svg(width: float, height: float, root: Path) -> str:
         width, height, ratio=brand.motif_width_ratio(root)
     )
     return (
-        f'<svg class="ribbon-overlay" viewBox="0 0 {_num(width)} {_num(height)}" '
+        f'<svg class="motif-overlay" viewBox="0 0 {_num(width)} {_num(height)}" '
         'aria-hidden="true" focusable="false">'
         f'<path d="{d}" fill="none" stroke="{colour}" '
         f'stroke-width="{_num(stroke_width)}" stroke-linecap="round"/>'
@@ -1326,7 +1326,7 @@ def render_announcement(
     height: 100%;
   }}
 
-  .ribbon-overlay {{
+  .motif-overlay {{
     position: absolute;
     inset: 0;
     width: 100%;

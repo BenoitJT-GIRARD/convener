@@ -513,7 +513,7 @@ def test_an_empty_title_falls_back_rather_than_rendering_a_blank_band() -> None:
 
 def test_the_ribbon_is_painted_last_so_it_sits_on_top_of_everything() -> None:
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
-    assert doc.rindex("ribbon-overlay") > doc.rindex("registration-code-slot")
+    assert doc.rindex("motif-overlay") > doc.rindex("registration-code-slot")
     assert doc.rindex("</svg>") > doc.rindex("</figure>")
 
 
@@ -652,10 +652,10 @@ def test_the_register_band_is_never_squeezed_by_flexible_content() -> None:
     content_start = doc.index('<div class="content">')
     content_end = doc.index("</div>", doc.index('<div class="frame-wrap">'))
     register_start = doc.index('<div class="register">')
-    ribbon_start = doc.index('<svg class="ribbon-overlay"')
+    motif_start = doc.index('<svg class="motif-overlay"')
     # `.register` is a sibling AFTER `.content`, never between its opening
     # and closing tags.
-    assert content_start < content_end < register_start < ribbon_start
+    assert content_start < content_end < register_start < motif_start
 
     register_rule = _rule_block(doc, ".register")
     assert "flex: 0 0 auto" in register_rule

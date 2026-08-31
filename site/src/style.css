@@ -217,19 +217,26 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   background: var(--surface);
   border-bottom: 4px solid var(--dominant);
 }
-.masthead__loops {
-  /* Same motif as .hero__loops / .coda__loops, extended to the one piece
-   * of chrome every page shares (D-18's "other pages" have no hero of
-   * their own yet). Deliberately allowed to run past the masthead's own
-   * bottom edge into the field below -- the designer's own loop crosses from
-   * the band into the field the same way, and .masthead has no
-   * overflow:hidden of its own so it can. Kept to the left and low so it
-   * does not compete with .hero__loops, which already owns the top-right
-   * on this page. */
+.masthead__motif {
+  /* The same drawing .hero__motif and .coda__motif set, extended to the
+   * one piece of chrome every page shares (D-18's "other pages" have no
+   * hero of their own yet). Deliberately allowed to run past the
+   * masthead's own bottom edge into the field below -- the designer's own
+   * loop crosses from the band into the field the same way, and .masthead
+   * has no overflow:hidden of its own so it can. Kept to the left and low
+   * so it does not compete with .hero__motif, which already owns the
+   * top-right on this page.
+   *
+   * The offset is a fraction of a rem rather than three. A family draws
+   * across the whole canvas it is handed -- the ribbon's tail and loop
+   * down the left edge, the bracket's left arm against it -- so an offset
+   * of a fifth of this box's own width carried that side's ink off the
+   * page and left the masthead showing whatever happened to sit in the
+   * middle. */
   stroke: var(--dominant);
   position: absolute;
   pointer-events: none;
-  left: -3rem;
+  left: -.4rem;
   top: -1.5rem;
   width: min(150px, 32vw);
   height: auto;
@@ -303,10 +310,10 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   position: relative;
   z-index: 1;
 }
-.hero__loops {
-  /* The ribbon motif -- instance/data/brand.json's motif.stroke,
-   * i.e. the dominant. Never a hand-typed hex here: the SVG in index.njk
-   * carries no colour of its own and takes this rule's stroke instead. */
+.hero__motif {
+  /* The charter's motif, in its own motif.stroke, i.e. the dominant.
+   * Never a hand-typed hex here: the SVG in index.njk carries no colour of
+   * its own and takes this rule's stroke instead. */
   stroke: var(--dominant);
   position: absolute;
   pointer-events: none;
@@ -1036,16 +1043,16 @@ a.btn--ghost:hover { border-color: var(--dominant); }
   color: var(--white);
   overflow: hidden;
 }
-.coda__loops {
-  /* The field here rather than the ribbon's usual dominant: the coda's own
-   * background *is* the dominant (.coda below), and a ribbon in that same
-   * colour would not be visible on it. Still a instance/data/brand.json
-   * colour, never a hand-typed hex. */
+.coda__motif {
+  /* The field here rather than the motif's usual dominant: the coda's own
+   * background *is* the dominant (.coda below), and a drawing in that same
+   * colour would not be visible on it. Still a charter colour, never a
+   * hand-typed hex. */
   stroke: var(--field);
   position: absolute;
   pointer-events: none;
   left: -2rem;
-  bottom: -2rem;
+  bottom: 0;
   width: min(360px, 40vw);
   height: auto;
   opacity: .35;
@@ -1090,6 +1097,14 @@ a.btn--ghost:hover { border-color: var(--dominant); }
 
 /* ── Colophon ─────────────────────────────────────────────── */
 .colophon {
+  /* A layer of its own, the same declaration .masthead__inner,
+   * .hero__inner and .coda__inner already make. A motif is absolutely
+   * positioned inside the section it decorates, and an absolutely
+   * positioned box paints above the static content that follows it: the
+   * footer is the one block of text that follows every section on the
+   * page. */
+  position: relative;
+  z-index: 1;
   padding: 2.5rem 0 3rem;
   background: var(--surface);
   border-top: 1px solid var(--rule);
@@ -1153,7 +1168,11 @@ a.btn--ghost:hover { border-color: var(--dominant); }
   .hero { padding: 3.5rem 0 3rem; }
   .section { padding: 2.5rem 0 1.5rem; }
   .feature__rail { border-top: 3px solid var(--dominant); padding-top: .5rem; }
-  .hero__loops { width: 60vw; right: -4rem; top: 50%; transform: translateY(-50%); }
-  .masthead__loops { width: 30vw; left: -2.5rem; }
+  /* Down into the hero's own lower right, clear of the text column. A
+   * family draws across the whole canvas it is handed, and at this width
+   * the text column is the whole page: a box centred on the hero puts the
+   * drawing's own stroke through the headline, in the headline's colour. */
+  .hero__motif { width: 45vw; right: -6rem; top: auto; bottom: 1rem; transform: none; }
+  .masthead__motif { width: 30vw; left: -.4rem; }
   .coda { margin-top: 3.5rem; padding: 3rem 0; }
 }
