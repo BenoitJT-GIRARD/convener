@@ -91,10 +91,13 @@ the code rather than in the abstract:
 What is actually lost is one word: `.accent2` resolved to `var(--dominant)`,
 which is the colour `.wordmark-text` already inherits, so the "two-tone"
 treatment rendered as a single `The` in the same colour as the rest of the
-line -- not two colours meeting. The device to its left (`_WORDMARK_LOGO_SVG`)
-is untouched: it is drawn from the charter's own `--dominant` and
-`--field` -- not from `motif`, which only the two downloadable
-templates read for their wordmark -- and it carries no name.
+line -- not two colours meeting. The device to its left
+(`_wordmark_logo_svg`) is the charter's own drawing at the size of a mark,
+drawn from `motif` exactly as the two downloadable templates draw theirs
+(`publication/lockup.py`), and it carries no name. It was two squares and
+two dots until then -- a simplified reading of the reference poster's own
+device, which is a reading of one instance's artwork drawn into every
+duplicate's poster.
 
 The motif itself is never drawn here. `motifs.path` and
 `motifs.stroke_width`, with the family and the ink `brand.py` reads out of
@@ -270,7 +273,7 @@ from typing import Final
 
 from ..declaration.published import load_identity
 from ..governance.rule import PARIS
-from . import brand, motifs
+from . import brand, lockup, motifs
 from .registration_code import registration_code_svg
 
 __all__ = [
@@ -601,32 +604,29 @@ def _num(value: float) -> str:
 # The fixed parts: wordmark, series title, invitation, "WHAT TO EXPECT?"
 # ---------------------------------------------------------------------------
 
-#: The squares-and-dots device to the wordmark's own left, in the
-#: reference poster -- a deliberately simplified reading of it, not a
-#: pixel trace the way the ribbon is. Unlike the ribbon, this glyph
-#: was never named as the part of the identity that had drifted (D-16
-#: names the palette; the correction named the ribbon
-#: specifically as "the only part of the identity that was ever in
-#: doubt"), so it is redrawn here as a plain evocation -- two squares in
-#: the field's colour on a diagonal, two dots in the dominant joined by a
-#: short curved lead -- rather than measured stroke by stroke.
-_WORDMARK_LOGO_SVG: Final = """\
-<svg class="wordmark-logo" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-  <rect x="1" y="1" width="14" height="14" fill="var(--field)"/>
-  <rect x="17" y="17" width="14" height="14" fill="var(--field)"/>
-  <path d="M9 15 V22 Q9 26 13 26 H24" fill="none" stroke="var(--dominant)"
-        stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M24 26 V19 Q24 15 28 15 H33" fill="none" stroke="var(--dominant)"
-        stroke-width="2.6" stroke-linecap="round"/>
-  <circle cx="9" cy="26" r="3.6" fill="var(--dominant)"/>
-  <circle cx="24" cy="26" r="3.6" fill="var(--dominant)"/>
-  <circle cx="9" cy="26" r="1.2" fill="var(--surface)"/>
-  <circle cx="24" cy="26" r="1.2" fill="var(--surface)"/>
-</svg>
-"""
+
+def _wordmark_logo_svg(root: Path) -> str:
+    """The device to the wordmark's own left.
+
+    `publication/lockup.py` is what it is and why: the same device the two
+    downloadable templates set, on the third surface that sets it. What
+    stood here was two squares on a diagonal and two dots joined by a
+    short lead, called "a deliberately simplified reading" of the
+    reference poster's own device -- which is a reading of one instance's
+    artwork, drawn into every duplicate's generated poster at every
+    charter, exactly as the pixel-traced version of the same device was
+    drawn into both templates.
+    """
+    return lockup.device(
+        family=brand.motif_family(root),
+        ratio=brand.motif_width_ratio(root),
+        ink=brand.motif_stroke(root),
+        dots=str(brand.motif(root)["logo_dots"]),
+        attributes='class="wordmark-logo"',
+    )
 
 
-def _wordmark_html(forum_host: str) -> str:
+def _wordmark_html(forum_host: str, root: Path) -> str:
     """The top band: the device, then the forum's own address.
 
     Plain, one colour, and lower case -- see the module docstring's "The
@@ -636,7 +636,7 @@ def _wordmark_html(forum_host: str) -> str:
     """
     return f"""\
 <div class="band band--wordmark">
-  {_WORDMARK_LOGO_SVG}
+  {_wordmark_logo_svg(root)}
   <p class="wordmark-text">{html.escape(forum_host)}</p>
 </div>
 """
@@ -1074,7 +1074,7 @@ def render_announcement(
       <p>Register<br>here</p>
       {registration_slot}
     </div>"""
-    wordmark = _wordmark_html(identity.forum_host)
+    wordmark = _wordmark_html(identity.forum_host, root)
     if wide:
         # See the module's own "The wide derivation" section: the series
         # hero and the "what to expect" copy are dropped outright, not

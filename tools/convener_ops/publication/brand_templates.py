@@ -189,7 +189,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from ..declaration import published
-from . import brand, formats, motifs, registration_code, typeface
+from . import brand, formats, lockup, motifs, registration_code, typeface
 
 __all__ = [
     "ANNOUNCEMENT_PATH",
@@ -458,102 +458,36 @@ def _centred(
 # The mark, and the wordmark beside it
 # --------------------------------------------------------------------------
 
-#: The mark, drawn in a box of its own hundred units so that one set of
-#: numbers serves both files at whatever size each sets it. Every
-#: coordinate is measured off
-#: `announcement-template_initial.png` (1200x1200), where the mark occupies
-#: x 165..265 and y 57..157 -- so a hundred units there is a hundred pixels,
-#: and the figures below can be read straight back off the reference.
-#:
-#: **Five squares and not four, on a grid and not scattered.** They sit at
-#: the corners and the centre of a three-by-three grid of 34-unit cells,
-#: each square 32 units with the two-unit gap that grid leaves: x 0, 34, 68
-#: and y 0, 34, 68 in this box, filled at (0,0), (68,0), (34,34), (0,68) and
-#: (68,68). What stood here before was four squares of 26 at four offsets
-#: that fell on no grid at all, which is most of why the device did not read
-#: as the reference's.
-#:
-#: **The two markers are filled drops with a hole, not open rings.** Each is
-#: 18 wide and 22 tall with a 5-unit hole on its own axis, and they point
-#: opposite ways -- the left one down the way its tail leaves, the right one
-#: up the way the connector arrives. Traced row by row off the same
-#: reference: the left one is widest 6 rows below its point and tapers over
-#: the 16 below that, the right one is the same shape turned over.
-#:
-#: **The rule under the wordmark is this drawing's own tail**, which is why
-#: `_MARK_TAIL_END` is a coordinate rather than a comment: the stroke leaves
-#: the left marker, turns east and becomes the rule that runs under the
-#: address. Each file continues it as a rectangle from exactly that point,
-#: because how far east it runs is a property of that page's own width and
-#: not of the mark.
-_MARK_BOX: Final = 100.0
 
-#: Where the tail lands, in the mark's own hundred-unit box: the rule each
-#: file draws begins here, at this height, and runs east.
-_MARK_TAIL_END: Final = (25.0, 83.0)
+def _mark(
+    x: float,
+    y: float,
+    size: float,
+    *,
+    family: str,
+    ratio: float,
+    dots: str,
+    ink: str,
+) -> str:
+    """The lock-up's device, placed on this page.
 
-#: The mark's own line weight, in the same box. Thin on purpose -- the
-#: reference draws the connector and the rule at 3 to 4 pixels where the
-#: mark is 100 across -- and it scales with the group, so the flyer's
-#: larger mark carries a proportionally heavier line without a second
-#: number.
-_MARK_STROKE: Final = 3.5
-
-_MARK_SQUARES: Final = ((0, 0), (68, 0), (34, 34), (0, 68), (68, 68))
-_MARK_SQUARE: Final = 32
-
-#: The left marker: a drop pointing down, and the 5-unit hole through it.
-_MARK_PIN_LEFT: Final = (
-    "M 15.5 39 C 21 39.5 24.5 42 24.5 45.5 C 24.5 52 20.5 57.5 15.5 61 "
-    "C 10.5 57.5 6.5 52 6.5 45.5 C 6.5 42 10 39.5 15.5 39 Z "
-    "M 18 49 A 2.5 2.5 0 1 1 13 49 A 2.5 2.5 0 1 1 18 49 Z"
-)
-
-#: The right marker: the same drop turned over, pointing up.
-_MARK_PIN_RIGHT: Final = (
-    "M 83.5 60 C 89 59.5 92.5 57 92.5 53.5 C 92.5 47 88.5 41 83.5 38 "
-    "C 78.5 41 74.5 47 74.5 53.5 C 74.5 57 78 59.5 83.5 60 Z "
-    "M 86 49 A 2.5 2.5 0 1 1 81 49 A 2.5 2.5 0 1 1 86 49 Z"
-)
-
-#: The line joining the two markers, and the tail leaving the left one for
-#: the rule -- one stroked path each, drawn under the filled markers.
-_MARK_CONNECTOR: Final = "M 48 15 L 73 15 C 79 15 83.5 20 83.5 29 L 83.5 38"
-_MARK_TAIL: Final = "M 15.5 61 L 15.5 73 C 15.5 79 19 83 25 83"
-
-
-def _mark(x: float, y: float, size: float, *, dots: str, ink: str) -> str:
-    """The mark, set with its own box's top-left corner at `x`, `y`.
-
-    `size` is how many of the page's units the hundred-unit box occupies,
-    so both files ask for the mark at the size their own composition wants
-    and neither restates its geometry.
+    Everything the device *is* lives in `publication/lockup.py` -- what
+    was drawn here before, whose artwork it was traced off, and why what
+    replaces it follows the charter rather than becoming the product's own
+    mark. This adds the one thing that is the page's: where the box goes
+    and how many of the page's own units it occupies, so that both files
+    ask for it at the size their own composition wants and neither
+    restates any geometry.
     """
-    scale = size / _MARK_BOX
-    # No `scale(1)` on a mark drawn at its measured size: an identity
-    # transform in a file somebody opens to edit is a thing to work out
-    # the meaning of before deciding it means nothing.
-    resize = "" if scale == 1 else f" scale({_num(scale)})"
-    squares = "\n".join(
-        f'      <rect x="{sx}" y="{sy}" width="{_MARK_SQUARE}" '
-        f'height="{_MARK_SQUARE}" fill="{dots}"/>'
-        for sx, sy in _MARK_SQUARES
-    )
-    pins = "\n".join(
-        f'        <path d="{pin}"/>' for pin in (_MARK_PIN_LEFT, _MARK_PIN_RIGHT)
-    )
-    return (
-        f'    <g transform="translate({_num(x)} {_num(y)}){resize}">\n'
-        f"{squares}\n"
-        f'      <g fill="none" stroke="{ink}" stroke-width="{_MARK_STROKE}"\n'
-        f'         stroke-linecap="round">\n'
-        f'        <path d="{_MARK_CONNECTOR}"/>\n'
-        f'        <path d="{_MARK_TAIL}"/>\n'
-        f"      </g>\n"
-        f'      <g fill="{ink}" fill-rule="evenodd">\n'
-        f"{pins}\n"
-        f"      </g>\n"
-        f"    </g>"
+    return lockup.device(
+        family=family,
+        ratio=ratio,
+        ink=ink,
+        dots=dots,
+        attributes=(
+            f'x="{_num(x)}" y="{_num(y)}" width="{_num(size)}" height="{_num(size)}"'
+        ),
+        indent=" " * 4,
     )
 
 
@@ -567,16 +501,6 @@ def _motif_path(family: str, width: float, height: float) -> str:
     """
     joiner = "\n" + " " * 15
     return joiner.join(motifs.path(family, width, height).splitlines())
-
-
-def _mark_tail_x(x: float, size: float) -> float:
-    """Where the mark's tail lands, so a file's rule can start there."""
-    return x + _MARK_TAIL_END[0] * size / _MARK_BOX
-
-
-def _mark_tail_y(y: float, size: float) -> float:
-    """The height the mark's tail lands at, which is the rule's own."""
-    return y + _MARK_TAIL_END[1] * size / _MARK_BOX
 
 
 #: Which of the organisation's own words takes the second tone. The
@@ -758,10 +682,12 @@ _ANNOUNCEMENT: Final = """\
       <path d="{motif}"/>
     </g>
 
-    <!-- Wordmark. The mark is five squares, two markers and the line
-         joining them, drawn rather than embedded: an SVG that references
-         an external logo file is an SVG that travels broken. The rule
-         under the address is the same line, continuing east. -->
+    <!-- Wordmark. The device is the charter's own drawing again, at the
+         size of a mark and clipped to its box, drawn rather than embedded:
+         an SVG that references an external logo file is an SVG that
+         travels broken. The dot is the one the mark closes on. The rule
+         underlines the two together. Nothing here is anybody's logo: put
+         your own in its place if you have one. -->
 {mark}
     <text x="{wordmark_x}" y="112" font-size="{wordmark_size}"
           font-weight="500">{wordmark}</text>
@@ -876,8 +802,9 @@ _FLYER: Final = """\
       <path d="{motif}"/>
     </g>
 
-    <!-- Wordmark: five squares, two markers and the line joining them,
-         drawn rather than embedded. The rule is that line, continuing. -->
+    <!-- Wordmark: the charter's own drawing at the size of a mark,
+         clipped to its box, with the dot the mark closes on. Nothing here
+         is anybody's logo: put your own in its place if you have one. -->
 {mark}
     <text x="{wordmark_x}" y="188" font-size="{wordmark_size}"
           font-weight="500">{wordmark}</text>
@@ -1038,19 +965,23 @@ def _wordmark_values(
     text_rows = canvas.rows(mark.baseline, mark.text_size)
     _first, text_last = canvas.corridor(*text_rows)
     address = values["wordmark_text"]
-    tail_x = _mark_tail_x(mark_x, mark.size)
-    tail_y = _mark_tail_y(mark.top, mark.size)
+    # The rule hangs from the box's own bottom edge and starts at its own
+    # left one, so it underlines the whole lock-up -- the device and the
+    # address together. It used to begin at (25, 83) inside the box, where
+    # the traced device's tail turned east and became it; that coordinate
+    # was a reading of somebody's poster and it went with the drawing.
+    rule_x = mark_x
+    rule_y = rows[1]
     rule_end = _ends_at(
-        canvas,
-        inset=inset,
-        top=tail_y - mark.rule_weight / 2,
-        bottom=tail_y + mark.rule_weight / 2,
+        canvas, inset=inset, top=rule_y, bottom=rule_y + mark.rule_weight
     )
     return {
         "mark": _mark(
             mark_x,
             mark.top,
             mark.size,
+            family=values["motif_family"],
+            ratio=float(values["motif_ratio"]),
             dots=values["logo_dots"],
             ink=values["motif_stroke"],
         ),
@@ -1063,9 +994,9 @@ def _wordmark_values(
                 available=text_last - text_x,
             )
         ),
-        "rule_x": _num(tail_x),
-        "rule_y": _num(tail_y - mark.rule_weight / 2),
-        "rule_w": _num(rule_end - tail_x),
+        "rule_x": _num(rule_x),
+        "rule_y": _num(rule_y),
+        "rule_w": _num(rule_end - rule_x),
         "rule_h": _num(mark.rule_weight),
     }
 

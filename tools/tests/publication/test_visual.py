@@ -22,7 +22,7 @@ import json
 import re
 from dataclasses import replace
 from datetime import date, datetime, timedelta, tzinfo
-from typing import Any
+from typing import Any, Final
 
 import pytest
 from conftest import speaker
@@ -361,22 +361,32 @@ def test_colours_in_the_root_block_match_brand_json_exactly() -> None:
         )
 
 
+#: The two attributes a colour may legitimately reach at render time:
+#: the drawing's own `stroke`, filled in from `brand.motif_stroke(root)`,
+#: and the lock-up device's own dot, filled in from `motif.logo_dots`
+#: (`publication/lockup.py`). Neither is hand-typed in any module's
+#: source -- what this guard is for is a colour retyped rather than read.
+_FILLED_IN_AT_RENDER: Final = re.compile(r'(?:stroke|fill)="#[0-9a-fA-F]{6}"')
+
+
+def _outside_the_root_block(doc: str) -> str:
+    """Everything but the generated `:root` block and the two attributes
+    a colour is legitimately filled into."""
+    return _FILLED_IN_AT_RENDER.sub(
+        'EXCLUDED="EXCLUDED"', doc.replace(_root_block_text(doc), "")
+    )
+
+
 def test_no_brand_colour_hand_typed_outside_root_or_motif_stroke() -> None:
     """The same guard `test_brand.py` already runs on the downloadable
     templates and the two generated stylesheets, applied to this third
-    consumer of `instance/data/brand.json`. The motif's own `stroke="#..."`
-    is the one accepted exception -- an SVG attribute filled in from
-    `brand.motif_stroke(root)` at render time, never hand-typed in this
-    module's source."""
+    consumer of `instance/data/brand.json`."""
     brand = _brand()
     colours = {value for value in brand["colour"].values() if isinstance(value, str)}
     colours |= {value for value in brand["derived"].values() if isinstance(value, str)}
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
 
-    root_block = _root_block_text(doc)
-    rest = doc.replace(root_block, "")
-    # The motif path's own stroke attribute -- the one accepted exception.
-    rest = re.sub(r'stroke="#[0-9a-fA-F]{6}"', 'stroke="EXCLUDED"', rest)
+    rest = _outside_the_root_block(doc)
 
     pattern = re.compile("|".join(re.escape(c) for c in colours), re.IGNORECASE)
     match = pattern.search(rest)
@@ -889,9 +899,7 @@ def test_no_brand_colour_hand_typed_outside_root_or_stroke_in_any_format() -> No
         doc = render_announcement(
             _announcement(), width=fmt.width, height=fmt.height, root=ROOT
         )
-        root_block = _root_block_text(doc)
-        rest = doc.replace(root_block, "")
-        rest = re.sub(r'stroke="#[0-9a-fA-F]{6}"', 'stroke="EXCLUDED"', rest)
+        rest = _outside_the_root_block(doc)
         pattern = re.compile("|".join(re.escape(c) for c in colours), re.IGNORECASE)
         match = pattern.search(rest)
         assert match is None, (fmt.name, match.group(0) if match else "")

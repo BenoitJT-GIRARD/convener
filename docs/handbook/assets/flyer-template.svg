@@ -57,27 +57,47 @@
                C 2001.3 1319.05 2083.55 1369.66 2100 1410.75"/>
     </g>
 
-    <!-- Wordmark: five squares, two markers and the line joining them,
-         drawn rather than embedded. The rule is that line, continuing. -->
-    <g transform="translate(280 92) scale(1.75)">
-      <rect x="0" y="0" width="32" height="32" fill="#fecac1"/>
-      <rect x="68" y="0" width="32" height="32" fill="#fecac1"/>
-      <rect x="34" y="34" width="32" height="32" fill="#fecac1"/>
-      <rect x="0" y="68" width="32" height="32" fill="#fecac1"/>
-      <rect x="68" y="68" width="32" height="32" fill="#fecac1"/>
-      <g fill="none" stroke="#012765" stroke-width="3.5"
-         stroke-linecap="round">
-        <path d="M 48 15 L 73 15 C 79 15 83.5 20 83.5 29 L 83.5 38"/>
-        <path d="M 15.5 61 L 15.5 73 C 15.5 79 19 83 25 83"/>
-      </g>
-      <g fill="#012765" fill-rule="evenodd">
-        <path d="M 15.5 39 C 21 39.5 24.5 42 24.5 45.5 C 24.5 52 20.5 57.5 15.5 61 C 10.5 57.5 6.5 52 6.5 45.5 C 6.5 42 10 39.5 15.5 39 Z M 18 49 A 2.5 2.5 0 1 1 13 49 A 2.5 2.5 0 1 1 18 49 Z"/>
-        <path d="M 83.5 60 C 89 59.5 92.5 57 92.5 53.5 C 92.5 47 88.5 41 83.5 38 C 78.5 41 74.5 47 74.5 53.5 C 74.5 57 78 59.5 83.5 60 Z M 86 49 A 2.5 2.5 0 1 1 81 49 A 2.5 2.5 0 1 1 86 49 Z"/>
-      </g>
-    </g>
+    <!-- Wordmark: the charter's own drawing at the size of a mark,
+         clipped to its box, with the dot the mark closes on. Nothing here
+         is anybody's logo: put your own in its place if you have one. -->
+    <svg x="280" y="92" width="175" height="175"
+         viewBox="0 0 100 100"
+         aria-hidden="true" focusable="false">
+      <path d="M 10.6 0
+                   C 10.6 10.62 5.3 21.25 0 21.25
+                   C -25 23.42 -25 25.58 0 27.75
+                   C 0.89 27.46 3.52 26.09 5.31 26.01
+                   C 7.11 25.93 9.18 26.4 10.77 27.25
+                   C 12.35 28.1 13.89 29.57 14.81 31.11
+                   C 15.73 32.65 16.3 34.7 16.3 36.5
+                   C 16.3 38.3 15.73 40.35 14.81 41.89
+                   C 13.89 43.43 12.35 44.9 10.77 45.75
+                   C 9.18 46.6 7.11 47.07 5.31 46.99
+                   C 3.52 46.91 -3 40.63 0 45.25
+                   C 3 49.87 20.38 65.58 23.3 74.7
+                   C 26.22 83.82 18.47 95.78 17.5 100
+                   C 17.5 300 300 300 300 300
+                   C 300 50 300 2.65 300 2.65
+                   C 240 2.65 160 2.65 100 2.65
+                   C 99.12 2.23 96.57 0.42 94.72 0.13
+                   C 92.87 -0.17 90.62 0.13 88.92 0.89
+                   C 87.21 1.65 85.48 3.12 84.46 4.69
+                   C 83.44 6.26 82.8 8.43 82.8 10.3
+                   C 82.8 12.17 83.44 14.34 84.46 15.91
+                   C 85.48 17.48 87.21 18.95 88.92 19.71
+                   C 90.62 20.47 92.87 20.77 94.72 20.47
+                   C 96.57 20.18 98.82 18.03 100 17.95
+                   C 101.18 17.86 101.8 19.11 101.8 19.95
+                   C 101.8 20.78 101.08 19.74 100 22.95
+                   C 98.92 26.16 95.3 35.11 95.3 39.2
+                   C 95.3 43.29 99.22 46.12 100 47.5"
+            fill="none" stroke="#012765" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="82.99" cy="49.84" r="9.31" fill="#fecac1"/>
+    </svg>
     <text x="485" y="188" font-size="72.68"
           font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
-    <rect x="323.75" y="233.75" width="1365.52" height="7"
+    <rect x="280" y="267" width="1414.98" height="7"
           fill="#012765"/>
 
     <text x="1050" y="430" text-anchor="middle" font-size="82.16"
