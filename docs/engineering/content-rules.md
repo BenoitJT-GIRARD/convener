@@ -77,7 +77,7 @@ A single glossary at `docs/handbook/start-here/glossary.md` defines every term. 
 
 Which directory a page sits in says who it is written for.
 
-- **`handbook/`** — the volunteer's manual: how a webinar is run, from sourcing a speaker to the certificate that follows it. This is the tree the cockpit serves.
+- **`handbook/`** — the volunteer's manual: how a webinar is run, from sourcing a speaker to the certificate that follows it. The cockpit serves pages from all three trees; most of what it serves is here.
 - **`operating/`** — the operator's reference: standing an instance up, the settings each repository needs, the record schema, and the procedures a running instance is kept on. `operating/standing-up.md` is generated from `STANDING-UP.yml` and is the one page here written for somebody who does not have an instance yet.
 - **`engineering/`** — how the system is built and why: the architecture, the decision records, and this file.
 

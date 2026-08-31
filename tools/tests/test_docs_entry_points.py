@@ -239,3 +239,26 @@ def test_a_sibling_named_with_an_anchor_still_counts() -> None:
 
 def test_a_lone_tree_owes_no_sibling() -> None:
     assert siblings_missing({"a": "nothing"}) == ()
+
+
+def test_the_cockpit_serves_more_than_one_tree() -> None:
+    """The fact `content-rules.md` rests on when it describes the trees.
+
+    That page used to call the handbook "the tree the cockpit serves".
+    The registry draws from all three, so the sentence was wrong in a
+    file nothing checks. If the registry ever narrows to one tree, the
+    sentence has to change with it.
+    """
+    registry = (ROOT / "app" / "src" / "content" / "registry.ts").read_text(
+        encoding="utf-8"
+    )
+    trees = {
+        match.split("/")[0]
+        for match in re.findall(r"file:\s*'([^']+)'", registry)
+        if "/" in match
+    }
+    assert len(trees) > 1, (
+        "the content registry now draws from one tree only "
+        f"({sorted(trees)}). docs/engineering/content-rules.md says the "
+        "cockpit serves pages from all three; that sentence is now wrong."
+    )
