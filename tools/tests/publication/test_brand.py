@@ -1831,9 +1831,14 @@ def test_no_custom_property_in_a_generated_stylesheet_names_a_hue(
     against its own palette. `--purple` fed `colour.dominant` for as long
     as one charter existed; the product's own charter holds a navy there
     and the worked example a moss green, so the name told three readers
-    three different untruths from one line of CSS. The showcase says
-    `--field` and `--dominant` now, the cockpit `--primary` and
-    `--accent`: two vocabularies, both of positions, neither of hues.
+    three different untruths from one line of CSS. Both stylesheets say
+    `--field` and `--dominant` now. They were two vocabularies for a
+    while, the cockpit's `--primary`/`--accent` being positions too and no
+    hues either -- which is why this test stayed green over a cockpit that
+    filled twenty-five class lists with the field as a button or a label.
+    Naming no hue is the weaker half of the rule; the other half is that
+    the position a name gives has to be the one the composition allows,
+    and that is measured in `test_cockpit.py`.
     """
     properties = _declared_properties(_stylesheet_sources()[name])
     assert properties, f"{name} declares no custom property to check"

@@ -28,29 +28,29 @@ export function Layout() {
           this series, and on an unconfigured duplicate that is the
           example collective. See UnconfiguredBanner's own header. */}
       <UnconfiguredBanner />
-      <header className="bg-primary text-white border-b-4 border-accent">
+      <header className="bg-field text-dominant border-b-4 border-dominant">
         <div className="max-w-content mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
           <Link to="/" className="flex items-baseline gap-2 no-underline">
-            <span className="font-mono text-sm opacity-85">No.</span>
+            <span className="font-mono text-sm">No.</span>
             <span className="font-display font-extrabold tracking-wider uppercase text-sm">
               {instance.organisation}
             </span>
-            <span className="font-display font-medium text-sm opacity-90 tracking-wide">
+            <span className="font-display font-medium text-sm tracking-wide">
               {instance.series}
             </span>
-            <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-accent/40 border border-white/30">
+            <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-white/25 border border-dominant/40">
               Organiser
             </span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
             {login && (
-              <span className="font-mono text-xs opacity-85">
+              <span className="font-mono text-xs">
                 {login}{role && ` · ${role}`}
               </span>
             )}
             <button
               onClick={signOut}
-              className="font-display font-bold text-[11px] tracking-widest uppercase border border-white/45 px-3 py-1.5 hover:bg-white/15 transition-colors"
+              className="font-display font-bold text-[11px] tracking-widest uppercase border border-dominant/45 px-3 py-1.5 hover:bg-white/25 transition-colors"
             >
               Sign out
             </button>
@@ -59,7 +59,7 @@ export function Layout() {
       </header>
 
       {demo && (
-        <div className="bg-accent text-white text-sm py-2 px-6">
+        <div className="bg-dominant text-white text-sm py-2 px-6">
           <div className="max-w-content mx-auto flex items-center justify-between flex-wrap gap-2">
             <span>
               <strong className="font-display tracking-wide uppercase text-xs mr-2">Demo</strong>
@@ -118,7 +118,7 @@ export function Layout() {
           </p>
           <a
             href={instance.forum}
-            className="font-mono text-[11px] tracking-wider uppercase hover:text-accent"
+            className="font-mono text-[11px] tracking-wider uppercase hover:text-dominant"
           >
             {instance.forum_host} →
           </a>
@@ -146,7 +146,7 @@ export function Layout() {
             <a
               href={notice.licence_url}
               rel="license"
-              className="underline underline-offset-2 hover:text-accent"
+              className="underline underline-offset-2 hover:text-dominant"
             >
               {notice.licence_name}
             </a>

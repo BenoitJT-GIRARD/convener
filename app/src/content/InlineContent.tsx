@@ -64,7 +64,7 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
             target="_blank"
             rel="noreferrer"
             title="Open this file in the GitHub web editor"
-            className="font-display font-bold text-[11px] tracking-widest uppercase text-ink-muted hover:text-accent border border-border px-2.5 py-1 hover:border-accent transition-colors no-underline"
+            className="font-display font-bold text-[11px] tracking-widest uppercase text-ink-muted hover:text-dominant border border-border px-2.5 py-1 hover:border-dominant transition-colors no-underline"
           >
             ✎ Edit on GitHub
           </a>
@@ -86,14 +86,14 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
               target="_blank"
               rel="noreferrer"
               title="Open this file in the GitHub web editor"
-              className="font-display font-bold text-[11px] tracking-widest uppercase text-ink-muted hover:text-accent border border-border px-2.5 py-1 hover:border-accent transition-colors no-underline"
+              className="font-display font-bold text-[11px] tracking-widest uppercase text-ink-muted hover:text-dominant border border-border px-2.5 py-1 hover:border-dominant transition-colors no-underline"
             >
               ✎ Edit
             </a>
           )}
           <button
             onClick={copy}
-            className="font-display font-bold text-[11px] tracking-widest uppercase text-primary-hover border border-border px-2.5 py-1 hover:bg-primary-soft transition-colors"
+            className="font-display font-bold text-[11px] tracking-widest uppercase text-field-text border border-border px-2.5 py-1 hover:bg-paper-soft transition-colors"
           >
             {copied ? '✓ Copied' : 'Copy to clipboard'}
           </button>

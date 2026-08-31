@@ -211,7 +211,7 @@ function ConsentBlock({
             type="button"
             disabled={disabled || choice === ''}
             onClick={() => choice !== '' && onSet(choice)}
-            className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+            className="px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50"
           >
             Record the speaker&apos;s answer
           </button>
@@ -282,7 +282,7 @@ function BoardBlock({
           type="button"
           disabled={disabled}
           onClick={onApprove}
-          className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          className="px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50"
         >
           {p.approved_on ? 'Approve again (restarts the window)' : 'Approve for publication'}
         </button>
@@ -354,7 +354,7 @@ function BoardBlock({
             type="button"
             disabled={disabled || note.trim() === ''}
             onClick={() => onResolve(resolution, note)}
-            className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+            className="px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50"
           >
             Resolve
           </button>
@@ -402,7 +402,7 @@ function ArchiveBlock({
         type="button"
         disabled={disabled || blocked}
         onClick={onArchive}
-        className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-5 py-3 hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
+        className="font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-5 py-3 hover:bg-dominant-hover disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {speaker.publication.outcome === 'published'
           ? 'Publish the recording again'

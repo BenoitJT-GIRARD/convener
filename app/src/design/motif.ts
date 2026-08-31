@@ -14,7 +14,7 @@
  * that produces it.
  *
  * The colour is not here either. The stroke is Tailwind's
- * `stroke-accent`, which resolves to `--accent`, the charter's dominant,
+ * `stroke-dominant`, which resolves to `--dominant`, the charter's dominant,
  * generated into `design/tokens.css` by `generate_brand_css.py`.
  *
  * `snake_case` keys: they are `site/src/_data/motif.json`'s own, and one

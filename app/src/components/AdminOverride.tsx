@@ -316,7 +316,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
         >
           {busy ? 'Saving…' : 'Save changes'}
         </button>
-        {saved && <span className="text-xs text-primary-hover">✓ saved</span>}
+        {saved && <span className="text-xs text-field-text">✓ saved</span>}
       </div>
     </div>
   );
@@ -498,7 +498,7 @@ function HiddenConflict({ speaker }: { speaker: Speaker }) {
             >
               {busy ? 'Recording…' : 'Record and cancel the acceptance'}
             </button>
-            {done && <span className="text-xs text-primary-hover">✓ vote reopened</span>}
+            {done && <span className="text-xs text-field-text">✓ vote reopened</span>}
           </div>
           <p className="text-xs text-ink-muted">
             Recorded in the decision register with your name. Nothing here is sent to the

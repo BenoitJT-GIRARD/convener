@@ -26,13 +26,13 @@ function Shell({ children }: { children: ReactNode }) {
           design/motif.ts, which generate_motif.py writes from the family
           `motif.family` names -- the showcase's chrome reads the same two
           values out of site/src/_data/motif.json. Nothing here derives
-          geometry, and stroke-accent rather than a hex literal keeps the
-          colour where it already was: --accent is the charter's dominant,
+          geometry, and stroke-dominant rather than a hex literal keeps the
+          colour where it already was: --dominant is the charter's dominant,
           generated into tokens.css by generate_brand_css.py. */}
       <svg
         aria-hidden="true"
         viewBox={MOTIF.view_box}
-        className="absolute -right-20 top-10 w-[420px] max-w-[55vw] pointer-events-none opacity-90 stroke-accent"
+        className="absolute -right-20 top-10 w-[420px] max-w-[55vw] pointer-events-none stroke-dominant"
         fill="none"
         strokeWidth={MOTIF.stroke_width}
         strokeLinecap="round"
@@ -46,24 +46,24 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="relative z-10">
         <UnconfiguredBanner />
       </div>
-      <header className="bg-primary text-white border-b-4 border-accent relative z-10">
+      <header className="bg-field text-dominant border-b-4 border-dominant relative z-10">
         <div className="max-w-content mx-auto px-6 py-3 flex items-baseline gap-2">
-          <span className="font-mono text-sm opacity-85">No.</span>
+          <span className="font-mono text-sm">No.</span>
           <span className="font-display font-extrabold tracking-wider uppercase text-sm">
             {instance.organisation}
           </span>
-          <span className="font-display font-medium text-sm opacity-90 tracking-wide">
+          <span className="font-display font-medium text-sm tracking-wide">
             {instance.series}
           </span>
-          <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-accent/40 border border-white/30">
+          <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-white/25 border border-dominant/40">
             Organiser
           </span>
         </div>
       </header>
 
       <div className="max-w-md mx-auto px-6 py-20 relative z-10">
-        <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-3 flex items-center gap-3">
-          <span className="h-0.5 bg-accent w-8" />
+        <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-3 flex items-center gap-3">
+          <span className="h-0.5 bg-dominant w-8" />
           Sign in
         </p>
         <h1 className="font-display font-extrabold text-4xl uppercase tracking-tight mb-4 leading-[1.05]">
@@ -79,7 +79,7 @@ function Shell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={enterDemo}
-            className="font-display font-bold tracking-wider uppercase text-sm text-accent border-2 border-accent px-5 py-2.5 hover:bg-accent hover:text-white transition-colors"
+            className="font-display font-bold tracking-wider uppercase text-sm text-dominant border-2 border-dominant px-5 py-2.5 hover:bg-dominant hover:text-white transition-colors"
           >
             View a live demo
           </button>
@@ -120,8 +120,8 @@ function TokenPanel() {
         to the <code className="font-mono text-ink">{repository}</code> repository.
       </p>
 
-      <details className="mb-8 text-sm border-l-2 border-primary pl-4">
-        <summary className="cursor-pointer font-display font-bold uppercase tracking-wider text-xs text-primary-hover">
+      <details className="mb-8 text-sm border-l-2 border-field pl-4">
+        <summary className="cursor-pointer font-display font-bold uppercase tracking-wider text-xs text-field-text">
           How to generate a token (one minute)
         </summary>
         <ol className="list-decimal pl-6 mt-3 space-y-1.5 text-ink-muted">
@@ -160,7 +160,7 @@ function TokenPanel() {
         <button
           type="submit"
           disabled={busy}
-          className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
+          className="font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-6 py-3 hover:bg-dominant-hover hover:border-dominant-hover disabled:opacity-50 transition-colors"
         >
           {busy ? 'Checking…' : 'Sign in →'}
         </button>
@@ -208,13 +208,13 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
         <p className="text-ink-muted max-w-prose">
           Open GitHub and enter this code to finish signing in.
         </p>
-        <p className="font-mono font-extrabold text-4xl tracking-[0.2em] text-center bg-primary/5 border-2 border-primary py-6">
+        <p className="font-mono font-extrabold text-4xl tracking-[0.2em] text-center bg-field/5 border-2 border-field py-6">
           {state.code.user_code}
         </p>
         <button
           type="button"
           onClick={() => window.open(state.code.verification_uri, '_blank', 'noopener,noreferrer')}
-          className="w-full font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover transition-colors"
+          className="w-full font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-6 py-3 hover:bg-dominant-hover hover:border-dominant-hover transition-colors"
         >
           Open GitHub
         </button>
@@ -230,7 +230,7 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
         <button
           type="button"
           onClick={() => setState({ step: 'idle' })}
-          className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover transition-colors"
+          className="font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-6 py-3 hover:bg-dominant-hover hover:border-dominant-hover transition-colors"
         >
           Start again
         </button>
@@ -248,7 +248,7 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
         type="button"
         disabled={state.step === 'requesting'}
         onClick={start}
-        className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
+        className="font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-6 py-3 hover:bg-dominant-hover hover:border-dominant-hover disabled:opacity-50 transition-colors"
       >
         {state.step === 'requesting' ? 'Starting…' : 'Sign in with GitHub'}
       </button>

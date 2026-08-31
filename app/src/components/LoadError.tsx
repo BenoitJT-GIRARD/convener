@@ -13,7 +13,7 @@ export function LoadError({ message }: { message: string }) {
       <button
         type="button"
         onClick={reload}
-        className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover transition-colors"
+        className="font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-6 py-3 hover:bg-dominant-hover hover:border-dominant-hover transition-colors"
       >
         Try again
       </button>

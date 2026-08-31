@@ -80,7 +80,7 @@ export function ActionButtons({ speaker, role }: Props) {
       ? 'px-3 py-1.5 text-sm rounded border border-danger text-danger hover:bg-danger hover:text-white disabled:opacity-50'
       : variant === 'ghost'
         ? 'px-3 py-1.5 text-sm rounded border border-border text-ink-muted hover:text-ink disabled:opacity-50'
-        : 'px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50';
+        : 'px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50';
 
   function btn(
     label: string,
@@ -286,7 +286,7 @@ function BallotForm({
           type="button"
           disabled={disabled || reasonMissing}
           onClick={() => onCast(value, comment, coiReason)}
-          className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          className="px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50"
         >
           {existing ? 'Update ballot' : 'Submit ballot'}
         </button>
@@ -443,7 +443,7 @@ function CandidateDates({
             <span
               className={
                 c.answer === 'accepted'
-                  ? 'text-xs text-primary'
+                  ? 'text-xs text-field-text'
                   : c.answer === 'declined'
                     ? 'text-xs text-danger'
                     : 'text-xs text-ink-muted italic'
@@ -460,7 +460,7 @@ function CandidateDates({
                 type="button"
                 disabled={locked}
                 onClick={() => reply(c.date, 'accepted')}
-                className="text-xs text-primary-hover underline disabled:opacity-50"
+                className="text-xs text-field-text underline disabled:opacity-50"
               >
                 they accepted
               </button>
@@ -480,7 +480,7 @@ function CandidateDates({
                 type="button"
                 disabled={locked || !edition || titleMissing}
                 onClick={() => onLock(c.date, edition)}
-                className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-dominant text-white border-2 border-dominant hover:bg-dominant-hover disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Lock this date &rarr;
               </button>
@@ -533,7 +533,7 @@ function CandidateDates({
           <button
             type="button"
             onClick={() => config && setEdition(nextEditionCode(speakers, config.next_edition_number))}
-            className="text-xs text-primary-hover underline"
+            className="text-xs text-field-text underline"
           >
             Suggest the next code
           </button>

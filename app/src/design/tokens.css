@@ -5,10 +5,16 @@
  * has not (tools/convener_ops/publication/brand.py::source) -- by
  * tools/scripts/generate_brand_css.py, whose --check fails on a stylesheet that
  * has drifted from it. The token *names* are the product's and describe a
- * role rather than a hue: `--primary` is the charter's field, the ground the
- * composition is built on, and `--accent` its dominant ink -- the headlines,
- * the motif, the wordmark. Which colours those are is the instance's answer,
- * not this file's. Archivo for display and body, JetBrains Mono for IDs /
+ * role rather than a hue: `--field` is the saturated ground the composition
+ * is built on, `--dominant` the ink the headlines, the motif and the
+ * wordmark are drawn in, and `--field-text` the readable variant of the
+ * field, for a link or a text accent. They are the showcase's own names
+ * (site/src/style.css). This file said `--primary` and `--accent` until the
+ * cockpit's every pairing was measured against every charter under brand/:
+ * a field may never carry text and may never carry white text, which is
+ * what `primary` invites, and twenty-five class lists had done one or the
+ * other. Which colours these are is the instance's answer, not this file's.
+ * Archivo for display and body, JetBrains Mono for IDs /
  * dates / metadata. Hairline rules, sharp rectangles, generous whitespace.
  */
 
@@ -58,26 +64,26 @@
 
 :root {
 /* BEGIN GENERATED TOKENS -- tools/scripts/generate_brand_css.py */
-  --paper:         #ffffff;
-  --paper-soft:    #f4f0f1;
-  --surface:       #ffffff;
-  --surface-mute:  #fedad4;
-  --ink:           #522f3c;
-  --ink-muted:     #794658;
-  --ink-faint:     #8a596b;
-  --primary:       #fecac1;
-  --primary-hover: #a24535;
-  --primary-soft:  #fedad4;
-  --accent:        #012765;
-  --accent-hover:  #011f51;
-  --accent-soft:   #d8dde7;
-  --border:        #d0bbc3;
-  --border-strong: #b18f9b;
+  --paper:          #ffffff;
+  --paper-soft:     #f4f0f1;
+  --surface:        #ffffff;
+  --surface-mute:   #fedad4;
+  --ink:            #522f3c;
+  --ink-muted:      #794658;
+  --ink-faint:      #8a596b;
+  --field:          #fecac1;
+  --field-text:     #a24535;
+  --field-tint:     #fedad4;
+  --dominant:       #012765;
+  --dominant-hover: #011f51;
+  --dominant-tint:  #d8dde7;
+  --border:         #d0bbc3;
+  --border-strong:  #b18f9b;
   /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. */
-  --danger:        #9b2226;
-  --info:          #4a6c75;
-  --select:        rgba(130, 219, 215, 0.25);
+  --danger:         #9b2226;
+  --info:           #4a6c75;
+  --select:         rgba(130, 219, 215, 0.25);
 /* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
 
   --radius-sm:     2px;
@@ -119,11 +125,11 @@ code, .mono, .font-mono {
 }
 
 a {
-  color: var(--primary-hover);
+  color: var(--field-text);
   text-decoration: none;
   transition: color .15s;
 }
-a:hover { color: var(--accent); }
+a:hover { color: var(--dominant); }
 
 input[type="text"], input[type="email"], input[type="password"],
 input[type="date"], input[type="search"], select, textarea {
@@ -135,8 +141,8 @@ input[type="date"], input[type="search"], select, textarea {
 }
 input:focus, select:focus, textarea:focus {
   outline: 0;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--field);
+  box-shadow: 0 0 0 3px var(--field-tint);
 }
 
 button { font-family: inherit; }
@@ -178,7 +184,7 @@ button { font-family: inherit; }
   margin-top: 0;
   margin-bottom: 1rem;
   padding-bottom: .6rem;
-  border-bottom: 3px solid var(--primary);
+  border-bottom: 3px solid var(--field);
 }
 .prose h2 {
   font-size: 1.25rem;
@@ -192,7 +198,7 @@ button { font-family: inherit; }
   font-size: 1.05rem;
   font-weight: 700;
   margin-top: 1.5rem;
-  color: var(--primary-hover);
+  color: var(--field-text);
 }
 .prose h4 {
   font-size: .92rem;
@@ -208,12 +214,12 @@ button { font-family: inherit; }
 .prose em { font-style: italic; }
 
 .prose a {
-  color: var(--primary-hover);
+  color: var(--field-text);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
   transition: color .15s, border-color .15s;
 }
-.prose a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.prose a:hover { color: var(--dominant); border-bottom-color: var(--dominant); }
 
 .prose ul, .prose ol {
   padding-left: 1.4rem;
@@ -225,8 +231,13 @@ button { font-family: inherit; }
   padding-left: .2rem;
 }
 .prose ul > li::before {
+  /* A glyph, so the readable variant and never the field itself: the
+   * field is a ground and measures 1.61 against the paper this list is
+   * set on, 1.42 against the band a .prose-inline sits in. The sweep in
+   * convener_ops/publication/cockpit.py reads Tailwind class lists and
+   * does not read this file, which is why the number is written here. */
   content: "▸";
-  color: var(--primary);
+  color: var(--field-text);
   position: absolute;
   left: -1.1rem;
   top: 0;
@@ -236,7 +247,7 @@ button { font-family: inherit; }
   list-style: decimal;
   font-variant-numeric: tabular-nums;
 }
-.prose ol > li::marker { color: var(--accent); font-weight: 600; }
+.prose ol > li::marker { color: var(--dominant); font-weight: 600; }
 .prose li + li { margin-top: .35rem; }
 .prose li > p { display: inline; }
 
@@ -249,14 +260,14 @@ button { font-family: inherit; }
 .prose li.task-list-item input[type="checkbox"] {
   margin-right: .55rem;
   vertical-align: middle;
-  accent-color: var(--primary);
+  accent-color: var(--field);
 }
 
 .prose code {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: .88em;
   background: var(--surface-mute);
-  color: var(--accent);
+  color: var(--dominant);
   padding: 1px 6px;
   border-radius: 2px;
   border: 1px solid var(--border);
@@ -267,7 +278,7 @@ button { font-family: inherit; }
   color: var(--ink);
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid var(--field);
   border-radius: 2px;
   overflow-x: auto;
   font-size: .85rem;
@@ -281,12 +292,12 @@ button { font-family: inherit; }
 }
 
 .prose blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--dominant);
   padding: .25rem 1rem;
   color: var(--ink-muted);
   font-style: italic;
   margin-left: 0;
-  background: var(--accent-soft);
+  background: var(--dominant-tint);
 }
 .prose blockquote p { margin: 0; }
 
@@ -305,7 +316,7 @@ button { font-family: inherit; }
   transform: translate(-50%, -50%);
   background: var(--paper);
   padding: 0 .75rem;
-  color: var(--accent);
+  color: var(--dominant);
   font-size: .9rem;
 }
 

@@ -40,7 +40,7 @@ export function Templates() {
                 onClick={() => setActive(t.key)}
                 className={`w-full text-left px-2 py-1 rounded ${
                   active === t.key
-                    ? 'bg-primary/10 text-primary font-medium'
+                    ? 'bg-field/10 text-field-text font-medium'
                     : 'text-ink-muted hover:text-ink'
                 }`}
               >

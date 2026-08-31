@@ -201,8 +201,8 @@ export function DistributionView({ dist }: { dist: Distribution }) {
   return (
     <div>
       <div className="mb-8">
-        <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-2 flex items-center gap-3">
-          <span className="h-0.5 bg-accent w-8" />
+        <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-2 flex items-center gap-3">
+          <span className="h-0.5 bg-dominant w-8" />
           How the programme is composed
         </p>
         <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">Diversity</h1>
@@ -225,7 +225,7 @@ export function DistributionView({ dist }: { dist: Distribution }) {
           <div key={nature} className="flex flex-wrap items-baseline gap-3">
             <span
               className={`text-xs font-bold uppercase tracking-[0.14em] shrink-0 ${
-                nature === 'preference' ? 'text-accent' : 'text-ink-muted'
+                nature === 'preference' ? 'text-dominant' : 'text-ink-muted'
               }`}
             >
               {NATURE_LABEL[nature]}
@@ -238,7 +238,7 @@ export function DistributionView({ dist }: { dist: Distribution }) {
                   onClick={() => setDimensionKey(d.key)}
                   className={`px-3 py-1 text-sm border transition-colors ${
                     d.key === dimension.key
-                      ? 'border-primary text-primary'
+                      ? 'border-field-text text-field-text'
                       : 'border-border text-ink-muted hover:text-ink'
                   }`}
                 >

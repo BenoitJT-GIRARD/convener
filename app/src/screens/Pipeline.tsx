@@ -24,8 +24,8 @@ export function Pipeline() {
     <div>
       <div className="flex items-baseline justify-between mb-8 flex-wrap gap-3">
         <div>
-          <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-2 flex items-center gap-3">
-            <span className="h-0.5 bg-accent w-8" />
+          <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-2 flex items-center gap-3">
+            <span className="h-0.5 bg-dominant w-8" />
             Active pipeline
           </p>
           <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">
@@ -34,7 +34,7 @@ export function Pipeline() {
         </div>
         <Link
           to="/speakers/new"
-          className="font-display font-bold tracking-widest uppercase text-xs bg-primary text-white border-2 border-primary px-4 py-2.5 hover:bg-primary-hover hover:border-primary-hover transition-colors"
+          className="font-display font-bold tracking-widest uppercase text-xs bg-dominant text-white border-2 border-dominant px-4 py-2.5 hover:bg-dominant-hover hover:border-dominant-hover transition-colors"
         >
           + New speaker
         </Link>
@@ -78,7 +78,7 @@ export function Pipeline() {
 
       <p className="text-xs text-ink-muted mt-8 italic">
         Parked, declined, and past webinars live in{' '}
-        <Link to="/archive" className="text-accent underline">Archive</Link>.
+        <Link to="/archive" className="text-dominant underline">Archive</Link>.
       </p>
     </div>
   );

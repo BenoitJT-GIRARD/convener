@@ -149,8 +149,8 @@ export function Board() {
   return (
     <div>
       <div className="mb-10">
-        <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-2 flex items-center gap-3">
-          <span className="h-0.5 bg-accent w-8" />
+        <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-2 flex items-center gap-3">
+          <span className="h-0.5 bg-dominant w-8" />
           Who decides
         </p>
         <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">Board</h1>
@@ -250,7 +250,7 @@ export function Board() {
                   <span className="text-xs text-ink-muted">
                     sponsored by {n.sponsor} · opened {n.opened_on || '—'}
                   </span>
-                  <span className="ml-auto text-xs uppercase tracking-wider text-accent">
+                  <span className="ml-auto text-xs uppercase tracking-wider text-dominant">
                     {OUTCOME_LABEL[n.outcome]}
                   </span>
                 </div>

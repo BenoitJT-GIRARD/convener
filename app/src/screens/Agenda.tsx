@@ -5,9 +5,9 @@ import type { Speaker } from '../data/types';
 import { LoadError } from '../components/LoadError';
 
 const STATUS_COLOR: Record<string, string> = {
-  scheduled: 'bg-primary/20 border-primary text-ink',
-  delivered: 'bg-accent/20 border-accent text-ink',
-  archived: 'bg-paper border-border text-ink-muted opacity-60',
+  scheduled: 'bg-field/20 border-field text-ink',
+  delivered: 'bg-dominant/20 border-dominant text-ink',
+  archived: 'bg-paper border-border text-ink-faint',
 };
 
 export function Agenda() {

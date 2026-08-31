@@ -102,8 +102,8 @@ export function SpeakerPage() {
       </p>
 
       {s.conflicts_of_interest && (
-        <div className="mt-4 p-3 border-l-2 border-accent bg-accent-soft">
-          <p className="text-xs font-display font-bold uppercase tracking-widest text-accent mb-1">
+        <div className="mt-4 p-3 border-l-2 border-dominant bg-dominant-tint">
+          <p className="text-xs font-display font-bold uppercase tracking-widest text-dominant mb-1">
             Conflicts of interest
           </p>
           <p className="text-sm whitespace-pre-wrap">{s.conflicts_of_interest}</p>
@@ -146,7 +146,7 @@ export function SpeakerPage() {
       )}
 
       <div className="mt-12 pt-6 border-t border-border text-sm">
-        <Link to="/pipeline" className="text-primary-hover underline">
+        <Link to="/pipeline" className="text-field-text underline">
           ← back to pipeline
         </Link>
       </div>
@@ -256,7 +256,7 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
                     href={l}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-primary-hover underline break-all"
+                    className="text-field-text underline break-all"
                   >
                     {l}
                   </a>

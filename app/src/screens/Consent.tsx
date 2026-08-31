@@ -82,8 +82,8 @@ export function Consent() {
   return (
     <div>
       <div className="mb-8">
-        <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-2 flex items-center gap-3">
-          <span className="h-0.5 bg-accent w-8" />
+        <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-2 flex items-center gap-3">
+          <span className="h-0.5 bg-dominant w-8" />
           Permissions
         </p>
         <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">
@@ -98,7 +98,7 @@ export function Consent() {
 
       <section className="mb-10">
         <header className="flex items-baseline gap-3 mb-4">
-          <span className="font-mono text-xs text-accent">01</span>
+          <span className="font-mono text-xs text-dominant">01</span>
           <h2 className="font-display font-extrabold text-xs uppercase tracking-[0.16em] text-ink">
             Still to be asked
           </h2>
@@ -133,7 +133,7 @@ export function Consent() {
 
       <section className="mb-10">
         <header className="flex items-baseline gap-3 mb-4">
-          <span className="font-mono text-xs text-accent">02</span>
+          <span className="font-mono text-xs text-dominant">02</span>
           <h2 className="font-display font-extrabold text-xs uppercase tracking-[0.16em] text-ink">
             Answered
           </h2>
@@ -155,7 +155,7 @@ export function Consent() {
               >
                 <Link
                   to={`/speakers/${s.id}`}
-                  className="font-mono text-xs text-accent uppercase tracking-wider truncate no-underline"
+                  className="font-mono text-xs text-dominant uppercase tracking-wider truncate no-underline"
                 >
                   {s.edition_code || s.id}
                 </Link>
@@ -184,7 +184,7 @@ function AwaitingRow({ speaker, role }: { speaker: Speaker; role: Role }) {
       <div className="grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2">
         <Link
           to={`/speakers/${speaker.id}`}
-          className="font-mono text-xs text-accent uppercase tracking-wider truncate no-underline"
+          className="font-mono text-xs text-dominant uppercase tracking-wider truncate no-underline"
         >
           {speaker.edition_code || speaker.id}
         </Link>
@@ -199,7 +199,7 @@ function AwaitingRow({ speaker, role }: { speaker: Speaker; role: Role }) {
         <button
           type="button"
           onClick={() => setShowMessage(!showMessage)}
-          className="font-display font-bold text-[10px] tracking-widest uppercase text-primary-hover border border-border px-2 py-0.5 hover:bg-primary-soft"
+          className="font-display font-bold text-[10px] tracking-widest uppercase text-field-text border border-border px-2 py-0.5 hover:bg-paper-soft"
         >
           {showMessage ? 'Hide the message' : 'Show the message'}
         </button>
@@ -297,7 +297,7 @@ function RecordAnswer({ speaker, role }: { speaker: Speaker; role: Role }) {
         type="button"
         disabled={busy || !config || choice === ''}
         onClick={() => choice !== '' && record(choice)}
-        className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+        className="px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50"
       >
         Record their answer
       </button>

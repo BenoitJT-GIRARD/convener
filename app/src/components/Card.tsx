@@ -21,12 +21,12 @@ export function SpeakerCard({ s, displayStatus, lateness }: Props) {
   return (
     <Link
       to={`/speakers/${s.id}`}
-      className="block p-3 rounded-md bg-surface border border-border hover:border-primary transition-colors"
+      className="block p-3 rounded-md bg-surface border border-border hover:border-field transition-colors"
     >
       <div className="flex items-baseline justify-between gap-2">
         <div className="font-medium text-sm">{s.name || '(no name)'}</div>
         {displayStatus && displayStatus !== s.status && (
-          <span className="font-mono text-[10px] uppercase tracking-wider text-accent shrink-0">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-dominant shrink-0">
             now {displayStatus}
           </span>
         )}

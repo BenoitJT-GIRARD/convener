@@ -24,7 +24,7 @@ export function TopTabs() {
           className={({ isActive }) =>
             `px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               isActive
-                ? 'border-primary text-primary'
+                ? 'border-field-text text-field-text'
                 : 'border-transparent text-ink-muted hover:text-ink'
             }`
           }

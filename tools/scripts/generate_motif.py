@@ -59,7 +59,7 @@ stays.
 
 The colour is untouched. The stroke comes from `--dominant` -- from
 `--field` in the coda, where the dominant is the ground -- through
-`site/src/style.css`, and from Tailwind's `stroke-accent` in the cockpit,
+`site/src/style.css`, and from Tailwind's `stroke-dominant` in the cockpit,
 both generated from the charter by `generate_brand_css.py`. Nothing here
 writes a colour.
 
@@ -185,7 +185,7 @@ _APP_TEMPLATE: Final = """\
  * that produces it.
  *
  * The colour is not here either. The stroke is Tailwind's
- * `stroke-accent`, which resolves to `--accent`, the charter's dominant,
+ * `stroke-dominant`, which resolves to `--dominant`, the charter's dominant,
  * generated into `design/tokens.css` by `generate_brand_css.py`.
  *
  * `snake_case` keys: they are `site/src/_data/motif.json`'s own, and one

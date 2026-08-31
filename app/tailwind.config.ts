@@ -14,15 +14,15 @@ export default {
           muted: 'var(--ink-muted)',
           faint: 'var(--ink-faint)',
         },
-        primary: {
-          DEFAULT: 'var(--primary)',
-          hover: 'var(--primary-hover)',
-          soft: 'var(--primary-soft)',
+        field: {
+          DEFAULT: 'var(--field)',
+          text: 'var(--field-text)',
+          tint: 'var(--field-tint)',
         },
-        accent: {
-          DEFAULT: 'var(--accent)',
-          hover: 'var(--accent-hover)',
-          soft: 'var(--accent-soft)',
+        dominant: {
+          DEFAULT: 'var(--dominant)',
+          hover: 'var(--dominant-hover)',
+          tint: 'var(--dominant-tint)',
         },
         border: { DEFAULT: 'var(--border)', strong: 'var(--border-strong)' },
         danger: 'var(--danger)',

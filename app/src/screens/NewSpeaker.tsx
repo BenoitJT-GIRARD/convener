@@ -332,7 +332,7 @@ export function NewSpeaker() {
           <button
             type="submit"
             disabled={busy || !config || !form.name.trim()}
-            className="px-4 py-2 bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 font-display font-bold tracking-widest uppercase text-sm"
+            className="px-4 py-2 bg-dominant text-white border-2 border-dominant hover:bg-dominant-hover disabled:opacity-50 font-display font-bold tracking-widest uppercase text-sm"
           >
             {busy ? 'Creating…' : 'Create lead'}
           </button>

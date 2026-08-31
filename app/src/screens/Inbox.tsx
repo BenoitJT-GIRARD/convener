@@ -65,8 +65,8 @@ export function Inbox() {
     <div>
       <div className="flex items-baseline justify-between mb-10 flex-wrap gap-2">
         <div>
-          <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-2 flex items-center gap-3">
-            <span className="h-0.5 bg-accent w-8" />
+          <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-2 flex items-center gap-3">
+            <span className="h-0.5 bg-dominant w-8" />
             What needs you
           </p>
           <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">Inbox</h1>
@@ -122,7 +122,7 @@ function Section({ num, label, rows, variant, empty }: SectionProps) {
   return (
     <section className="mb-10 border-t border-border pt-6">
       <header className="flex items-baseline gap-3 mb-4">
-        <span className="font-mono text-xs text-accent">{num}</span>
+        <span className="font-mono text-xs text-dominant">{num}</span>
         <h2 className="font-display font-extrabold text-xs uppercase tracking-[0.16em] text-ink">
           {label}
         </h2>
@@ -157,11 +157,11 @@ function Row({
     <li>
       <Link
         to={`/speakers/${r.speaker.id}`}
-        className={`grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-primary-soft transition-colors ${
-          variant === 'awareness' ? 'opacity-70' : ''
+        className={`grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-field-tint transition-colors ${
+          variant === 'awareness' ? 'bg-paper-soft' : ''
         }`}
       >
-        <span className="font-mono text-xs text-accent uppercase tracking-wider">
+        <span className="font-mono text-xs text-dominant uppercase tracking-wider">
           {r.speaker.edition_code || r.speaker.id}
         </span>
         <div className="min-w-0">

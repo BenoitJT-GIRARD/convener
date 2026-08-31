@@ -168,7 +168,7 @@ function ContentRow({ item, speaker }: { item: RunbookItem; speaker: Speaker }) 
   const today = parisToday();
   return (
     <details className="border border-border rounded p-3 open:bg-surface-mute" open>
-      <summary className="cursor-pointer font-display font-bold text-xs uppercase tracking-widest text-accent">
+      <summary className="cursor-pointer font-display font-bold text-xs uppercase tracking-widest text-dominant">
         {item.label}
       </summary>
       <div className="mt-3">
@@ -260,14 +260,14 @@ function CheckboxRow({
   const label = item.window !== undefined ? `${item.label} (T-${item.window})` : item.label;
   const today = parisToday();
   return (
-    <div className={`border border-border rounded p-2 ${inWindow ? '' : 'opacity-50'}`}>
+    <div className={`border border-border rounded p-2 ${inWindow ? '' : 'bg-paper-soft'}`}>
       <div className="flex items-start gap-2">
         <input
           type="checkbox"
           checked={checked}
           disabled={disabled || held}
           onChange={e => onToggle(item.key, e.target.checked)}
-          className="mt-1 accent-primary"
+          className="mt-1 accent-field"
         />
         <div className="flex-1">
           <p className="text-sm">
@@ -282,7 +282,7 @@ function CheckboxRow({
                 <button
                   type="button"
                   onClick={() => setReleased(true)}
-                  className="text-xs text-primary-hover underline mt-1"
+                  className="text-xs text-field-text underline mt-1"
                 >
                   It happened in another order — tick it anyway
                 </button>
@@ -293,7 +293,7 @@ function CheckboxRow({
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="text-xs text-primary-hover underline mt-1"
+              className="text-xs text-field-text underline mt-1"
             >
               {expanded ? 'Hide' : 'Show'} content
             </button>

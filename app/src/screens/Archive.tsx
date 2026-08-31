@@ -93,8 +93,8 @@ export function Archive() {
   return (
     <div>
       <div className="mb-8">
-        <p className="text-xs font-bold tracking-[0.14em] uppercase text-accent mb-2 flex items-center gap-3">
-          <span className="h-0.5 bg-accent w-8" />
+        <p className="text-xs font-bold tracking-[0.14em] uppercase text-dominant mb-2 flex items-center gap-3">
+          <span className="h-0.5 bg-dominant w-8" />
           History
         </p>
         <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">Archive</h1>
@@ -118,7 +118,7 @@ export function Archive() {
               active={active === c.key}
               onClick={() => setActive(c.key)}
             >
-              {c.label} <span className="font-mono opacity-70 ml-1">{grouped[c.key].length}</span>
+              {c.label} <span className="font-mono ml-1">{grouped[c.key].length}</span>
             </FilterChip>
           ))}
         </div>
@@ -148,8 +148,8 @@ function FilterChip({
       onClick={onClick}
       className={`font-display font-bold text-[11px] tracking-widest uppercase px-3 py-1.5 border-2 transition-colors ${
         active
-          ? 'bg-accent text-white border-accent'
-          : 'bg-transparent text-ink-muted border-border hover:border-accent hover:text-accent'
+          ? 'bg-dominant text-white border-dominant'
+          : 'bg-transparent text-ink-muted border-border hover:border-dominant hover:text-dominant'
       }`}
     >
       {children}
@@ -169,7 +169,7 @@ function CategorySection({
   return (
     <section className="mb-10">
       <header className="flex items-baseline gap-3 mb-4">
-        <span className="font-mono text-xs text-accent">{category.num}</span>
+        <span className="font-mono text-xs text-dominant">{category.num}</span>
         <h2 className="font-display font-extrabold text-xs uppercase tracking-[0.16em] text-ink">
           {category.label}
         </h2>
@@ -214,10 +214,10 @@ function ArchiveRow({
   const displayStatus = config ? effectiveStatus(s, config, new Date()) : s.status;
   return (
     <li>
-      <div className="grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-primary-soft transition-colors">
+      <div className="grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-field-tint transition-colors">
         <Link
           to={`/speakers/${s.id}`}
-          className="font-mono text-xs text-accent uppercase tracking-wider truncate no-underline"
+          className="font-mono text-xs text-dominant uppercase tracking-wider truncate no-underline"
         >
           {s.edition_code || s.id}
         </Link>
@@ -233,7 +233,7 @@ function ArchiveRow({
         </div>
         <div className="text-right flex items-center justify-end gap-3">
           {displayStatus !== s.status && (
-            <span className="font-mono text-[10px] uppercase tracking-wider text-accent shrink-0">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-dominant shrink-0">
               now {displayStatus}
             </span>
           )}
@@ -249,7 +249,7 @@ function ArchiveRow({
           {showMetricsEdit && (
             <button
               onClick={() => setEditing(!editing)}
-              className="font-display font-bold text-[10px] tracking-widest uppercase text-primary-hover border border-border px-2 py-0.5 hover:bg-primary-soft"
+              className="font-display font-bold text-[10px] tracking-widest uppercase text-field-text border border-border px-2 py-0.5 hover:bg-paper-soft"
             >
               {editing ? 'Hide' : 'Edit metrics'}
             </button>
@@ -350,7 +350,7 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
         >
           {busy ? 'Saving…' : 'Save metrics'}
         </button>
-        {saved && <span className="text-xs text-primary-hover">✓ saved</span>}
+        {saved && <span className="text-xs text-field-text">✓ saved</span>}
       </div>
     </div>
   );

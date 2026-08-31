@@ -130,7 +130,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand, brand_templates, motifs
+from convener_ops.publication import brand, brand_templates, cockpit, motifs
 from convener_ops.publication.brand import rgb_triplet, rgba
 
 #: The instance's own values, relative to the repository root. Not "the one
@@ -299,60 +299,66 @@ def render_site_css(root: Path) -> str:
     return _splice(current, render_site_root_block(load_brand(root)))
 
 
-#: `app/src/design/tokens.css`'s tokens. Same variable *names* the file
-#: already declared, and every value read from the charter in force.
-#: The names differ from `site/src/style.css`'s: the cockpit says
-#: `--primary`/`--accent` where the showcase says `--field`/`--dominant`.
-#: Both are positions rather than hues, so neither can come to name a
-#: colour it does not hold, and the cockpit's pair is a Tailwind
-#: vocabulary as much as a CSS one -- `tailwind.config.ts` turns each into
-#: a colour key, and every `bg-primary` and `text-accent` across the
-#: application reads it. Bringing the two into one vocabulary is a change
-#: to the cockpit, not to the charter.
+#: `app/src/design/tokens.css`'s tokens, one line per key
+#: `convener_ops.publication.cockpit.TOKEN_COLOURS` declares, and every
+#: value read from the charter in force through it. That table is the one
+#: home for "which charter colour is behind this custom property": the
+#: same module measures every pairing the cockpit's chrome sets against
+#: every charter under `brand/`, and a sweep reading one table while the
+#: stylesheet was written from another would be measuring a cockpit
+#: nobody builds.
+#:
+#: The names are the showcase's now. They were `--primary` and `--accent`
+#: where `site/src/style.css` says `--field` and `--dominant`, which the
+#: comment here used to call a Tailwind vocabulary as much as a CSS one
+#: and leave at that. What settled it is the measurement: a charter's
+#: field is a ground that may never carry text and may never carry white
+#: text -- every `contrast._forbidden` under `brand/` says so in those
+#: words -- and `primary` is the word an author reaches for when filling
+#: a button. Twenty-five class lists in fifteen files did one of the two
+#: things it invites: eighteen filled a control or a masthead with the
+#: field and set white on it, seven set the field itself as type, and both
+#: measure 1.61 to 1.71 against white. The rest of the
+#: cockpit's names are left alone: no measurement bears on `--border`
+#: against the showcase's `--rule`, and a rename nothing measures is
+#: taste rather than a finding.
 _APP_ROOT_TEMPLATE: Final = """\
-  --paper:         {white};
-  --paper-soft:    {band};
-  --surface:       {white};
-  --surface-mute:  {field_tint};
-  --ink:           {ink};
-  --ink-muted:     {ink_muted};
-  --ink-faint:     {ink_faint};
-  --primary:       {field};
-  --primary-hover: {field_text};
-  --primary-soft:  {field_tint};
-  --accent:        {dominant};
-  --accent-hover:  {dominant_hover};
-  --accent-soft:   {dominant_tint};
-  --border:        {rule};
-  --border-strong: {rule_strong};
+  --paper:          {paper};
+  --paper-soft:     {paper-soft};
+  --surface:        {surface};
+  --surface-mute:   {surface-mute};
+  --ink:            {ink};
+  --ink-muted:      {ink-muted};
+  --ink-faint:      {ink-faint};
+  --field:          {field};
+  --field-text:     {field-text};
+  --field-tint:     {field-tint};
+  --dominant:       {dominant};
+  --dominant-hover: {dominant-hover};
+  --dominant-tint:  {dominant-tint};
+  --border:         {border};
+  --border-strong:  {border-strong};
   /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. */
-  --danger:        {danger};
-  --info:          {info};
-  --select:        {select};
+  --danger:         {danger};
+  --info:           {info};
+  --select:         {select};
 """
+
+
+def app_tokens(charter: dict[str, Any]) -> dict[str, str]:
+    """Every cockpit token at this charter, including the two no charter
+    carries. One call, so that the stylesheet this script writes and the
+    pairings `cockpit.contrast_problems` measures are the same colours."""
+    return cockpit.token_colours(charter, danger=_DANGER, info=_INFO)
 
 
 def render_app_root_block(charter: dict[str, Any]) -> str:
     """The generated inner text of `app/src/design/tokens.css`'s `:root` block."""
-    colours = _colours(charter)
+    tokens = app_tokens(charter)
     return _APP_ROOT_TEMPLATE.format(
-        white=colours["white"],
-        band=colours["band"],
-        field_tint=colours["field_tint"],
-        ink=colours["ink"],
-        ink_muted=colours["ink_muted"],
-        ink_faint=colours["ink_faint"],
-        field=colours["field"],
-        field_text=colours["field_text"],
-        dominant=colours["dominant"],
-        dominant_hover=colours["dominant_hover"],
-        dominant_tint=colours["dominant_tint"],
-        rule=colours["rule"],
-        rule_strong=colours["rule_strong"],
-        danger=_DANGER,
-        info=_INFO,
-        select=rgba(colours["field"], _APP_SELECT_ALPHA),
+        **tokens,
+        select=rgba(_colours(charter)["field"], _APP_SELECT_ALPHA),
     )
 
 
@@ -440,11 +446,49 @@ def main(argv: list[str] | None = None) -> int:
     # failing AA with every gate green. The list is read off the directory
     # (`brand.shipped`), so a charter added there is measured on the commit
     # that adds it.
+    # What the cockpit's own chrome sets, read off `app/src` before any
+    # palette is measured against it. Two refusals rather than a ratio --
+    # a `text-`/`bg-` value that names neither a colour nor a known
+    # non-colour word, and an `opacity-*` dimming type its own class list
+    # does not name -- because both are pairings this sweep would
+    # otherwise have measured something other than what the browser
+    # paints. See `convener_ops/publication/cockpit.py` for why they are
+    # findings rather than skips.
+    chrome, refused = cockpit.scan(root)
+    refused += cockpit.unresolved_foregrounds(chrome)
+    if refused:
+        for problem in refused:
+            print(problem, file=sys.stderr)
+        print(
+            "A pairing this sweep cannot resolve is a pairing no charter "
+            "is ever measured against. Name the ground and the type on the "
+            "same element.",
+            file=sys.stderr,
+        )
+        return 1
+
     failed = False
     for shown, values in [(named, charter), *others]:
         contrast = brand.contrast_problems(values, named=shown)
+        # The palette's own twelve pairings, and then every pairing the
+        # cockpit's chrome sets at this palette. The second is not a
+        # property of the charter and could not be recorded in it: it is
+        # what `app/src` does with the charter, and until it was measured
+        # the sign-in screen filled its primary button with the field and
+        # set white on it -- 1.61, the exact pairing every
+        # `contrast._forbidden` under `brand/` names. `check-a11y.mjs`
+        # could not see it: it sweeps the showcase's pages, and it renders
+        # the one charter in force rather than the four a duplicate may
+        # choose.
+        contrast += cockpit.contrast_problems(
+            chrome, values, named=shown, danger=_DANGER, info=_INFO
+        )
         if not contrast:
-            print(f"every measured contrast in {shown} recomputes and clears AA")
+            print(
+                f"every measured contrast in {shown} recomputes and clears "
+                f"AA, and so does every one of the {len(chrome)} pairings "
+                "the cockpit's chrome sets at it"
+            )
             continue
         failed = True
         for problem in contrast:

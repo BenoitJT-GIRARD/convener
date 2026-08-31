@@ -206,11 +206,11 @@ function IntegrationRow({ report }: { report: IntegrationReport }) {
   const { integration, state, missing, family } = report;
   const tone =
     state === 'configured'
-      ? 'text-primary'
+      ? 'text-field-text'
       : state === 'unknown'
         ? 'text-ink-muted'
         : integration.absentIsNormal
-          ? 'text-accent'
+          ? 'text-dominant'
           : 'text-danger';
   return (
     <li className="py-3 border-t border-border">
@@ -441,7 +441,7 @@ export function Settings() {
           {SECRETS_SETTINGS_PATH}.
         </p>
         {names?.refusal && (
-          <p className="mt-2 text-xs text-accent max-w-prose">{names.refusal}</p>
+          <p className="mt-2 text-xs text-dominant max-w-prose">{names.refusal}</p>
         )}
         <ul className="mt-2">
           {reports.map(report => (
