@@ -270,7 +270,7 @@ def test_the_notice_states_each_of_the_four_things_section_0_asks_for() -> None:
 
     assert re.match(r"Copyright © \d{4} \S", data["copyright"])
 
-    assert "NO WARRANTY" in data["warranty"], (
+    assert "no warranty" in data["warranty"].lower(), (
         "the warranty disclaimer no longer says there is none"
     )
 

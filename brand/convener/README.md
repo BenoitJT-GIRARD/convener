@@ -1,18 +1,15 @@
 <!-- cspell:ignore currentColor color -->
 # Convener — the product's own mark
 
-**This is the product's identity, not an instance's.** It is what appears on
-Convener's README, its documentation and the demonstration built out of it.
-It is **not** one of the themes an instance chooses. `config/boundary.yml`
-says why this directory sits outside the instance's paths, and
-`instance/data/brand.json` is where an instance's own charter goes instead.
+**This is the product's identity.** It is what appears on Convener's README,
+its documentation and the demonstration built out of it.
+`config/boundary.yml` says why this directory sits outside the instance's
+paths, and `instance/data/brand.json` is where an instance's own charter goes.
 
 ## The mark
 
 Two concentric arcs closing on a single dot. The arcs read as the C of Convener
-and as two parties coming together; the dot is the moment they meet. Nothing in
-it depicts a calendar, deliberately — a calendar glyph says what a scheduling
-tool *does*, which every scheduling tool does.
+and as two parties coming together; the dot is the moment they meet.
 
 It is built from circles and arcs, so it holds at the sizes that decide whether a
 mark works: a browser tab, an avatar.
@@ -27,10 +24,9 @@ mark works: a browser tab, an avatar.
 | `convener-banner-mono.svg` | the same, single ink |
 | `brand.json` | the product's own charter — the palette *and* the motif a duplicate builds with when it has chosen neither |
 
-**There are no light and dark variants, and no rasters.** There is nothing to
-keep in step, because there is only one file per shape.
+**There are no light and dark variants, and no rasters** — one file per shape.
 
-## How the colour works — read this before using them
+## How the colour works
 
 The ink is `currentColor`. **The file takes the colour of whatever it is placed
 in**, so one file serves a white page and a near-black one.
@@ -42,35 +38,25 @@ in**, so one file serves a white page and a near-black one.
 - **Opened on its own, or loaded through an image tag** — a
   `svg:root { color: #012765 }` rule inside each file makes it navy.
 
-That rule is `svg:root` and **not** a `color` attribute, which is the whole
-point: an attribute wins over inheritance, so the mark would stay navy on a dark
-ground and the single-file idea would collapse. `svg:root` matches only when the
-file *is* the document. Rendered on both grounds and looked at, not assumed.
+`svg:root` matches only when the file *is* the document. An attribute would win
+over inheritance instead, and the mark would stay navy on a dark ground.
 
 ## The palette
 
-Measured from the original artwork, WCAG 2.1 relative luminance.
+Measured from the original artwork, WCAG 2.1 relative luminance, recomputed with
+the repository's own arithmetic (`tools/convener_ops/publication/brand.py`).
 
 | | value | on white | on navy |
 |---|---|---|---|
 | navy | `#012765` | **14.19** | — |
 | coral | `#fd6b52` | 2.84 | **5.00** |
 
-Navy read **14.23** here until it was recomputed with the repository's own
-WCAG 2.1 arithmetic (`tools/convener_ops/publication/brand.py`), which gives 14.194. Nothing
-turns on the difference — it clears AAA either way — but a measurement nobody
-rechecks is exactly what D-16 was decided over, so the figure the build asserts
-and the figure written here are the same one.
-
 **The role those numbers impose:** coral is an accent **on the ink**, never text
 on white — 2.84 is below AA at any size. Navy on white clears AAA with room.
 
-This is the same shape of constraint `instance/data/brand.json` records for the other
-palette here, so these values entered the system without bending it. **They are
-declared now**, in `brand.json` beside this file, and
+Both values are declared in `brand.json` beside this file, and
 `generate_brand_css.py --check` recomputes every pairing in it on every run and
-fails the build if one drops below AA. It is no longer a measurement in a
-README; it is a rule.
+fails the build if one drops below AA.
 
 ## The charter beside this file
 
@@ -83,11 +69,11 @@ system measures each role at.** The neutrals come from navy and coral in equal
 parts, which are near enough to opposite that their blend is this palette's own
 grey.
 
-Two consequences worth knowing before using it:
+Two things follow:
 
-- **The token names are the system's, not this palette's.** `purple` is the
-  navy, `turquoise` is a coral field. They name positions in the composition,
-  never hues — see `brand.json`'s own `_names`.
+- **The token names are the system's.** `purple` holds the navy, `turquoise` a
+  coral field. They name positions in the composition rather than hues — see
+  `brand.json`'s own `_names`.
 - **It carries a `motif`, and the motif is this mark taken apart.** The
   ribbon's stroke is the navy; the wordmark's dots are the coral of the dot
   above; the stroke weight is the proportion the inner arc is drawn at — 25.86
@@ -95,46 +81,26 @@ Two consequences worth knowing before using it:
   curls, which `tools/convener_ops/publication/ribbon.py` builds at radius 0.105 and 0.103
   of the shorter side. That gives 0.0204, and it means a curl on a poster is
   drawn at the weight this mark's own line is drawn at, at any size.
-  **That section had no default at all until 2026-08-26**, on the reasoning
-  that a mark somebody drew must not be lent to a duplicate that forgot to
-  configure one. The mark half of that is right and has not moved. The
-  “therefore no default may exist” half did not follow from it, and what it
-  produced was a clone whose first build stopped, asking a seminar organiser
-  for a design file. Identity is what has to be supplied — an organisation's
-  name, its published address, the title of its series. Design never is, and
-  the guard against a duplicate passing for somebody else is the unconfigured
-  banner on the public pages, not a build that will not run.
 
-## Two things that were decided rather than defaulted
+A duplicate that has configured no charter therefore builds against this one.
+What a duplicate has to supply is identity — an organisation's name, its
+published address, the title of its series — and the unconfigured banner on
+the public pages is what says it has not yet.
 
-**The mark is measured, not traced.** Radii, stroke widths and one 81 degree
-opening read off the original artwork and rebuilt as two arcs and a circle. The
+## How the mark and the wordmark were made
+
+**The mark is measured.** Radii, stroke widths and one 81 degree opening read
+off the original artwork and rebuilt as two arcs and a circle. The
 reconstruction was overlaid on the original: it matched exactly.
 
-**The wordmark is Archivo at weight 400, converted to outlines — and it is not
-the face of the original artwork.** That face was never identified; the only
-Archivo axis pair whose proportions match it is weight 800 at width 80, a
-condensed heavy the logo visibly is not, so a coincidence rather than a match.
-Two alternatives were rejected: tracing letterforms out of a raster gives exactly
-the wobbly curves a vector exists to avoid, and building a publicly redistributed
-product's identity on an unidentified, unlicensed face is a liability nobody
-would notice until it mattered.
+**The wordmark is Archivo at weight 400, converted to outlines.** The face of
+the original artwork was never identified; the only Archivo axis pair whose
+proportions match it is weight 800 at width 80, a condensed heavy the logo
+visibly is not.
 
 Archivo is the face and weight `instance/data/brand.json` already declares
 as `body`, and it ships here under the SIL Open Font License 1.1 (`fonts/`,
 `Archivo-LICENSE.txt`). The glyphs are paths, so no font is needed to render.
 
 It reads about 9 % wider than the original wordmark at the same cap height,
-because Archivo is a grotesque and the original is geometric. **Matching it would
-mean condensing Archivo to imitate a face this project decided not to use** —
-the wrong trade, and a visible one.
-
-## What is still open
-
-**At 16 px the inner arc thins to a hairline.** Legible, but a true 16 px favicon
-would be better served by a heavier inner stroke, or by the outer arc and the dot
-alone. Rendered at 16, 32 and 64 and looked at.
-
-**A raster will be needed eventually** — a social preview card cannot be SVG.
-When that day comes it is generated from these files, never drawn again: one
-source, derived outputs, the rule everything else in this repository follows.
+because Archivo is a grotesque and the original is geometric.

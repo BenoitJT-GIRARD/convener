@@ -21,7 +21,3 @@ whether to build on it at all.
 **How to run a webinar**, and how to run an instance of this software.
 Those are [`handbook/`](../handbook/index.md) and
 [`operating/`](../operating/index.md).
-
-**A design document.** There is no separate specification to read after
-the decision records: why the system is shaped the way it is *is* those
-records, and the code is the rest of the answer.

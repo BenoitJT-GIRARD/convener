@@ -7,14 +7,7 @@ account beyond the GitHub one you already have to be reading this, and it
 is the only channel on this page.
 
 **Not an issue.** An issue is public from the moment it is opened, and
-there is no way to make it private afterwards. Somebody who finds a hole
-and has nowhere private to put it does one of two things: publishes it, or
-gives up. Both are worse than reading it here first.
-
-**Not an email address either.** There is deliberately none on this page,
-for the same reason `TRADEMARK.md` gives for its own: this file is
-published, and a published address is one more thing for a scraper to
-collect. The private advisory is the address.
+there is no way to make it private afterwards.
 
 If the *Report a vulnerability* button is not there, private vulnerability
 reporting has not been switched on for the repository you are looking at
@@ -25,10 +18,7 @@ registration arrives rather than after.
 ## What to expect
 
 Reports are read. **No response time is promised, and none should be
-inferred.** This is unpaid work by one maintainer, and a page claiming a
-72-hour acknowledgement it cannot honour would be worse than this
-paragraph: the first missed deadline would teach every later reporter that
-nothing here means anything.
+inferred.** This is unpaid work by one maintainer.
 
 What does happen, when a report is valid: a fix lands on the default
 branch, the advisory is published with it, and you are credited in it
@@ -49,9 +39,7 @@ and the derivation guard (`tools/convener_ops/derivation/repository.py`).
 
 A weakness in a template is worth more to an attacker than the same
 weakness in one repository, because every duplicate inherits it. That is
-D-15's own reasoning for publishing this at all, and it is the reason a
-report about the product matters more here than a report about any single
-instance.
+D-15's own reasoning for publishing this at all.
 
 ## What is out of scope, and where it goes instead
 
@@ -60,8 +48,7 @@ instance.
   data controller for it and the only person who can act on it: report to
   them, not here. If what you found is a defect in the code they are
   running, it is in scope above and both reports are worth making.
-- **Limits this project already documents rather than claims to have
-  closed.** `docs/operating/operations.md` records that whoever holds an
+- **Limits this project already documents.** `docs/operating/operations.md` records that whoever holds an
   event's key and its attendance list can pair a survey answer with roughly
   when it arrived; `docs/handbook/governance/traitement-donnees.md` records what a
   certificate register does and does not hold; `TRADEMARK.md` records that

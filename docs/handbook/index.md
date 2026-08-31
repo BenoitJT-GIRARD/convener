@@ -26,5 +26,5 @@ records: [`engineering/`](../engineering/index.md).
 ## How we work — three ideas
 
 - **You are trusted to act.** Pick up a task and move it forward; you do not need permission for everyday steps.
-- **Two moments need a green light:** choosing a speaker, and publishing a recording. Everything else is yours to run. The second one has a [reason worth reading once](governance/board-rules.md#publishing-a-recording-two-permissions-and-they-are-not-alike): a session is heard once and then gone, and a recording is not.
+- **Two moments need a green light:** choosing a speaker, and publishing a recording. Everything else is yours to run. The second one has a [reason](governance/board-rules.md#publishing-a-recording-two-permissions-and-they-are-not-alike): a session is heard once and then gone, and a recording is not.
 - **Everything is visible.** Anyone can see where each webinar stands, so nothing falls through the cracks.
