@@ -62,7 +62,7 @@ Both files drew three bare circles and arcs in place of the motif until
 2026-08-28, which is what `instance/data/brand.json::motif._ribbon` had always
 said they were: a stroke ending in a closed ring reads as a line with a
 circle stuck on it, not as one continuous ribbon running off the edges.
-`ribbon.py` had the real curve all along -- traced against the designer's
+`motifs/ribbon.py` had the real curve all along -- traced against the designer's
 own poster, the same 1200-unit reference these two layouts come from --
 and drew it for the generated posters (`visual.py`) and nowhere else. It
 draws it here now, at the same colour and the same weight the charter
@@ -72,7 +72,7 @@ What that cost was a re-layout, which is why it had been deferred and is
 the whole of the work: the ribbon owns ground on both sides that these
 two compositions were using. Every block moved below is moved because the
 stroke passes through where it stood, and the distance each moved is the
-stroke's own reach over that block's rows -- read off `ribbon.ribbon_path`
+stroke's own reach over that block's rows -- read off `motifs.path`
 at the size the file is drawn, not guessed. The reference poster places
 its own type the same way: its "what to expect" column starts at 312 of
 1200 and its registration slot ends at 215, both just clear of the stroke
@@ -144,7 +144,7 @@ these declarations derive, character for character -- the names, the
 address, the palette, the motif's own weight, and the string inside the
 code. What it does not prove is anything about a rendering: that no glyph
 collides with the ribbon, that no line overflows the plate. The first is
-answered by construction (`ribbon.safe_margins` places the plate inside
+answered by construction (`motifs.safe_margins` places the plate inside
 the corridor the stroke leaves, at every stroke weight the charter might
 declare); the second by fitting each line's size to the plate it is set in
 rather than typing three sizes and hoping (`_fitted_font_size`).
@@ -163,7 +163,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from ..declaration import published
-from . import brand, formats, registration_code, ribbon
+from . import brand, formats, motifs, registration_code
 
 __all__ = [
     "ANNOUNCEMENT_PATH",
@@ -349,16 +349,16 @@ def _mark(x: float, y: float, size: float, *, dots: str, ink: str) -> str:
     )
 
 
-def _ribbon(width: float, height: float) -> str:
-    """The charter's ribbon for a canvas, indented to sit in the markup.
+def _motif_path(family: str, width: float, height: float) -> str:
+    """The charter's motif for a canvas, indented to sit in the markup.
 
-    `ribbon.ribbon_path` returns one command a line, which is how a
-    hundred cubics stay readable; a `d` attribute pasted in flush left
-    inside an indented document is not, and these two files are opened in
-    a text editor on purpose.
+    `motifs.path` returns one command a line, which is how a hundred
+    cubics stay readable; a `d` attribute pasted in flush left inside an
+    indented document is not, and these two files are opened in a text
+    editor on purpose.
     """
     joiner = "\n" + " " * 15
-    return joiner.join(ribbon.ribbon_path(width, height).splitlines())
+    return joiner.join(motifs.path(family, width, height).splitlines())
 
 
 def _mark_tail_x(x: float, size: float) -> float:
@@ -482,7 +482,8 @@ def _values(root: Path) -> dict[str, str]:
             ink=colours["dominant"],
             accent=colours["field_text"],
         ),
-        "ribbon_stroke": str(motif["ribbon_stroke"]),
+        "motif_family": str(motif[brand.MOTIF_FAMILY]),
+        "motif_stroke": str(motif["stroke"]),
         "logo_dots": str(motif["logo_dots"]),
         "font_family": _font_family(charter),
         "series_title": f"{identity.short_name} {identity.series}",
@@ -497,7 +498,7 @@ def _values(root: Path) -> dict[str, str]:
         "organisation_caps": _display_words(identity.organisation).upper(),
         "strapline_caps": identity.strapline.upper(),
         "address_caps": identity.forum_host.upper(),
-        "ribbon_ratio": str(motif["ribbon_width_ratio"]),
+        "motif_ratio": str(motif["width_ratio"]),
     }
 
 
@@ -538,9 +539,9 @@ _ANNOUNCEMENT: Final = """\
          and every word on this page is placed clear of it. Move or delete
          it freely; if you move a word instead, keep it out of the stroke,
          because a heavy line behind dark type is unreadable type. -->
-    <g fill="none" stroke="{ribbon_stroke}" stroke-width="{stroke_weight}"
+    <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
        stroke-linecap="round" stroke-linejoin="round">
-      <path d="{ribbon}"/>
+      <path d="{motif}"/>
     </g>
 
     <!-- Wordmark. The mark is five squares, two markers and the line
@@ -650,9 +651,9 @@ _FLYER: Final = """\
          its own weight. It carries no text and every word on this page is
          placed clear of it. Move or delete it freely; if you move a word
          instead, keep it out of the stroke. -->
-    <g fill="none" stroke="{ribbon_stroke}" stroke-width="{stroke_weight}"
+    <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
        stroke-linecap="round" stroke-linejoin="round">
-      <path d="{ribbon}"/>
+      <path d="{motif}"/>
     </g>
 
     <!-- Wordmark: five squares, two markers and the line joining them,
@@ -747,15 +748,14 @@ _FLYER: Final = """\
 
 
 def _stroke_weight(width: float, height: float, ratio: float) -> str:
-    """The ribbon's stroke weight, from the charter's own ratio.
+    """The motif's stroke weight, from the charter's own ratio.
 
-    `ribbon.ribbon_stroke_width` and not a literal: the weight the loops
-    that stood in for the ribbon were drawn at (17 units on a 1200 square,
+    `motifs.stroke_width` and not a literal: the weight the loops that
+    stood in for the ribbon were drawn at (17 units on a 1200 square,
     0.014 of the shorter side) was nobody's measurement, and
-    `motif._ribbon_width_ratio` records one taken against the reference
-    poster.
+    `motif._width_ratio` records one taken against the reference poster.
     """
-    return _num(ribbon.ribbon_stroke_width(width, height, ratio=ratio))
+    return _num(motifs.stroke_width(width, height, ratio=ratio))
 
 
 @dataclass(frozen=True)
@@ -795,7 +795,7 @@ def _wordmark_values(mark: _Wordmark, values: dict[str, str]) -> dict[str, str]:
             mark.y,
             mark.size,
             dots=values["logo_dots"],
-            ink=values["ribbon_stroke"],
+            ink=values["motif_stroke"],
         ),
         "rule_x": _num(tail_x),
         "rule_y": _num(tail_y - mark.rule_weight / 2),
@@ -814,8 +814,8 @@ def render_announcement_template(root: Path) -> str:
         w=_num(width),
         h=_num(height),
         generated_note=_GENERATED_NOTE,
-        stroke_weight=_stroke_weight(width, height, float(values["ribbon_ratio"])),
-        ribbon=_ribbon(width, height),
+        stroke_weight=_stroke_weight(width, height, float(values["motif_ratio"])),
+        motif=_motif_path(values["motif_family"], width, height),
     )
 
 
@@ -832,8 +832,8 @@ def render_flyer_template(root: Path) -> str:
         paper_w=_num(paper_w),
         paper_h=_num(paper_h),
         generated_note=_GENERATED_NOTE,
-        stroke_weight=_stroke_weight(width, height, float(values["ribbon_ratio"])),
-        ribbon=_ribbon(width, height),
+        stroke_weight=_stroke_weight(width, height, float(values["motif_ratio"])),
+        motif=_motif_path(values["motif_family"], width, height),
     )
 
 
@@ -852,7 +852,7 @@ _BACKGROUND_HEIGHT: Final = 1080.0
 #: The plate's own vertical geometry, in canvas units, read straight off
 #: the original at this size: it runs from 24 to 376, drawn with a 3-unit
 #: rule. Horizontal geometry is deliberately *not* here, because it is not
-#: a measurement worth keeping -- `ribbon.safe_margins` derives it, and
+#: a measurement worth keeping -- `motifs.safe_margins` derives it, and
 #: what it derives for this canvas (277.56) lands within half a unit of
 #: where the designer put the plate's own left edge, which is the check on
 #: both.
@@ -888,7 +888,7 @@ _ADVANCE_EM: Final = 0.68
 #: right edge and 24 up from the bottom, all measured off the original. Its
 #: label sits above it, the two baselines 53 and 24 units above the box.
 #: Nothing here is derived from the ribbon, and that is not an omission:
-#: `ribbon.waypoints`'s right-hand motif leaves this canvas at 0.475 of its
+#: the ribbon's right-hand curl leaves this canvas at 0.475 of its
 #: own height, so no part of the stroke shares a row with this block --
 #: `test_brand.py` samples the rendered curve and holds that.
 _CODE_SIDE: Final = 202.0
@@ -941,9 +941,9 @@ _BACKGROUND: Final = """\
        turning back on itself, in the charter's own motif colour and at its
        own weight. The plate below sits inside the corridor the stroke
        leaves free, so no word is ever drawn across it. -->
-  <g fill="none" stroke="{ribbon_stroke}" stroke-width="{stroke_weight}"
+  <g fill="none" stroke="{motif_stroke}" stroke-width="{stroke_weight}"
      stroke-linecap="round" stroke-linejoin="round">
-    <path d="{ribbon}"/>
+    <path d="{motif}"/>
   </g>
 
   <!-- The plate: who this is, what the series is for, and where to find
@@ -983,8 +983,10 @@ def render_video_call_background(root: Path) -> str:
     """`docs/handbook/assets/video-call-background.svg` in full."""
     values = _values(root)
     width, height = _BACKGROUND_WIDTH, _BACKGROUND_HEIGHT
-    ratio = float(values["ribbon_ratio"])
-    left, right = ribbon.safe_margins(width, height, ratio=ratio)
+    ratio = float(values["motif_ratio"])
+    left, right = motifs.safe_margins(
+        values["motif_family"], width, height, ratio=ratio
+    )
 
     plate_x = left + _PLATE_RULE / 2
     plate_w = (width - right - _PLATE_RULE / 2) - plate_x
@@ -1008,7 +1010,7 @@ def render_video_call_background(root: Path) -> str:
         h=_num(height),
         generated_note=_GENERATED_NOTE,
         stroke_weight=_stroke_weight(width, height, ratio),
-        ribbon=_ribbon(width, height),
+        motif=_motif_path(values["motif_family"], width, height),
         plate_x=_num(plate_x),
         plate_y=_num(_PLATE_TOP + _PLATE_RULE / 2),
         plate_w=_num(plate_w),

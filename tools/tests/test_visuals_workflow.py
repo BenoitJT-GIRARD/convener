@@ -161,7 +161,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
     anyway because a path filter has no finer grain than a file."""
     expected_paths = {
         "tools/convener_ops/publication/visual.py",
-        "tools/convener_ops/publication/ribbon.py",
+        "tools/convener_ops/publication/motifs/**",
         "tools/convener_ops/publication/registration_code.py",
         "tools/convener_ops/publication/formats.py",
         "tools/convener_ops/governance/rule.py",

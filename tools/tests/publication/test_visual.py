@@ -1,6 +1,6 @@
 """The announcement composition -- pinning the properties that make it
 compose rather than a byte-identical page, the same discipline
-`test_ribbon.py` already applies to the ribbon (see that file's
+`motifs/test_ribbon.py` already applies to the ribbon (see that file's
 own docstring). Five groups matter most, because each is a defect that
 would otherwise be
 invisible in a single screenshot: a long title staying inside its band, a
@@ -10,7 +10,7 @@ reflecting the edition's real Europe/Paris offset -- pinned for a winter
 *and* a summer edition, because a test that only ever checked a winter date
 would pass against the reference poster's own hard-typed "(CET)" defect --
 and every text element staying inside a safe area that
-clears the ribbon on both sides, checked against `ribbon.waypoints`
+clears the ribbon on both sides, checked against `motifs/ribbon.py::waypoints`
 itself rather than against a rendered pixel (see
 `test_the_safe_area_clears_every_ribbon_waypoint`'s own docstring for why a
 pixel could not be part of this suite).
@@ -30,8 +30,8 @@ from conftest import speaker
 import convener_ops.publication.visual as visual
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication.formats import BANNER, FORMATS, PRINT, SQUARE
+from convener_ops.publication.motifs.ribbon import waypoints
 from convener_ops.publication.public_data import to_public
-from convener_ops.publication.ribbon import waypoints
 from convener_ops.publication.visual import (
     _AFFILIATION_FONT_MAX_VMIN,
     _AFFILIATION_FONT_MIN_VMIN,
@@ -43,9 +43,9 @@ from convener_ops.publication.visual import (
     Announcement,
     _affiliation_font_size,
     _frame_photo_html,
+    _motif_content_right_margin,
+    _motif_safe_margins,
     _name_font_size,
-    _ribbon_content_right_margin,
-    _ribbon_safe_margins,
     _title_font_size,
     date_line,
     is_wide,
@@ -361,13 +361,13 @@ def test_colours_in_the_root_block_match_brand_json_exactly() -> None:
         )
 
 
-def test_no_brand_colour_hand_typed_outside_root_or_ribbon_stroke() -> None:
-    """The same guard `test_brand.py` already runs on the ribbon templates
-    and the two generated stylesheets, applied to this third consumer of
-    `instance/data/brand.json`. The ribbon's own `stroke="#..."` is the one
-    accepted exception -- an SVG attribute filled
-    in from `ribbon_stroke_colour(root)` at render time, never hand-typed
-    in this module's source."""
+def test_no_brand_colour_hand_typed_outside_root_or_motif_stroke() -> None:
+    """The same guard `test_brand.py` already runs on the downloadable
+    templates and the two generated stylesheets, applied to this third
+    consumer of `instance/data/brand.json`. The motif's own `stroke="#..."`
+    is the one accepted exception -- an SVG attribute filled in from
+    `brand.motif_stroke(root)` at render time, never hand-typed in this
+    module's source."""
     brand = _brand()
     colours = {value for value in brand["colour"].values() if isinstance(value, str)}
     colours |= {value for value in brand["derived"].values() if isinstance(value, str)}
@@ -375,7 +375,7 @@ def test_no_brand_colour_hand_typed_outside_root_or_ribbon_stroke() -> None:
 
     root_block = _root_block_text(doc)
     rest = doc.replace(root_block, "")
-    # The ribbon path's own stroke attribute -- the one accepted exception.
+    # The motif path's own stroke attribute -- the one accepted exception.
     rest = re.sub(r'stroke="#[0-9a-fA-F]{6}"', 'stroke="EXCLUDED"', rest)
 
     pattern = re.compile("|".join(re.escape(c) for c in colours), re.IGNORECASE)
@@ -535,8 +535,8 @@ def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
     """The property this whole fix rests on: no on-curve point of the
     ribbon -- either loop's own arc, the left tail's fitted bulge, the
     points where the stroke crosses an edge -- lies inside the horizontal
-    band the page reserves for text. Checked against `ribbon.waypoints`
-    directly (imported here, not reached through `_ribbon_safe_margins`'s
+    band the page reserves for text. Checked against `motifs/ribbon.py::waypoints`
+    directly (imported here, not reached through `_motif_safe_margins`'s
     own call to it) so a bug shared by both functions could not hide from
     this test the way it could if this re-derived the same numbers through
     the function under test.
@@ -549,13 +549,13 @@ def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
     to a test at all.
 
     Checked at three aspect ratios, not only the square:
-    `_ribbon_safe_margins` is built to survive a change of aspect ratio
+    `_motif_safe_margins` is built to survive a change of aspect ratio
     (see the module docstring's own argument for why), and a
     property that only happened to hold at one aspect ratio would not be
     evidence of that.
     """
     for width, height in ((1200.0, 1200.0), (1200.0, 630.0), (900.0, 1200.0)):
-        left_vw, right_vw = _ribbon_safe_margins(width, height, ROOT)
+        left_vw, right_vw = _motif_safe_margins(width, height, ROOT)
         left_px = left_vw / 100.0 * width
         right_px = right_vw / 100.0 * width
 
@@ -583,26 +583,26 @@ def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
 
 def test_the_safe_area_is_not_the_whole_canvas() -> None:
     """A guard against the property test above passing for the wrong
-    reason: `_ribbon_safe_margins` could clear every waypoint trivially by
+    reason: `_motif_safe_margins` could clear every waypoint trivially by
     reserving the entire canvas for margin, leaving no room for content at
     all. Both margins must leave a real content strip -- this project's
     reference poster leaves roughly 72% of the width for content; this only
     checks that *some* substantial majority remains, not that exact figure,
     since this fix's own margins are deliberately more conservative than the
     reference's (see the module docstring)."""
-    left_vw, right_vw = _ribbon_safe_margins(_W, _H, ROOT)
+    left_vw, right_vw = _motif_safe_margins(_W, _H, ROOT)
     assert left_vw + right_vw < 50.0
 
 
 def test_every_text_bearing_rule_reads_the_derived_safe_area() -> None:
-    """`_ribbon_safe_margins` returning the right numbers is not enough on
+    """`_motif_safe_margins` returning the right numbers is not enough on
     its own -- every rule a collision was ever traced to (the wordmark and
     talk-title bands share `.band`, the hero section, the date line) has to
     actually spend them, not fall back to a fixed `vw`
     that happens to look similar. `.content` and `.register` (the
     band sibling to `.content` -- see that module's own "Why the code can
     never be clipped" section) are the two rules that read a *narrower*
-    right margin, `--safe-r-content` -- `_ribbon_content_right_margin`'s own
+    right margin, `--safe-r-content` -- `_motif_content_right_margin`'s own
     docstring explains why -- but still read the full `--safe-l` on their
     own left."""
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
@@ -683,29 +683,29 @@ def test_the_register_band_is_never_squeezed_by_flexible_content() -> None:
 def test_the_safe_area_variables_match_the_derived_margins() -> None:
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
     poster_rule = _rule_block(doc, ".poster")
-    left_vw, right_vw = _ribbon_safe_margins(_W, _H, ROOT)
-    content_right_vw = _ribbon_content_right_margin(_W, _H, ROOT)
+    left_vw, right_vw = _motif_safe_margins(_W, _H, ROOT)
+    content_right_vw = _motif_content_right_margin(_W, _H, ROOT)
     assert f"--safe-l: {left_vw:g}vw" in poster_rule
     assert f"--safe-r: {right_vw:g}vw" in poster_rule
     assert f"--safe-r-content: {content_right_vw:g}vw" in poster_rule
 
 
 def test_the_content_right_margin_is_narrower_than_the_full_corridor() -> None:
-    """The whole point of `_ribbon_content_right_margin` existing as a
+    """The whole point of `_motif_content_right_margin` existing as a
     second function: `.content` would lose real width for nothing if it
     read the full-corridor `--safe-r` instead -- this is the property a
-    second bug rested on (see `_ribbon_content_right_margin`'s
+    second bug rested on (see `_motif_content_right_margin`'s
     own docstring for the collision that first exposed it: `.expect`'s copy
     re-wrapping into the "register" label beneath it)."""
-    _, full_right_vw = _ribbon_safe_margins(_W, _H, ROOT)
-    content_right_vw = _ribbon_content_right_margin(_W, _H, ROOT)
+    _, full_right_vw = _motif_safe_margins(_W, _H, ROOT)
+    content_right_vw = _motif_content_right_margin(_W, _H, ROOT)
     assert content_right_vw < full_right_vw
 
 
 def test_the_right_motif_never_reaches_below_its_own_tail_exit() -> None:
-    """The property `_ribbon_content_right_margin` relies on:
+    """The property `_motif_content_right_margin` relies on:
     `right_tail_exit` is the lowest any right-side on-curve point of the
-    ribbon ever reaches down the page. If `ribbon.waypoints` ever grew a
+    ribbon ever reaches down the page. If `motifs/ribbon.py::waypoints` ever grew a
     right-side point further down than that, `.content`'s own narrower
     margin would need widening to match -- this is the canary for that,
     checked at the same three aspect ratios the main safe-area property
@@ -839,7 +839,7 @@ def test_the_safe_area_clears_every_ribbon_waypoint_at_each_named_format() -> No
     the actual numbers a caller really renders at, not only placeholders
     that happen to share their shape."""
     for fmt in FORMATS:
-        left_vw, right_vw = _ribbon_safe_margins(fmt.width, fmt.height, ROOT)
+        left_vw, right_vw = _motif_safe_margins(fmt.width, fmt.height, ROOT)
         left_px = left_vw / 100.0 * fmt.width
         right_px = right_vw / 100.0 * fmt.width
 

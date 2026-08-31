@@ -3,7 +3,7 @@ instance, and the design ships whole rather than being demanded.
 
 Three things used to read `instance/data/brand.json`, each with its own two-line
 loader: `tools/scripts/generate_brand_css.py` for the two stylesheets,
-`ribbon.py` for the motif, `visual.py` for the colours. Three loaders were
+the ribbon for the motif, `visual.py` for the colours. Three loaders were
 harmless while there was exactly one file to load. They stopped being
 harmless the moment the file became optional: a duplicate that ships no
 `instance/data/brand.json` would have had one reader fall back to the product's own
@@ -41,8 +41,9 @@ palette that does not build.
 about this instance's own colours moved: the file is what it was.
 
 **`motif` has a default too, and its absence used to be the decision.**
-`motif` is the ribbon's stroke, how wide that stroke is drawn, and the
-colour of the wordmark's dots. It carried no default at first, on the
+`motif` names the drawing (`family`), the colour it is stroked in, how
+wide that stroke is drawn, and the colour of the wordmark's dots. It
+carried no default at first, on the
 reasoning that a mark somebody drew must not be lent to a duplicate that
 forgot to configure one. The first half of that is right and is not
 negotiable; the second does not follow from it, and what it produced was
@@ -58,19 +59,30 @@ on the public pages, which is the better guard of the two because it
 lets somebody watch the product work while they configure it.
 
 **What still refuses is a half-written one.** A `motif` an instance did
-write and left incomplete is a mistake rather than a choice -- a ribbon
-with no colour of its own would be drawn in whatever ink happened to
-surround it -- so `motif()` names the file and the missing fields instead
-of quietly filling them from somewhere else. Absence is answered;
+write and left incomplete is a mistake rather than a choice -- a drawing
+with no colour of its own would be inked in whatever happened to surround
+it -- so `motif()` names the file and the missing fields instead of
+quietly filling them from somewhere else. Absence is answered;
 incompleteness is refused. The same refusal covers the product's own
 charter losing its `motif`, which is the product being broken rather than
 an instance being unconfigured, and says so.
+
+**And a `motif` written in the shape that had one drawing.** While
+`ribbon.py` was the only mark there was, the section held `ribbon_stroke`
+and `ribbon_width_ratio` and named no family at all -- two field names
+that could only ever be true of that one drawing, and a section that
+could not say which drawing it meant. `SUPERSEDED_MOTIF_FIELDS` still
+knows those two spellings, and a section carrying no `family` is answered
+the same way, so a charter written before the rename is pointed at
+`MOTIF_MIGRATION` rather than meeting a `KeyError` inside a template. A
+`family` naming a drawing this product does not have is refused by
+`publication/motifs/` itself, which lists the ones it does.
 
 The arithmetic lives here, not in the generator
 -------------------------------------------------
 WCAG 2.1 relative luminance and contrast are needed on both sides: by
 `generate_brand_css.py`, which refuses to write a stylesheet from a
-palette that fails AA, and by `visual.py`/`ribbon.py`, which are inside
+palette that fails AA, and by `visual.py`, which is inside
 this package and cannot import `tools/scripts/` (`tools/pyproject.toml`'s wheel
 ships `convener_ops` alone). One implementation, imported by the script, rather
 than the script owning it and the package doing without.
@@ -83,15 +95,20 @@ from pathlib import Path
 from typing import Any, Final
 
 from ..declaration.paths import DATA_DIR
+from . import motifs
 
 __all__ = [
     "AA_NORMAL_TEXT",
     "COLOUR_MIGRATION",
     "DEFAULT_PATH",
     "INSTANCE_PATH",
+    "MOTIF_COMMON_FIELDS",
+    "MOTIF_FAMILY",
     "MOTIF_FIELDS",
     "MOTIF_KEY",
+    "MOTIF_MIGRATION",
     "SUPERSEDED_COLOURS",
+    "SUPERSEDED_MOTIF_FIELDS",
     "MissingMotifError",
     "SupersededCharterError",
     "colours",
@@ -100,6 +117,9 @@ __all__ = [
     "hex_to_rgb",
     "load",
     "motif",
+    "motif_family",
+    "motif_stroke",
+    "motif_width_ratio",
     "relative_luminance",
     "rgb_triplet",
     "rgba",
@@ -118,11 +138,46 @@ INSTANCE_PATH: Final = DATA_DIR / "brand.json"
 #: mark are one identity instead of two.
 DEFAULT_PATH: Final = Path("brand") / "convener" / "brand.json"
 
-#: The design section, and the three fields it has to carry wherever it
-#: is written. `brand/convener/brand.json` carries one, so an instance
-#: never has to; what it may not do is write half of one.
+#: The design section. `brand/convener/brand.json` carries one, so an
+#: instance never has to; what it may not do is write half of one.
 MOTIF_KEY: Final = "motif"
-MOTIF_FIELDS: Final = ("ribbon_stroke", "ribbon_width_ratio", "logo_dots")
+
+#: The field that names the drawing. Every other field in the section says
+#: how that drawing is inked, and `publication/motifs/` is where a name
+#: becomes one -- see that package for why a charter names a family rather
+#: than a module importing one.
+MOTIF_FAMILY: Final = "family"
+
+#: What a `motif` carries whatever it draws: the drawing's own name, and
+#: the colour of the wordmark's four squares, which belong to the wordmark
+#: rather than to the drawing.
+MOTIF_COMMON_FIELDS: Final = (MOTIF_FAMILY, "logo_dots")
+
+#: What a complete `motif` carries, per family. A flat tuple until the
+#: motif became a choice: `ribbon_stroke` and `ribbon_width_ratio` could
+#: only ever be true of one drawing, and a family that is not a stroked
+#: line declares different fields, so the family says which ones it wants
+#: and this reads them off the registry rather than holding a second list
+#: that could disagree with it.
+MOTIF_FIELDS: Final[dict[str, tuple[str, ...]]] = {
+    name: (*MOTIF_COMMON_FIELDS, *drawn.fields)
+    for name, drawn in motifs.FAMILIES.items()
+}
+
+#: The two field names a `motif` carried while there was one drawing, and
+#: what each became. Both name the ink rather than the drawing -- the
+#: colour the motif is stroked in, and that stroke's weight as a fraction
+#: of the composition's shorter side -- so both stay true of a drawing that
+#: is not the ribbon, and neither keeps the ribbon's name.
+#: `tools/migrations/migrate_motif_family.py` renames from this same table.
+SUPERSEDED_MOTIF_FIELDS: Final = {
+    "ribbon_stroke": "stroke",
+    "ribbon_width_ratio": "width_ratio",
+}
+
+#: The command that renames them and writes the family down, quoted in the
+#: refusal, as it is run from `tools/`.
+MOTIF_MIGRATION: Final = "uv run python migrations/migrate_motif_family.py"
 
 #: WCAG 2.1's floor for normal text. AAA is 7; nothing here is held to
 #: AAA, because the charter records pairings that are legitimately AA.
@@ -151,13 +206,16 @@ COLOUR_MIGRATION: Final = "uv run python migrations/migrate_charter_colour_names
 
 
 class SupersededCharterError(RuntimeError):
-    """A charter whose colours are still named after hues.
+    """A charter still written in a shape this product has moved past.
 
-    The keys are the system's, and every template reads a colour by name,
-    so a file under the old names answers none of the names anything asks
-    for. A duplicate that upgrades without running the migration would
-    otherwise meet a `KeyError` raised from inside a format string, which
-    names neither the file to open nor the command to run.
+    Two of them, and one sentence covers both: the keys are the system's,
+    and every template reads a colour and a motif field by name, so a file
+    under the old names answers none of the names anything asks for.
+    Colours named after hues is the first; a `motif` under the ribbon's own
+    field names, or naming no family at all, is the second. A duplicate
+    that upgrades without running the migration would otherwise meet a
+    `KeyError` raised from inside a format string, which names neither the
+    file to open nor the command to run.
 
     Carries the whole message rather than a code, for the reason
     `MissingMotifError` gives.
@@ -168,9 +226,11 @@ class MissingMotifError(RuntimeError):
     """A `motif` that was written and left half-finished.
 
     Not "no `motif`": an absent one is answered by the product's own, and
-    `motif` below says why. This is the case nothing can answer -- a
-    section somebody wrote, missing a field, which no default may quietly
-    complete without inventing a value that appears in no file.
+    `motif` below says why. Not a superseded one either, which
+    `SupersededCharterError` answers by name. This is the case nothing can
+    answer -- a section somebody wrote, missing a field the family it names
+    declares, which no default may quietly complete without inventing a
+    value that appears in no file.
 
     Carries the whole message rather than a code: the thing a person needs
     at the moment a build stops is what is missing and where to put it,
@@ -201,9 +261,22 @@ def load(root: Path) -> dict[str, Any]:
     an instance that overrode two colours and inherited six would be
     measured against a palette that exists in no file.
     """
-    named = source(root)
-    charter = _read(root, named)
-    _refuse_superseded_names(charter, named=named.as_posix())
+    return _checked(root, source(root))
+
+
+def _checked(root: Path, rel: Path) -> dict[str, Any]:
+    """One charter file, parsed, with every superseded spelling refused.
+
+    Both refusals run here rather than at each lookup: the alternative is
+    one `KeyError` per template, each of them the first thing a duplicate
+    sees after an upgrade and none of them naming the migration. `motif`
+    reads the product's own charter through this too, so a default written
+    in the old shape is answered the same way as an instance's.
+    """
+    charter = _read(root, rel)
+    named = rel.as_posix()
+    _refuse_superseded_names(charter, named=named)
+    _refuse_superseded_motif(charter.get(MOTIF_KEY), named=named)
     return charter
 
 
@@ -232,6 +305,53 @@ def _refuse_superseded_names(charter: dict[str, Any], *, named: str) -> None:
         "template reads a colour by that name. Run "
         f"`{COLOUR_MIGRATION}` from `tools/` to rename them; no value changes."
     )
+
+
+def _refuse_superseded_motif(section: Any, *, named: str) -> None:
+    """Stop on a `motif` written for the one drawing there used to be.
+
+    Three shapes, and the first two point at the same migration. A section
+    still under `ribbon_stroke` and `ribbon_width_ratio` names the ink
+    after the drawing, which is the defect the colour keys had one section
+    higher up. A section naming no `family` cannot say which drawing it
+    means, and guessing the ribbon is exactly the silent fall back the
+    registry exists to refuse. A `family` this product cannot draw is the
+    registry's own refusal, prefixed here with the file that wrote it.
+
+    A section that is not an object at all is left to `motif`, which
+    answers it as the half-written one it is.
+    """
+    if not isinstance(section, dict):
+        return
+
+    found = sorted(key for key in section if key in SUPERSEDED_MOTIF_FIELDS)
+    if found:
+        moved = ", ".join(
+            f"{old} -> {new}" for old, new in SUPERSEDED_MOTIF_FIELDS.items()
+        )
+        raise SupersededCharterError(
+            f"{named} names its {MOTIF_KEY} fields after the ribbon "
+            f"({', '.join(found)}). The section names the drawing it wants "
+            f"now ({MOTIF_FAMILY}), and the colour and weight it is stroked "
+            f"in are the same two fields whatever that drawing is ({moved}). "
+            f"Run `{MOTIF_MIGRATION}` from `tools/` to rename them and write "
+            "the family down; no value changes."
+        )
+
+    if MOTIF_FAMILY not in section:
+        raise SupersededCharterError(
+            f"{named} has a {MOTIF_KEY!r} section naming no {MOTIF_FAMILY!r}. "
+            f"A charter says which drawing it wants by name ({motifs.names()}) "
+            "now, and drawing whichever one this product happens to have "
+            "would hand a duplicate a "
+            f"mark it never asked for. Run `{MOTIF_MIGRATION}` from `tools/` "
+            "to write the family down; no value changes."
+        )
+
+    try:
+        motifs.family(str(section[MOTIF_FAMILY]))
+    except motifs.UnknownMotifFamilyError as unknown:
+        raise motifs.UnknownMotifFamilyError(f"{named}: {unknown}") from unknown
 
 
 def _read(root: Path, rel: Path) -> dict[str, Any]:
@@ -275,21 +395,22 @@ def motif(root: Path) -> dict[str, Any]:
 
     Case 2 reads the product's charter by path rather than merging it into
     the charter in force, so this stays whole-section-or-whole-section: an
-    instance gets its own three values or the product's three, never one
-    of each.
+    instance gets its own section or the product's, never one field of
+    each.
     """
     named = source(root)
-    section = load(root).get(MOTIF_KEY)
+    section = _checked(root, named).get(MOTIF_KEY)
     if section is None and named != DEFAULT_PATH:
         named = DEFAULT_PATH
-        section = _read(root, DEFAULT_PATH).get(MOTIF_KEY)
+        section = _checked(root, DEFAULT_PATH).get(MOTIF_KEY)
 
+    wanted = _fields_a_complete_motif_carries(section)
     if isinstance(section, dict):
-        missing = [field for field in MOTIF_FIELDS if field not in section]
+        missing = [field for field in wanted if field not in section]
         if not missing:
             return dict(section)
     else:
-        missing = list(MOTIF_FIELDS)
+        missing = list(MOTIF_COMMON_FIELDS)
 
     lacking = ", ".join(missing)
     if named == DEFAULT_PATH:
@@ -299,18 +420,75 @@ def motif(root: Path) -> dict[str, Any]:
             "duplicate that has written no mark of its own is drawn with that "
             "one, so this is the product being broken rather than an instance "
             f"being unconfigured. Restore it, or write a complete {MOTIF_KEY!r} "
-            f"object carrying {', '.join(MOTIF_FIELDS)} in "
+            f"object carrying {_how_to_write_one(wanted)} in "
             f"{INSTANCE_PATH.as_posix()} to stand in for it."
         )
     raise MissingMotifError(
         f"{named.as_posix()} has a {MOTIF_KEY!r} section and it is not a "
-        f"complete one: missing {lacking}. A ribbon with no colour of its own "
-        "would be drawn in whatever ink happened to surround it, so half a "
+        f"complete one: missing {lacking}. A drawing with no colour of its own "
+        "would be inked in whatever happened to surround it, so half a "
         f"{MOTIF_KEY!r} is refused rather than completed. Either finish it -- "
-        f"{', '.join(MOTIF_FIELDS)}, see brand/convener/README.md for what "
+        f"{_how_to_write_one(wanted)}, see brand/convener/README.md for what "
         "each one is -- or delete the section outright and the product's own "
         f"({DEFAULT_PATH.as_posix()}) is drawn instead."
     )
+
+
+def _fields_a_complete_motif_carries(section: Any) -> tuple[str, ...]:
+    """What this `motif` has to carry, given the family it names.
+
+    A section that names a family the registry knows is held to that
+    family's own list. One that names none is past `_refuse_superseded_
+    motif` only by not being an object at all, and the two fields every
+    motif carries are all that can be said about it without inventing a
+    family for it.
+    """
+    if isinstance(section, dict):
+        name = section.get(MOTIF_FAMILY)
+        if isinstance(name, str) and name in MOTIF_FIELDS:
+            return MOTIF_FIELDS[name]
+    return MOTIF_COMMON_FIELDS
+
+
+def _how_to_write_one(wanted: tuple[str, ...]) -> str:
+    """The fields to write, said so that it stays true when the family is
+    not known yet: a section that names one is answered with that family's
+    own list, and one that names none is answered with what every family
+    would want beside the two every motif carries."""
+    if wanted != MOTIF_COMMON_FIELDS:
+        return ", ".join(wanted)
+    declared = "; ".join(
+        f"{name} needs {', '.join(drawn.fields)}"
+        for name, drawn in sorted(motifs.FAMILIES.items())
+    )
+    return f"{', '.join(wanted)}, and what that family draws with ({declared})"
+
+
+def motif_family(root: Path) -> str:
+    """Which drawing the charter in force asks for.
+
+    Hand this to `publication/motifs/` to get the geometry; nothing outside
+    that package may import a family by name, which is the whole of what
+    naming the family in the charter bought.
+    """
+    return str(motif(root)[MOTIF_FAMILY])
+
+
+def motif_stroke(root: Path) -> str:
+    """The one colour the motif is ever drawn in -- never hand-typed."""
+    return str(motif(root)["stroke"])
+
+
+def motif_width_ratio(root: Path) -> float:
+    """Stroke width as a fraction of the canvas's shorter side.
+
+    Each charter says where its own figure comes from, and the two do not
+    come from the same place: this instance's was measured off the
+    designer's poster (`instance/data/brand.json::motif._width_ratio`), and
+    the product's is carried over from the proportion its own mark's inner
+    arc is drawn at (`brand/convener/brand.json`).
+    """
+    return float(motif(root)["width_ratio"])
 
 
 # --------------------------------------------------------------------------

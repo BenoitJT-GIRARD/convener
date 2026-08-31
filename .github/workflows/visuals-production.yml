@@ -119,7 +119,7 @@ on:
     branches: [main]
     paths:
       - 'tools/convener_ops/publication/visual.py'
-      - 'tools/convener_ops/publication/ribbon.py'
+      - 'tools/convener_ops/publication/motifs/**'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'

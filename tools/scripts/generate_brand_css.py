@@ -29,8 +29,8 @@ upstream over them. A duplicate that has not chosen colours yet has no such
 file at all, and `convener_ops.publication.brand.load` reads the product's own charter,
 `brand/convener/brand.json`, instead -- so a fresh duplicate builds a
 finished-looking site rather than a grey one. Which of the two is in force
-is `brand.py`'s answer and nobody else's; this script, `ribbon.py` and
-`visual.py` all ask it.
+is `brand.py`'s answer and nobody else's; this script, `brand_templates.py`
+and `visual.py` all ask it.
 
 **`motif` has a default of its own too, since 2026-08-26.** It had none
 until then, so that no duplicate could wear a mark somebody else drew --
@@ -130,7 +130,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand, brand_templates
+from convener_ops.publication import brand, brand_templates, motifs
 from convener_ops.publication.brand import rgb_triplet, rgba
 
 #: The instance's own values, relative to the repository root. Not "the one
@@ -179,8 +179,8 @@ _APP_SELECT_ALPHA: Final = 0.25
 def load_brand(root: Path) -> dict[str, Any]:
     """The charter in force -- the instance's values, or the product's own.
 
-    One line, and it is `convener_ops.publication.brand`'s: this script, `ribbon.py` and
-    `visual.py` each used to carry their own two-line loader, which was
+    One line, and it is `convener_ops.publication.brand`'s: this script, the
+    ribbon and `visual.py` each used to carry their own two-line loader, which was
     harmless while `instance/data/brand.json` was the only file there was to load
     and stopped being harmless the moment it became optional.
     """
@@ -405,13 +405,17 @@ def main(argv: list[str] | None = None) -> int:
     root = repo_root()
     named = brand.source(root).as_posix()
 
-    # A charter still naming its colours after hues, before anything is
-    # measured: it answers none of the names the templates below ask for,
-    # so the one useful thing to print is which file it is and which
-    # migration renames it.
+    # A charter still written in a shape this product has moved past --
+    # colours named after hues, a `motif` under the ribbon's own field
+    # names or naming no family at all -- before anything is measured: it
+    # answers none of the names the templates below ask for, so the one
+    # useful thing to print is which file it is and which migration
+    # rewrites it. A `family` naming a drawing that does not exist is the
+    # same moment and the same one useful thing to print, and never a
+    # fall back to whichever drawing this product happens to have.
     try:
         charter = brand.load(root)
-    except brand.SupersededCharterError as exc:
+    except (brand.SupersededCharterError, motifs.UnknownMotifFamilyError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

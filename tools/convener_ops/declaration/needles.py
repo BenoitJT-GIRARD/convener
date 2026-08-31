@@ -66,7 +66,7 @@ def needles(root: Path) -> dict[str, str]:
     - **`published.Published.publish_repository`.** It is where a build is
       pushed, read by two workflows and by nothing that renders. Its two
       halves are already needles (`host`, `path_prefix`).
-    - **`motif.ribbon_width_ratio`.** The templates multiply it by a
+    - **`motif.width_ratio`.** The templates multiply it by a
       dimension and write the product, so the ratio itself never reaches
       an artefact.
     - **`typography`.** Both the product's default charter and this

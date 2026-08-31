@@ -1,13 +1,15 @@
-"""The charter's ribbon: pin what makes it that ribbon, not the bytes.
+"""The `ribbon` family: pin what makes it that ribbon, not the bytes.
 
 A path string that happens to equal a stored literal would pass for a wrong
 ribbon and fail for a better one -- see `ribbon.py`'s own docstring for the
 defect this replaces (four bare `<circle>` elements) and what the reference
 poster actually shows. What is pinned here instead is what has to be
 provable: one continuous stroke rather than disjoint
-pieces, a stroke that leaves the frame, a width that tracks the shorter
-side, and a shape that adapts to aspect ratio rather than stretching. Each
-of the four has its own test, named so a mutation report can point at it.
+pieces, a stroke that leaves the frame, and a shape that adapts to aspect
+ratio rather than stretching. Each has its own test, named so a mutation
+report can point at it. The fourth property that used to be here -- a
+width that tracks the shorter side -- is the motif's rather than this
+family's, and `test_registry.py` pins it where `stroke_width` now lives.
 """
 
 from __future__ import annotations
@@ -16,9 +18,7 @@ import re
 
 import pytest
 
-from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand
-from convener_ops.publication.ribbon import (
+from convener_ops.publication.motifs.ribbon import (
     Point,
     Waypoints,
     _arc_points,
@@ -28,14 +28,9 @@ from convener_ops.publication.ribbon import (
     _edge_gap,
     _fmt,
     _short_side,
-    ribbon_path,
-    ribbon_stroke_colour,
-    ribbon_stroke_width,
-    ribbon_width_ratio,
+    path,
     waypoints,
 )
-
-ROOT = repo_root()
 
 
 def _numbers(text: str) -> list[float]:
@@ -56,58 +51,7 @@ def _points(text: str) -> list[Point]:
 
 
 # ---------------------------------------------------------------------------
-# instance/data/brand.json wiring -- the colour and ratio are read, never hand-typed
-# ---------------------------------------------------------------------------
-
-
-def test_ribbon_stroke_colour_reads_brand_json() -> None:
-    assert ribbon_stroke_colour(ROOT) == "#012765"
-
-
-def test_ribbon_width_ratio_reads_brand_json() -> None:
-    """It reads the charter, which is the whole claim in the name.
-
-    The expected value used to be `0.024` -- one instance's
-    measured ratio, in a test of the *product's* reader, which therefore
-    said nothing about reading and everything about which repository it
-    ran in. See `instance/data/brand.json::motif._ribbon_width_ratio` for how a
-    ratio is measured against a reference poster.
-    """
-    charter = brand.load(ROOT)
-    assert ribbon_width_ratio(ROOT) == charter["motif"]["ribbon_width_ratio"]
-
-
-# ---------------------------------------------------------------------------
-# Property 1: stroke width tracks the shorter side
-# ---------------------------------------------------------------------------
-
-
-def test_stroke_width_tracks_the_shorter_side_not_the_longer_one() -> None:
-    # Same short side (1000), wildly different long side: the width must
-    # not move. A `max` in place of `min` inside `ribbon_stroke_width`
-    # breaks exactly this -- confirmed by mutating it and watching this
-    # test fail, not assumed.
-    square = ribbon_stroke_width(1000, 1000, ratio=0.02)
-    tall = ribbon_stroke_width(1000, 5000, ratio=0.02)
-    wide = ribbon_stroke_width(5000, 1000, ratio=0.02)
-    assert square == tall == wide == pytest.approx(20.0)
-
-
-def test_stroke_width_scales_with_the_short_side_when_it_changes() -> None:
-    small = ribbon_stroke_width(1000, 1000, ratio=0.02)
-    big = ribbon_stroke_width(2000, 2000, ratio=0.02)
-    assert big == pytest.approx(2 * small)
-
-
-def test_stroke_width_rejects_a_non_positive_canvas() -> None:
-    with pytest.raises(ValueError, match="positive"):
-        ribbon_stroke_width(0, 100, ratio=0.02)
-    with pytest.raises(ValueError, match="positive"):
-        ribbon_stroke_width(100, -1, ratio=0.02)
-
-
-# ---------------------------------------------------------------------------
-# Property 2: the shape adapts to aspect ratio rather than being stretched
+# Property 1: the shape adapts to aspect ratio rather than being stretched
 # ---------------------------------------------------------------------------
 
 
@@ -172,7 +116,7 @@ def test_short_side_is_the_minimum_of_the_two() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Property 3: the stroke leaves the frame -- it is not a closed shape
+# Property 2: the stroke leaves the frame -- it is not a closed shape
 # inside the canvas, the defect the four bare circles stood in for
 # ---------------------------------------------------------------------------
 
@@ -236,27 +180,27 @@ def test_connector_never_crosses_back_into_the_canvas_rectangle() -> None:
             assert outside or (x, y) == pytest.approx(end)
 
 
-def test_ribbon_path_leaves_the_canvas_rectangle() -> None:
+def test_path_leaves_the_canvas_rectangle() -> None:
     width, height = 900, 1200
-    points = _points(ribbon_path(width, height))
+    points = _points(path(width, height))
     xs = [p[0] for p in points]
     assert min(xs) < 0, "the left gap should bulge past the left edge"
     assert max(xs) > width, "the right loop should turn past the right edge"
 
 
 # ---------------------------------------------------------------------------
-# Property 4: one continuous stroke, not disjoint pieces
+# Property 3: one continuous stroke, not disjoint pieces
 # ---------------------------------------------------------------------------
 
 
-def test_ribbon_path_is_a_single_continuous_subpath() -> None:
+def test_path_is_a_single_continuous_subpath() -> None:
     # Exactly one `M` (a single starting point) and no `Z` (nothing closes
     # into a shape) -- the structural difference between "one continuous
     # meandering stroke" and "four bare circles". Splicing a second `M`
-    # into the middle of `ribbon_path` (simulating a disjoint second piece)
+    # into the middle of `path` (simulating a disjoint second piece)
     # breaks exactly this -- confirmed by mutating it and watching this
     # test fail, not assumed.
-    d = ribbon_path(900, 1200)
+    d = path(900, 1200)
     commands = d.split("\n")
     moves = [line for line in commands if line.startswith("M")]
     closes = [line for line in commands if line.strip().upper().startswith("Z")]
@@ -264,8 +208,8 @@ def test_ribbon_path_is_a_single_continuous_subpath() -> None:
     assert closes == []
 
 
-def test_ribbon_path_has_only_cubic_segments_after_the_move() -> None:
-    d = ribbon_path(900, 1200)
+def test_path_has_only_cubic_segments_after_the_move() -> None:
+    d = path(900, 1200)
     commands = d.split("\n")
     assert commands[0].startswith("M")
     assert all(line.startswith("C") for line in commands[1:])
@@ -274,19 +218,19 @@ def test_ribbon_path_has_only_cubic_segments_after_the_move() -> None:
     assert len(commands) > 15
 
 
-def test_ribbon_path_starts_where_waypoints_says_it_does() -> None:
+def test_path_starts_where_waypoints_says_it_does() -> None:
     # Not a pin on the full string -- a pin on the one relationship that
     # must hold between the two public entry points this module offers.
     width, height = 900, 1200
-    d = ribbon_path(width, height)
+    d = path(width, height)
     first_line = d.split("\n", 1)[0]
     x, y = _numbers(first_line)
     assert (x, y) == pytest.approx(waypoints(width, height).left_top_entry, abs=0.01)
 
 
-def test_ribbon_path_rejects_a_non_positive_canvas() -> None:
+def test_path_rejects_a_non_positive_canvas() -> None:
     with pytest.raises(ValueError, match="positive"):
-        ribbon_path(0, 100)
+        path(0, 100)
 
 
 # ---------------------------------------------------------------------------
@@ -351,7 +295,7 @@ def test_fmt_never_prints_negative_zero() -> None:
 
 
 def test_waypoints_is_a_plain_dataclass_with_the_documented_shape() -> None:
-    # Guards the public shape `ribbon_path` and any future consumer (task
+    # Guards the public shape `path` and any future consumer (task
     # 2's composition) both rely on -- a field renamed or retyped here
     # would not otherwise fail loudly.
     w = waypoints(400, 400)

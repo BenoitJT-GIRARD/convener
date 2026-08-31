@@ -17,8 +17,9 @@ name: Visuals
 # - `tools/convener_ops/publication/visual.py` -- the composition itself (the HTML/CSS
 #   `render_announcement` builds) and `FIXTURE_ANNOUNCEMENT`, the fixed
 #   identity the reference images are rendered from.
-# - `tools/convener_ops/publication/ribbon.py` -- the ribbon's own path, colour and stroke
-#   width; painted last, on top of everything else.
+# - `tools/convener_ops/publication/motifs/**` -- the registry a charter names
+#   a drawing through, and each family's own path; painted last, on top of
+#   everything else.
 # - `tools/convener_ops/publication/registration_code.py` -- the QR code generator;
 #   its own pixels are part of every rendered format.
 # - `tools/convener_ops/publication/formats.py` -- the three named canvas sizes and
@@ -65,7 +66,7 @@ name: Visuals
 #   anywhere in this repository can read.
 # - `instances/example/instance/data/brand.json` -- the charter the fixture is
 #   rendered from, reached through `tools/convener_ops/publication/brand.py` by
-#   `visual.py`'s `_load_colours` and `ribbon.py`'s `_load_motif`. The
+#   `visual.py`'s `_load_colours` and `brand.py`'s `motif`. The
 #   example's, for the reason two entries up.
 # - `tools/convener_ops/publication/brand.py` -- the reader itself: which charter is in
 #   force, and which `motif` is drawn when that charter declares none.
@@ -138,7 +139,7 @@ on:
     # for the sweep that refuses one anywhere else in this repository too.
     paths:
       - 'tools/convener_ops/publication/visual.py'
-      - 'tools/convener_ops/publication/ribbon.py'
+      - 'tools/convener_ops/publication/motifs/**'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'
@@ -160,7 +161,7 @@ on:
     # tools/tests/test_visuals_workflow.py.
     paths:
       - 'tools/convener_ops/publication/visual.py'
-      - 'tools/convener_ops/publication/ribbon.py'
+      - 'tools/convener_ops/publication/motifs/**'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'

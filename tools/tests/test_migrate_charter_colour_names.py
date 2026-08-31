@@ -92,8 +92,9 @@ OLD_CHARTER = """\
   },
 
   "motif": {
-    "ribbon_stroke": "#123456",
-    "ribbon_width_ratio": 0.02,
+    "family": "ribbon",
+    "stroke": "#123456",
+    "width_ratio": 0.02,
     "logo_dots": "#f0c419"
   },
 
@@ -147,7 +148,8 @@ def _colour_names(text: str) -> list[str]:
         ("black", "black"),
         ("_roles", "_roles"),
         ("_comment", "_comment"),
-        ("ribbon_stroke", "ribbon_stroke"),
+        ("stroke", "stroke"),
+        ("width_ratio", "width_ratio"),
     ],
 )
 def test_a_key_takes_the_name_of_the_position_it_holds(before: str, after: str) -> None:

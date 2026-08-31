@@ -105,7 +105,7 @@ def test_the_registration_code_is_drawn_in_brand_black() -> None:
     """`render_announcement` threads `instance/data/brand.json`'s own "black" into
     the code -- not a hand-typed literal that happens to match today (the
     guard `test_visual.py::
-    test_no_brand_colour_hand_typed_outside_root_or_ribbon_stroke` already
+    test_no_brand_colour_hand_typed_outside_root_or_motif_stroke` already
     runs against this page; segno renders a doubled hex triple such as
     "#000000" in its own shortened three-digit form, so that guard's
     literal substring search would not have caught a hand-typed value here

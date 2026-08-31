@@ -68,7 +68,7 @@ from generate_brand_css import (
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication import brand, brand_templates, ribbon, visual
+from convener_ops.publication import brand, brand_templates, motifs, visual
 from convener_ops.publication.brand import (
     contrast_ratio,
     hex_to_rgb,
@@ -388,8 +388,9 @@ def _write_json(path: Path, data: Any) -> None:
 _SYNTHETIC_STROKE = "#123456"
 _SYNTHETIC_DOTS = "#654321"
 _SYNTHETIC_MOTIF: dict[str, Any] = {
-    "ribbon_stroke": _SYNTHETIC_STROKE,
-    "ribbon_width_ratio": 0.02,
+    brand.MOTIF_FAMILY: motifs.RIBBON.name,
+    "stroke": _SYNTHETIC_STROKE,
+    "width_ratio": 0.02,
     "logo_dots": _SYNTHETIC_DOTS,
 }
 
@@ -596,7 +597,8 @@ def test_the_default_charter_carries_a_motif_of_its_own() -> None:
     the answer from drifting into somebody else's.
     """
     section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
-    assert [field for field in brand.MOTIF_FIELDS if field not in section] == []
+    wanted = brand.MOTIF_FIELDS[section[brand.MOTIF_FAMILY]]
+    assert [field for field in wanted if field not in section] == []
 
 
 def test_the_default_motif_is_the_products_own_mark() -> None:
@@ -605,12 +607,14 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
     Every value is read back out of a file this repository already
     ships -- the two colours off `convener-mark.svg`, and the stroke
     weight the same file draws its inner arc at, carried onto the two
-    curls `ribbon.py` builds. A default motif nobody can trace is exactly
+    curls `motifs/ribbon.py` builds. A default motif nobody can trace is exactly
     what the refusal it replaced was afraid of.
     """
     section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
     instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
-    for field in brand.MOTIF_FIELDS:
+    for field in brand.MOTIF_FIELDS[section[brand.MOTIF_FAMILY]]:
+        if field == brand.MOTIF_FAMILY:
+            continue
         assert section[field] != instance[field], (
             f"{field} is this instance's own value wearing the product's name"
         )
@@ -619,7 +623,7 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
         encoding="utf-8"
     )
     colours = _charter_colours(brand.DEFAULT_PATH)
-    assert section["ribbon_stroke"] == colours["dominant"], (
+    assert section["stroke"] == colours["dominant"], (
         "the ribbon is drawn in the charter's own dominant ink, which "
         "`colour._roles` already names as the ribbon's colour"
     )
@@ -630,7 +634,7 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
     inner_stroke, inner_radius = 25.86, 131.72
     for radius in (0.105, 0.103):
         carried = inner_stroke / inner_radius * radius
-        assert abs(section["ribbon_width_ratio"] - carried) / carried < 0.011, (
+        assert abs(section["width_ratio"] - carried) / carried < 0.011, (
             "the stroke weight is the mark's inner arc, at the size the "
             "ribbon draws it: the midpoint of what the two curls give, "
             "1.0 percent from one and 0.9 percent from the other"
@@ -689,7 +693,7 @@ def test_a_duplicate_with_no_charter_at_all_is_drawn_with_the_products_motif(
     """
     section = brand.motif(default_repo)
     default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
-    for field in brand.MOTIF_FIELDS:
+    for field in brand.MOTIF_FIELDS[default[brand.MOTIF_FAMILY]]:
         assert section[field] == default[field]
 
 
@@ -712,9 +716,10 @@ def test_an_instance_that_wrote_colours_but_no_motif_gets_the_products(
     section = brand.motif(fake_repo)
     default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
     instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
-    for field in brand.MOTIF_FIELDS:
+    for field in brand.MOTIF_FIELDS[default[brand.MOTIF_FAMILY]]:
         assert section[field] == default[field]
-        assert section[field] != instance[field]
+        if field != brand.MOTIF_FAMILY:
+            assert section[field] != instance[field]
 
 
 def test_a_charter_whose_motif_is_incomplete_is_refused_by_the_missing_field(
@@ -741,8 +746,103 @@ def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> N
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
     data[brand.MOTIF_KEY] = "the usual one"
     _write_json(fake_repo / BRAND_PATH, data)
-    with pytest.raises(brand.MissingMotifError, match="ribbon_stroke"):
+    with pytest.raises(brand.MissingMotifError, match=brand.MOTIF_FAMILY):
         brand.motif(fake_repo)
+
+
+def test_a_charter_still_writing_the_ribbons_own_field_names_is_refused(
+    fake_repo: Path,
+) -> None:
+    """The defect one section down from the colour keys: `ribbon_stroke`
+    names the ink after one drawing, and a charter whose motif is a
+    lattice would be writing it too.
+
+    Answered by name at the load, not by a `KeyError` from inside a
+    template, and pointed at the migration that renames it.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    section = data[brand.MOTIF_KEY]
+    for old, new in brand.SUPERSEDED_MOTIF_FIELDS.items():
+        section[old] = section.pop(new)
+    del section[brand.MOTIF_FAMILY]
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    with pytest.raises(brand.SupersededCharterError) as raised:
+        brand.load(fake_repo)
+
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert brand.MOTIF_MIGRATION in message
+    for old, new in brand.SUPERSEDED_MOTIF_FIELDS.items():
+        assert old in message
+        assert new in message
+
+
+def test_a_motif_that_names_no_family_is_refused_and_says_what_to_run(
+    fake_repo: Path,
+) -> None:
+    """A section that cannot say which drawing it means. Guessing the one
+    this product used to draw is the silent fall back the registry exists
+    to refuse, so this stops instead and names the migration."""
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    del data[brand.MOTIF_KEY][brand.MOTIF_FAMILY]
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    with pytest.raises(brand.SupersededCharterError) as raised:
+        brand.load(fake_repo)
+
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert brand.MOTIF_FAMILY in message
+    assert brand.MOTIF_MIGRATION in message
+
+
+def test_a_family_this_product_cannot_draw_is_refused_by_name(
+    fake_repo: Path,
+) -> None:
+    """Never a fall back to the drawing that happens to exist: the file
+    and the name it wrote, and every family it could have written."""
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = "lattice"
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    with pytest.raises(motifs.UnknownMotifFamilyError) as raised:
+        brand.load(fake_repo)
+
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert "lattice" in message
+    for name in motifs.FAMILIES:
+        assert name in message
+
+
+def test_the_command_refuses_a_superseded_motif_and_names_the_migration(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Driven rather than read: the build stops before it measures a
+    single contrast, because a charter nothing can draw from is not a
+    palette question."""
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    del data[brand.MOTIF_KEY][brand.MOTIF_FAMILY]
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert brand.MOTIF_MIGRATION in captured.err
+    assert "clears AA" not in captured.out
+
+
+def test_the_command_refuses_a_family_it_cannot_draw(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = "lattice"
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert "lattice" in captured.err
+    assert motifs.RIBBON.name in captured.err
 
 
 def test_the_products_own_charter_losing_its_motif_refuses_and_says_whose(
@@ -760,19 +860,23 @@ def test_the_products_own_charter_losing_its_motif_refuses_and_says_whose(
         brand.motif(default_repo)
     message = str(raised.value)
     assert brand.DEFAULT_PATH.as_posix() in message
-    for field in brand.MOTIF_FIELDS:
+    for field in brand.MOTIF_COMMON_FIELDS:
         assert field in message
+    for drawn in motifs.FAMILIES.values():
+        for field in drawn.fields:
+            assert field in message
 
 
 def test_the_ribbon_draws_the_products_mark_when_the_instance_has_none(
     default_repo: Path,
 ) -> None:
     """The generated posters complete as well, not only the downloadable
-    templates: `ribbon.py` is the other thing that draws the mark.
+    templates: `motifs/` is the other thing that draws the mark.
     """
     default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
-    assert ribbon.ribbon_stroke_colour(default_repo) == default["ribbon_stroke"]
-    assert ribbon.ribbon_width_ratio(default_repo) == default["ribbon_width_ratio"]
+    assert brand.motif_family(default_repo) == default[brand.MOTIF_FAMILY]
+    assert brand.motif_stroke(default_repo) == default["stroke"]
+    assert brand.motif_width_ratio(default_repo) == default["width_ratio"]
 
 
 def test_a_duplicate_that_has_configured_nothing_builds_every_file(
@@ -795,9 +899,9 @@ def test_a_duplicate_that_has_configured_nothing_builds_every_file(
     instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
     for rel in (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH):
         svg = (default_repo / rel).read_text(encoding="utf-8")
-        assert str(default["ribbon_stroke"]) in svg
+        assert str(default["stroke"]) in svg
         assert str(default["logo_dots"]) in svg
-        assert str(instance["ribbon_stroke"]) not in svg
+        assert str(instance["stroke"]) not in svg
         assert str(instance["logo_dots"]) not in svg
 
     written = (default_repo / SITE_CSS_PATH).read_text(encoding="utf-8")
@@ -813,13 +917,13 @@ def test_the_command_refuses_a_half_written_mark_and_says_what_is_missing(
     field and both ways out, and leaves no half-written template behind.
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    del data[brand.MOTIF_KEY]["ribbon_stroke"]
+    del data[brand.MOTIF_KEY]["stroke"]
     _write_json(fake_repo / BRAND_PATH, data)
     (fake_repo / ANNOUNCEMENT_SVG_PATH).unlink(missing_ok=True)
 
     assert main([]) == 1
     captured = capsys.readouterr()
-    assert "ribbon_stroke" in captured.err
+    assert "stroke" in captured.err
     assert brand.INSTANCE_PATH.as_posix() in captured.err
     assert ANNOUNCEMENT_SVG_PATH.as_posix() in captured.err
     assert not (fake_repo / ANNOUNCEMENT_SVG_PATH).exists(), (
@@ -1197,13 +1301,13 @@ _LABEL_BAND = brand_templates._CODE_LABEL_BASELINES[0] + brand_templates._CODE_L
 def _sampled_ribbon(width: float, height: float) -> list[tuple[float, float]]:
     """Points on the rendered ribbon, not the waypoints it is fitted to.
 
-    `ribbon.safe_margins` answers from the waypoints, which is the right
+    `motifs.safe_margins` answers from the waypoints, which is the right
     place to *derive* a margin from; this walks the cubics that are
     actually drawn, so the test below is a check on the composition rather
     than a restatement of the arithmetic that placed it.
     """
     commands: list[tuple[str, list[float]]] = []
-    for line in ribbon.ribbon_path(width, height).splitlines():
+    for line in motifs.path(motifs.RIBBON.name, width, height).splitlines():
         parts = line.split()
         commands.append((parts[0], [float(value) for value in parts[1:]]))
     points: list[tuple[float, float]] = []
@@ -1237,7 +1341,7 @@ def _sampled_ribbon(width: float, height: float) -> list[tuple[float, float]]:
 
 
 def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
-    """The property `ribbon.safe_margins` exists to give the plate, held
+    """The property `motifs.safe_margins` exists to give the plate, held
     against the file that is actually committed.
 
     Both boxes are read out of the rendered document rather than
@@ -1257,10 +1361,7 @@ def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
         brand_templates._BACKGROUND_WIDTH,
         brand_templates._BACKGROUND_HEIGHT,
     )
-    half = (
-        ribbon.ribbon_stroke_width(width, height, ratio=ribbon.ribbon_width_ratio(ROOT))
-        / 2
-    )
+    half = motifs.stroke_width(width, height, ratio=brand.motif_width_ratio(ROOT)) / 2
 
     document = ElementTree.fromstring(
         (ROOT / BACKGROUND_SVG_PATH).read_text(encoding="utf-8")

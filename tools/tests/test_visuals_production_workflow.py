@@ -86,7 +86,7 @@ def test_data_speakers_yml_is_the_one_new_path_this_job_adds() -> None:
 #: pins that difference rather than letting it read as a drop.
 _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/publication/visual.py",
-    "tools/convener_ops/publication/ribbon.py",
+    "tools/convener_ops/publication/motifs/**",
     "tools/convener_ops/publication/registration_code.py",
     "tools/convener_ops/journey/registration.py",
     "tools/convener_ops/publication/formats.py",

@@ -29,8 +29,8 @@ Every colour below is read out of `instance/data/brand.json` by this module's ow
 `_load_colours`, never imported from `tools/scripts/generate_brand_css.py`:
 `convener_ops` ships as an installed package (`tools/pyproject.toml`'s own
 `[tool.hatch.build.targets.wheel]` lists only this one package), and
-`tools/scripts/` sits outside it -- exactly the boundary `ribbon.py`'s own
-`_load_motif` already respects (`ribbon.py`'s module docstring: "threaded
+`tools/scripts/` sits outside it -- exactly the boundary `brand.py`'s own
+`motif` already respects (`motifs/__init__.py`'s `stroke_width`: "threaded
 in from `repo_root()` at the call site rather than resolved here"). So
 this reads the one shared source of fact directly, the same file the
 site's and the app's own generators read, rather than importing either
@@ -96,10 +96,11 @@ is untouched: it is drawn from the charter's own `--dominant` and
 `--field` -- not from `motif`, which only the two downloadable
 templates read for their wordmark -- and it carries no name.
 
-The ribbon itself is never redrawn here. `ribbon_path`, `ribbon_stroke_colour`
-and `ribbon_stroke_width` (`ribbon.py`) are called with this
-composition's exact canvas size and painted as the last element in the
-document, so it always sits on top -- exactly what the reference shows:
+The motif itself is never drawn here. `motifs.path` and
+`motifs.stroke_width`, with the family and the ink `brand.py` reads out of
+the charter, are called with this composition's exact canvas size and
+painted as the last element in the document, so it always sits on top --
+exactly what the reference shows:
 the stroke crosses over the lower "WHAT TO EXPECT?" text near the
 left edge in the designer's own poster, not behind it.
 
@@ -109,14 +110,15 @@ The ribbon still runs off every edge and still passes behind the bands --
 it keeps its full gesture, exactly as above. What it must never do is pass
 *through* the words this page sets: the reference's own content sits inside
 margins the ribbon lives outside of on both sides, nothing it sets ever
-crosses the stroke. `_ribbon_safe_margins` computes the same two margins
-for this composition by reading `ribbon.waypoints` -- the loop centres, the
-left tail's own fitted bulge, the points where the stroke crosses each
-edge -- and taking the deepest on-curve reach into the canvas on each side,
+crosses the stroke. `_motif_safe_margins` computes the same two margins
+for this composition by asking the family the charter names -- for the
+ribbon, the loop centres, the left tail's own fitted bulge, the points
+where the stroke crosses each edge -- and taking the deepest on-curve
+reach into the canvas on each side,
 plus the stroke's own width as clearance (half of it for the stroke's own
 physical extent either side of its centreline, the other half as a
 documented buffer for the small overshoot a Catmull-Rom curve makes past an
-interior anchor on its way to the next one -- `ribbon.py`'s own
+interior anchor on its way to the next one -- `motifs/ribbon.py`'s own
 `_LEFT_TAIL_BULGE_X` comment measures this at ~8px on a 1200px canvas
 against a ~29px stroke there, comfortably inside one full stroke width).
 Every band and the hero section and the date line all read the same two
@@ -124,9 +126,9 @@ margins (`--safe-l`/`--safe-r`, `vw`-relative custom properties on
 `.poster`) for their own horizontal padding, rather than each guessing its
 own clearance the way `.expect`'s own hand-typed `padding-left: 22vmin`
 used to (a number that, worked out independently here, turns out close to
-what `_ribbon_safe_margins` derives for a square canvas -- a useful sanity
+what `_motif_safe_margins` derives for a square canvas -- a useful sanity
 check, not a coincidence worth relying on for the next aspect ratio).
-Deriving the margins from `ribbon.waypoints` rather than typing two numbers
+Deriving the margins from the family's own waypoints rather than typing two numbers
 is what makes them survive a change of aspect ratio: `waypoints`
 already expresses every loop and bulge as a fraction of the canvas's own
 short side, width or height (see that module's own docstring), so a margin
@@ -135,7 +137,7 @@ computed from it adapts the same way the ribbon itself does, at any
 
 `.content` is the one exception, and reads a third variable,
 `--safe-r-content`, for its own right padding instead of `--safe-r` --
-`_ribbon_content_right_margin`'s own docstring explains why: the right
+`_motif_content_right_margin`'s own docstring explains why: the right
 motif never reaches anywhere near as far down the page as `.content`
 itself sits, so the full corridor's own right margin is not a number
 `.content` needs to clear a threat with, only width it would otherwise
@@ -270,16 +272,8 @@ from typing import Final
 
 from ..declaration.published import load_identity
 from ..governance.rule import PARIS
-from . import brand
+from . import brand, motifs
 from .registration_code import registration_code_svg
-from .ribbon import (
-    CLEARANCE_STROKE_WIDTHS,
-    ribbon_path,
-    ribbon_stroke_colour,
-    ribbon_stroke_width,
-    ribbon_width_ratio,
-    safe_margins,
-)
 
 __all__ = [
     "FIXTURE_ANNOUNCEMENT",
@@ -293,7 +287,7 @@ __all__ = [
     "render_announcement",
 ]
 
-#: Same convention as `ribbon.BRAND_PATH`: relative to the repository root,
+#: Same convention as `brand.INSTANCE_PATH`: relative to the repository root,
 #: threaded in by the caller rather than resolved from this file's own
 #: location. Which file is actually read is `brand.py`'s answer, not this
 #: module's -- an instance that has written no values of its own builds
@@ -790,35 +784,38 @@ def _frame_html(
     )
 
 
-#: Clearance beyond the ribbon's own deepest on-curve reach, expressed as a
-#: multiple of the ribbon's own stroke width -- see the module docstring's
+#: Clearance beyond the motif's own deepest on-curve reach, expressed as a
+#: multiple of its own stroke width -- see the module docstring's
 #: "Why a safe area, and why derived rather than hand-typed" for the two
 #: halves this covers (the stroke's own physical extent either side of its
 #: centreline, and a documented buffer for Catmull-Rom overshoot).
-def _ribbon_safe_margins(
-    width: float, height: float, root: Path
-) -> tuple[float, float]:
+def _motif_safe_margins(width: float, height: float, root: Path) -> tuple[float, float]:
     """The left and right text safe-area margins, in `vw` (of the canvas
     *width* -- the axis every margin below is subtracted from).
 
-    `ribbon.safe_margins` is the arithmetic and this is the unit
+    `motifs.safe_margins` is the arithmetic and this is the unit
     conversion: the two numbers are "how far into the canvas does this
-    side's ribbon reach", plus `ribbon.CLEARANCE_STROKE_WIDTHS`, read off
-    `ribbon.waypoints` rather than sampled from the rendered curve -- see
-    that function's own docstring, and the module docstring here for what
-    the margins are for.
+    side's motif reach", plus the clearance the family it names keeps, read
+    off that family's own on-curve points rather than sampled from the
+    rendered drawing -- see `motifs.safe_margins`, and the module docstring
+    here for what the margins are for.
     """
-    left, right = safe_margins(width, height, ratio=ribbon_width_ratio(root))
+    left, right = motifs.safe_margins(
+        brand.motif_family(root),
+        width,
+        height,
+        ratio=brand.motif_width_ratio(root),
+    )
     return left / width * 100.0, right / width * 100.0
 
 
-def _ribbon_content_right_margin(width: float, height: float, root: Path) -> float:
+def _motif_content_right_margin(width: float, height: float, root: Path) -> float:
     """The right-hand safe-area margin for `.content` alone, in `vw` --
-    narrower than `_ribbon_safe_margins`'s own right margin, because
+    narrower than `_motif_safe_margins`'s own right margin, because
     `.content` never actually shares a row with the right motif.
 
     `waypoints`'s own right-side points never reach lower than
-    `right_tail_exit`, the last of them -- see `ribbon.waypoints`'s own
+    `right_tail_exit`, the last of them -- see `motifs/ribbon.py::waypoints`'s own
     docstring for the fitted `0.475`-of-height fraction that point sits at.
     `.content` is this composition's last band: it renders after the
     wordmark band and the hero section (both fixed text of a fixed
@@ -828,32 +825,36 @@ def _ribbon_content_right_margin(width: float, height: float, root: Path) -> flo
     rendering a one-character title and reading where `.content` actually
     starts, not merely assumed; the small residual gap that check found is
     well inside the tail's own approach to the edge in that band, in turn
-    well inside `ribbon.CLEARANCE_STROKE_WIDTHS`'s own buffer, applied
-    below unchanged). Reusing `_ribbon_safe_margins`'s own full-height right
+    well inside the ribbon's own `CLEARANCE_STROKE_WIDTHS` buffer, applied
+    below unchanged). Reusing `_motif_safe_margins`'s own full-height right
     margin here would cost `.content` -- the "what to expect" copy and the
     photo frame beside it -- width the right motif was never going to
     reach: this fix's own first attempt did exactly that, and it was that
     copy re-wrapping into the "register" label beneath it, not the ribbon,
     that gave the mistake away. `.content`'s own *left* margin still uses
-    `_ribbon_safe_margins`'s full corridor unchanged (see
+    `_motif_safe_margins`'s full corridor unchanged (see
     `render_announcement`) -- the left tail's own fitted bulge sits at
     `0.747` of the page, well inside `.content`'s own vertical range, not
     above it the way the right motif's reach is.
     """
-    stroke = ribbon_stroke_width(width, height, ratio=ribbon_width_ratio(root))
-    clearance = stroke * CLEARANCE_STROKE_WIDTHS
+    clearance = motifs.clearance(
+        brand.motif_family(root), width, height, ratio=brand.motif_width_ratio(root)
+    )
     return clearance / width * 100.0
 
 
-def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
-    """The ribbon, painted last so it sits on top of everything else --
+def _motif_overlay_svg(width: float, height: float, root: Path) -> str:
+    """The motif, painted last so it sits on top of everything else --
     exactly what the reference shows (the stroke crosses over the
     "WHAT TO EXPECT?" text near the left edge in the designer's own poster,
-    not behind it). Colour and width both come from `ribbon.py`'s reader
-    functions, never hand-typed here."""
-    d = ribbon_path(width, height)
-    colour = ribbon_stroke_colour(root)
-    stroke_width = ribbon_stroke_width(width, height, ratio=ribbon_width_ratio(root))
+    not behind it). The drawing comes from the family the charter names and
+    its colour and width from the charter's own fields, never hand-typed
+    here."""
+    d = motifs.path(brand.motif_family(root), width, height)
+    colour = brand.motif_stroke(root)
+    stroke_width = motifs.stroke_width(
+        width, height, ratio=brand.motif_width_ratio(root)
+    )
     return (
         f'<svg class="ribbon-overlay" viewBox="0 0 {_num(width)} {_num(height)}" '
         'aria-hidden="true" focusable="false">'
@@ -903,7 +904,7 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 # query to answer that this function does not already know when it builds
 # the page -- and a plain Python conditional is what every other
 # size-dependent choice in this module already is (`_scaled_font_size`,
-# `_ribbon_safe_margins`), not a second mechanism next to them.
+# `_motif_safe_margins`), not a second mechanism next to them.
 WIDE_ASPECT_THRESHOLD: Final = 1.5
 
 
@@ -995,7 +996,7 @@ def render_announcement(
     page -- see the module docstring for what is fixed, what varies, and
     why this is a page rather than an SVG template.
 
-    Reads `instance/data/brand.json` for colour, and `ribbon.py` for the
+    Reads `instance/data/brand.json` for colour, and `motifs/` for the
     motif; touches nothing else on disk and makes no network request of
     its own -- `portrait_data_uri`, if given, is inlined as-is (a `data:`
     URI is what a caller should normally pass, so the rendered page never
@@ -1049,12 +1050,12 @@ def render_announcement(
         # cost the reader.
         speaker_affiliation=("" if wide else announcement.speaker_affiliation),
     )
-    ribbon_svg = _ribbon_overlay_svg(width, height, root)
+    motif_svg = _motif_overlay_svg(width, height, root)
     registration_slot = _registration_slot_html(
         announcement.event_id, dark=colours["black"], root=root
     )
-    safe_left_vw, safe_right_vw = _ribbon_safe_margins(width, height, root)
-    safe_content_right_vw = _ribbon_content_right_margin(width, height, root)
+    safe_left_vw, safe_right_vw = _motif_safe_margins(width, height, root)
+    safe_content_right_vw = _motif_content_right_margin(width, height, root)
 
     poster_class = "poster poster--wide" if wide else "poster"
     title_band = f"""\
@@ -1096,7 +1097,7 @@ def render_announcement(
     </div>
     <div class="frame-wrap">{frame}</div>
 {register_band}
-    {ribbon_svg}"""
+    {motif_svg}"""
     else:
         body = f"""\
     {wordmark}
@@ -1110,7 +1111,7 @@ def render_announcement(
       <div class="frame-wrap">{frame}</div>
     </div>
 {register_band}
-    {ribbon_svg}"""
+    {motif_svg}"""
 
     return f"""<!doctype html>
 <html lang="en">

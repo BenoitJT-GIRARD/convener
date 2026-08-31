@@ -1,6 +1,6 @@
-"""The charter's ribbon: one continuous meandering stroke, not four circles.
+"""The `ribbon` family: one continuous meandering stroke, not four circles.
 
-`instance/data/brand.json::motif._ribbon` names the defect this module fixes: the
+`instance/data/brand.json::motif._family` names the defect this module fixes: the
 purple stroke that runs through the designer's own poster
 (`docs/handbook/assets/example_and_template_initial_assets/announcement-template_initial.png`,
 gitignored -- it carries a real person's photograph) was stood in for by
@@ -19,7 +19,7 @@ that came with it was a starting point to verify, not a given, and two of
 its claims did not survive that check: the left curl does not cross its own
 tail (it is a near circle open on one side, like the right one), and the
 stroke measures 23-33px wide there, not the 0.0075-ratio 9px
-`instance/data/brand.json` used to hold (see `motif._ribbon_width_ratio`).
+`instance/data/brand.json` used to hold (see `motif._width_ratio`).
 
 What does hold up: a single purple stroke, uniform width, round caps, no
 fill, that enters and leaves the canvas rather than closing on itself. On the
@@ -58,69 +58,9 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Final
-
-from . import brand
-
-#: Where the stroke's colour and width ratio are written down when an
-#: instance writes them. Kept under this name for the call sites that
-#: still quote it; `brand.py` is what decides which file is read, and
-#: what is drawn when this one carries no `motif` -- see `_load_motif`.
-BRAND_PATH: Final = brand.INSTANCE_PATH
+from typing import Final
 
 Point = tuple[float, float]
-
-
-def _load_motif(root: Path) -> dict[str, Any]:
-    """The charter's `motif`, or a refusal.
-
-    `root` matches `generate_brand_css.load_brand`'s own convention:
-    threaded in from `repo_root()` at the call site rather than resolved
-    here, so a test can point it at a fixture without touching the
-    environment.
-
-    **A duplicate that has chosen no mark is drawn with the product's
-    own** (`brand/convener/brand.json`) rather than stopped: design is
-    never something somebody has to supply before the thing will run.
-    What still raises `brand.MissingMotifError` is a `motif` that was
-    written and left incomplete, which no default may quietly finish --
-    `brand.motif` carries the reasoning and composes the message.
-    """
-    return brand.motif(root)
-
-
-def ribbon_stroke_colour(root: Path) -> str:
-    """The one colour the ribbon is ever drawn in -- never hand-typed."""
-    return str(_load_motif(root)["ribbon_stroke"])
-
-
-def ribbon_width_ratio(root: Path) -> float:
-    """Stroke width as a fraction of the canvas's shorter side.
-
-    Each charter says where its own figure comes from, and the two do not
-    come from the same place: this instance's was measured off the
-    designer's poster (`instance/data/brand.json::motif._ribbon_width_ratio`), and
-    the product's is carried over from the proportion its own mark's
-    inner arc is drawn at (`brand/convener/brand.json`).
-    """
-    return float(_load_motif(root)["ribbon_width_ratio"])
-
-
-def ribbon_stroke_width(width: float, height: float, *, ratio: float) -> float:
-    """The stroke width for a canvas of the given size, at the given ratio.
-
-    Pure geometry, deliberately not a brand.json reader itself -- a caller
-    fetches `ratio` once with `ribbon_width_ratio(repo_root())` and threads
-    it through, the same separation `ribbon_path` keeps from `waypoints`.
-    Tracks the *shorter* side on purpose: a wide banner and a tall print use
-    the same ratio, so the stroke never balloons on the long axis the way a
-    naive `width`-relative value would on a banner, or a `height`-relative
-    one would on a print.
-    """
-    if width <= 0 or height <= 0:
-        raise ValueError("width and height must both be positive")
-    return ratio * min(width, height)
 
 
 def _short_side(width: float, height: float) -> float:
@@ -224,7 +164,7 @@ class Waypoints:
     """Every on-curve point of the ribbon, before it is joined into a path.
 
     A dataclass rather than a dict of mixed single points and arcs: exposed
-    on purpose, not folded into `ribbon_path`, because the properties that
+    on purpose, not folded into `path`, because the properties that
     actually matter -- a loop's footprint tracking the shorter side, a
     point's distance from the edge it belongs to, a value that does *not*
     move when only the long side changes -- are trivial to pin against named
@@ -444,14 +384,14 @@ def _connector(start: Point, end: Point, *, width: float, height: float) -> str:
 _GAP_BULGE_FACTOR: Final = 0.25
 
 
-def ribbon_path(width: float, height: float) -> str:
-    """The charter's ribbon for a canvas of the given size, as an SVG path `d`.
+def path(width: float, height: float) -> str:
+    """This family's drawing for a canvas of the given size, as an SVG path `d`.
 
     One `M`, only `C` after it, no `Z`: a single continuous cubic-Bezier
-    stroke, exactly as `instance/data/brand.json::motif._ribbon` describes it, not
-    four bare circles standing in for one. Pair with `ribbon_stroke_colour`
-    and `ribbon_stroke_width` for the `stroke` and `stroke-width` a consumer
-    draws it with; this function only ever returns geometry.
+    stroke, exactly as `instance/data/brand.json::motif._family` describes
+    it, not four bare circles standing in for one. The charter's own
+    `stroke` and `width_ratio` say what a consumer inks it with
+    (`motifs.stroke_width`); this function only ever returns geometry.
     """
     if width <= 0 or height <= 0:
         raise ValueError("width and height must both be positive")
@@ -485,30 +425,32 @@ def ribbon_path(width: float, height: float) -> str:
     return "\n".join(commands)
 
 
-#: How much clearance a block of text keeps from the ribbon's own reach,
+#: How much clearance a block of text keeps from this drawing's own reach,
 #: in stroke widths. Half of it is the stroke's physical extent either side
 #: of its centreline; the other half is a documented buffer for the small
 #: overshoot a Catmull-Rom curve makes past an interior anchor on its way
 #: to the next one -- `_LEFT_TAIL_BULGE_X`'s own comment measures that at
 #: about 8 units on a 1200-unit canvas against a ~29-unit stroke there,
-#: comfortably inside one full stroke width.
+#: comfortably inside one full stroke width. A family drawn some other way
+#: measures its own, which is why the registry reads this off the family
+#: rather than holding one figure for all of them.
 CLEARANCE_STROKE_WIDTHS: Final = 1.0
 
 
-def safe_margins(width: float, height: float, *, ratio: float) -> tuple[float, float]:
-    """How far in from each side a word has to start to clear the ribbon.
+def margins(width: float, height: float, *, clearance: float) -> tuple[float, float]:
+    """How far in from each side a word has to start to clear this drawing.
 
     Two lengths in the canvas's own units -- left and right -- computed
     from `waypoints` rather than sampled off the rendered curve:
     `_catmull_rom` interpolates every one of those points exactly, so the
     curve's own extremes cannot fall short of them, only overshoot
-    slightly past the tail bulge, which `CLEARANCE_STROKE_WIDTHS` covers.
+    slightly past the tail bulge, which `clearance` covers.
 
-    Pure geometry, and `ratio` is threaded in by the caller for the same
-    reason `ribbon_stroke_width` takes one: this module draws the ribbon,
-    it does not decide whose charter is in force.
+    Pure geometry, and `clearance` is threaded in by the registry for the
+    same reason `motifs.stroke_width` takes a ratio: this module draws one
+    family, it does not decide whose charter is in force.
 
-    Two readers, one arithmetic: `visual._ribbon_safe_margins` turns these
+    Two readers, one arithmetic: `visual._motif_safe_margins` turns these
     into the `vw` its own CSS is written in, and
     `brand_templates.render_video_call_background` places a plate of text
     between them. They used to be one reader, and the second one arriving
@@ -517,8 +459,6 @@ def safe_margins(width: float, height: float, *, ratio: float) -> tuple[float, f
     if width <= 0 or height <= 0:
         raise ValueError("width and height must both be positive")
     marks = waypoints(width, height)
-    stroke = ribbon_stroke_width(width, height, ratio=ratio)
-    clearance = stroke * CLEARANCE_STROKE_WIDTHS
     left_reach = max(
         x
         for x, _y in (

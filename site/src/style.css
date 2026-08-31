@@ -304,7 +304,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   z-index: 1;
 }
 .hero__loops {
-  /* The ribbon motif -- instance/data/brand.json's motif.ribbon_stroke,
+  /* The ribbon motif -- instance/data/brand.json's motif.stroke,
    * i.e. the dominant. Never a hand-typed hex here: the SVG in index.njk
    * carries no colour of its own and takes this rule's stroke instead. */
   stroke: var(--dominant);

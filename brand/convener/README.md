@@ -78,7 +78,7 @@ Two things follow:
   ribbon's stroke is the navy; the wordmark's dots are the coral of the dot
   above; the stroke weight is the proportion the inner arc is drawn at — 25.86
   on a radius of 131.72, 0.196 of its own radius — carried onto the ribbon's
-  curls, which `tools/convener_ops/publication/ribbon.py` builds at radius 0.105 and 0.103
+  curls, which `tools/convener_ops/publication/motifs/ribbon.py` builds at radius 0.105 and 0.103
   of the shorter side. That gives 0.0204, and it means a curl on a poster is
   drawn at the weight this mark's own line is drawn at, at any size.
 
