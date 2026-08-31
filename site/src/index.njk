@@ -16,13 +16,30 @@ layout: layout.njk
     <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".75"/>
   </svg>
 
+  {#
+    The three lines of the hero are the declaration's, not this file's.
+    They were hand-typed here until now -- this series' field in the
+    eyebrow, its motto in the headline, its subject and audience in the
+    lede -- so a duplicate of this product published all three on its own
+    home page under its own name, and nothing looked for them: they were
+    nobody's declared value, so `test_published.py`'s source sweep and
+    `test_second_instance.py`'s build sweep both had nothing to match.
+
+    The three declared values already existed and are exactly these three
+    slots. `identity.series` is what the series is called, which is what
+    an eyebrow is for; `identity.strapline` is the two-or-three-word
+    display line the poster's hero band is already set from, and this
+    headline is the same line at the same weight (`style.css`
+    upper-cases it, and `.hero__title em` carries no styling of its own
+    any more, so nothing is lost by setting the whole line plainly);
+    `identity.tagline` is the sentence the footer and the feed's own
+    description already print. `instance/config.json`'s
+    `_identity_comment` states why the last two are two keys.
+  #}
   <div class="container hero__inner">
-    <p class="hero__eyebrow">Behavioural neuroscience &middot; Online seminar series</p>
-    <h1 class="hero__title">Behaviour <em>up close.</em></h1>
-    <p class="hero__lede">
-      A community-run series of free online seminars on behavioural neuroscience &mdash;
-      from rodent ethology to decision dynamics, hosted by researchers, open to all.
-    </p>
+    <p class="hero__eyebrow">{{ site.series }}</p>
+    <h1 class="hero__title">{{ site.strapline }}</h1>
+    <p class="hero__lede">{{ site.tagline }}</p>
     <div class="hero__actions">
       <a class="btn btn--primary" href="{{ '/propose/' | url }}">Propose a speaker</a>
       <a class="btn btn--ghost" href="{{ site.forum }}">Visit the forum</a>

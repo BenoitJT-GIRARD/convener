@@ -69,6 +69,13 @@ const IDENTITY = identity();
 const SITE = {
   title: `${IDENTITY.short_name} ${IDENTITY.series}`,
   tagline: IDENTITY.tagline,
+  // The display line `src/index.njk` sets the home page's own headline
+  // in, and the same key `tools/convener_ops/publication/visual.py` sets
+  // the poster's hero band from. Two or three words in heavy capitals,
+  // which is why the declaration carries it beside `tagline` rather than
+  // instead of it -- `instance/config.json`'s own `_identity_comment`
+  // states the typographic difference between the two.
+  strapline: IDENTITY.strapline,
   // The forum: the whole address where a link is wanted, the bare host
   // where a sentence names it.
   forum: IDENTITY.forum,

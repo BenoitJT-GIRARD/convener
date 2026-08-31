@@ -708,11 +708,13 @@ def test_the_showcase_feeds_its_templates_the_declared_identity() -> None:
     reads, so this is the value a visitor sees in the masthead, in the
     footer, in `og:site_name` and in every `mailto:` on the site.
 
-    The composition is pinned here rather than restated: `title` is
-    `short_name` and `series` with a space between them, and
-    `tools/tests/test_site.py::_site_config` builds the same map to check
-    the built pages against. Two spellings of that would be the copy this
-    whole module exists to refuse.
+    The composition is pinned here and nowhere else: `title` is
+    `short_name` and `series` with a space between them. `test_site.py`
+    used to carry a `_site_config` helper that built the same map, cited
+    from this very docstring as the check against the built pages -- it
+    was called by nothing, so the citation described a control that could
+    not fail and the map it built was never compared with anything. This
+    function is the one place the composition is held.
     """
     answer = _node_json(
         ROOT / "site" / "scripts" / "print-published.cjs", ROOT / "site"
@@ -723,6 +725,14 @@ def test_the_showcase_feeds_its_templates_the_declared_identity() -> None:
     }
     site = answer["siteData"]
     assert site["title"] == f"{identity.short_name} {identity.series}"
+    assert site["shortName"] == identity.short_name
+    assert site["series"] == identity.series
+    # The home page's own headline, the masthead's sub-line and the
+    # footer's sentence, in that order. All three were typed into the
+    # templates until the hero was rewritten from the declaration, so all
+    # three are pinned here beside the composed `title` rather than left
+    # to the one that happened to be checked first.
+    assert site["strapline"] == identity.strapline
     assert site["tagline"] == identity.tagline
     assert site["forum"] == identity.forum
     assert site["forumHost"] == identity.forum_host

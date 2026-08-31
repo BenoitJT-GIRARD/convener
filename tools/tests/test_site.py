@@ -933,36 +933,11 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 # against a scratch destination.
 # -------------------------------------------------------------------------- #
 
-#: What `site/.eleventy.js` hands every template as `site`. Composed
-#: here from the one declaration rather than read out of a file, because
-#: there is no file to read: the four keys that used
-#: to be `site/src/_data/site.json` are `instance/config.json`'s own
-#: `identity`, and the data file derives them.
-#: `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
-#: identity` holds this composition against what the real, committed data
-#: file actually emits, so the `title` line below cannot quietly become a
-#: second way of spelling it.
 _LAYOUT_TEMPLATE = SITE_SRC / "_includes" / "layout.njk"
 _DONNEES_TEMPLATE = SITE_SRC / "donnees.njk"
 _REGISTRY_TS = ROOT / "app" / "src" / "content" / "registry.ts"
 _DOCS_DIR = ROOT / "docs"
 _HANDBOOK_REGISTRY_MJS = ROOT / "app" / "scripts" / "handbook-registry.mjs"
-
-
-def _site_config() -> dict[str, Any]:
-    identity = published.load_identity()
-    return {
-        "title": f"{identity.short_name} {identity.series}",
-        "tagline": identity.tagline,
-        "forum": identity.forum,
-        "forumHost": identity.forum_host,
-        # The derived address, not the declared one: empty while the
-        # declaration still carries a placeholder. See
-        # `test_the_propose_page_offers_a_form_or_says_it_is_not_open`.
-        "applyForm": identity.proposal_form_url,
-        "organisation": identity.organisation,
-        "contact": identity.contact,
-    }
 
 
 def _past_events() -> list[dict[str, Any]]:
