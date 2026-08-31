@@ -57,6 +57,7 @@ are the explanation.
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 from test_no_literal_copies import served_pages
@@ -146,6 +147,31 @@ META_COMMENTARY = re.compile(
 )
 
 
+def _tracked_root_pages() -> list[Path]:
+    """The Markdown pages at the repository root, as git holds them.
+
+    `git ls-files` and not the directory listing. The rule is about what
+    this repository publishes, and a file the index does not carry reaches
+    nobody who clones it. Reading the directory instead measures whatever
+    somebody has left lying in their working copy -- a scratch page
+    written while reviewing this repository failed the whole suite once,
+    which is a red result that says nothing about any page anybody will
+    ever read. `*.md` matches at every depth, so the first segment is
+    checked here: `docs/` is swept by `served_pages` above and would
+    otherwise arrive twice.
+    """
+    listed = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", "*.md"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    return sorted(
+        ROOT / name for name in listed if "/" not in name and (ROOT / name).is_file()
+    )
+
+
 def swept() -> list[tuple[str, str]]:
     """Every page rule 7 applies to, with its text.
 
@@ -157,7 +183,7 @@ def swept() -> list[tuple[str, str]]:
     and are what whoever arrives at the repository reads first.
     """
     pages: list[tuple[str, str]] = []
-    for path in list(served_pages()) + sorted(ROOT.glob("*.md")):
+    for path in list(served_pages()) + _tracked_root_pages():
         relative = path.relative_to(ROOT).as_posix()
         if relative == SELF_DESCRIBING:
             continue
