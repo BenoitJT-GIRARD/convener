@@ -1,7 +1,7 @@
 """The map of the repository's root, and the guard that keeps it derived.
 
 Two hand-written tables of top-level directories existed, nine rows in
-`README.md` and eight in `docs/architecture.md`. They disagreed with each
+`README.md` and eight in `docs/engineering/architecture.md`. They disagreed with each
 other, and between them they placed eight of the twelve directories this
 repository tracks: `.claude/`, `brand/`, `fonts/` and `instances/` were in
 neither, and `config/` was in one of the two.
@@ -55,7 +55,7 @@ README = ROOT / "README.md"
 
 #: The anchor `README.md` links to, and the heading it has to answer to.
 HEADING = "## Every directory, and who owns it"
-ANCHOR = "docs/architecture.md#every-directory-and-who-owns-it"
+ANCHOR = "docs/engineering/architecture.md#every-directory-and-who-owns-it"
 
 #: A repository with this repository's shape and none of its content: one
 #: tracked file per top-level directory, plus the four paths whose owner is
@@ -68,7 +68,7 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "app": ("src/main.tsx",),
     "brand": ("convener/brand.json",),
     "config": ("boundary.yml",),
-    "docs": ("architecture.md", "handbook/governance/register.md"),
+    "docs": ("engineering/architecture.md", "handbook/governance/register.md"),
     "fonts": ("Archivo-LICENSE.txt",),
     "instance": ("data/config.yml", "data/schema.md", "keys/signing/README.md"),
     "instances": ("example/README.md",),
@@ -77,8 +77,8 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "tools": ("convener_ops/cli.py",),
 }
 
-#: `docs/architecture.md` as this script sees it: prose, the two markers, and
-#: prose again. Nothing outside them may move.
+#: `docs/engineering/architecture.md` as this script sees it: prose, the two
+#: markers, and prose again. Nothing outside them may move.
 SKELETON = f"""# Architecture
 
 Prose the generator never touches.
@@ -118,7 +118,7 @@ def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         encoding="utf-8",
         newline="",
     )
-    (tmp_path / "docs").mkdir()
+    (tmp_path / DOC_PATH).parent.mkdir(parents=True)
     (tmp_path / DOC_PATH).write_text(SKELETON, encoding="utf-8", newline="")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setattr(

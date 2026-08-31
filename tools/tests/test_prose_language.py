@@ -418,10 +418,10 @@ def cspell_files() -> list[str]:
 def test_every_page_this_project_writes_at_the_root_is_spell_checked() -> None:
     """Derived from what is tracked, not from a second copy of the list.
 
-    `README.md` and `INFORMATION-ARCHITECTURE.md` were in `cspell.json`
-    and `TRADEMARK.md` was not, for no reason anybody wrote down. A fourth
-    page added at the root should have to be gated or have its exemption
-    argued, rather than simply arriving unchecked.
+    `README.md` was in `cspell.json` and `TRADEMARK.md` was not, for no
+    reason anybody wrote down. A page added at the root should have to be
+    gated or have its exemption argued, rather than simply arriving
+    unchecked.
     """
     listed = cspell_files()
     at_the_root = sorted(

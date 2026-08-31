@@ -81,7 +81,7 @@ This repository is also one of those instances: the operational workspace
 for our community webinar series, from finding a speaker to certifying
 attendance — and the source of the public showcase those webinars are
 announced and registered on. See
-[`docs/architecture.md`](docs/architecture.md) for the full picture: how
+[`docs/engineering/architecture.md`](docs/engineering/architecture.md) for the full picture: how
 the two applications and the public showcase fit together, why the
 structural choices were made, where a participant's personal data goes
 and when it stops being readable, and how to take this project over.
@@ -107,7 +107,7 @@ private**. Three facts make a fork incompatible with that:
 **Duplicate instead**: a new *private* repository of your own, holding
 these contents, with no fork relationship to this one.
 `docs/operating/operations.md` has what to do;
-[D-15](docs/decisions/d-15-publication-topology.md) has the reasoning in
+[D-15](docs/engineering/decisions/d-15-publication-topology.md) has the reasoning in
 full, including why the product itself is published even so.
 
 ## What a duplicate edits
@@ -137,7 +137,7 @@ run, and why is worth knowing:
   has written nothing — so a duplicate builds a finished-looking site
   without providing a single design file. Whole file or whole file, never a
   merge of the two, and a palette measuring below AA does not build, yours
-  or ours. [D-16](docs/decisions/d-16-brand-source-of-truth.md) is the
+  or ours. [D-16](docs/engineering/decisions/d-16-brand-source-of-truth.md) is the
   argument.
 - **`instance/actions-budget.yml`, `instance/queue-drain.yml` and
   `instance/registration-lanes.yml`** carry numbers rather than identity: an
@@ -197,7 +197,7 @@ a person who has neither repository to an instance that runs.
 
 Every tracked directory at the root of this repository, with its owner
 and what it holds, is one generated table: [*Every directory, and who owns
-it*](docs/architecture.md#every-directory-and-who-owns-it). It is derived
+it*](docs/engineering/architecture.md#every-directory-and-who-owns-it). It is derived
 from `config/boundary.yml` and from the repository's own tracked files by
 `tools/scripts/generate_directory_map.py`, so a directory added without a
 row fails the build.
@@ -264,9 +264,9 @@ authority.
 - **Handbook content rendered inline.** Each runbook step links to the relevant Markdown chunk (template email, instructions) which renders next to the action. No back-and-forth with a separate doc site.
 - **The showcase is generated, not hand-built.** The published repository holds no source of its own — continuous integration here builds `site/` and `app/` and pushes the output to its root.
 
-See [`docs/architecture.md`](docs/architecture.md) for how these pieces
+See [`docs/engineering/architecture.md`](docs/engineering/architecture.md) for how these pieces
 fit together, the diagram of where personal data goes, and the handover
-procedure, and [`docs/decisions/`](docs/decisions/index.md) for why each
+procedure, and [`docs/engineering/decisions/`](docs/engineering/decisions/index.md) for why each
 structural choice was made — one record per decision, what was rejected,
 and what it costs. There is no separate design document to read after
 them: why the cockpit is shaped the way it is *is* those records.
@@ -312,7 +312,7 @@ unpaid person, with a day job".
 A pull request is expected to leave every gate green — the same
 formatting, linting, British-English spelling, type-checking and test
 commands continuous integration runs on every push; see
-[`docs/architecture.md`](docs/architecture.md#contributing) for the
+[`docs/engineering/architecture.md`](docs/engineering/architecture.md#contributing) for the
 per-directory commands. None of it needs an account or a secret to run.
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md) has the rest: one `Signed-off-by` line
@@ -340,7 +340,7 @@ of `LICENSE`, under section 7 of the licence itself, declines them, and
 unregistered mark is actually worth. Both the showcase and the cockpit display
 the licence notice in their footer; its text is `NOTICE.json`, and no part of
 it is an instance's to configure. See
-[D-29](docs/decisions/d-29-licence-and-attribution.md) for the whole argument,
+[D-29](docs/engineering/decisions/d-29-licence-and-attribution.md) for the whole argument,
 including the two licence families that were rejected and why.
 
 ### No warranty, in ordinary words
@@ -357,7 +357,7 @@ Two of the things it does are worth reading that sentence twice for:
   and nothing can decrypt it again. There is no recovery, no escrow and no
   support line. A key destroyed early, or an event given the wrong
   retention window, takes its data with it —
-  [D-22](docs/decisions/d-22-key-destruction-not-deletion.md) is why that
+  [D-22](docs/engineering/decisions/d-22-key-destruction-not-deletion.md) is why that
   is the design rather than an accident.
 - **It processes other people's personal data.** Names, addresses,
   institutional affiliations, attendance and survey answers, belonging to

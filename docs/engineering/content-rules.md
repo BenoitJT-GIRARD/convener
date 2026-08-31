@@ -1,4 +1,4 @@
-# Information architecture
+# Content rules
 
 This is the contract the handbook and the app honour. Five rules.
 
@@ -44,10 +44,12 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 
 The handbook explains *who · what · why*. The app shows *where you are · click to advance*. Never the other way around. The app's own screens contain no explanatory paragraphs; small `↗ in the handbook` links bridge the two.
 
-The handbook content under `docs/` is not a separate site: the React app
-fetches it at runtime via the GitHub API and renders it inline — at the point
-of action for templates, in the Handbook tab for long-form reading. One app,
-one URL space.
+The handbook content under `docs/handbook/` is not a separate site: the React
+app fetches it at runtime via the GitHub API and renders it inline — at the
+point of action for templates, in the Handbook tab for long-form reading. One
+app, one URL space. Why they are rendered that way rather than built into a
+site of their own is
+`docs/engineering/decisions/d-18-static-pages-with-islands.md`.
 
 ## 3 · Same labels everywhere, via a single source
 

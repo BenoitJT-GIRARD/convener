@@ -86,7 +86,7 @@ stop working.
 ## Before you open a pull request
 
 Every gate continuous integration runs is runnable locally, and none of
-them needs an account or a secret. `docs/architecture.md` has the
+them needs an account or a secret. `docs/engineering/architecture.md` has the
 per-directory commands; `README.md` has the day-to-day ones, and the
 optional pre-commit hook that runs the formatting, linting, secret and
 British-English spelling checks before each commit.
@@ -97,7 +97,7 @@ Two conventions that are not obvious from the diff:
   application displays**, so a wording fix there is an ordinary pull
   request and needs no development environment at all — every page carries
   an edit link.
-- **One notion, one home.** `INFORMATION-ARCHITECTURE.md` is the contract,
+- **One notion, one home.** `docs/engineering/content-rules.md` is the contract,
   and a passage that has to appear on two pages is included from the first
   rather than copied into the second. A copy is refused by a test, not by
   a reviewer's memory.

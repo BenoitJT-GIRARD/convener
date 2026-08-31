@@ -1,17 +1,18 @@
 """One map of the repository's root, derived from what the root actually holds.
 
 Two hand-written tables of top-level directories existed: nine rows in
-`README.md` under *What is here*, eight in `docs/architecture.md`. They
+`README.md` under *What is here*, eight in `docs/engineering/architecture.md`. They
 disagreed with each other, and between them they placed eight of the twelve
 directories this repository tracks -- `README.md` spent three of its rows on
-`services/`'s own subdirectories, and `docs/architecture.md` named `.github/`
-one level down, as `.github/workflows/`. `.claude/`, `brand/`, `fonts/` and
-`instances/` were in neither table, and `config/` was in one of the two. A
+`services/`'s own subdirectories, and `docs/engineering/architecture.md`
+named `.github/` one level down, as `.github/workflows/`. `.claude/`,
+`brand/`, `fonts/` and `instances/` were in neither table, and `config/` was
+in one of the two. A
 reader who cannot place a third of the root concludes the root is disorganised
 even when it is not.
 
 That is also the one place this repository broke its own first rule.
-`INFORMATION-ARCHITECTURE.md` asks for one home per notion, and for a passage
+`docs/engineering/content-rules.md` asks for one home per notion, and for a passage
 needed twice to be *included* rather than copied. Two directory tables were
 exactly that copy, and nothing in this repository could have said so.
 `tools/tests/test_no_literal_copies.py` compares served handbook pages, and
@@ -22,7 +23,7 @@ opened with one, so each row broke into two fragments and neither reached the
 threshold. A `README.md` inside the sweep would have changed nothing. What
 catches this class of copy is the generation itself.
 
-So the map is derived, written once, into `docs/architecture.md`, and
+So the map is derived, written once, into `docs/engineering/architecture.md`, and
 `README.md` links to it.
 
 What is derived
@@ -94,10 +95,11 @@ and had for long enough that four directories were missing from both.
 
 Spliced, not written whole
 --------------------------
-`docs/architecture.md` is a hand-authored page. Only the block between the two
-markers below is this script's, in the shape `generate_brand_css.py` already
-uses for the two stylesheets: read the committed file, keep everything outside
-the markers exactly as it stood, replace what is between them. A missing marker
+`docs/engineering/architecture.md` is a hand-authored page. Only the block
+between the two markers below is this script's, in the shape
+`generate_brand_css.py` already uses for the two stylesheets: read the
+committed file, keep everything outside the markers exactly as it stood,
+replace what is between them. A missing marker
 raises rather than being ignored, because a check comparing a file with itself
 reports success on a repository with nowhere left to write.
 
@@ -131,7 +133,7 @@ from convener_ops.declaration.boundary import INSTANCE, PRODUCT, Boundary, load
 from convener_ops.declaration.paths import repo_root
 
 #: The page the map is spliced into, relative to the repository root.
-DOC_PATH: Final = Path("docs") / "architecture.md"
+DOC_PATH: Final = Path("docs") / "engineering" / "architecture.md"
 
 #: The declaration the owner column is read from. Named here only for the
 #: failure messages and the page's own preamble; the reading itself is
@@ -421,7 +423,7 @@ def splice(current: str, inner: str) -> str:
 
 
 def directory_map(root: Path) -> str:
-    """The whole of `docs/architecture.md`, with the map this root derives."""
+    """The whole of `docs/engineering/architecture.md`, with this root's own map."""
     boundary = load(root)
     tracked = tracked_files(root)
     directories = top_level_directories(tracked)
@@ -440,7 +442,7 @@ def directory_map(root: Path) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Generate the map of the repository's top-level "
-        "directories in docs/architecture.md."
+        "directories in docs/engineering/architecture.md."
     )
     parser.add_argument(
         "--check",

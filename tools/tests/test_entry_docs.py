@@ -1,23 +1,23 @@
-"""`README.md` and `docs/architecture.md` are the entry documentation a
+"""`README.md` and `docs/engineering/architecture.md` are the entry documentation a
 newcomer reads first. Properties are
 pinned here rather than trusted by inspection:
 
 1. Every relative Markdown link the two files carry resolves to a real
    file in this repository -- and, if the target sits under `docs/`, to a
-   page `app/src/content/registry.ts` actually publishes, or to one of the
-   two pages that file's own tests already name as deliberately
-   unregistered (`app/tests/copy-handbook.test.ts`). README.md and
-   docs/architecture.md are not registered pages themselves, so nothing
+   page `app/src/content/registry.ts` actually publishes, or to a page
+   that file's own tests already name as deliberately unregistered
+   (`app/tests/copy-handbook.test.ts`). README.md and
+   docs/engineering/architecture.md are not registered pages themselves, so nothing
    already checks their own outbound links the way
    `app/tests/registered-links.test.ts` checks a registered page's.
 2. `docs/operating/operations.md` -- documents every secret this project
    uses and is deliberately excluded from the app's public bundle -- is
    named by these two files *in prose, never as a clickable link*, this
    repository's own convention for a path a reader should not be led to
-   follow. `INFORMATION-ARCHITECTURE.md` and `site/README.md` already use
+   follow. `docs/engineering/content-rules.md` and `site/README.md` already use
    this same convention; this test holds the pair to it too.
 3. The published architecture decision records
-   (`docs/decisions/index.md`) are a real link from at least one of the
+   (`docs/engineering/decisions/index.md`) are a real link from at least one of the
    two files, not merely named -- the working register they were edited
    from never ships, but the edited
    records do, so a reader must be able to click through to them.
@@ -37,26 +37,27 @@ from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
 README = ROOT / "README.md"
-ARCHITECTURE = ROOT / "docs" / "architecture.md"
+ARCHITECTURE = ROOT / "docs" / "engineering" / "architecture.md"
 REGISTRY_TS = ROOT / "app" / "src" / "content" / "registry.ts"
 DOCS = ROOT / "docs"
 
-#: `docs/handbook/index.md` and `docs/README.md` are real, deliberately unregistered
-#: pages meant for a reader browsing the repository itself, not the app --
-#: see `app/tests/copy-handbook.test.ts`'s own test naming them.
-#: `docs/architecture.md`, this same task's own second file, joins them for
-#: the identical reason (and lets README.md link to it). Anything else
-#: under `docs/` must be in the registry to be a safe link target.
-UNREGISTERED_BUT_SAFE = {"index.md", "README.md", "architecture.md"}
+#: `docs/handbook/index.md` is a real, deliberately unregistered page meant
+#: for a reader browsing the repository itself, not the app -- see
+#: `app/tests/copy-handbook.test.ts`'s own test naming it.
+#: `docs/engineering/architecture.md`, the second of the two files above,
+#: joins it for the identical reason (and lets README.md link to it).
+#: Anything else under `docs/` must be in the registry to be a safe link
+#: target.
+UNREGISTERED_BUT_SAFE = {"handbook/index.md", "engineering/architecture.md"}
 
 #: The path this repository's own convention names in prose rather than as
-#: a link -- see `INFORMATION-ARCHITECTURE.md` and `site/README.md` for the
+#: a link -- see `docs/engineering/content-rules.md` and `site/README.md` for the
 #: precedent.
 OPERATIONS_REFERENCE = "docs/operating/operations.md"
 
 #: The published form of the decision register -- see
-#: `docs/decisions/index.md` itself for what it holds.
-DECISIONS_INDEX = "docs/decisions/index.md"
+#: `docs/engineering/decisions/index.md` itself for what it holds.
+DECISIONS_INDEX = "docs/engineering/decisions/index.md"
 
 _LINK_RE = re.compile(r"\]\(([^)]+)\)")
 _SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.\-]*:", re.IGNORECASE)
@@ -163,7 +164,7 @@ def test_a_docs_link_targets_a_published_page_or_a_known_safe_one() -> None:
 
 def test_the_entry_docs_link_to_the_decisions_index() -> None:
     # Once the architecture decision records exist in their published
-    # form, README.md and docs/architecture.md must *link* to them, not
+    # form, README.md and docs/engineering/architecture.md must *link* to them, not
     # merely name the private working register they were edited from --
     # naming without a link was only ever right while nothing published
     # existed yet to point at.
@@ -246,12 +247,12 @@ def _shipping_markdown() -> list[Path]:
 def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     """
     `app/tests/decisions-records.test.ts` already holds this of
-    `docs/decisions/`: a published record may not send a reader into the
+    `docs/engineering/decisions/`: a published record may not send a reader into the
     working record. The same sentence is true of every other page that
     ships, and nothing held them to it -- so `README.md` and
     `docs/README.md` both pointed a public reader at a design
     specification no clone would ever hold, `site/README.md` at a decision
-    whose published form sits in `docs/decisions/`, and
+    whose published form sits in `docs/engineering/decisions/`, and
     `docs/operating/operations.md` at four such paths plus one under
     `.superpowers/`, which `.gitignore` keeps out of *every* clone and
     which was therefore already unfollowable here.
@@ -268,5 +269,5 @@ def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     assert not offending, (
         f"{sorted(offending)} name this project's own working record, which "
         "no reader of the published repository has. Say the fact, or point "
-        "at the published form of it under docs/decisions/."
+        "at the published form of it under docs/engineering/decisions/."
     )

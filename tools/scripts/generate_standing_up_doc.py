@@ -709,8 +709,8 @@ def render_page(sequence: Sequence, rows: dict[str, Integration]) -> str:
     blocks.append(
         _wrap(
             "The split is forced, not preferred, and "
-            "`docs/decisions/d-15-publication-topology.md` is the argument in "
-            "full. Both exist before anything else works."
+            "`docs/engineering/decisions/d-15-publication-topology.md` is the "
+            "argument in full. Both exist before anything else works."
         )
     )
     blocks.append("## How to read a step")

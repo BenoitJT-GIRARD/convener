@@ -16,8 +16,8 @@ name: Quality
 # it touches". The same job's own `pytest` suite is close to as broad in
 # practice, not by design flaw but because it reads the repository as
 # its own fixtures: `test_entry_docs.py` follows every relative link out
-# of `README.md` and `docs/architecture.md`, including into
-# `docs/decisions/**`; `test_workflows.py` parses every file under
+# of `README.md` and `docs/engineering/architecture.md`, including into
+# `docs/engineering/decisions/**`; `test_workflows.py` parses every file under
 # `.github/workflows/`; the schema and brand-token checks derive from
 # `app/src/data/types.ts`, `docs/operating/schema.md` and
 # `instance/data/brand.json`. A filter list built to be honestly safe here would
@@ -312,7 +312,7 @@ jobs:
         run: uv run python scripts/generate_brand_css.py --check
       - name: Directory map
         working-directory: tools
-        # `docs/architecture.md` and `README.md` each carried a
+        # `docs/engineering/architecture.md` and `README.md` each carried a
         # hand-written table of top-level directories. They disagreed, and
         # between them they placed eight of the twelve the repository
         # tracks: `.claude/`, `brand/`, `fonts/` and `instances/` were in

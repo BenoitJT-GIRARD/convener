@@ -172,21 +172,20 @@ describe('a real run against the real docs/ tree', () => {
     expect(slash(await walkAll(dst))).not.toContain('handbook/assets/flyer-example.png');
   });
 
-  it('never publishes docs/handbook/index.md or docs/README.md -- real, unregistered pages meant for a reader browsing the repository itself, not the app', async () => {
-    // Distinct from the probes below: these two are not invented for this
-    // test, they are real files under docs/ today. If either were ever
+  it('never publishes docs/handbook/index.md -- a real, unregistered page meant for a reader browsing the repository itself, not the app', async () => {
+    // Distinct from the probes below: this one is not invented for this
+    // test, it is a real file under docs/ today. If it were ever
     // added to CONTENT_REGISTRY or PUBLIC_ASSETS this assertion would
     // need updating -- which is the point: it is pinned to the
-    // registry's current, deliberate silence about them, not to an
-    // assumption that they are harmless. (`handbook/governance/register.md` was a
-    // third such page until it was registered -- see
+    // registry's current, deliberate silence about it, not to an
+    // assumption that it is harmless. (`handbook/governance/register.md` was
+    // another such page until it was registered -- see
     // `registry.ts`'s own comment on that entry, and
     // `app/tests/registered-links.test.ts`.)
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const onDisk = slash(await walkAll(dst));
     expect(onDisk).not.toContain('handbook/index.md');
-    expect(onDisk).not.toContain('README.md');
   });
 });
 

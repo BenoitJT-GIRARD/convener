@@ -4,7 +4,7 @@ Source of the public showcase. Which series, under whose name, is in
 `instance/config.json` and nowhere else. Built with
 [Eleventy](https://www.11ty.dev/) and pushed, built, to the public `example-showcase`
 repository's root by `.github/workflows/publish-vitrine.yml` — see
-`docs/decisions/d-15-publication-topology.md`. `example-showcase` itself
+`docs/engineering/decisions/d-15-publication-topology.md`. `example-showcase` itself
 holds no source: every byte there is reproducible from this directory.
 
 `src/_data/events.json` is committed here as a build fixture only. In CI it is

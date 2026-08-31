@@ -1,5 +1,5 @@
 /**
- * The architecture decision records under `docs/decisions/`: the edited,
+ * The architecture decision records under `docs/engineering/decisions/`: the edited,
  * published form of the decisions this project took while it was built.
  * Four properties are pinned here rather than trusted by inspection:
  *
@@ -14,7 +14,7 @@
  *    here on its own.
  * 3. Each record carries the minimum an ADR needs: a status line, and
  *    `Context`, `Decision`, `Rejected` and `Cost` sections.
- * 4. Nothing under `docs/decisions/` links into `docs/superpowers/` --
+ * 4. Nothing under `docs/engineering/decisions/` links into `docs/superpowers/` --
  *    the working record, which stays local and is never published.
  *    `registered-links.test.ts` already forbids this indirectly, because
  *    nothing under `docs/superpowers/` is registered; this test pins the
@@ -26,7 +26,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CONTENT_REGISTRY } from '../src/content/registry';
 
-const DECISIONS_DIR = resolve(__dirname, '../../docs/decisions');
+const DECISIONS_DIR = resolve(__dirname, '../../docs/engineering/decisions');
 
 function page(file: string): string {
   return readFileSync(resolve(DECISIONS_DIR, file), 'utf-8');
@@ -66,7 +66,7 @@ describe('every decision record on disk is registered, and vice versa', () => {
     expect(decisionEntries.length).toBeGreaterThan(0);
     const missing = decisionEntries
       .map(([key, entry]) => ({ key, file: entry.file }))
-      .filter(({ file }) => !onDisk.includes(file.replace('decisions/', '')));
+      .filter(({ file }) => !onDisk.includes(file.replace('engineering/decisions/', '')));
     expect(missing).toEqual([]);
   });
 
@@ -74,8 +74,8 @@ describe('every decision record on disk is registered, and vice versa', () => {
     const registeredFiles = new Set(
       Object.values(CONTENT_REGISTRY)
         .map(e => e.file)
-        .filter(f => f.startsWith('decisions/d-'))
-        .map(f => f.replace('decisions/', '')),
+        .filter(f => f.startsWith('engineering/decisions/d-'))
+        .map(f => f.replace('engineering/decisions/', '')),
     );
     const unregistered = onDisk.filter(name => !registeredFiles.has(name));
     expect(unregistered).toEqual([]);
@@ -118,7 +118,7 @@ describe('every record carries the minimum an ADR needs', () => {
   }
 });
 
-describe('nothing under docs/decisions/ links into docs/superpowers/', () => {
+describe('nothing under docs/engineering/decisions/ links into docs/superpowers/', () => {
   const files = ['index.md', ...recordFilesOnDisk()];
 
   it('is a real sweep: at least one of these files carries a local link', () => {

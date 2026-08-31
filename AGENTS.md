@@ -24,11 +24,11 @@ generated from it and refused by continuous integration if they drift:
 
 ## Working on the product itself
 
-`README.md` has the day-to-day commands, `docs/architecture.md` has the gate
+`README.md` has the day-to-day commands, `docs/engineering/architecture.md` has the gate
 each directory is held to, and `CONTRIBUTING.md` says what a contribution
 certifies and how a commit is signed off.
 
-`INFORMATION-ARCHITECTURE.md` is the rule those three answer to: one notion,
+`docs/engineering/content-rules.md` is the rule those three answer to: one notion,
 one home. A passage that has to appear in two places is included from the
 first rather than copied into the second, and a test refuses the copy. That is
 the rule most worth knowing before writing anything here, because it is the

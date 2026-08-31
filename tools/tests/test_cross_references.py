@@ -16,9 +16,9 @@ reader the same thing: they go looking, and there is nothing there.
 Four vocabularies, each read from the repository at run time:
 
 * **`D-NN`** -- the architecture decision records. Derived from the
-  filenames under `docs/decisions/`, which is published, registered in
+  filenames under `docs/engineering/decisions/`, which is published, registered in
   `app/src/content/registry.ts` and served through the handbook. Adding
-  `docs/decisions/d-29-….md` makes `D-29` citable, on its own, with nothing
+  `docs/engineering/decisions/d-29-….md` makes `D-29` citable, on its own, with nothing
   here to edit.
 * **`T-N`** -- the event journey's countdown, "T minus N days". Not a
   document at all: `app/src/state/phases.ts` establishes the notation in its
@@ -158,7 +158,7 @@ ROOT = repo_root()
 
 #: Where the published architecture decision records live, one file per
 #: record, `d-NN-<slug>.md`.
-DECISIONS_DIR = "docs/decisions"
+DECISIONS_DIR = "docs/engineering/decisions"
 
 #: The file whose milestone keys establish the "T minus N" notation.
 JOURNEY = Path("app") / "src" / "state" / "phases.ts"
@@ -173,7 +173,7 @@ PUBLIC_STANDARDS = frozenset({"UTF", "SHA", "AES", "RFC", "P"})
 #: number: `## Inactivity (G-09)`. The number sits at the very end of the
 #: heading, which is what separates naming a rule from mentioning one --
 #: `**Handover is manual and deliberate, exactly as G-11 provides for:**`
-#: in `docs/decisions/d-28-architect-and-board-permissions.md` cites the
+#: in `docs/engineering/decisions/d-28-architect-and-board-permissions.md` cites the
 #: rule, it does not state it.
 RULE_HEADING = re.compile(r"^#{1,6}[ \t]+[^\n]*?\((G-\d{2})\)[ \t]*$", re.MULTILINE)
 
@@ -389,7 +389,7 @@ def prose_of(name: str, text: str) -> str:
 
 @cache
 def published_decision_ids() -> frozenset[str]:
-    """`D-NN` for every decision record `docs/decisions/` publishes."""
+    """`D-NN` for every decision record `docs/engineering/decisions/` publishes."""
     ids = set()
     for path in (ROOT / DECISIONS_DIR).glob("d-*.md"):
         match = re.fullmatch(r"d-(\d{2})-.+", path.stem)
@@ -712,7 +712,7 @@ def _report(found: dict[str, list[str]]) -> str:
 
 
 def test_every_identifier_in_a_comment_names_a_published_document() -> None:
-    """`D-19` resolves: `docs/decisions/d-19-event-identifier.md` is a page
+    """`D-19` resolves: `docs/engineering/decisions/d-19-event-identifier.md` is a page
     the handbook serves. `R-27` resolved to a reviewer's ruling in a
     document this repository never publishes, and a reader who went
     looking found nothing."""

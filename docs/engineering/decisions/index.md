@@ -3,7 +3,7 @@
 Why this system is shaped the way it is: twenty-nine decisions, each one a
 short record of the decision itself, what was rejected, and what it costs.
 Governance rules (who votes, what the bar is, what happens if nobody acts)
-are documented separately in [the Board's rules](../handbook/governance/board-rules.md)
+are documented separately in [the Board's rules](../../handbook/governance/board-rules.md)
 — this index is about the software's own architecture, not who decides what
 inside it.
 

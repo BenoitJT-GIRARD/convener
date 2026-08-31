@@ -124,7 +124,7 @@ repository can open it directly and read every field above in full, not only
 the Board members the app's own screens present it to
 (`app/src/screens/SpeakerPage.tsx`, `app/src/components/AdminOverride.tsx`).
 Signing in to the app itself goes through the organisation's GitHub App and
-device flow (see [D-03](../../decisions/d-03-github-app-device-flow.md)), which
+device flow (see [D-03](../../engineering/decisions/d-03-github-app-device-flow.md)), which
 is a convenience layer over that same repository access, not a narrower one.
 No recipient outside this repository's collaborators is sent any of it.
 

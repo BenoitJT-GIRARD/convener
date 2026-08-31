@@ -39,8 +39,8 @@ working instance and one that has published something it cannot take back.
 | `showcase` | public | The publication target, and nothing else. GitHub Pages will not serve a private repository without a paid plan, which the no-cost constraint rules out, so continuous integration in the cockpit builds `site/` and `app/` and pushes the result into this repository's root. Nobody edits anything here. Every byte is reproducible from the cockpit, so losing it costs a rebuild. |
 
 The split is forced, not preferred, and
-`docs/decisions/d-15-publication-topology.md` is the argument in full. Both
-exist before anything else works.
+`docs/engineering/decisions/d-15-publication-topology.md` is the argument in
+full. Both exist before anything else works.
 
 ## How to read a step
 
