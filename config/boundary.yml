@@ -147,7 +147,7 @@ instance:
           page depends on. It is product documentation that happens to live
           where the keys go, so that an operator opening the directory meets
           it. Upstream maintains it; an instance never edits it.
-  - path: docs/governance/register.md
+  - path: docs/handbook/governance/register.md
     regenerated: true
     reason: >-
       The decision register: a total re-rendering of this repository's own
@@ -217,6 +217,14 @@ retired:
     reason: >-
       Where instance/registration-lanes.yml was until 2026-08-28: the
       lanes this instance routes registrations through.
+  - path: docs/governance/register.md
+    reason: >-
+      Where docs/handbook/governance/register.md was until 2026-08-31,
+      when docs/ was split into one tree per reader. Every version
+      reachable at this path is a re-rendering of this series' own
+      governance -- the rows the live entry above says a duplicate has
+      no reason to inherit -- so a history read through the present
+      tense alone would hand all of them over as the product's.
   - path: site/src/_data/site.json
     reason: >-
       Four identity keys the showcase's build read through Eleventy's

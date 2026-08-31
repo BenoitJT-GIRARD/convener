@@ -6,7 +6,7 @@ repository.
 What this module renders, and why HTML with an inline SVG code
 ------------------------------------------------------------------
 `render_certificate` builds a self-contained HTML document, entirely in
-memory: the text `docs/toolkit/certificate.md` already describes in
+memory: the text `docs/handbook/toolkit/certificate.md` already describes in
 square-bracket placeholders, plus the machine-readable code a certificate carries
 -- a QR encoding the certificate's own verification address
 (`certificate.verification_url`, identifier and signed token both), so a
@@ -63,7 +63,7 @@ message -- and answered it differently: writing it to a single,
 access-controlled build artefact. **That pattern was wrong here,
 deliberately, not by oversight, from the day this module was written** --
 and a review later ruled it wrong for
-that confirmation too, once `docs/governance/traitement-donnees.md`
+that confirmation too, once `docs/handbook/governance/traitement-donnees.md`
 turned out to call that artefact a documented *exception*, when with SMTP
 unconfigured (this project's default state) it was the path every
 registration took. `confirmation.py`'s own module docstring now carries
@@ -370,7 +370,7 @@ class Delivery:
 
 #: The load-bearing half of the body sentence describing the attachment --
 #: exported so `test_delivery.py` can pin it against
-#: `docs/toolkit/emails/certificate-delivered.md`'s own copy, the same
+#: `docs/handbook/toolkit/emails/certificate-delivered.md`'s own copy, the same
 #: "export the sentence, do not retype it" discipline
 #: `confirmation.MATCHING_INSTRUCTION` and `confirmation.UPDATE_WARNING`
 #: already use for their own pages. Before this,
@@ -392,7 +392,7 @@ def compose(
     registration: Registration, event_title: str, identifier: str, document: str
 ) -> Delivery:
     """The e-mail that carries `document` -- see
-    `docs/toolkit/emails/certificate-delivered.md` for the copy this
+    `docs/handbook/toolkit/emails/certificate-delivered.md` for the copy this
     mirrors, and `DOCUMENT_INSTRUCTION` above for the one sentence pinned
     against it directly. Deterministic in every argument, the same
     property `confirmation.compose` has and for the same reason: a resend

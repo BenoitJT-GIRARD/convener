@@ -87,7 +87,7 @@ publishes it.*
 `config/boundary.yml` also names paths sitting on the other side of the directory
 that holds them:
 
-- `docs/governance/register.md` — the instance's, inside a directory the product owns.
+- `docs/handbook/governance/register.md` — the instance's, inside a directory the product owns.
 - `instance/data/schema.md` — the product's, inside a directory the instance owns.
 - `instance/keys/signing/README.md` — the product's, inside a directory the instance owns.
 <!-- END GENERATED DIRECTORY MAP -- edit tools/scripts/generate_directory_map.py, not this block -->

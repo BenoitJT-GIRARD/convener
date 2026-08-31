@@ -52,7 +52,7 @@ export function isSafeHref(href: string): boolean {
  * `toolkit/visual-kit.md`. Rendered in the app the browser would resolve that
  * against the *route* — the app's own published base — and hand the volunteer
  * a 404. Resolving it against the file's own directory instead, under the same
- * `handbook/` path the content was fetched from, makes the download link in
+ * `docs/` path the content was fetched from, makes the download link in
  * the handbook the download link in the app, with one file on disk behind
  * both. A link with an unknown scheme resolves to nothing rather than being
  * passed through: this replaces react-markdown's own sanitiser, so it keeps
@@ -73,14 +73,14 @@ export function handbookUrl(key: string, href: string | null | undefined): strin
     else if (part === '..') segments.pop();
     else segments.push(part);
   }
-  return `${BASE}/handbook/${segments.map(encodeURIComponent).join('/')}${hash}`;
+  return `${BASE}/docs/${segments.map(encodeURIComponent).join('/')}${hash}`;
 }
 
 /** One file under `docs/`, fetched once. */
 async function loadFile(file: string): Promise<string> {
   const known = rawCache.get(file);
   if (known !== undefined) return known;
-  const url = `${BASE}/handbook/${file}`;
+  const url = `${BASE}/docs/${file}`;
   let r: Response;
   try {
     r = await request(url);
@@ -91,7 +91,7 @@ async function loadFile(file: string): Promise<string> {
     });
   }
   if (!r.ok) {
-    console.error(`Content fetch failed (${r.status}): handbook/${file}`);
+    console.error(`Content fetch failed (${r.status}): docs/${file}`);
     throw new Error('This content could not be loaded right now.');
   }
   const text = await r.text();

@@ -1,7 +1,7 @@
 /**
  * The handbook's countdown, against the journey the app actually runs.
  *
- * `docs/workflow/2-preparation.md` counts the preparation down day by day, and
+ * `docs/handbook/workflow/2-preparation.md` counts the preparation down day by day, and
  * `app/src/state/phases.ts` is what a volunteer ticks. They are the same list
  * written twice, and the second copy drifted exactly as the schema appendix
  * did: the block that stood here until this phase was six windows and four
@@ -31,7 +31,7 @@ import { channelItem, channelsOf } from '../src/state/channels';
 import type { RunbookItem } from '../src/state/phases';
 import { config as double } from './data-doubles';
 
-const PAGE = resolve(__dirname, '../../docs/workflow/2-preparation.md');
+const PAGE = resolve(__dirname, '../../docs/handbook/workflow/2-preparation.md');
 
 /** The one line of the countdown that stands for a list this file cannot
  *  know: the channels are `instance/data/config.yml`'s, so the page names the file

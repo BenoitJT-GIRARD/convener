@@ -346,7 +346,8 @@ def test_register_writes_the_file_under_the_repository_root(
     written = (tmp_path / REGISTER_PATH).read_text(encoding="utf-8")
     assert "| 2026-03-01 | lock the date of | spk-001 | ada |" in written
     assert (
-        "wrote docs/governance/register.md - 1 decision(s)" in capsys.readouterr().out
+        "wrote docs/handbook/governance/register.md - 1 decision(s)"
+        in capsys.readouterr().out
     )
 
 

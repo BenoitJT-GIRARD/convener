@@ -304,7 +304,7 @@ describe('recording what the speaker answered', () => {
 describe('the message asking for permission', () => {
   it('reaches the screen through the fragment mechanism, like every other template', () => {
     expect(CONTENT_REGISTRY[MESSAGE_KEY]).toEqual({
-      file: 'toolkit/emails/consent-request.md',
+      file: 'handbook/toolkit/emails/consent-request.md',
       anchor: null,
     });
   });

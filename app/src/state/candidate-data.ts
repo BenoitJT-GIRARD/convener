@@ -12,10 +12,10 @@ import type { Speaker } from '../data/types';
  * and is never published either. Neither set is derived from the other.
  *
  * This axis exists for one reader: a security review's finding that
- * `docs/governance/traitement-donnees.md` described `instance/data/speakers.yml` as
+ * `docs/handbook/governance/traitement-donnees.md` described `instance/data/speakers.yml` as
  * holding "speakers' own names and institutional email addresses" when the
  * schema carries a good deal more, and its own fix
- * (`docs/governance/candidate-data-protection.md`) states plainly what the
+ * (`docs/handbook/governance/candidate-data-protection.md`) states plainly what the
  * file holds and why. That record cannot be left to drift the way a
  * hand-written sentence would -- so its own field list is bound to
  * `PERSONAL_DATA_FIELDS` by `tools/tests/fixtures/governance-cases.json`,

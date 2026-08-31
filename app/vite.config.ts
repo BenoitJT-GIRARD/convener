@@ -43,7 +43,7 @@ const PUBLISHED = published();
  * and carried into the bundle the same way.
  *
  * `src/content/render.ts` resolves the `{{ instance.* }}` namespace that
- * `docs/toolkit/`'s templates are written in, and the cockpit's own
+ * `docs/handbook/toolkit/`'s templates are written in, and the cockpit's own
  * chrome (`components/Layout.tsx`, `auth/Login.tsx`) names the
  * organisation too. All of that runs in a volunteer's browser, where no
  * file can be read, so the identity has to be substituted in at build

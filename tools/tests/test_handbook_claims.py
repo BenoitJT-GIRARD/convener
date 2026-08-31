@@ -5,7 +5,7 @@ has paid for that four times: the schema appendix drifted twice, the
 preparation countdown drifted six windows out of date, and both did it
 *underneath a sentence claiming they could not*. A marker is not a control.
 
-`docs/workflow/4-after.md` carried the same shape. It typed the view-counting
+`docs/handbook/workflow/4-after.md` carried the same shape. It typed the view-counting
 window as prose and then said "the handbook and the form cannot end up
 claiming different windows" - but only the form's label is derived
 (`viewCountLabel`, `app/src/state/phases.ts`); nothing read the page. Setting
@@ -47,10 +47,10 @@ from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 
 ROOT = repo_root()
-PAGE = Path("docs/workflow/4-after.md")
-GATES = Path("docs/governance/board-rules.md")
+PAGE = Path("docs/handbook/workflow/4-after.md")
+GATES = Path("docs/handbook/governance/board-rules.md")
 OPERATIONS = Path("docs/reference/operations.md")
-HOSTING = Path("docs/workflow/3-hosting.md")
+HOSTING = Path("docs/handbook/workflow/3-hosting.md")
 DRAIN_WORKFLOW = Path(".github/workflows/sweep-and-notify.yml")
 
 #: The sentence the page states the window in. Written as a pattern rather

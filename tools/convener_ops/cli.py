@@ -711,7 +711,7 @@ def _send_confirmation(
 
     **Reported, not retained.** An unsent
     confirmation used to be written to a `.gitignore`d file and uploaded as
-    a 14-day build artefact -- `docs/governance/traitement-donnees.md`'s
+    a 14-day build artefact -- `docs/handbook/governance/traitement-donnees.md`'s
     own Recipients section named this an exception, but with
     `email_transport` unconfigured (this project's default state) it was
     the path *every* registration took, not an exception at all. Removed
@@ -5783,7 +5783,7 @@ def render_announcements() -> int:
     alongside them, never colliding on a filename. `.md`, not `.txt`: the
     text this command now writes is a page's worth of Markdown (headings,
     emphasis, a volunteer's own working notes), not plain prose, because
-    it is now `docs/toolkit/*.md` itself, rendered (`announce.py`'s own
+    it is now `docs/handbook/toolkit/*.md` itself, rendered (`announce.py`'s own
     module docstring) -- the extension names what the file actually is.
 
     Routed through `public_data.to_public` before either rendering module

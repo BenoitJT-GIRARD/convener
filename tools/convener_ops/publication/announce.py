@@ -18,7 +18,7 @@ docstring for the argument in full; nothing here re-derives it.
 One prose, not two
 -------------------
 This module used to compose its own English by hand, deliberately not
-reading `docs/toolkit/*.md` -- a second templating engine over the same
+reading `docs/handbook/toolkit/*.md` -- a second templating engine over the same
 four files, its own docstring argued, was a second thing to keep in step
 with `render.ts`'s own for a payoff nobody had asked for. That argument
 proved wrong the moment it was checked against what an operator actually
@@ -30,7 +30,7 @@ to disagree the moment either one was edited without the other. D-14's own
 answer to a rule living on both sides of a language boundary is a shared
 fixture read from both sides, not two hand-typed copies; here the shared
 artefact is the templates themselves. So every function below now reads
-the identical file `render.ts` substitutes -- `docs/toolkit/forum-post-
+the identical file `render.ts` substitutes -- `docs/handbook/toolkit/forum-post-
 announce.md`, `linkedin-post.md`, `mailing-list-announce.md`, `recording-
 announce.md` -- through `_render`, a second, independent substitution
 engine (mechanics may exist twice; the words may not) that resolves the
@@ -99,9 +99,9 @@ __all__ = [
 #: Relative to the repository root, the same convention `paths.py::
 #: REGISTER_PATH` already uses for a `docs/` file -- and the exact
 #: directory `app/scripts/copy-handbook.mjs` copies into the cockpit's own
-#: `public/handbook/toolkit/`, so this is provably the file an operator's
+#: `public/docs/handbook/toolkit/`, so this is provably the file an operator's
 #: browser fetches too, not a second copy of it.
-TOOLKIT_DIR: Final[Path] = Path("docs") / "toolkit"
+TOOLKIT_DIR: Final[Path] = Path("docs") / "handbook" / "toolkit"
 
 #: `render.ts`'s own `{{ *.* }}` grammar -- a namespace, a dot, a leaf --
 #: reproduced here rather than imported: a `.ts` module cannot be required
@@ -144,7 +144,7 @@ def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
     expects to be there -- a title, a date, anything with no `?`/`!` sigil.
     It was always the wrong rule for a field that is *ordinarily* absent,
     read against a body an operator is about to copy verbatim and post
-    (`docs/toolkit/recording-announce.md`'s own `{{ public.bio }}`, sitting
+    (`docs/handbook/toolkit/recording-announce.md`'s own `{{ public.bio }}`, sitting
     alone as a paragraph, was the finding this exists for): a
     volunteer who pastes `«missing: public.bio»` into a forum reply has
     pasted a bug report, not an announcement.
@@ -168,7 +168,7 @@ def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
       *token* disappears, leaving the rest of that line as an ordinary
       sentence, when the field is absent -- so the template's own words say
       what happened to it, in whichever of the two ways this field's own
-      absence should read (`docs/toolkit/recording-announce.md`'s own
+      absence should read (`docs/handbook/toolkit/recording-announce.md`'s own
       `bio`/`forum_thread` notes read differently on purpose: one is
       finished, the other is a task); the *whole line*, when the field is
       present, because the fact is already in the body and does not need
@@ -292,7 +292,7 @@ def _public_namespace(row: Mapping[str, Any]) -> dict[str, str]:
 
 
 def forum_announcement(row: Mapping[str, Any], *, root: Path) -> str:
-    """`docs/toolkit/forum-post-announce.md`, filled in from `row`."""
+    """`docs/handbook/toolkit/forum-post-announce.md`, filled in from `row`."""
     text = _template(root, "forum-post-announce.md")
     return _render(
         text,
@@ -301,11 +301,11 @@ def forum_announcement(row: Mapping[str, Any], *, root: Path) -> str:
 
 
 def network_post(row: Mapping[str, Any], *, root: Path) -> str:
-    """`docs/toolkit/linkedin-post.md`, filled in from `row`. Named
+    """`docs/handbook/toolkit/linkedin-post.md`, filled in from `row`. Named
     `network_post`, not `linkedin_post`: the professional network is the
     channel, LinkedIn is this project's own current choice of one, and the
     template's own filename is the one place that choice is written down
-    (`docs/toolkit/linkedin-post.md`'s own module comment)."""
+    (`docs/handbook/toolkit/linkedin-post.md`'s own module comment)."""
     text = _template(root, "linkedin-post.md")
     return _render(
         text,
@@ -314,7 +314,7 @@ def network_post(row: Mapping[str, Any], *, root: Path) -> str:
 
 
 def mailing_list_message(row: Mapping[str, Any], *, root: Path) -> str:
-    """`docs/toolkit/mailing-list-announce.md`, filled in from `row`."""
+    """`docs/handbook/toolkit/mailing-list-announce.md`, filled in from `row`."""
     text = _template(root, "mailing-list-announce.md")
     return _render(
         text,
@@ -323,7 +323,7 @@ def mailing_list_message(row: Mapping[str, Any], *, root: Path) -> str:
 
 
 def recording_announcement(row: Mapping[str, Any], *, root: Path) -> str | None:
-    """`docs/toolkit/recording-announce.md`, filled in from `row` --
+    """`docs/handbook/toolkit/recording-announce.md`, filled in from `row` --
     `None`, not a page full of missing markers, when `row["youtube_url"]`
     is empty: there is nothing to announce yet, an ordinary state (D-13)
     for an archived edition whose speaker has not yet agreed to publish,

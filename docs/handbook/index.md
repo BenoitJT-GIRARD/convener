@@ -10,8 +10,8 @@ Welcome. This handbook holds everything our volunteers need to run the series' o
 - **[Templates](toolkit/index.md)** — ready-made emails, posts and scripts.
 - **[Governance](governance/editorial-line.md)** — what the series stands for, and how we decide.
 - **[The Board's rules](governance/board-rules.md)** — for Board members: who votes, what the bar is, what happens if you do nothing.
-- **[Contacts](reference/contacts.md)** — how to reach the Board, and why there is nobody outside the team to reach.
-- **[The workspace](reference/the-workspace.md)** — what each screen of this app is for, and what runs in it on its own.
+- **[Contacts](../reference/contacts.md)** — how to reach the Board, and why there is nobody outside the team to reach.
+- **[The workspace](../reference/the-workspace.md)** — what each screen of this app is for, and what runs in it on its own.
 
 ## How we work — three ideas
 

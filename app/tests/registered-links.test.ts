@@ -4,7 +4,7 @@
  * itself).
  *
  * This was once not true: `docs/reference/operations.md` was
- * linked from eight registered pages, and `docs/governance/register.md`
+ * linked from eight registered pages, and `docs/handbook/governance/register.md`
  * from two, neither of them registered. Fixing those nine links one at a
  * time -- rewriting the prose, or registering the two pages that turned out
  * to deserve it -- closes today's instances and nothing else: exactly the

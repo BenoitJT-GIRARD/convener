@@ -76,7 +76,7 @@ field short. An absence has an answer; half a section does not, and completing
 it from the default would hand back three values that appear in no file — the
 same reason the two charters are never merged.
 
-The two templates a collaborator downloads (`docs/assets/*.svg`) are derived
+The two templates a collaborator downloads (`docs/handbook/assets/*.svg`) are derived
 from the charter now as well, so "nothing may hard-code a colour" finally holds
 for the files that leave the repository. They had drifted onto the very palette
 this decision rejected, and one line in them was set in the page's own

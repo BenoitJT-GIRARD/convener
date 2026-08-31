@@ -186,7 +186,7 @@ describe('the settings screen', () => {
   it('lists what this instance owns, derived rather than typed', async () => {
     renderSettings(makeBackend());
     // From `config/boundary.yml`'s own list...
-    expect(await screen.findByText('docs/governance/register.md', undefined, FIRST_RENDER)).toBeInTheDocument();
+    expect(await screen.findByText('docs/handbook/governance/register.md', undefined, FIRST_RENDER)).toBeInTheDocument();
     expect(screen.getByText('instance/keys/')).toBeInTheDocument();
     // ...and from each configuration file's own `owner:` header.
     expect(screen.getByText('instance/queue-drain.yml')).toBeInTheDocument();

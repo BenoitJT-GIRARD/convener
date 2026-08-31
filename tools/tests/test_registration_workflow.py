@@ -116,7 +116,7 @@ def test_the_workflow_never_uploads_an_unsent_confirmation_artefact() -> None:
     """An unsent confirmation is reported, not
     retained. There used to be a step here uploading the composed message
     as a 14-day build artefact; it is gone, and this pins that it does not
-    come back -- `docs/governance/traitement-donnees.md`'s own Recipients
+    come back -- `docs/handbook/governance/traitement-donnees.md`'s own Recipients
     section is only true again because it does not exist."""
     assert "unsent-confirmation" not in _REGISTRATION
     assert "upload-artifact" not in _REGISTRATION

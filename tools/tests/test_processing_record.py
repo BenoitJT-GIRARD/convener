@@ -1,5 +1,5 @@
 """The data-protection processing record
-(`docs/governance/traitement-donnees.md`), against the code it describes.
+(`docs/handbook/governance/traitement-donnees.md`), against the code it describes.
 
 A page that states a number or an address the code also holds is a copy --
 this project has paid for that drift before (`test_handbook_claims.py`'s own
@@ -22,7 +22,7 @@ from convener_ops.journey.confirmation import CONTACT_EMAIL
 from convener_ops.journey.eventkeys import RETENTION_DAYS
 
 ROOT = repo_root()
-PAGE = ROOT / "docs" / "governance" / "traitement-donnees.md"
+PAGE = ROOT / "docs" / "handbook" / "governance" / "traitement-donnees.md"
 
 #: Written as a pattern, not a loose `"90" in text` check -- a page free to
 #: mention "90" anywhere (a percentage, a different count) would still pass

@@ -16,17 +16,17 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 
 | Topic | Canonical home |
 |---|---|
-| Editorial line | `docs/governance/editorial-line.md` |
-| Roles | `docs/roles.md` |
-| The two gates (mechanics) | `docs/governance/board-rules.md` |
-| What the Board is, and its yearly meeting | `docs/governance/editorial-board.md` |
-| Selection criteria | `docs/governance/selection-criteria.md` |
-| Conflict-of-interest policy | `docs/governance/conflict-of-interest.md` |
-| Data protection record (registration & certification) | `docs/governance/traitement-donnees.md` |
-| Data protection record (speaker & event-lead candidates) | `docs/governance/candidate-data-protection.md` |
+| Editorial line | `docs/handbook/governance/editorial-line.md` |
+| Roles | `docs/handbook/roles.md` |
+| The two gates (mechanics) | `docs/handbook/governance/board-rules.md` |
+| What the Board is, and its yearly meeting | `docs/handbook/governance/editorial-board.md` |
+| Selection criteria | `docs/handbook/governance/selection-criteria.md` |
+| Conflict-of-interest policy | `docs/handbook/governance/conflict-of-interest.md` |
+| Data protection record (registration & certification) | `docs/handbook/governance/traitement-donnees.md` |
+| Data protection record (speaker & event-lead candidates) | `docs/handbook/governance/candidate-data-protection.md` |
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
 | T-minus runbook steps | `app/src/state/phases.ts` |
-| Templates | `docs/toolkit/` |
+| Templates | `docs/handbook/toolkit/` |
 | What each screen of the app is for | `docs/reference/the-workspace.md` |
 | Live speaker & event data | `instance/data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
@@ -63,7 +63,7 @@ The nav reflects how soon a volunteer needs the page:
 
 ## 5 · Coherent terminology
 
-A single glossary at `docs/start-here/glossary.md` defines every term. Every other page conforms to it. Notable canonical terms:
+A single glossary at `docs/handbook/start-here/glossary.md` defines every term. Every other page conforms to it. Notable canonical terms:
 
 - **Event Host** — the person who runs a webinar (each webinar has two co-hosting).
 - **Editorial Board** — the curatorial body. Always capitalised.

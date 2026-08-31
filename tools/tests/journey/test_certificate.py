@@ -1136,7 +1136,7 @@ def test_certificates_path_is_the_events_directory_plus_certificates_yml() -> No
 
 
 # ------------------------------------------------------------------ #
-# docs/toolkit/certificate.md: the page claims a test pins its field list
+# docs/handbook/toolkit/certificate.md: the page claims a test pins its field list
 # against signing.PAYLOAD_FIELDS and ORGANISER. This is that test.
 # ------------------------------------------------------------------ #
 
@@ -1154,13 +1154,13 @@ _TOOLKIT_PLACEHOLDERS = {
 
 
 def test_the_toolkit_page_field_list_matches_the_signed_payload() -> None:
-    text = (repo_root() / "docs" / "toolkit" / "certificate.md").read_text(
+    text = (repo_root() / "docs" / "handbook" / "toolkit" / "certificate.md").read_text(
         encoding="utf-8"
     )
     assert set(_TOOLKIT_PLACEHOLDERS) == PAYLOAD_FIELDS
     for field, placeholder in _TOOLKIT_PLACEHOLDERS.items():
         assert placeholder in text, (
-            f"docs/toolkit/certificate.md has no placeholder for the signed "
+            f"docs/handbook/toolkit/certificate.md has no placeholder for the signed "
             f"field {field!r} -- expected {placeholder!r}"
         )
 
@@ -1179,12 +1179,12 @@ def test_the_toolkit_page_prints_the_organiser_constant() -> None:
     had gone back to a literal would fail the first; a token that resolved
     to something else would fail the second.
     """
-    text = (repo_root() / "docs" / "toolkit" / "certificate.md").read_text(
+    text = (repo_root() / "docs" / "handbook" / "toolkit" / "certificate.md").read_text(
         encoding="utf-8"
     )
     token = "{{ instance.organisation }}"
     assert token in text, (
-        "docs/toolkit/certificate.md no longer names the organiser through "
+        "docs/handbook/toolkit/certificate.md no longer names the organiser through "
         "the substitution vocabulary -- a literal here is a name a duplicate "
         "has to find and edit by hand"
     )

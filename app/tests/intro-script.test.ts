@@ -143,11 +143,11 @@ describe('what belongs to another page is pointed at, not restated', () => {
 
   it('reaches the app through the fragment mechanism, like every template', () => {
     expect(CONTENT_REGISTRY[DECK_KEY]).toEqual({
-      file: 'toolkit/slides/presentation-template.md',
+      file: 'handbook/toolkit/slides/presentation-template.md',
       anchor: null,
     });
     expect(CONTENT_REGISTRY[SCRIPT_KEY]).toEqual({
-      file: 'toolkit/intro-scripts.md',
+      file: 'handbook/toolkit/intro-scripts.md',
       anchor: null,
     });
   });

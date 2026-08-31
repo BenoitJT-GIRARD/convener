@@ -31,7 +31,7 @@ Four vocabularies, each read from the repository at run time:
 * **`G-NN`** -- a governance rule. Derived from the pages under `docs/`
   that state the rules, each of which *titles* the rule with its number:
   `## Inactivity (G-09)` in `docs/reference/operations.md`, `### The bar
-  (G-01)` in `docs/governance/board-rules.md`, `**Declaring an absence
+  (G-01)` in `docs/handbook/governance/board-rules.md`, `**Declaring an absence
   (G-04)**` opening its own paragraph on that same page. Writing a new
   rule and titling it is what makes its number citable; there is nothing
   here to edit.
@@ -51,7 +51,7 @@ the first heading of every published page under `docs/`, and a coordinate
 resolves only if some page bears that name.
 
 That derivation is exactly what separates the two meanings of one word.
-`docs/workflow/3-hosting.md` opens `# Phase 3 — Hosting day`, so
+`docs/handbook/workflow/3-hosting.md` opens `# Phase 3 — Hosting day`, so
 "[Phase 3 — Hosting day](../workflow/3-hosting.md)" resolves and stays;
 "phase 8, task 3" names a plan this repository never publishes, and goes.
 **The limit of that, stated rather than left to be discovered:** the event
@@ -112,16 +112,16 @@ thorough one:
 * **`the plan`.** `plan_queue_drain` computes one and `repository.py`
   prints one; `validate.py` and `app/src/state/channels.ts` both mean the
   promotion plan a volunteer edits. It is a noun this product owns.
-* **`the review`.** `docs/governance/editorial-board.md` says a member
+* **`the review`.** `docs/handbook/governance/editorial-board.md` says a member
   "reviews edits to the handbook"; `commit_format.py` means "the commits
-  under review"; `docs/toolkit/run-of-show.md` means peer review. Ordinary
+  under review"; `docs/handbook/toolkit/run-of-show.md` means peer review. Ordinary
   English three ways over, in a repository that uses the word 123 times.
 * **`the audit`.** `register.py` calls the git history "the audit trail",
   and `test_dependency_audit_workflow.py` means the dependency audit a
   published workflow actually runs.
 * **`the report`.** Every guard, checker and sweep in this repository
   prints one, and says so in its own docstring.
-* **bare `task`, `phase`, `round`.** `docs/start-here/index.md` is headed
+* **bare `task`, `phase`, `round`.** `docs/handbook/start-here/index.md` is headed
   "Pick a first task", the event journey has four phases, a Markdown
   checklist has tasks, and `yaml.test.ts` has a round-trip. `COORDINATE`
   above already catches the citing use, because that one carries a number.
@@ -249,7 +249,7 @@ SEVERITY_TOKEN = re.compile(
 #:
 #: * `this task` / `the task's`, but never a bare `the task`, which is
 #:   ordinary English and this product's own vocabulary besides
-#:   (`docs/start-here/index.md` is headed "Pick a first task").
+#:   (`docs/handbook/start-here/index.md` is headed "Pick a first task").
 #: * `the brief`, `own brief`, `task brief` -- always the noun. `brief`
 #:   alone is left out because it is usually the adjective.
 #: * `the spec`, abbreviated and bare. A public standard is always named
@@ -469,7 +469,7 @@ def published_governance_rules() -> frozenset[str]:
 def published_page_titles() -> frozenset[str]:
     """The first heading of every published page under `docs/`, lower-cased.
 
-    What a coordinate is resolved against. `docs/workflow/3-hosting.md`
+    What a coordinate is resolved against. `docs/handbook/workflow/3-hosting.md`
     contributes "phase 3 — hosting day", which is what lets a link to it
     keep saying "Phase 3".
     """
@@ -634,7 +634,7 @@ def test_the_edition_prefixes_are_read_from_the_declarations() -> None:
 def test_the_published_page_titles_include_the_event_journey() -> None:
     """The derivation that separates a journey phase from a plan's phase.
 
-    If `docs/workflow/` ever stopped opening its pages with `# Phase N`,
+    If `docs/handbook/workflow/` ever stopped opening its pages with `# Phase N`,
     every link to them would start failing the coordinate sweep -- which
     would be this check's fault, not the links'.
     """
@@ -813,7 +813,7 @@ def test_a_governance_rule_no_page_states_is_caught(tmp_path: Path) -> None:
 
 
 def test_a_published_governance_rule_is_not_caught(tmp_path: Path) -> None:
-    """`docs/governance/board-rules.md` titles a section `### The bar
+    """`docs/handbook/governance/board-rules.md` titles a section `### The bar
     (G-01)`, so a comment naming the bar by its number resolves."""
     probe = tmp_path / "probe.py"
     probe.write_text('"""The two-thirds bar (G-01)."""\n', "utf-8")

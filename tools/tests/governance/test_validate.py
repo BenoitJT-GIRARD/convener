@@ -212,7 +212,7 @@ def test_the_view_counting_window_is_configuration_on_this_side_too() -> None:
     Both languages have to require it, or the browser writes a file the
     scheduled jobs refuse - or, worse, the other way round, and a config
     without the key reaches `instance/data/` where the app then reads `undefined`
-    into a label. `docs/workflow/4-after.md` states the convention itself.
+    into a label. `docs/handbook/workflow/4-after.md` states the convention itself.
     """
     cfg = config()
     del cfg["view_count_window_days"]

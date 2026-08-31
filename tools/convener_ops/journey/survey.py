@@ -56,7 +56,7 @@ address. Two things follow from that, deliberately:
    responses" is the same lever that erases its registrations: destroying
    the event's key early, which `eventkeys.destroy` already supports and
    which this module adds no new procedure for. This is a real, named gap
-   between what `docs/governance/traitement-donnees.md` records for
+   between what `docs/handbook/governance/traitement-donnees.md` records for
    registrations and what this module can deliver for anonymous survey
    text -- written down here rather than quietly assumed away.
 

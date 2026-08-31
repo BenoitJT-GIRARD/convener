@@ -145,7 +145,7 @@ class Handed:
     *upstream* rather than about the instance. Ownership says upstream will
     not edit a path; it cannot say upstream will not *run* — and upstream
     is itself a running instance, whose own scheduled jobs rewrite some of
-    these paths on every push. `docs/governance/register.md` is the one
+    these paths on every push. `docs/handbook/governance/register.md` is the one
     that bites: it is a total re-rendering of one repository's own commit
     history, so upstream's copy and a duplicate's copy are both correct,
     entirely different, and rewritten on both sides between any two merges.

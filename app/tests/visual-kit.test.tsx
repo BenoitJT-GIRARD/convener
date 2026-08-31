@@ -10,7 +10,7 @@
  * 1. A link in the kit points at a file that is not there.
  * 2. The file is there, but the build never copies it, so the download is a
  *    404 for everyone using the app. This is the failure the previous copy
- *    step had: it walked `.md` only and skipped `docs/assets/` outright, and
+ *    step had: it walked `.md` only and skipped `docs/handbook/assets/` outright, and
  *    the video-call background had been sitting unreachable behind that.
  * 3. A file drifts into a closed format, or grows until nobody wants to
  *    clone the repository — the two ways this kit's own purpose is undone.
@@ -34,8 +34,8 @@ import { walk, isServed } from '../scripts/handbook-files.mjs';
 
 const KIT_KEY = 'toolkit/visual-kit';
 const DOCS = resolve(__dirname, '../../docs');
-const TEMPLATES = ['assets/announcement-template.svg', 'assets/flyer-template.svg'];
-const BACKGROUND = 'assets/video-call-background.svg';
+const TEMPLATES = ['handbook/assets/announcement-template.svg', 'handbook/assets/flyer-template.svg'];
+const BACKGROUND = 'handbook/assets/video-call-background.svg';
 // All three are SVG now: the background was a hand-drawn PNG until
 // 2026-08-28, which made it the one file in this kit nothing could read --
 // including the sweep that keeps one instance's name out of another's
@@ -48,7 +48,7 @@ const SOURCE = [...TEMPLATES, BACKGROUND];
 // Named here so the tests below assert its absence rather than simply
 // omitting it -- an omission a later change could not tell apart from an
 // oversight.
-const WITHDRAWN_EXAMPLE = 'assets/flyer-example.png';
+const WITHDRAWN_EXAMPLE = 'handbook/assets/flyer-example.png';
 
 function kit(): string {
   return readFileSync(resolve(DOCS, CONTENT_REGISTRY[KIT_KEY].file), 'utf-8');
@@ -61,6 +61,12 @@ function localLinks(): string[] {
     .filter(href => !/^[a-z][a-z0-9+.-]*:/i.test(href));
 }
 
+/** How the kit's own page links to one of the files above: the paths here
+ *  are relative to `docs/`, and the page sits in `handbook/toolkit/`. */
+function linkTo(file: string): string {
+  return `../${file.slice('handbook/'.length)}`;
+}
+
 let served: string[];
 beforeAll(async () => {
   served = (await walk(DOCS)).map((p: string) => p.split('\\').join('/'));
@@ -68,17 +74,17 @@ beforeAll(async () => {
 
 describe('the kit is reachable', () => {
   it('is a handbook page like any other', () => {
-    expect(CONTENT_REGISTRY[KIT_KEY]).toEqual({ file: 'toolkit/visual-kit.md', anchor: null });
+    expect(CONTENT_REGISTRY[KIT_KEY]).toEqual({ file: 'handbook/toolkit/visual-kit.md', anchor: null });
   });
 
   it('is listed on the templates index', () => {
-    const index = readFileSync(resolve(DOCS, 'toolkit/index.md'), 'utf-8');
+    const index = readFileSync(resolve(DOCS, 'handbook/toolkit/index.md'), 'utf-8');
     expect(index).toContain('(visual-kit.md)');
   });
 
   it('links only to files that exist', () => {
     for (const href of localLinks()) {
-      const path = resolve(DOCS, 'toolkit', href.split('#')[0]);
+      const path = resolve(DOCS, 'handbook', 'toolkit', href.split('#')[0]);
       expect(statSync(path).isFile(), `${href} is missing`).toBe(true);
     }
   });
@@ -86,7 +92,7 @@ describe('the kit is reachable', () => {
   it('offers both templates and the video-call background', () => {
     const links = localLinks();
     for (const file of SOURCE) {
-      expect(links).toContain(`../${file}`);
+      expect(links).toContain(linkTo(file));
     }
   });
 });
@@ -112,17 +118,17 @@ describe('the build serves what the kit links to', () => {
     // that would put her real name in the clear in this test file to
     // check for it, which the fix this test is guarding is not allowed to
     // do either.)
-    expect(localLinks()).not.toContain(`../${WITHDRAWN_EXAMPLE}`);
+    expect(localLinks()).not.toContain(linkTo(WITHDRAWN_EXAMPLE));
   });
 
   it('turns a link written for the repository into one the app can fetch', () => {
     // Written `../assets/flyer-template.svg` so it works when read on GitHub;
     // resolved against the file's own directory so it works in the app.
     const url = handbookUrl(KIT_KEY, '../assets/flyer-template.svg');
-    expect(url.endsWith('/handbook/assets/flyer-template.svg'), url).toBe(true);
+    expect(url.endsWith('/docs/handbook/assets/flyer-template.svg'), url).toBe(true);
     expect(url).not.toContain('..');
     // And the published path is exactly where the copy step puts the file.
-    expect(PUBLIC_ASSETS).toContain('assets/flyer-template.svg');
+    expect(PUBLIC_ASSETS).toContain('handbook/assets/flyer-template.svg');
   });
 
   it('leaves external links alone and drops unsafe schemes', () => {

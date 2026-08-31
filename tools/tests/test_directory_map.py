@@ -68,7 +68,7 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "app": ("src/main.tsx",),
     "brand": ("convener/brand.json",),
     "config": ("boundary.yml",),
-    "docs": ("architecture.md", "governance/register.md"),
+    "docs": ("architecture.md", "handbook/governance/register.md"),
     "fonts": ("Archivo-LICENSE.txt",),
     "instance": ("data/config.yml", "data/schema.md", "keys/signing/README.md"),
     "instances": ("example/README.md",),
@@ -264,7 +264,7 @@ def test_every_crossing_is_listed_and_says_which_way_it_crosses() -> None:
     crossed = crossings(owners, tracked, boundary)
 
     assert crossed == (
-        ("docs/governance/register.md", INSTANCE),
+        ("docs/handbook/governance/register.md", INSTANCE),
         ("instance/data/schema.md", PRODUCT),
         ("instance/keys/signing/README.md", PRODUCT),
     )

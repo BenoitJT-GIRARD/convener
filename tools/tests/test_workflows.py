@@ -5181,11 +5181,11 @@ def _overlaps(one: str, other: str) -> bool:
 
 def test_the_overlap_rule_reproduces_the_distinction_it_exists_to_draw() -> None:
     """Positive control. The whole of this filter's correctness sits on one
-    distinction: `docs/reference` and `docs/governance/board-rules.md`
+    distinction: `docs/reference` and `docs/handbook/governance/board-rules.md`
     do *not* overlap even though both live under `docs/`, while `config`
     and `config/integrations.yml` do. A rule that could not draw that
     line would either pass on a broken list or fail on the correct one."""
-    assert not _overlaps("docs/reference", "docs/governance/board-rules.md")
+    assert not _overlaps("docs/reference", "docs/handbook/governance/board-rules.md")
     assert not _overlaps("site", "site-map.md")
     assert _overlaps("config", "config/integrations.yml")
     assert _overlaps("instance/data/events", "instance/data")

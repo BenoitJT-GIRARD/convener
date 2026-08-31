@@ -1,7 +1,7 @@
 """The three files a collaborator downloads, derived rather than drawn.
 
-`docs/assets/announcement-template.svg` and `flyer-template.svg` are the
-files `docs/toolkit/visual-kit.md` links to: a volunteer downloads one,
+`docs/handbook/assets/announcement-template.svg` and `flyer-template.svg` are the
+files `docs/handbook/toolkit/visual-kit.md` links to: a volunteer downloads one,
 opens it in Inkscape or a text editor, fills in the event and exports an
 image. They were drawn by hand, and they had drifted -- measured, not
 suspected. They carried
@@ -98,9 +98,9 @@ that is not a decision a generator gets to take on its own.
 
 The third file, and why it is vector where it used to be a bitmap
 -------------------------------------------------------------------
-`docs/assets/video-call-background.svg` is what a host puts behind them
+`docs/handbook/assets/video-call-background.svg` is what a host puts behind them
 during a session. It was a hand-drawn PNG until 2026-08-28, and it was the
-last hand-made file in `docs/assets/` -- which made it the one thing
+last hand-made file in `docs/handbook/assets/` -- which made it the one thing
 `convener_ops.derivation.derivation_guard` could not read: that guard sweeps every
 blob of every ref for the values this instance declares about itself, and
 a wordmark inside an image is invisible to it. The file it could not read
@@ -150,7 +150,7 @@ declare); the second by fitting each line's size to the plate it is set in
 rather than typing three sizes and hoping (`_fitted_font_size`).
 
 What it costs a volunteer is one export, and that cost is named on the
-page rather than hidden: `docs/toolkit/visual-kit.md` already asks for
+page rather than hidden: `docs/handbook/toolkit/visual-kit.md` already asks for
 exactly that export from the other two files, and this is the one of the
 three that needs no editing first.
 """
@@ -175,11 +175,12 @@ __all__ = [
 ]
 
 #: Where each generated template lives, relative to a repository root.
-#: `docs/toolkit/visual-kit.md` links to both by these paths, and
+#: `docs/handbook/toolkit/visual-kit.md` links to both by these paths, and
 #: `app/src/content/registry.ts::PUBLIC_ASSETS` publishes them.
-ANNOUNCEMENT_PATH: Final = Path("docs") / "assets" / "announcement-template.svg"
-FLYER_PATH: Final = Path("docs") / "assets" / "flyer-template.svg"
-BACKGROUND_PATH: Final = Path("docs") / "assets" / "video-call-background.svg"
+ASSETS_DIR: Final = Path("docs") / "handbook" / "assets"
+ANNOUNCEMENT_PATH: Final = ASSETS_DIR / "announcement-template.svg"
+FLYER_PATH: Final = ASSETS_DIR / "flyer-template.svg"
+BACKGROUND_PATH: Final = ASSETS_DIR / "video-call-background.svg"
 
 #: The flyer's user-unit grid: ten units per millimetre of A4, so a
 #: coordinate reads as a tenth of a millimetre and the physical size comes
@@ -808,7 +809,7 @@ def _wordmark_values(mark: _Wordmark, values: dict[str, str]) -> dict[str, str]:
 
 
 def render_announcement_template(root: Path) -> str:
-    """`docs/assets/announcement-template.svg` in full."""
+    """`docs/handbook/assets/announcement-template.svg` in full."""
     values = _values(root)
     width, height = formats.SQUARE.width, formats.SQUARE.height
     return _ANNOUNCEMENT.format(
@@ -823,7 +824,7 @@ def render_announcement_template(root: Path) -> str:
 
 
 def render_flyer_template(root: Path) -> str:
-    """`docs/assets/flyer-template.svg` in full."""
+    """`docs/handbook/assets/flyer-template.svg` in full."""
     values = _values(root)
     paper_w, paper_h = formats.PRINT_PAPER_MM
     width, height = paper_w * _UNITS_PER_MM, paper_h * _UNITS_PER_MM
@@ -983,7 +984,7 @@ _BACKGROUND: Final = """\
 
 
 def render_video_call_background(root: Path) -> str:
-    """`docs/assets/video-call-background.svg` in full."""
+    """`docs/handbook/assets/video-call-background.svg` in full."""
     values = _values(root)
     width, height = _BACKGROUND_WIDTH, _BACKGROUND_HEIGHT
     ratio = float(values["ribbon_ratio"])

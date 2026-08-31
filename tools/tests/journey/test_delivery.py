@@ -396,6 +396,7 @@ def test_smtp_delivery_transport_uses_implicit_tls_on_port_465(
 _DOCS_TEMPLATE = (
     Path(__file__).resolve().parents[3]
     / "docs"
+    / "handbook"
     / "toolkit"
     / "emails"
     / "certificate-delivered.md"
@@ -420,7 +421,7 @@ def test_the_document_instruction_matches_the_documentation_copy() -> None:
     ASCII "--" where both the docs page and `compose`'s own subject line
     already used an em dash). `DOCUMENT_INSTRUCTION` is exported so this
     test, and `compose` itself, can never quietly diverge from
-    `docs/toolkit/emails/certificate-delivered.md` again -- the same
+    `docs/handbook/toolkit/emails/certificate-delivered.md` again -- the same
     "export the sentence" discipline `test_confirmation.py` already
     applies to `MATCHING_INSTRUCTION` and `UPDATE_WARNING`."""
     assert DOCUMENT_INSTRUCTION in _normalised_docs_template()

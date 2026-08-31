@@ -80,7 +80,7 @@ reason:
 - **`instance/public-data/`** — empty in a fresh clone by construction: everything
   in it is derived from `instance/data/` by the product's own commands, and the
   second-instance build runs them.
-- **`docs/governance/register.md`** — declared `regenerated: true`, which
+- **`docs/handbook/governance/register.md`** — declared `regenerated: true`, which
   means a scheduled job rewrites it in full on both sides of any merge. A
   duplicate inherits upstream's copy and its own next push replaces it, so
   an authored one here would be an authored copy of a generated file.

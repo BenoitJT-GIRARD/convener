@@ -109,7 +109,7 @@ describe('the view-counting window is a convention, so it is configuration', () 
    * agreed once and written in `instance/data/config.yml` -- and the field a volunteer
    * fills in has to say which number is in force, or the handbook and the
    * form can end up asking for two different measurements of the same talk.
-   * `docs/workflow/4-after.md` is where the convention is stated.
+   * `docs/handbook/workflow/4-after.md` is where the convention is stated.
    */
   const wrapUp = phaseOf('delivered')!;
   const labelFor = (cfg: Config | null) =>

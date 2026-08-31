@@ -1,4 +1,4 @@
-# `docs/governance/register.md` is derived, never authored: this job rewrites
+# `docs/handbook/governance/register.md` is derived, never authored: this job rewrites
 # it in full from the commit history, so a row added by hand does not survive
 # the next push. It commits only when the derivation actually changed.
 
@@ -36,7 +36,7 @@ jobs:
         # On a rejected push, re-derive against the
         # refreshed tip rather than `git pull --rebase` -- the same shape
         # registration.yml's own retry loop uses, and for the identical
-        # reason. `docs/governance/register.md` is a generated file
+        # reason. `docs/handbook/governance/register.md` is a generated file
         # (this file's own header comment): two runs racing each other
         # both rewrite it in full, so their diffs both touch the same
         # lines and a rebase between them conflicts instead of applying.
@@ -53,7 +53,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-register)
-            git add docs/governance/register.md
+            git add docs/handbook/governance/register.md
             if git diff --staged --quiet; then
               echo "nothing to commit"
               exit 0

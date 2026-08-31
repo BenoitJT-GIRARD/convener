@@ -149,7 +149,7 @@ run, and why is worth knowing:
   or a signing key is an operator's act; everything under
   `instance/public-data/` is derived from `instance/data/` by this
   project's own commands and committed by a workflow.
-- **`docs/governance/register.md`** is a total re-rendering of a
+- **`docs/handbook/governance/register.md`** is a total re-rendering of a
   repository's own commit history, rewritten by a scheduled job on every
   push. A duplicate inherits ours, and its own next push replaces it.
 
@@ -288,9 +288,9 @@ out.
 For an operator, concretely:
 
 - **The processing record is yours.**
-  [`docs/governance/traitement-donnees.md`](docs/governance/traitement-donnees.md)
+  [`docs/handbook/governance/traitement-donnees.md`](docs/handbook/governance/traitement-donnees.md)
   and
-  [`docs/governance/candidate-data-protection.md`](docs/governance/candidate-data-protection.md)
+  [`docs/handbook/governance/candidate-data-protection.md`](docs/handbook/governance/candidate-data-protection.md)
   describe mechanisms a duplicate genuinely shares, which is why a duplicate
   inherits them — but the controller each names is the instance's own, and
   every claim on those pages is one you are making about your own

@@ -136,7 +136,7 @@ The state machine governs transitions. Statuses:
 
 Keys follow `phase/item` (e.g. `approved/host_1`, `scheduled/T-14/zoom-link`).
 The phase definitions and gate semantics live in `app/src/state/phases.ts`, and
-the countdown in `docs/workflow/2-preparation.md` is checked against them.
+the countdown in `docs/handbook/workflow/2-preparation.md` is checked against them.
 Checking the last gate of a phase auto-advances the speaker to the next status.
 
 `checklist` is keyed the same way, one entry per line somebody has been put
@@ -251,7 +251,7 @@ access control, because everyone who could edit it is already inside. What
 nothing enforces is that the two agree — a member removed from the team but
 left `active` here still counts toward the bar they can no longer reach the
 app to meet. Comparing them needs a call to GitHub, so it is an operator's
-check and not a test; see `docs/governance/editorial-board.md`.
+check and not a test; see `docs/handbook/governance/editorial-board.md`.
 
 ## History
 

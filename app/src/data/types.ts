@@ -511,7 +511,7 @@ export interface Config {
    *
    *  Views arrive for years, so a count is only comparable with another
    *  count taken the same number of days out. The number itself is a
-   *  convention -- see `docs/workflow/4-after.md` -- which is why it is
+   *  convention -- see `docs/handbook/workflow/4-after.md` -- which is why it is
    *  configuration and not a constant, and why the field's label is built
    *  from it rather than typed. */
   view_count_window_days: number;

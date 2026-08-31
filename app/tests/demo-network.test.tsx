@@ -378,8 +378,8 @@ const HERE = 'https://example.org/cockpit/app/';
 
 describe('demoRefusal', () => {
   it('lets a read of the origin that served the page through', () => {
-    expect(demoRefusal('/cockpit/app/handbook/start-here/index.md', 'GET', HERE)).toBeNull();
-    expect(demoRefusal('handbook/start-here/index.md', 'HEAD', HERE)).toBeNull();
+    expect(demoRefusal('/cockpit/app/docs/handbook/start-here/index.md', 'GET', HERE)).toBeNull();
+    expect(demoRefusal('docs/handbook/start-here/index.md', 'HEAD', HERE)).toBeNull();
     expect(demoRefusal('https://example.org/elsewhere', 'get', HERE)).toBeNull();
   });
 
@@ -431,7 +431,7 @@ describe('request', () => {
       return Promise.resolve(new Response('', { status: 200 }));
     });
     await expect(request('https://api.github.com/user')).rejects.toBeInstanceOf(DemoModeRefused);
-    await expect(request('/handbook/x.md', { method: 'PUT' })).rejects.toBeInstanceOf(
+    await expect(request('/docs/handbook/x.md', { method: 'PUT' })).rejects.toBeInstanceOf(
       DemoModeRefused,
     );
     expect(called).toBe(0);
@@ -440,7 +440,7 @@ describe('request', () => {
   it('still reads the page it was served from, in demo mode', async () => {
     localStorage.setItem('convener.demo', '1');
     vi.stubGlobal('fetch', () => Promise.resolve(new Response('# page', { status: 200 })));
-    const response = await request('/handbook/start-here/index.md');
+    const response = await request('/docs/handbook/start-here/index.md');
     expect(await response.text()).toBe('# page');
   });
 });
@@ -482,6 +482,6 @@ describe('the cockpit rendered in demo mode', () => {
     // Non-vacuity for this test in particular: the assertions above are
     // satisfied by an empty list, so the list is pinned to the one thing
     // demo mode really does ask for.
-    expect(asked.some(c => c.includes('/handbook/'))).toBe(true);
+    expect(asked.some(c => c.includes('/docs/handbook/'))).toBe(true);
   });
 });

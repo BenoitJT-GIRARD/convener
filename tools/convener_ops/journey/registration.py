@@ -122,10 +122,10 @@ FILE_VERSION: Final = 1
 #: before this constant existed, nothing in the repository
 #: -- no document, no template, no other constant -- carried
 #: `#/signup/<event id>` at all, while the two public announcement
-#: templates (`docs/toolkit/forum-post-announce.md`,
-#: `docs/toolkit/linkedin-post.md`) published the meeting room link under
+#: templates (`docs/handbook/toolkit/forum-post-announce.md`,
+#: `docs/handbook/toolkit/linkedin-post.md`) published the meeting room link under
 #: the word "Registration" instead. That both contradicted
-#: `docs/toolkit/emails/registration-confirmed.md`'s own pinned claim that
+#: `docs/handbook/toolkit/emails/registration-confirmed.md`'s own pinned claim that
 #: the room link "is not otherwise published", and meant nobody could ever
 #: reach the page `certificate.VERIFICATION_BASE` and `survey_invite.
 #: SURVEY_BASE` already treat as this project's third public address.

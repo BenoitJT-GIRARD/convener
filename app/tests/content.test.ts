@@ -60,7 +60,7 @@ describe('fetchContent', () => {
     expect(out).toMatch(/Missing/);
   });
 
-  it('fetches markdown from /<base>/handbook/<file>', async () => {
+  it('fetches markdown from /<base>/docs/<file>', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => '# Hello from invitation.md',
@@ -68,7 +68,7 @@ describe('fetchContent', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const out = await fetchContent('toolkit/emails/invitation', null);
     expect(out).toBe('# Hello from invitation.md');
-    expect(fetchSpy.mock.calls[0][0]).toMatch(/handbook\/toolkit\/emails\/invitation\.md$/);
+    expect(fetchSpy.mock.calls[0][0]).toMatch(/docs\/handbook\/toolkit\/emails\/invitation\.md$/);
   });
 
   it('throws a plain-language error on non-ok response, not the raw status', async () => {

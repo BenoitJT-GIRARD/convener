@@ -20,13 +20,13 @@ export const repoUrl = repositoryUrl;
 
 export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // governance
-  'governance/selection-criteria': { file: 'governance/selection-criteria.md', anchor: null },
-  'governance/editorial-line': { file: 'governance/editorial-line.md', anchor: null },
-  'governance/editorial-board': { file: 'governance/editorial-board.md', anchor: null },
-  'governance/board-rules': { file: 'governance/board-rules.md', anchor: null },
-  'governance/conflict-of-interest': { file: 'governance/conflict-of-interest.md', anchor: null },
-  'governance/decisions': { file: 'governance/decisions.md', anchor: null },
-  // Linked from `governance/decisions.md` and
+  'governance/selection-criteria': { file: 'handbook/governance/selection-criteria.md', anchor: null },
+  'governance/editorial-line': { file: 'handbook/governance/editorial-line.md', anchor: null },
+  'governance/editorial-board': { file: 'handbook/governance/editorial-board.md', anchor: null },
+  'governance/board-rules': { file: 'handbook/governance/board-rules.md', anchor: null },
+  'governance/conflict-of-interest': { file: 'handbook/governance/conflict-of-interest.md', anchor: null },
+  'governance/decisions': { file: 'handbook/governance/decisions.md', anchor: null },
+  // Linked from `handbook/governance/decisions.md` and
   // `reference/the-workspace.md` with a plain relative link, but never
   // itself registered -- so it shipped by accident under the old
   // wholesale copy, and would have 404ed under the registry-derived
@@ -36,13 +36,13 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // own header), the same kind of governance transparency
   // `governance/decisions` already carries, not internal operational
   // detail like `reference/operations.md`.
-  'governance/register': { file: 'governance/register.md', anchor: null },
+  'governance/register': { file: 'handbook/governance/register.md', anchor: null },
   // The data-protection processing record: data, purpose, legal
   // basis, recipients, duration and measures for the registration,
   // attendance and certificate pipeline. The filename is French, as it was
   // first written; every other file in this directory is named in English.
   'governance/data-protection-record': {
-    file: 'governance/traitement-donnees.md',
+    file: 'handbook/governance/traitement-donnees.md',
     anchor: null,
   },
   // The record above named
@@ -52,7 +52,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // record, so it is registered and linked from the page above rather than
   // credited to one that does not deliver.
   'governance/candidate-data-protection': {
-    file: 'governance/candidate-data-protection.md',
+    file: 'handbook/governance/candidate-data-protection.md',
     anchor: null,
   },
 
@@ -105,25 +105,25 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   },
 
   // toolkit — emails
-  'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },
-  'toolkit/emails/talk-details': { file: 'toolkit/emails/talk-details.md', anchor: null },
-  'toolkit/emails/reminder': { file: 'toolkit/emails/reminder.md', anchor: null },
-  'toolkit/emails/thank-you': { file: 'toolkit/emails/thank-you.md', anchor: null },
+  'toolkit/emails/invitation': { file: 'handbook/toolkit/emails/invitation.md', anchor: null },
+  'toolkit/emails/talk-details': { file: 'handbook/toolkit/emails/talk-details.md', anchor: null },
+  'toolkit/emails/reminder': { file: 'handbook/toolkit/emails/reminder.md', anchor: null },
+  'toolkit/emails/thank-you': { file: 'handbook/toolkit/emails/thank-you.md', anchor: null },
   'toolkit/emails/proposal-received': {
-    file: 'toolkit/emails/proposal-received.md',
+    file: 'handbook/toolkit/emails/proposal-received.md',
     anchor: null,
   },
   'toolkit/emails/promotion-starting': {
-    file: 'toolkit/emails/promotion-starting.md',
+    file: 'handbook/toolkit/emails/promotion-starting.md',
     anchor: null,
   },
-  'toolkit/emails/consent-request': { file: 'toolkit/emails/consent-request.md', anchor: null },
-  'toolkit/emails/video-online': { file: 'toolkit/emails/video-online.md', anchor: null },
-  'toolkit/emails/outreach-sourcing': { file: 'toolkit/emails/outreach-sourcing.md', anchor: null },
-  'toolkit/emails/decision-declined': { file: 'toolkit/emails/decision-declined.md', anchor: null },
-  'toolkit/emails/decision-parked': { file: 'toolkit/emails/decision-parked.md', anchor: null },
+  'toolkit/emails/consent-request': { file: 'handbook/toolkit/emails/consent-request.md', anchor: null },
+  'toolkit/emails/video-online': { file: 'handbook/toolkit/emails/video-online.md', anchor: null },
+  'toolkit/emails/outreach-sourcing': { file: 'handbook/toolkit/emails/outreach-sourcing.md', anchor: null },
+  'toolkit/emails/decision-declined': { file: 'handbook/toolkit/emails/decision-declined.md', anchor: null },
+  'toolkit/emails/decision-parked': { file: 'handbook/toolkit/emails/decision-parked.md', anchor: null },
   'toolkit/emails/registration-confirmation': {
-    file: 'toolkit/emails/registration-confirmation.md',
+    file: 'handbook/toolkit/emails/registration-confirmation.md',
     anchor: null,
   },
   // Not "registration-confirmation" above -- that one is the speaker's own
@@ -133,20 +133,20 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // outbound message is, even though nobody opens it from the Templates
   // screen to send it by hand -- see the file's own header note.
   'toolkit/emails/registration-confirmed': {
-    file: 'toolkit/emails/registration-confirmed.md',
+    file: 'handbook/toolkit/emails/registration-confirmed.md',
     anchor: null,
   },
   // Not an e-mail template -- the certificate document itself,
   // generated by tools/convener_ops/journey/certificate.py once per eligible
   // attendee and delivered by e-mail, never committed here. Kept
   // in the registry for the same reason registration-confirmed is above.
-  'toolkit/certificate': { file: 'toolkit/certificate.md', anchor: null },
+  'toolkit/certificate': { file: 'handbook/toolkit/certificate.md', anchor: null },
   // The e-mail that carries the certificate above as an attachment (see
   // 14), composed by tools/convener_ops/journey/delivery.py. Same reasoning as
   // registration-confirmed: nobody sends this by hand, kept here so a
   // board member can read the copy without opening the Python module.
   'toolkit/emails/certificate-delivered': {
-    file: 'toolkit/emails/certificate-delivered.md',
+    file: 'handbook/toolkit/emails/certificate-delivered.md',
     anchor: null,
   },
   // The post-event survey's own invitation, composed
@@ -155,40 +155,40 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // certificate-delivered above: nobody sends this by hand, kept here so
   // a board member can read the copy without opening the Python module.
   'toolkit/emails/survey-invitation': {
-    file: 'toolkit/emails/survey-invitation.md',
+    file: 'handbook/toolkit/emails/survey-invitation.md',
     anchor: null,
   },
 
   // toolkit — posts
-  'toolkit/forum-post-announce': { file: 'toolkit/forum-post-announce.md', anchor: null },
-  'toolkit/forum-post-summary': { file: 'toolkit/forum-post-summary.md', anchor: null },
-  'toolkit/linkedin-post': { file: 'toolkit/linkedin-post.md', anchor: null },
+  'toolkit/forum-post-announce': { file: 'handbook/toolkit/forum-post-announce.md', anchor: null },
+  'toolkit/forum-post-summary': { file: 'handbook/toolkit/forum-post-summary.md', anchor: null },
+  'toolkit/linkedin-post': { file: 'handbook/toolkit/linkedin-post.md', anchor: null },
   'toolkit/mailing-list-announce': {
-    file: 'toolkit/mailing-list-announce.md',
+    file: 'handbook/toolkit/mailing-list-announce.md',
     anchor: null,
   },
-  'toolkit/recording-announce': { file: 'toolkit/recording-announce.md', anchor: null },
-  'toolkit/intro-scripts': { file: 'toolkit/intro-scripts.md', anchor: null },
-  'toolkit/run-of-show': { file: 'toolkit/run-of-show.md', anchor: null },
+  'toolkit/recording-announce': { file: 'handbook/toolkit/recording-announce.md', anchor: null },
+  'toolkit/intro-scripts': { file: 'handbook/toolkit/intro-scripts.md', anchor: null },
+  'toolkit/run-of-show': { file: 'handbook/toolkit/run-of-show.md', anchor: null },
   'toolkit/slides/presentation-template': {
-    file: 'toolkit/slides/presentation-template.md',
+    file: 'handbook/toolkit/slides/presentation-template.md',
     anchor: null,
   },
   // toolkit -- visual kit. The page is markdown; the templates it links to are
-  // SVG and PNG files under `docs/assets/`, served from the same `handbook/`
+  // SVG and PNG files under `docs/handbook/assets/`, served from the same `handbook/`
   // path by `scripts/copy-handbook.mjs`.
-  'toolkit/visual-kit': { file: 'toolkit/visual-kit.md', anchor: null },
+  'toolkit/visual-kit': { file: 'handbook/toolkit/visual-kit.md', anchor: null },
 
   // handbook — long-read
-  'handbook/overview': { file: 'start-here/index.md', anchor: null },
-  'handbook/glossary': { file: 'start-here/glossary.md', anchor: null },
-  'handbook/first-webinar': { file: 'start-here/first-webinar.md', anchor: null },
-  'handbook/roles': { file: 'roles.md', anchor: null },
-  'handbook/workflow-overview': { file: 'workflow/overview.md', anchor: null },
-  'handbook/sourcing': { file: 'workflow/1-sourcing-selection.md', anchor: null },
-  'handbook/preparation': { file: 'workflow/2-preparation.md', anchor: null },
-  'handbook/hosting': { file: 'workflow/3-hosting.md', anchor: null },
-  'handbook/after': { file: 'workflow/4-after.md', anchor: null },
+  'handbook/overview': { file: 'handbook/start-here/index.md', anchor: null },
+  'handbook/glossary': { file: 'handbook/start-here/glossary.md', anchor: null },
+  'handbook/first-webinar': { file: 'handbook/start-here/first-webinar.md', anchor: null },
+  'handbook/roles': { file: 'handbook/roles.md', anchor: null },
+  'handbook/workflow-overview': { file: 'handbook/workflow/overview.md', anchor: null },
+  'handbook/sourcing': { file: 'handbook/workflow/1-sourcing-selection.md', anchor: null },
+  'handbook/preparation': { file: 'handbook/workflow/2-preparation.md', anchor: null },
+  'handbook/hosting': { file: 'handbook/workflow/3-hosting.md', anchor: null },
+  'handbook/after': { file: 'handbook/workflow/4-after.md', anchor: null },
   'handbook/workspace': { file: 'reference/the-workspace.md', anchor: null },
   'handbook/tools': { file: 'reference/tools.md', anchor: null },
   'handbook/contacts': { file: 'reference/contacts.md', anchor: null },
@@ -202,21 +202,21 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // meets `{{> fragments/roles-no-ladder }}` in a page knows where to go
   // without opening this file.
   'fragments/board-rules-publication-gate': {
-    file: 'governance/board-rules.md',
+    file: 'handbook/governance/board-rules.md',
     anchor: 'publishing-a-recording-two-permissions-and-they-are-not-alike',
   },
   'fragments/board-rules-objection': {
-    file: 'governance/board-rules.md',
+    file: 'handbook/governance/board-rules.md',
     anchor: 'objecting-and-what-deferral-means',
   },
-  'fragments/roles-host-pair': { file: 'roles.md', anchor: 'two-event-hosts-per-webinar' },
-  'fragments/roles-no-ladder': { file: 'roles.md', anchor: 'no-ladder-to-climb' },
+  'fragments/roles-host-pair': { file: 'handbook/roles.md', anchor: 'two-event-hosts-per-webinar' },
+  'fragments/roles-no-ladder': { file: 'handbook/roles.md', anchor: 'no-ladder-to-climb' },
 };
 
 /** Files under `docs/` that ship alongside the content above without ever
  *  being looked up by a content key: the visual kit's two blank templates
  *  and its background image, reached only through a relative link inside
- *  `toolkit/visual-kit.md` (and, for the background, `workflow/3-hosting.md`
+ *  `handbook/toolkit/visual-kit.md` (and, for the background, `handbook/workflow/3-hosting.md`
  *  too) rather than through `fetchContent`. Kept out of `CONTENT_REGISTRY`
  *  itself so that map keeps meaning exactly "pages the app renders" -- an
  *  SVG run through `substitute` by a test sweeping every registry entry
@@ -235,7 +235,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
  *  separate consent to use them as a sample (`git log --follow` on
  *  `docs/assets/flyer-example.png` shows this: a pure rename, no content
  *  change, from a filename that named the speaker directly). It is gone
- *  from here and from the page; see `toolkit/visual-kit.md`'s own note on
+ *  from here and from the page; see `handbook/toolkit/visual-kit.md`'s own note on
  *  that slot, and `app/tests/copy-handbook.test.ts`'s regression test
  *  pinning this list to exactly the three that were actually checked.
  *
@@ -245,7 +245,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
  *  application unless its path is named on one of these two lists. See that
  *  script's own comment, and `app/tests/copy-handbook.test.ts`. */
 export const PUBLIC_ASSETS: readonly string[] = [
-  'assets/announcement-template.svg',
-  'assets/flyer-template.svg',
-  'assets/video-call-background.svg',
+  'handbook/assets/announcement-template.svg',
+  'handbook/assets/flyer-template.svg',
+  'handbook/assets/video-call-background.svg',
 ];

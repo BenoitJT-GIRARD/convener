@@ -107,7 +107,7 @@ export function parsePublicAssets(source) {
 
 /** The complete allowlist: every path `copy-handbook.mjs` may publish,
  *  sorted and deduplicated. Nothing under `docs/` reaches
- *  `public/handbook/` unless its path appears here. */
+ *  `public/docs/` unless its path appears here. */
 export function publishedPaths(registrySource) {
   return [...new Set([...parseContentFiles(registrySource), ...parsePublicAssets(registrySource)])].sort();
 }

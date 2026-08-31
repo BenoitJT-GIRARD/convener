@@ -45,7 +45,7 @@ Whichever platform hosted the session has limited storage, and a scheduled job f
 
 {{> fragments/board-rules-publication-gate }}
 
-Once cleared, publish the recording on the series' own video channel and announce it on the forum. There is nobody outside the team to send it to — see [Contacts](../reference/contacts.md).
+Once cleared, publish the recording on the series' own video channel and announce it on the forum. There is nobody outside the team to send it to — see [Contacts](../../reference/contacts.md).
 
 ## Thank the speaker
 

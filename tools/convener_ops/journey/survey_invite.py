@@ -245,7 +245,7 @@ def survey_url(event_id: str) -> str:
 #: notice that stands in for a per-person token, held here as a named
 #: constant rather
 #: than typed inline so `test_survey_invite.py` can pin it against
-#: `docs/toolkit/emails/survey-invitation.md`'s own copy, the same
+#: `docs/handbook/toolkit/emails/survey-invitation.md`'s own copy, the same
 #: discipline `confirmation.MATCHING_INSTRUCTION` already holds itself to.
 #: Deliberately silent on anonymity or padding or metadata: see the module
 #: docstring's own paragraph on why a second, shorter paraphrase of

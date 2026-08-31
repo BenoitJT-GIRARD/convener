@@ -877,9 +877,9 @@ _LITERAL_IDENTITY_FILES = (Path(".github/CODEOWNERS"),)
 #: the same, rather than exempted: a generated file nobody compares is a
 #: hand-written one with better manners.
 _DERIVED_IDENTITY_FILES = (
-    Path("docs/assets/announcement-template.svg"),
-    Path("docs/assets/flyer-template.svg"),
-    Path("docs/assets/video-call-background.svg"),
+    Path("docs/handbook/assets/announcement-template.svg"),
+    Path("docs/handbook/assets/flyer-template.svg"),
+    Path("docs/handbook/assets/video-call-background.svg"),
 )
 
 #: Files that still name this organisation and are somebody else's task,

@@ -2,7 +2,7 @@
 
 `instance/data/brand.json::motif._ribbon` names the defect this module fixes: the
 purple stroke that runs through the designer's own poster
-(`docs/assets/example_and_template_initial_assets/announcement-template_initial.png`,
+(`docs/handbook/assets/example_and_template_initial_assets/announcement-template_initial.png`,
 gitignored -- it carries a real person's photograph) was stood in for by
 three bare circles and arcs everywhere it appeared. A poster built from
 circles does not

@@ -57,7 +57,7 @@ The purpose line is the part nothing can derive, and this module holds it, in
 **A declared field** would have meant widening `config/boundary.yml`. That file
 is the product's statement about which paths an instance owns, and it names
 four -- `instance/data/`, `instance/keys/`, `instance/public-data/` and
-`docs/governance/register.md`. Not one of them is a top-level directory, so
+`docs/handbook/governance/register.md`. Not one of them is a top-level directory, so
 every entry would have to be invented, and the file would stop being a
 declaration about merges and become a second index of the repository. Its own
 header argues against precisely that: the list is "deliberately short", and

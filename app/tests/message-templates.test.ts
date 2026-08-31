@@ -68,8 +68,8 @@ beforeAll(async () => {
 
 describe('every page the app serves is written in a vocabulary the app resolves', () => {
   it('walks a tree with the toolkit in it, so an empty walk cannot pass this suite', () => {
-    expect(servedPages).toContain('toolkit/index.md');
-    expect(servedPages.filter(p => p.startsWith('toolkit/emails/')).length).toBeGreaterThan(10);
+    expect(servedPages).toContain('handbook/toolkit/index.md');
+    expect(servedPages.filter(p => p.startsWith('handbook/toolkit/emails/')).length).toBeGreaterThan(10);
   });
 
   it('leaves no unresolved substitution anywhere under docs/', () => {
@@ -88,7 +88,7 @@ describe('every page the app serves is written in a vocabulary the app resolves'
   it('says in the index how a value that is filled in by hand is written', () => {
     // Square brackets, not braces: a hand-filled blank that looks like a
     // substitution is a substitution the workspace appears to have failed at.
-    const index = page('toolkit/index.md');
+    const index = page('handbook/toolkit/index.md');
     expect(index).toMatch(/square\s+\*\*brackets\*\*|\*\*square\s+brackets\*\*/);
     expect(index).not.toContain('{{speaker}}');
   });
@@ -96,7 +96,7 @@ describe('every page the app serves is written in a vocabulary the app resolves'
 
 describe('the three missing messages', () => {
   it.each(ATTACHED)('%s is a handbook page like every other template', key => {
-    expect(CONTENT_REGISTRY[key]).toEqual({ file: `${key}.md`, anchor: null });
+    expect(CONTENT_REGISTRY[key]).toEqual({ file: `handbook/${key}.md`, anchor: null });
     expect(source(key).length).toBeGreaterThan(400);
   });
 
@@ -107,7 +107,7 @@ describe('the three missing messages', () => {
   });
 
   it.each(ATTACHED)('%s is listed on the templates index page', key => {
-    expect(page('toolkit/index.md')).toContain(`(emails/${key.slice('toolkit/emails/'.length)}.md)`);
+    expect(page('handbook/toolkit/index.md')).toContain(`(emails/${key.slice('toolkit/emails/'.length)}.md)`);
   });
 
   it('names every step of the journey that carries a template in the registry', () => {
@@ -196,14 +196,14 @@ describe('the discussion summary is written from notes, not from a tool', () => 
   });
 
   it('tells the note-taker what to write down while co-hosting', () => {
-    const after = page('workflow/4-after.md');
+    const after = page('handbook/workflow/4-after.md');
     expect(after).toMatch(/who holds the notes/i);
     expect(after).toMatch(/forum/i);
   });
 
   it('keeps the draft going to the speaker before it is posted', () => {
     expect(source(SUMMARY_KEY)).toMatch(/before posting it|before you post it/i);
-    expect(page('workflow/4-after.md')).toMatch(/shown to the speaker/i);
+    expect(page('handbook/workflow/4-after.md')).toMatch(/shown to the speaker/i);
   });
 
   it('puts the assistant after the procedure ends, never inside it', () => {

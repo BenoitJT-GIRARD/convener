@@ -572,6 +572,7 @@ def test_confirmation_is_a_plain_comparable_value() -> None:
 _DOCS_TEMPLATE = (
     Path(__file__).resolve().parents[3]
     / "docs"
+    / "handbook"
     / "toolkit"
     / "emails"
     / "registration-confirmed.md"
@@ -729,7 +730,7 @@ def test_signup_form_max_field_length_matches_the_python_constant() -> None:
 # ------------------------------------------------------------------ #
 
 _ROOM_LINK_CLAIM = "The room link only ever reaches a participant here"
-_TOOLKIT_DIR = Path(__file__).resolve().parents[3] / "docs" / "toolkit"
+_TOOLKIT_DIR = Path(__file__).resolve().parents[3] / "docs" / "handbook" / "toolkit"
 _PUBLIC_ANNOUNCEMENT_TEMPLATES = (
     _TOOLKIT_DIR / "forum-post-announce.md",
     _TOOLKIT_DIR / "linkedin-post.md",

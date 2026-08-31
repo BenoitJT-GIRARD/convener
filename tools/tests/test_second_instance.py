@@ -31,7 +31,7 @@ instance's identity is not declared there, it survives the deletion, and
 the sweep in step 4 finds it -- the declaration and the proof are the same
 mechanism seen from two ends.
 
-The one exception is a `regenerated:` path. `docs/governance/register.md`
+The one exception is a `regenerated:` path. `docs/handbook/governance/register.md`
 is rewritten in full by a scheduled job on both sides of any merge, which
 is what that flag means, so a duplicate does not author one before its
 first build: it inherits upstream's and its own next push replaces it.
@@ -141,7 +141,7 @@ What this module cannot see, stated rather than left to be found
   forms it reaches an artefact as -- the code the showcase prints, and
   the event id in every event page's address, in `instance/keys/events/<id>.pub`
   and in a certificate's verification link.
-- **Rows this instance's own history wrote.** `docs/governance/register.md`
+- **Rows this instance's own history wrote.** `docs/handbook/governance/register.md`
   is inherited (above). It holds no identity today because it holds no
   rows; the day it holds some, a duplicate's handbook would publish this
   instance's governance decisions and nothing here would notice, because a
@@ -204,7 +204,7 @@ DELIBERATELY_ABSENT: Final = {
         "committed projection would be carrying a stale copy of its own "
         "input."
     ),
-    "docs/governance/register.md": (
+    "docs/handbook/governance/register.md": (
         "Declared `regenerated: true`: a total re-rendering of one "
         "repository's own commit history, written by a scheduled job on "
         "both sides of any merge. A duplicate does not author one -- it "
@@ -217,8 +217,8 @@ DELIBERATELY_ABSENT: Final = {
 #: The trees and files this module reads back, relative to the built root.
 _ARTEFACT_TREES: Final = ("site/_site", "app/dist", "public-data", POSTERS)
 _ARTEFACT_FILES: Final = (
-    "docs/assets/announcement-template.svg",
-    "docs/assets/flyer-template.svg",
+    "docs/handbook/assets/announcement-template.svg",
+    "docs/handbook/assets/flyer-template.svg",
 )
 
 #: Run one `convener_ops.cli` entry point in a process of its own. `sys.argv`

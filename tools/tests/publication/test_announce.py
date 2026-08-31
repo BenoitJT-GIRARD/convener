@@ -17,7 +17,7 @@ from convener_ops.publication.announce import (
 from convener_ops.publication.public_data import to_public
 
 #: Every function below renders the real, committed
-#: `docs/toolkit/*.md` page -- the same file `app/src/content/render.ts`
+#: `docs/handbook/toolkit/*.md` page -- the same file `app/src/content/render.ts`
 #: substitutes for the cockpit's own copy-to-clipboard button -- rather
 #: than a second, hand-typed English composed only in Python. `root=ROOT`
 #: is threaded through every call below the same way `visual.render_
@@ -69,7 +69,7 @@ class TestForumAnnouncement:
 
     def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
         """The property this exists to prove: a sentence that lives
-        only in `docs/toolkit/forum-post-announce.md`, never in this
+        only in `docs/handbook/toolkit/forum-post-announce.md`, never in this
         module's own prose, must appear in the rendered text -- a
         hand-rolled composition of the same facts could never produce it
         by accident, so this fails the moment this module goes back to
@@ -119,7 +119,7 @@ class TestNetworkPost:
         assert "There is no LinkedIn robot behind this page and none is planned" in text
 
     def test_carries_the_forum_thread_link_when_there_is_one(self) -> None:
-        # `docs/toolkit/linkedin-post.md` invites readers to the forum
+        # `docs/handbook/toolkit/linkedin-post.md` invites readers to the forum
         # thread -- a field the old hand-rolled `network_post` never even
         # read, since it composed its own, shorter English independently
         # of the template.
@@ -233,7 +233,7 @@ class TestRecordingAnnouncement:
         assert "stays withheld" not in text
 
     def test_drops_the_biography_paragraph_and_notes_it_was_withheld(self) -> None:
-        # This is the finding itself -- `docs/toolkit/
+        # This is the finding itself -- `docs/handbook/toolkit/
         # recording-announce.md`'s `{{ public.bio }}` used to sit alone as a
         # paragraph and render the bare `«missing: public.bio»` marker
         # straight into the body a volunteer copies and pastes as-is. An

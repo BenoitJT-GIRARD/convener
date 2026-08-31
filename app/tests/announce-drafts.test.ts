@@ -168,18 +168,18 @@ describe('a template that reached for the room link fails loudly instead of leak
 
   it('{{ speaker.time }} beside a hard-coded zone never appears in a public draft', () => {
     for (const file of [
-      'toolkit/forum-post-announce.md',
-      'toolkit/linkedin-post.md',
-      'toolkit/mailing-list-announce.md',
-      'toolkit/recording-announce.md',
+      'handbook/toolkit/forum-post-announce.md',
+      'handbook/toolkit/linkedin-post.md',
+      'handbook/toolkit/mailing-list-announce.md',
+      'handbook/toolkit/recording-announce.md',
     ]) {
       expect(page(file)).not.toMatch(/\{\{\s*(speaker|public)\.time\s*\}\}\s*(CET|CEST)/);
     }
   });
 });
 
-describe('the recording announcement (docs/toolkit/recording-announce.md)', () => {
-  const RECORDING_ANNOUNCE = 'toolkit/recording-announce.md';
+describe('the recording announcement (docs/handbook/toolkit/recording-announce.md)', () => {
+  const RECORDING_ANNOUNCE = 'handbook/toolkit/recording-announce.md';
   const NOTES = '## Notes for the volunteer posting this';
 
   function notesOf(out: string): string {
@@ -265,8 +265,8 @@ describe('an unopened forum thread (linkedin-post.md, mailing-list-announce.md)'
   // is not covered here: it never reads `forum_thread` at all, since it is
   // itself posted on that thread.
   it.each([
-    ['toolkit/linkedin-post.md', 'Join the discussion'],
-    ['toolkit/mailing-list-announce.md', 'on the forum thread'],
+    ['handbook/toolkit/linkedin-post.md', 'Join the discussion'],
+    ['handbook/toolkit/mailing-list-announce.md', 'on the forum thread'],
   ] as const)('%s drops the forum-thread sentence and flags it as a task when unset', (file, sentence) => {
     const open = archivedSpeaker({ forum_thread: '' });
     const out = substitute(page(file), { speaker: open, today: '2026-06-20' });
@@ -275,7 +275,7 @@ describe('an unopened forum thread (linkedin-post.md, mailing-list-announce.md)'
     expect(out).toContain('none has been opened yet, so open one and add its link');
   });
 
-  it.each(['toolkit/linkedin-post.md', 'toolkit/mailing-list-announce.md'] as const)(
+  it.each(['handbook/toolkit/linkedin-post.md', 'handbook/toolkit/mailing-list-announce.md'] as const)(
     '%s carries the real link and no conditional note when a thread is open',
     file => {
       const open = archivedSpeaker();
@@ -317,9 +317,9 @@ describe('a drafted date names the real Paris offset, never a hard-coded one', (
   it('every public draft states the date and time as one computed line', () => {
     const open = archivedSpeaker();
     for (const [file, ctx] of [
-      ['toolkit/forum-post-announce.md', { speaker: open, today: '2026-06-20' }],
-      ['toolkit/linkedin-post.md', { speaker: open, today: '2026-06-20' }],
-      ['toolkit/mailing-list-announce.md', { speaker: open, today: '2026-06-20' }],
+      ['handbook/toolkit/forum-post-announce.md', { speaker: open, today: '2026-06-20' }],
+      ['handbook/toolkit/linkedin-post.md', { speaker: open, today: '2026-06-20' }],
+      ['handbook/toolkit/mailing-list-announce.md', { speaker: open, today: '2026-06-20' }],
     ] as const) {
       const out = substitute(page(file), ctx);
       expect(out).toContain('11 June 2026 at 12:30 CEST');

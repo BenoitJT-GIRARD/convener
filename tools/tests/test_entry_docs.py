@@ -41,7 +41,7 @@ ARCHITECTURE = ROOT / "docs" / "architecture.md"
 REGISTRY_TS = ROOT / "app" / "src" / "content" / "registry.ts"
 DOCS = ROOT / "docs"
 
-#: `docs/index.md` and `docs/README.md` are real, deliberately unregistered
+#: `docs/handbook/index.md` and `docs/README.md` are real, deliberately unregistered
 #: pages meant for a reader browsing the repository itself, not the app --
 #: see `app/tests/copy-handbook.test.ts`'s own test naming them.
 #: `docs/architecture.md`, this same task's own second file, joins them for

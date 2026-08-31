@@ -1478,7 +1478,7 @@ def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None
     below.
     """
     expected_call = (
-        f"{{{{ '/app/handbook/{_governance_record_file()}' | absoluteUrl }}}}"
+        f"{{{{ '/app/docs/{_governance_record_file()}' | absoluteUrl }}}}"
     )
     for template in _GOVERNANCE_LINK_TEMPLATES:
         source = template.read_text(encoding="utf-8")
@@ -1513,7 +1513,7 @@ def test_the_governance_record_link_resolves_to_the_published_handbook(
     rather than typed, so a duplicate publishing at its own address gets
     its own link with nothing to edit in either template.
     """
-    expected = published.load().under(f"app/handbook/{_governance_record_file()}")
+    expected = published.load().under(f"app/docs/{_governance_record_file()}")
     pages = [built_site / "data" / "index.html"]
     pages += sorted((built_site / "events").glob("*/index.html"))
     assert len(pages) >= 2, f"only {pages} to check -- the build wrote too little"

@@ -234,7 +234,7 @@ milliseconds, not a lifetime -- an *ordinary* property of any HMAC over a
 low-entropy input, not a defect in the construction. Publishing this
 register would let anyone who ever held the salt confirm attendance for
 any guessed address; only the projection is the lamp-post artefact.
-Likewise, `docs/toolkit/certificate.md` used to call the fingerprint
+Likewise, `docs/handbook/toolkit/certificate.md` used to call the fingerprint
 "never reversible in practice", unqualified -- the honest version is "not
 reversible by anyone who does not hold the salt". The salt is the entire
 protection, not a detail alongside it.

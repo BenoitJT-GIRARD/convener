@@ -3,7 +3,7 @@ dist
 .vite
 coverage
 public/fonts
-public/handbook
+public/docs
 public/keys
 public/certificates.json
 public/survey-status.json

@@ -36,4 +36,4 @@ Two rules, one reason. The one above is about whom a message is addressed to; th
 
 If that list is in a temporary state — an identifier that is not yet a GitHub login, a seat declared and not filled — the file itself is the only thing that says so, and `convener-validate` is what reports it. What such a state costs while it stands, and the change that ends it, are in `docs/reference/operations.md` ("Deferred governance configuration").
 
-What each of the four roles does is in [Roles](../roles.md); what the Board itself is for is in [The Editorial Board](../governance/editorial-board.md).
+What each of the four roles does is in [Roles](../handbook/roles.md); what the Board itself is for is in [The Editorial Board](../handbook/governance/editorial-board.md).

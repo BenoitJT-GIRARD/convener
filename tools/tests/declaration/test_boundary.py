@@ -147,7 +147,7 @@ def test_this_repository_declares_a_boundary_that_reads() -> None:
     its four keys were folded into `instance/config.json`'s own
     `identity` and left `site/.eleventy.js` composing them. The file
     entry went with the file, and nothing under `site/` is the instance's
-    now -- so the anchor moved to `docs/governance/register.md`, the one
+    now -- so the anchor moved to `docs/handbook/governance/register.md`, the one
     path here that a scheduled job rewrites rather than a person.
     """
     declared = load().instance_paths
@@ -155,7 +155,7 @@ def test_this_repository_declares_a_boundary_that_reads() -> None:
         "instance/data/",
         "instance/keys/",
         "instance/public-data/",
-        "docs/governance/register.md",
+        "docs/handbook/governance/register.md",
     ):
         assert owned in declared, f"{owned} is no longer declared: {declared}"
 
@@ -479,7 +479,7 @@ def test_every_regenerated_path_is_told_to_git_how_to_merge() -> None:
     Declaring a path the instance's says upstream will not *edit* it. It
     cannot say upstream will not *run*: upstream is itself a running
     instance, and `.github/workflows/register.yml` rewrites
-    `docs/governance/register.md` in full from the commit history on every
+    `docs/handbook/governance/register.md` in full from the commit history on every
     push, on both sides of any merge. Both renderings are correct, they
     are entirely different, and they touch the same lines -- a conflict on
     every merge, for ever, whose only correct resolution is "mine".
@@ -515,8 +515,8 @@ def test_the_register_is_the_regenerated_path_this_task_found() -> None:
     """The anchor, so the clause above cannot pass over an empty set or a
     set somebody quietly widened. One path today, and it is the one this
     repository found and ruled on."""
-    assert load().regenerated_paths == ("docs/governance/register.md",)
-    assert (ROOT / "docs" / "governance" / "register.md").is_file()
+    assert load().regenerated_paths == ("docs/handbook/governance/register.md",)
+    assert (ROOT / "docs" / "handbook" / "governance" / "register.md").is_file()
 
 
 def test_a_directory_cannot_be_declared_regenerated() -> None:
@@ -721,7 +721,7 @@ def test_the_walk_sees_the_files_this_repository_really_holds() -> None:
     assert "instance/data/config.yml" in found
     assert "instance/data/brand.json" in found
     assert "instance/registration-lanes.yml" in found
-    assert "docs/governance/register.md" in found
+    assert "docs/handbook/governance/register.md" in found
     assert "instance/data/schema.md" not in found, "a kept file is the product's"
     assert "instance/keys/signing/README.md" not in found
     assert "config/integrations.yml" not in found
@@ -799,7 +799,7 @@ def test_a_path_nobody_declared_belongs_to_the_product() -> None:
     assert board.owner_of("tools/convener_ops/declaration/boundary.py") == PRODUCT
     assert board.owner_of("app/src/main.tsx") == PRODUCT
     assert board.owner_of("site/src/_data/events.json") == PRODUCT
-    assert board.owner_of("docs/toolkit/intro-scripts.md") == PRODUCT
+    assert board.owner_of("docs/handbook/toolkit/intro-scripts.md") == PRODUCT
 
 
 def test_a_windows_separator_reads_the_same_as_a_posix_one() -> None:

@@ -281,7 +281,7 @@ const REFUSED = [
   "getFile('instance/data/speakers.yml', token);",
   "const SRC = resolve(__dirname, '..', '..', 'instance', 'keys', 'events');",
   "const OUT = join(root, 'instance', 'public-data', 'certificates-public.json');",
-  "const REGISTER = 'docs/governance/register.md';",
+  "const REGISTER = 'docs/handbook/governance/register.md';",
   "const EVENTS = resolve(root, 'instance', 'data');",
   "throw new Error('instance/data/queue-ledger.yml holds no usable handled list');",
   'const url = `instance/data/events/${eventId}/registrations.enc`;',

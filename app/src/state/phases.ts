@@ -20,7 +20,7 @@ const DEFAULT_VIEW_WINDOW_DAYS = 30;
  * built rather than typed: a handbook saying thirty days and a form asking
  * for something else would leave a volunteer to guess which the Board meant,
  * and the guess would be stored as a number nobody could compare afterwards.
- * `docs/workflow/4-after.md` states the convention.
+ * `docs/handbook/workflow/4-after.md` states the convention.
  */
 export function viewCountLabel(config: Pick<Config, 'view_count_window_days'>): string {
   return `Video views (${config.view_count_window_days}d)`;
@@ -304,7 +304,7 @@ export const PHASES: PhaseDef[] = [
         // so this line cannot be misread as ticking that
         // instead, or as a claim that the room link was published anywhere
         // beyond the confirmation e-mail -- see
-        // `docs/toolkit/emails/registration-confirmed.md`'s own pinned claim
+        // `docs/handbook/toolkit/emails/registration-confirmed.md`'s own pinned claim
         // that it is not.
         key: 'scheduled/T-1/final-reminder',
         form: 'checkbox',

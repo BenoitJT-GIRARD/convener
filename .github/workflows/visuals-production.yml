@@ -65,7 +65,7 @@ name: Visuals production
 # rendered edition looks like just as much as they change the fixture
 # visuals.yml checks. The list also carries `tools/convener_ops/publication/announce.py`,
 # `tools/convener_ops/journey/registration.py` (the registration address every drafted
-# text points at, D-19) and the four `docs/toolkit/*.md` pages themselves
+# text points at, D-19) and the four `docs/handbook/toolkit/*.md` pages themselves
 # -- `announce.py` now renders those files rather than composing its own
 # English (D-14), so a wording change to any one of them is exactly as
 # real a change to this job's own output as a change to `visual.py` is,
@@ -127,10 +127,10 @@ on:
       - 'tools/convener_ops/publication/announce.py'
       - 'tools/convener_ops/journey/registration.py'
       - 'tools/convener_ops/publication/public_data.py'
-      - 'docs/toolkit/forum-post-announce.md'
-      - 'docs/toolkit/linkedin-post.md'
-      - 'docs/toolkit/mailing-list-announce.md'
-      - 'docs/toolkit/recording-announce.md'
+      - 'docs/handbook/toolkit/forum-post-announce.md'
+      - 'docs/handbook/toolkit/linkedin-post.md'
+      - 'docs/handbook/toolkit/mailing-list-announce.md'
+      - 'docs/handbook/toolkit/recording-announce.md'
       - 'instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'instance/data/brand.json'

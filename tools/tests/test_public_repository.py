@@ -109,7 +109,7 @@ NOT_EDITED: Final[dict[str, str]] = {
         "getting it wrong routes a submission to the slower lane and "
         "nothing else."
     ),
-    "docs/governance/register.md": (
+    "docs/handbook/governance/register.md": (
         "Declared `regenerated: true`: a total re-rendering of one "
         "repository's own commit history, rewritten in full by a scheduled "
         "job on every push. A duplicate inherits upstream's and its own "

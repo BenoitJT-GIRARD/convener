@@ -232,7 +232,7 @@ describe('the run of show is offered, not imposed', () => {
 
   it('reaches the screen through the fragment mechanism, like every other template', () => {
     expect(CONTENT_REGISTRY['toolkit/run-of-show']).toEqual({
-      file: 'toolkit/run-of-show.md',
+      file: 'handbook/toolkit/run-of-show.md',
       anchor: null,
     });
   });
@@ -258,7 +258,7 @@ describe('the run of show is offered, not imposed', () => {
   });
 
   it('carries the split between the two hosts, which is what it is for', () => {
-    const text = readFileSync(resolve(__dirname, '../../docs/toolkit/run-of-show.md'), 'utf-8');
+    const text = readFileSync(resolve(__dirname, '../../docs/handbook/toolkit/run-of-show.md'), 'utf-8');
     expect(text).toContain('Host 1');
     expect(text).toContain('Host 2');
     // Said in the document itself, so a host reading it knows it is not a rule.

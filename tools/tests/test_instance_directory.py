@@ -17,7 +17,7 @@ convention anybody has to remember, and not a review anybody has to do
 twice.
 
 **The one exception is declared, not typed here.**
-`docs/governance/register.md` is the instance's and does not move: it is
+`docs/handbook/governance/register.md` is the instance's and does not move: it is
 written for a volunteer to read, two handbook pages link to it and the
 cockpit publishes it, all of which break if it moves. The rule below
 therefore admits any entry the declaration *itself* places outside
@@ -118,7 +118,7 @@ def test_the_one_declared_path_outside_the_directory_is_the_register() -> None:
     """The anchor. The rule below admits whatever the declaration places
     outside `instance/`, so without this it could be widened by adding an
     entry and nobody would have had to decide anything."""
-    assert declared_elsewhere(board()) == ("docs/governance/register.md",)
+    assert declared_elsewhere(board()) == ("docs/handbook/governance/register.md",)
 
 
 # ------------------------------------------------------------------ #
@@ -133,7 +133,7 @@ def test_the_walk_sees_a_tree_it_could_fail_on() -> None:
     assert len(tracked) > 400, f"the walk found {len(tracked)} tracked files"
     assert "instance/data/config.yml" in tracked
     assert "instance/queue-drain.yml" in tracked
-    assert "docs/governance/register.md" in tracked
+    assert "docs/handbook/governance/register.md" in tracked
 
 
 def test_every_file_the_instance_owns_sits_under_the_instance_directory() -> None:

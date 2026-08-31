@@ -525,7 +525,7 @@ module.exports = function (cfg) {
   // "/README.md"`, because it names the organisation and both repositories
   // and those are the instance's, declared once in `instance/config.json`.
   // A passthrough copy renders nothing, so a `{{ }}` in it would have been
-  // published verbatim -- the exact failure `docs/toolkit/index.md` warns
+  // published verbatim -- the exact failure `docs/handbook/toolkit/index.md` warns
   // about. A `.njk` under `src/` is fine where a `.md` was not: only `md`
   // is in `templateFormats` as a page-producing extension whose permalink
   // would have landed at `/README/`.

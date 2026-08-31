@@ -1033,24 +1033,24 @@ is maintained there, and quoted here.*
 > registration confirmation, carrying a participant's address and matching
 > code, used to be written to a local, .gitignore'd file and uploaded as a
 > short-retention build artefact instead of being sent -- removed once
-> docs/governance/traitement-donnees.md's own Recipients section turned out to
-> call that artefact a documented exception, when with this row absent (this
-> project's default state) it was the path every registration took, not an
-> exception. Every attempt is folded into a bare sent/not-sent count instead,
-> and convener-resend-confirmation reproduces the identical message from the
-> stored registration and the same deterministic matching code, so nothing is
-> ever the only copy of anything. tools/convener_ops/journey/delivery.py: the
-> certificate document this row would carry is never written anywhere at all,
-> not even to a private artefact, from the day this module was written -- see
-> that module's own docstring for why a signed, nominative document must never
-> land in any Actions surface, a stricter constraint than the registration
-> confirmation was held to at first.
-> tools/convener_ops/journey/survey_invite.py: the post-event survey
-> invitation, reusing confirmation.py's own transport rather than a third copy
-> of it, degrades the same bare-count way delivery.py does -- and for a
-> related but distinct reason: a survey invitation carries no identifier at
-> all to keep an unsent copy filed against, unlike a certificate, which at
-> least has a public one.
+> docs/handbook/governance/traitement-donnees.md's own Recipients section
+> turned out to call that artefact a documented exception, when with this row
+> absent (this project's default state) it was the path every registration
+> took, not an exception. Every attempt is folded into a bare sent/not-sent
+> count instead, and convener-resend-confirmation reproduces the identical
+> message from the stored registration and the same deterministic matching
+> code, so nothing is ever the only copy of anything.
+> tools/convener_ops/journey/delivery.py: the certificate document this row
+> would carry is never written anywhere at all, not even to a private
+> artefact, from the day this module was written -- see that module's own
+> docstring for why a signed, nominative document must never land in any
+> Actions surface, a stricter constraint than the registration confirmation
+> was held to at first. tools/convener_ops/journey/survey_invite.py: the
+> post-event survey invitation, reusing confirmation.py's own transport rather
+> than a third copy of it, degrades the same bare-count way delivery.py does
+> -- and for a related but distinct reason: a survey invitation carries no
+> identifier at all to keep an unsent copy filed against, unlike a
+> certificate, which at least has a public one.
 
 **Credentials.** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`,
 `CONVENER_SMTP_USER`, `CONVENER_SMTP_PASSWORD`, `CONVENER_SMTP_FROM`

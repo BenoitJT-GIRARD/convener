@@ -12,7 +12,7 @@ it refuses read from the declaration at run time.
 or begins with, a declared instance path -- `"instance/data/config.yml"`,
 `"instance/public-data/registration-routing.json"` -- and a `/` chain that spells
 one segment by segment: `Path("instance") / "data" / "events"`, `root /
-"instance" / "data" / "speakers.yml"`, `Path("docs") / "governance" /
+"instance" / "data" / "speakers.yml"`, `Path("docs") / "handbook" /
 "register.md"`. The chain is read the way `Path` reads it, so a constant
 that is only a *fragment* of a path is caught in the position it actually
 occupies.
@@ -114,7 +114,8 @@ def offence(value: str, *, as_path: bool) -> str | None:
 def joined(node: ast.expr) -> list[str] | None:
     """The string segments of a `/` chain, in order, or `None`.
 
-    `Path("docs") / "governance" / "register.md"` gives three segments and
+    `Path("docs") / "handbook" / "governance" / "register.md"` gives four
+    segments and
     `root / "instance" / "data" / "speakers.yml"` gives three: a chain
     rooted in something
     this cannot read -- a variable, a call, a constant of the package --
@@ -394,7 +395,7 @@ REFUSED = (
     'path = root / "instance" / "data" / "speakers.yml"',
     'path = repo_root() / "instance" / "keys" / "events" / f"{event_id}.pub"',
     'out = root / "instance" / "public-data"',
-    'REGISTER = Path("docs") / "governance" / "register.md"',
+    'REGISTER = Path("docs") / "handbook" / "governance" / "register.md"',
     'EVENTS = Path("instance") / "data"',
     'raise ValueError("instance/data/queue-ledger.yml holds no usable handled list")',
     'return f"instance/data/events/{event_id}/registrations.enc"',
@@ -409,7 +410,7 @@ ADMITTED = (
     'KEYS = paths.KEYS_DIR / "events"',
     'raise ValueError(f"{LEDGER_PATH.as_posix()} holds no usable handled list")',
     'DEFAULT_PATH: Final = Path("brand") / "convener" / "brand.json"',
-    'TOOLKIT_DIR: Final = Path("docs") / "toolkit"',
+    'TOOLKIT_DIR: Final = Path("docs") / "handbook" / "toolkit"',
     'BUDGET_PATH: Final = Path("instance") / "actions-budget.yml"',
     '"""instance/data/config.yml is the instance\'s own board configuration."""',
 )

@@ -200,7 +200,7 @@ def test_survey_base_is_the_survey_pages_own_address() -> None:
 
 # ------------------------------------------------------------------ #
 # `survey_invite.py` and
-# `docs/toolkit/emails/survey-invitation.md:12-14` both claimed this test
+# `docs/handbook/toolkit/emails/survey-invitation.md:12-14` both claimed this test
 # already existed. It did not -- rewording `NOTICE` survived the full
 # suite. Same idiom as `test_confirmation.py`'s `_normalised_docs_template`
 # and `test_delivery.py`'s own copy of it: collapse the markdown's line
@@ -210,6 +210,7 @@ def test_survey_base_is_the_survey_pages_own_address() -> None:
 _DOCS_TEMPLATE = (
     Path(__file__).resolve().parents[3]
     / "docs"
+    / "handbook"
     / "toolkit"
     / "emails"
     / "survey-invitation.md"

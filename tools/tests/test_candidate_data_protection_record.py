@@ -1,10 +1,10 @@
-"""`docs/governance/candidate-data-protection.md`, against the schema it
+"""`docs/handbook/governance/candidate-data-protection.md`, against the schema it
 describes.
 
-A security review found that `docs/governance/traitement-donnees.md`
+A security review found that `docs/handbook/governance/traitement-donnees.md`
 described `instance/data/speakers.yml` in one sentence -- "speakers' own names and
 institutional email addresses" -- and pointed at
-`docs/governance/selection-criteria.md` for the rest, which is the Board's
+`docs/handbook/governance/selection-criteria.md` for the rest, which is the Board's
 editorial judgement and never described a data-handling process at all. This
 page is the fix: an honest account of what the file holds, established
 against the schema rather than against what would be convenient to claim.
@@ -30,8 +30,8 @@ from pathlib import Path
 from convener_ops.declaration.paths import repo_root
 
 ROOT = repo_root()
-PAGE = ROOT / "docs" / "governance" / "candidate-data-protection.md"
-OLD_PAGE = ROOT / "docs" / "governance" / "traitement-donnees.md"
+PAGE = ROOT / "docs" / "handbook" / "governance" / "candidate-data-protection.md"
+OLD_PAGE = ROOT / "docs" / "handbook" / "governance" / "traitement-donnees.md"
 
 CASES = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(

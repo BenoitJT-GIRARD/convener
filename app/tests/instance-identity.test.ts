@@ -21,7 +21,7 @@
  * the one surface that is finished today.
  *
  * The copied handbook is checked separately and on purpose. `copy-handbook`
- * publishes the registry's own files into `public/handbook/`, from where
+ * publishes the registry's own files into `public/docs/`, from where
  * they reach a volunteer's browser -- so a page that still named this
  * organisation would reach a duplicate's volunteers verbatim, whatever the
  * repository's own sources said. It is also why the substitution happens at
@@ -156,7 +156,7 @@ describe('the substitution vocabulary names the instance', () => {
 
 describe('a second instance renders nothing of the first', () => {
   it('walks a tree with the toolkit in it, so an empty walk cannot pass', () => {
-    expect(servedPages).toContain('toolkit/emails/invitation.md');
+    expect(servedPages).toContain('handbook/toolkit/emails/invitation.md');
     expect(servedPages.length).toBeGreaterThan(30);
   });
 
@@ -205,7 +205,7 @@ describe('the handbook copied into the built bundle', () => {
 
   it.skipIf(ONE_INSTANCE)('carries the second instance once rendered, and nothing of the first', async () => {
     // The real copy step, into a scratch destination -- what actually lands
-    // in `public/handbook/` and is served to a volunteer's browser.
+    // in `public/docs/` and is served to a volunteer's browser.
     const { files } = await copyHandbook({
       docsDir: DOCS,
       registrySource: REGISTRY_SOURCE,
@@ -213,7 +213,7 @@ describe('the handbook copied into the built bundle', () => {
     });
     const copied = (await walkAll(dst)).filter((p: string) => p.endsWith('.md'));
     expect(copied.length).toBeGreaterThan(30);
-    expect(files).toContain('toolkit/emails/invitation.md');
+    expect(files).toContain('handbook/toolkit/emails/invitation.md');
 
     const { substitute } = await rendererWith(SECOND);
     const offending: string[] = [];

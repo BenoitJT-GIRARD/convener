@@ -20,4 +20,4 @@ instance/public-data/agenda-internal.ics binary
 # ordinary conflict, which is the state this replaces.
 # `tools/tests/test_boundary.py` refuses a `regenerated:` path that is
 # missing this line.
-docs/governance/register.md merge=ours
+docs/handbook/governance/register.md merge=ours

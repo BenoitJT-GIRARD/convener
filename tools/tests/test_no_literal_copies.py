@@ -159,9 +159,9 @@ def test_the_skip_list_is_the_one_the_app_applies() -> None:
 def test_the_sweep_covers_the_pages_the_app_serves() -> None:
     """An empty walk would make every assertion below pass for free."""
     names = set(_handbook())
-    assert "workflow/4-after.md" in names
-    assert "governance/board-rules.md" in names
-    assert "toolkit/intro-scripts.md" in names
+    assert "handbook/workflow/4-after.md" in names
+    assert "handbook/governance/board-rules.md" in names
+    assert "handbook/toolkit/intro-scripts.md" in names
     assert not any(name.startswith("superpowers/") for name in names)
 
 
@@ -177,12 +177,14 @@ def test_the_detector_finds_a_copy_when_there_is_one() -> None:
     )
     found = duplicates(
         {
-            "governance/board-rules.md": f"# Rules\n\n{shared}\n",
-            "workflow/4-after.md": f"# After\n\n{shared} Ask the speaker first.\n",
+            "handbook/governance/board-rules.md": f"# Rules\n\n{shared}\n",
+            "handbook/workflow/4-after.md": (
+                f"# After\n\n{shared} Ask the speaker first.\n"
+            ),
         }
     )
     assert [files for _, files in found] == [
-        ["governance/board-rules.md", "workflow/4-after.md"]
+        ["handbook/governance/board-rules.md", "handbook/workflow/4-after.md"]
     ]
 
 
@@ -193,8 +195,8 @@ def test_the_detector_leaves_a_shared_short_sentence_alone() -> None:
     assert (
         duplicates(
             {
-                "toolkit/emails/invitation.md": sign_off,
-                "toolkit/emails/outreach-sourcing.md": sign_off,
+                "handbook/toolkit/emails/invitation.md": sign_off,
+                "handbook/toolkit/emails/outreach-sourcing.md": sign_off,
             }
         )
         == []

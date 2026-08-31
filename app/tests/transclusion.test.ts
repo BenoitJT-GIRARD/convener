@@ -110,7 +110,7 @@ describe('a fragment is a window onto one section, not a second copy of it', () 
 describe('an included passage says where it is maintained', () => {
   it('carries a link to the section in the repository, not just a name', () => {
     const url = sourceUrl('fragments/board-rules-publication-gate');
-    expect(url).toContain('/docs/governance/board-rules.md');
+    expect(url).toContain('/docs/handbook/governance/board-rules.md');
     expect(url).toContain('#publishing-a-recording-two-permissions-and-they-are-not-alike');
   });
 
@@ -139,7 +139,7 @@ describe('an included passage says where it is maintained', () => {
 
 describe('the expansion refuses to hang or to lie', () => {
   const cyclic = async (file: string) =>
-    file === 'roles.md' ? '# Roles\n\n## No ladder to climb\n\n{{> fragments/roles-no-ladder }}\n' : '';
+    file === 'handbook/roles.md' ? '# Roles\n\n## No ladder to climb\n\n{{> fragments/roles-no-ladder }}\n' : '';
 
   it('marks a key nobody registered instead of dropping the line', async () => {
     const out = await expandIncludes('{{> fragments/invented }}', fromDisk);
@@ -172,8 +172,8 @@ describe('the expansion refuses to hang or to lie', () => {
 
 describe('every include under docs/ resolves, over the tree the build serves', () => {
   it('walks a tree with the handbook in it, so an empty walk cannot pass this suite', () => {
-    expect(servedPages).toContain('workflow/4-after.md');
-    expect(servedPages).toContain('governance/board-rules.md');
+    expect(servedPages).toContain('handbook/workflow/4-after.md');
+    expect(servedPages).toContain('handbook/governance/board-rules.md');
   });
 
   it('uses the mechanism at all — a rule nothing applies is a rule nobody keeps', () => {
@@ -215,7 +215,7 @@ describe('every include under docs/ resolves, over the tree the build serves', (
 
 describe('the passages this task moved are read from their source', () => {
   it('the publication gate is stated once, in the Board rules', async () => {
-    const after = page('workflow/4-after.md');
+    const after = page('handbook/workflow/4-after.md');
     expect(includesIn(after)).toContain('fragments/board-rules-publication-gate');
     // The retelling is gone from the workflow page...
     expect(after).not.toMatch(/three working days/);
@@ -225,7 +225,7 @@ describe('the passages this task moved are read from their source', () => {
   });
 
   it('the split between the two hosts is stated once, in Roles', async () => {
-    const hosting = page('workflow/3-hosting.md');
+    const hosting = page('handbook/workflow/3-hosting.md');
     expect(includesIn(hosting)).toContain('fragments/roles-host-pair');
     expect(hosting).not.toMatch(/introduces the speaker, runs the questions/);
     const rendered = await expandIncludes(hosting, fromDisk, ['handbook/hosting']);
@@ -233,7 +233,7 @@ describe('the passages this task moved are read from their source', () => {
   });
 
   it('the sentence about there being no ladder is stated once, in Roles', async () => {
-    const start = page('start-here/index.md');
+    const start = page('handbook/start-here/index.md');
     expect(includesIn(start)).toContain('fragments/roles-no-ladder');
     expect(start).not.toMatch(/There is no ladder to climb/);
     const rendered = await expandIncludes(start, fromDisk, ['handbook/overview']);

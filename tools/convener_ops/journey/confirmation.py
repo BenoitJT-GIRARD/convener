@@ -13,7 +13,7 @@ a participant typing this code where instructed, so it is built from
 `MATCHING_INSTRUCTION` below rather than restated by hand at each call site
 -- one sentence, quoted by `test_confirmation.py` against both this module's
 own output and the documentation copy
-(`docs/toolkit/emails/registration-confirmed.md`), so the two cannot quietly
+(`docs/handbook/toolkit/emails/registration-confirmed.md`), so the two cannot quietly
 say different things.
 
 `matching_code` (`registration.py`) returns `None` when `CONVENER_MATCHING_SALT`
@@ -73,7 +73,7 @@ this module handed the *whole* composed text back to the caller as
 `.github/workflows/resend-confirmation.yml` then uploaded as a 14-day,
 access-controlled build artefact. That was reasonable for "do not lose an
 unsent message" in isolation, but it was wrong for what
-`docs/governance/traitement-donnees.md`'s own Recipients section had to
+`docs/handbook/governance/traitement-donnees.md`'s own Recipients section had to
 say about it: the page named this artefact a *documented exception* to
 "a registration's plaintext exists only inside the job that read it, for
 the length of that job's run" -- true only when SMTP is configured. With
@@ -173,7 +173,7 @@ def changed_fields(old: Registration, new: Registration) -> tuple[str, ...]:
 
 def _join_labels(labels: Sequence[str]) -> str:
     """ "a" / "a and b" / "a, b and c" -- an ordinary English list, no Oxford
-    comma before the final "and" (house style: see `docs/toolkit/emails/`
+    comma before the final "and" (house style: see `docs/handbook/toolkit/emails/`
     for the convention this mirrors)."""
     if not labels:
         return ""
@@ -204,7 +204,7 @@ UPDATE_WARNING: Final = (
 class EventDetails:
     """What the confirmation needs to know about the event itself, beyond
     the registration. `title` and `date` come straight off the matching
-    speaker record -- the same fields `docs/toolkit/emails/*.md` already
+    speaker record -- the same fields `docs/handbook/toolkit/emails/*.md` already
     read as `{{ speaker.title }}` and `{{ speaker.date }}` -- because they
     are ordinary record fields with no `Platform` abstraction wrapping
     them. The room link and join instructions come through
@@ -251,7 +251,7 @@ class Confirmation:
 #: turns a participant's free-typed display name into a deterministic
 #: match. A named constant, not inlined in `compose`, so
 #: `test_confirmation.py` can pin the same words against
-#: `docs/toolkit/emails/registration-confirmed.md` without a second,
+#: `docs/handbook/toolkit/emails/registration-confirmed.md` without a second,
 #: hand-copied sentence living in the test file too.
 #:
 #: `compose` follows it with a worked example built from the registrant's

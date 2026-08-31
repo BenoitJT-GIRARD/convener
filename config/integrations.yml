@@ -166,7 +166,7 @@ integrations:
       confirmation, carrying a participant's address and matching code,
       used to be written to a local, .gitignore'd file and uploaded as a
       short-retention build artefact instead of being sent -- removed once
-      docs/governance/traitement-donnees.md's own Recipients section
+      docs/handbook/governance/traitement-donnees.md's own Recipients section
       turned out to call that artefact a documented exception, when with
       this row absent (this project's default state) it was the path
       every registration took, not an exception. Every attempt is folded

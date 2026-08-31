@@ -8,7 +8,7 @@ name: Quality
 # A path filter here would either cover so much of the repository that it
 # saved nothing, or risk exactly the "regression ships green" failure a
 # path filter exists to avoid: the `python` job's own "Decision register" step
-# (`uv run convener-register --check`) compares `docs/governance/register.md`
+# (`uv run convener-register --check`) compares `docs/handbook/governance/register.md`
 # against the *entire* commit history, not against any one file's diff --
 # a decision-grammar commit whose only change sits outside whatever a
 # filter watched would still need this check to run, and there is no path
@@ -250,7 +250,7 @@ jobs:
           git log --format=%B%x00 $range | uv run convener-check-commits
       - name: Decision register
         working-directory: tools
-        # `docs/governance/register.md` is derived from the commit history and
+        # `docs/handbook/governance/register.md` is derived from the commit history and
         # rewritten in full by the scheduled job, so a row typed by hand is
         # undone on the next push -- but it is wrong in the repository until
         # then. This is the same derivation run as an assertion: it writes
@@ -303,7 +303,7 @@ jobs:
         #
         # It has two more things to fail on beyond the stylesheet. It also
         # derives the two SVG templates a collaborator downloads
-        # (docs/assets/), which had drifted onto the same discarded
+        # (docs/handbook/assets/), which had drifted onto the same discarded
         # palette where no check could see them; and it recomputes every
         # contrast the charter records, refusing a palette that measures
         # below WCAG AA rather than only one that disagrees with a file.

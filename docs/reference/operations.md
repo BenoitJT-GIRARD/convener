@@ -698,7 +698,7 @@ the time this step runs, so nothing here is the only copy of anything a
 manual resend (below) cannot reproduce. **Reported, not retained.**
 An earlier version of this row described the composed
 message being written to a local file and uploaded as a 14-day, access-
-controlled build artefact — that pattern is gone: `docs/governance/
+controlled build artefact — that pattern is gone: `docs/handbook/governance/
 traitement-donnees.md`'s own Recipients section named it a documented
 exception to "a registration's plaintext exists only inside the job that
 read it, for the length of that job's run", but with outbound email
@@ -1461,7 +1461,7 @@ a line on the event's own runbook -- "Attendance export encrypted
 and committed" (`app/src/state/phases.ts`, `delivered/attendance-export-
 encrypted`), right beside "Recording retrieved and archived somewhere
 durable" -- and a matching checklist line in
-[Phase 4 -- After the webinar](../workflow/4-after.md), so an operator
+[Phase 4 -- After the webinar](../handbook/workflow/4-after.md), so an operator
 meets this step without needing to already know this command exists.
 Issuing certificates re-reads whatever is committed here, so nothing
 downstream can proceed until this step is done.
@@ -1788,7 +1788,7 @@ to let a stored response carry. The e-mail itself is an ordinary,
 personally-addressed message (`Dear <first name>,`, sent to the address on
 that participant's own registration) — nothing about *sending* it is
 anonymous; only the *response* the link leads to is designed to be. See
-[Survey invitation](../toolkit/emails/survey-invitation.md) for the exact
+[Survey invitation](../handbook/toolkit/emails/survey-invitation.md) for the exact
 wording, and this document's own "Anonymous against a stranger;
 pseudonymous by metadata against the organiser" section, above, for the
 claim this page and that one must never overstate.

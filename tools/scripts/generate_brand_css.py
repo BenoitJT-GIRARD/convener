@@ -83,8 +83,8 @@ outside the block this script owns.
 
 The three downloadable files are generated whole
 --------------------------------------------------
-`docs/assets/announcement-template.svg`, `flyer-template.svg` and
-`video-call-background.svg` are the files `docs/toolkit/visual-kit.md`
+`docs/handbook/assets/announcement-template.svg`, `flyer-template.svg` and
+`video-call-background.svg` are the files `docs/handbook/toolkit/visual-kit.md`
 hands a volunteer. Nothing in them is hand-authored any more, so there are
 no markers and no splice: they are written entire, from the charter and
 from `instance/config.json`. All three were drawn by hand once. The two

@@ -61,7 +61,7 @@ describe('the boundary declaration', () => {
           reason: 'the records',
           kept: [{ path: 'instance/data/schema.md', reason: 'a stub' }],
         },
-        { path: 'docs/governance/register.md', reason: 'the register', regenerated: true },
+        { path: 'docs/handbook/governance/register.md', reason: 'the register', regenerated: true },
       ]),
     );
     expect(handed[0].kept).toEqual(['instance/data/schema.md']);

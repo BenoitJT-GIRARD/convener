@@ -7,7 +7,7 @@ import {
 } from '../state/consent';
 import { dateLine } from '../state/derived';
 import type { Speaker } from '../data/types';
-// `docs/toolkit/`'s templates used to write the
+// `docs/handbook/toolkit/`'s templates used to write the
 // organisation's name, the series' title, its forum and its contact
 // address out in full. They read them as `{{ instance.* }}` now,
 // resolved from the one declaration through the reader below --

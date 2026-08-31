@@ -1,6 +1,6 @@
 """The announcement composition: a page, not a hand-drawn SVG.
 
-`docs/assets/example_and_template_initial_assets/announcement-template_initial.png`
+`docs/handbook/assets/example_and_template_initial_assets/announcement-template_initial.png`
 (gitignored -- it carries a real person's photograph) is the designer's
 own template. Reading it pixel by pixel, top to bottom: a cream band carrying the
 wordmark; the series title in heavy purple caps on turquoise; a two-line
@@ -79,7 +79,7 @@ the code rather than in the abstract:
   unconfigured extra degrades visibly instead of stopping everything.
 - **Render it plainly.** Taken, and it is not a new decision so much as
   the one this project already made: `brand_templates.py` writes exactly
-  this wordmark into `docs/assets/announcement-template.svg` and
+  this wordmark into `docs/handbook/assets/announcement-template.svg` and
   `flyer-template.svg` -- the two files a collaborator downloads -- as
   `<text ... fill="{purple}">{forum_host}</text>`, plain and lower case,
   derived from this same declaration. Two renderings of one poster

@@ -30,7 +30,7 @@
  *    registry has never heard of is run through the real copy step and
  *    does not reach the destination. This is the test that would fail if
  *    the filter were removed, or replaced with a denylist of today's three
- *    known-bad paths (`operations.md`, `docs/assets/`, `docs/superpowers/`)
+ *    known-bad paths (`operations.md`, `docs/handbook/assets/`, `docs/superpowers/`)
  *    -- a denylist passes every check in section 2 above and still fails
  *    this one, because the probe page sits outside all three.
  */
@@ -93,7 +93,7 @@ export const CONTENT_REGISTRY = {
   },
 };
 export const PUBLIC_ASSETS = [
-  'assets/x.svg',
+  'handbook/assets/x.svg',
 ];
 `;
     expect(parseContentFiles(source)).toEqual(['a.md']);
@@ -106,10 +106,10 @@ export const CONTENT_REGISTRY = {
 };
 export const PUBLIC_ASSETS = [
   // 'reference/operations.md' -- decoy, inside the array
-  'assets/x.svg',
+  'handbook/assets/x.svg',
 ];
 `;
-    expect(parsePublicAssets(source)).toEqual(['assets/x.svg']);
+    expect(parsePublicAssets(source)).toEqual(['handbook/assets/x.svg']);
   });
 
   it('ignores a decoy string outside both blocks entirely', () => {
@@ -119,12 +119,12 @@ export const CONTENT_REGISTRY = {
   'a': { file: 'a.md', anchor: null },
 };
 export const PUBLIC_ASSETS = [
-  'assets/x.svg',
+  'handbook/assets/x.svg',
 ];
-// a trailing comment mentioning file: 'reference/operations.md' and 'assets/y.png'
+// a trailing comment mentioning file: 'reference/operations.md' and 'handbook/assets/y.png'
 `;
     expect(parseContentFiles(source)).toEqual(['a.md']);
-    expect(parsePublicAssets(source)).toEqual(['assets/x.svg']);
+    expect(parsePublicAssets(source)).toEqual(['handbook/assets/x.svg']);
   });
 });
 
@@ -155,10 +155,10 @@ describe('a real run against the real docs/ tree', () => {
     expect(slash(await walkAll(dst)).some(p => p.startsWith('superpowers/'))).toBe(false);
   });
 
-  it('publishes nothing under docs/assets/ beyond what PUBLIC_ASSETS names', async () => {
+  it('publishes nothing under docs/handbook/assets/ beyond what PUBLIC_ASSETS names', async () => {
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
-    const publishedAssets = slash(await walkAll(dst)).filter(p => p.startsWith('assets/'));
+    const publishedAssets = slash(await walkAll(dst)).filter(p => p.startsWith('handbook/assets/'));
     expect(publishedAssets).toEqual([...PUBLIC_ASSETS].sort());
   });
 
@@ -169,23 +169,23 @@ describe('a real run against the real docs/ tree', () => {
     // assertion exists to catch instead.
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
-    expect(slash(await walkAll(dst))).not.toContain('assets/flyer-example.png');
+    expect(slash(await walkAll(dst))).not.toContain('handbook/assets/flyer-example.png');
   });
 
-  it('never publishes docs/index.md or docs/README.md -- real, unregistered pages meant for a reader browsing the repository itself, not the app', async () => {
+  it('never publishes docs/handbook/index.md or docs/README.md -- real, unregistered pages meant for a reader browsing the repository itself, not the app', async () => {
     // Distinct from the probes below: these two are not invented for this
     // test, they are real files under docs/ today. If either were ever
     // added to CONTENT_REGISTRY or PUBLIC_ASSETS this assertion would
     // need updating -- which is the point: it is pinned to the
     // registry's current, deliberate silence about them, not to an
-    // assumption that they are harmless. (`governance/register.md` was a
+    // assumption that they are harmless. (`handbook/governance/register.md` was a
     // third such page until it was registered -- see
     // `registry.ts`'s own comment on that entry, and
     // `app/tests/registered-links.test.ts`.)
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const onDisk = slash(await walkAll(dst));
-    expect(onDisk).not.toContain('index.md');
+    expect(onDisk).not.toContain('handbook/index.md');
     expect(onDisk).not.toContain('README.md');
   });
 });
@@ -244,14 +244,14 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
     expect(existsSync(resolve(dst, 'superpowers', 'zzz-probe.md'))).toBe(false);
   });
 
-  it('does not publish a probe file added under docs/assets/ that no registered page links to', async () => {
+  it('does not publish a probe file added under docs/handbook/assets/ that no registered page links to', async () => {
     sandbox = await sandboxDocs();
-    await writeFile(resolve(sandbox, 'assets', 'zzz-probe.png'), Buffer.from([0]));
+    await writeFile(resolve(sandbox, 'handbook', 'assets', 'zzz-probe.png'), Buffer.from([0]));
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-mut-'));
 
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
-    expect(files).not.toContain('assets/zzz-probe.png');
-    expect(existsSync(resolve(dst, 'assets', 'zzz-probe.png'))).toBe(false);
+    expect(files).not.toContain('handbook/assets/zzz-probe.png');
+    expect(existsSync(resolve(dst, 'handbook', 'assets', 'zzz-probe.png'))).toBe(false);
   });
 });
