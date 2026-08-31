@@ -8,6 +8,11 @@ accounts and secrets, and keeps it running once volunteers are using it.
 - **[Standing up an instance](standing-up.md)** — the ordered path from no
   repositories and no accounts to a running instance, walkable with a
   browser and a text editor. Generated from `STANDING-UP.yml`.
+- **[What a duplicate edits](what-a-duplicate-edits.md)** — the six files,
+  and what everything else is that nobody has to touch.
+- **[What you take on](what-you-take-on.md)** — the personal data you
+  become the controller for, the keys this software destroys on purpose,
+  and what the licence does not promise.
 - **[Publishing the product](publishing-the-product.md)** — creating and
   pushing the product repository, the one sequence `STANDING-UP.yml`
   deliberately does not declare.

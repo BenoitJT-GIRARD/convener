@@ -51,11 +51,27 @@ DOCS = ROOT / "docs"
 #: `tools/tests/test_docs_entry_points.py` is what holds one to every
 #: tree. Anything else under `docs/` must be in the registry to be a safe
 #: link target.
+#:
+#: The three `operating/` pages below join them on the same argument, not
+#: on an exception to it. Every page the registry carries is one the
+#: cockpit renders to somebody already signed in to a running instance.
+#: These three are addressed to the reader who has neither: the ordered
+#: path from no repositories to an instance that runs, the files that
+#: reader edits before the first build, and what running one makes them
+#: answerable for. A cockpit is the one place none of them can be read at
+#: the moment they are needed, which is why they are not registered -- and
+#: `README.md` is the only front door such a reader has, which is why it
+#: has to be able to link them. `operating/publishing-the-product.md` is
+#: unregistered for the same reason and is absent here only because
+#: `README.md` does not link it.
 UNREGISTERED_BUT_SAFE = {
     "handbook/index.md",
     "operating/index.md",
     "engineering/index.md",
     "engineering/architecture.md",
+    "operating/standing-up.md",
+    "operating/what-a-duplicate-edits.md",
+    "operating/what-you-take-on.md",
 }
 
 #: The path this repository's own convention names in prose rather than as

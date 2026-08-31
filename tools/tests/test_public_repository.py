@@ -5,15 +5,19 @@ notice both interfaces print. This module pins the other four things a
 repository somebody else is expected to duplicate has to get right, and
 each is pinned against a declaration rather than against a transcription.
 
-1. **The edit list in `README.md` is derived from `config/boundary.yml`,
-   not written beside it.** A hand-written list of "the files a duplicate
-   edits" is the single most driftable sentence in the entry documentation:
+1. **The edit list is derived from `config/boundary.yml`, not written
+   beside it.** It lives on `docs/operating/what-a-duplicate-edits.md`,
+   which is where the operator standing an instance up reads it. `README.md`
+   carried it until the front page was cut back to what a first-time visitor
+   needs, and the property held here was never about which file the table
+   sits in. A hand-written list of "the files a duplicate
+   edits" is the single most driftable sentence in the documentation:
    it is read on day one, it is never read again, and the day a path moves
-   nothing tells it. So every path the README names has to be one the
+   nothing tells it. So every path the page names has to be one the
    boundary declaration actually hands to the instance, and every path the
-   declaration hands over has to be either named in the README or given a
+   declaration hands over has to be either named on the page or given a
    reason here for needing no edit. Adding an instance path and forgetting
-   the README fails here; naming a product path in the README fails here;
+   the page fails here; naming a product path on the page fails here;
    an exemption for a path that stopped being the instance's fails here
    too.
 
@@ -66,6 +70,7 @@ from convener_ops.governance.commit_format import validate_messages
 
 ROOT = repo_root()
 README = ROOT / "README.md"
+EDIT_LIST = ROOT / "docs" / "operating" / "what-a-duplicate-edits.md"
 CITATION = ROOT / "CITATION.cff"
 SECURITY = ROOT / "SECURITY.md"
 CONTRIBUTING = ROOT / "CONTRIBUTING.md"
@@ -76,10 +81,10 @@ DEPENDABOT = ROOT / ".github" / "dependabot.yml"
 # 1. The edit list.
 # ------------------------------------------------------------------ #
 
-#: The README heading the list sits under, and the fence its table ends at.
-#: Named once so that renaming the section fails loudly here rather than
-#: silently emptying the sweep below.
-EDIT_LIST_HEADING: Final = "## What a duplicate edits"
+#: The heading the list sits under on `EDIT_LIST`, and the fence its table
+#: ends at. Named once so that renaming the section fails loudly here rather
+#: than silently emptying the sweep below.
+EDIT_LIST_HEADING: Final = "## The three the boundary declares"
 
 #: A path the declaration hands to the instance that a duplicate still does
 #: not have to edit before its first build, and why. Not an escape hatch:
@@ -129,7 +134,7 @@ NOT_EDITED: Final[dict[str, str]] = {
     ),
 }
 
-#: The one instance path the README must *not* name, and the reason it is
+#: The one instance path the edit list must *not* name, and the reason it is
 #: singled out rather than left to `NOT_EDITED`: the product ships a
 #: palette and a motif of its own, so a duplicate builds a finished-looking
 #: site without providing any design file at all. That is a property of the
@@ -143,10 +148,6 @@ def _boundary() -> boundary.Boundary:
     return boundary.load(ROOT)
 
 
-def _readme() -> str:
-    return README.read_text(encoding="utf-8")
-
-
 def _unwrapped(path: Path) -> str:
     """One page's text with its line wrapping taken out, so that a
     sentence this module looks for is found whichever column the prose
@@ -156,13 +157,13 @@ def _unwrapped(path: Path) -> str:
 
 
 def _edit_list_section() -> str:
-    """The README section the list lives in, from its heading to the next
-    one of the same level. Sliced rather than searched over the whole file:
+    """The section the list lives in, from its heading to the next one of
+    the same level. Sliced rather than searched over the whole file:
     a path mentioned in some other section is not a path on the list."""
-    text = _readme()
+    text = EDIT_LIST.read_text(encoding="utf-8")
     assert EDIT_LIST_HEADING in text, (
-        f"{README.name} no longer carries a {EDIT_LIST_HEADING!r} section, "
-        "so nothing here reads the list a duplicate is told to edit"
+        f"{EDIT_LIST.name} no longer carries a {EDIT_LIST_HEADING!r} "
+        "section, so nothing here reads the list a duplicate is told to edit"
     )
     after = text.split(EDIT_LIST_HEADING, 1)[1]
     return after.split("\n## ", 1)[0]
@@ -170,7 +171,7 @@ def _edit_list_section() -> str:
 
 def _listed_paths() -> list[str]:
     """The paths in the section's table: the first cell of every row, which
-    the README writes in backticks. Read out of the table rather than out
+    the page writes in backticks. Read out of the table rather than out
     of the prose, because the prose around it names product paths on
     purpose (the boundary declaration, the example instance) and a sweep
     that could not tell the two apart would be asserting nothing."""
@@ -189,13 +190,13 @@ def test_the_readme_actually_lists_something() -> None:
     # The guard against every sweep below passing vacuously because the
     # table was reformatted into prose.
     assert _listed_paths(), (
-        f"{README.name}'s {EDIT_LIST_HEADING!r} table names no path, so "
+        f"{EDIT_LIST.name}'s {EDIT_LIST_HEADING!r} table names no path, so "
         "every check in this module would pass on an empty list"
     )
 
 
 def test_every_path_the_readme_tells_a_duplicate_to_edit_is_the_instances() -> None:
-    """A README that told a duplicate to edit a product file would be
+    """A page that told a duplicate to edit a product file would be
     telling it to fork: upstream writes that file, and the next merge is a
     conflict. The declaration is the authority, so this asks it rather than
     a reader's memory."""
@@ -204,7 +205,7 @@ def test_every_path_the_readme_tells_a_duplicate_to_edit_is_the_instances() -> N
         path for path in _listed_paths() if declared.owner_of(path) != boundary.INSTANCE
     ]
     assert product == [], (
-        f"{README.name} tells a duplicate to edit {product}, which "
+        f"{EDIT_LIST.name} tells a duplicate to edit {product}, which "
         f"{boundary.DECLARATION_PATH.as_posix()} does not hand to the "
         "instance. Either the boundary is wrong or the list is."
     )
@@ -213,7 +214,7 @@ def test_every_path_the_readme_tells_a_duplicate_to_edit_is_the_instances() -> N
 def test_every_path_the_boundary_hands_over_is_listed_or_exempt() -> None:
     """The other direction, and the one that actually catches drift: a new
     instance path arriving in the declaration and nobody remembering the
-    README. Answered by being on the list, by being covered by something on
+    page. Answered by being on the list, by being covered by something on
     the list (`instance/data/` is answered by `instance/data/config.yml`),
     or by an entry in `NOT_EDITED` carrying its reason."""
     declared = _boundary()
@@ -227,15 +228,15 @@ def test_every_path_the_boundary_hands_over_is_listed_or_exempt() -> None:
         unanswered.append(path)
     assert unanswered == [], (
         f"{boundary.DECLARATION_PATH.as_posix()} hands {unanswered} to the "
-        f"instance and {README.name} says nothing about them. Put each on "
-        "the list, or state in NOT_EDITED why a duplicate needs no edit "
+        f"instance and {EDIT_LIST.name} says nothing about them. Put each "
+        "on the list, or state in NOT_EDITED why a duplicate needs no edit "
         "there."
     )
 
 
 def test_no_exemption_survives_the_path_it_was_written_for() -> None:
     """A reason for a path the declaration no longer hands over is a reason
-    for nothing, and it would go on quietly excusing the README from
+    for nothing, and it would go on quietly excusing the page from
     mentioning a path that had become the product's."""
     declared = set(_boundary().instance_paths)
     stale = sorted(path for path in NOT_EDITED if path not in declared)
@@ -248,31 +249,31 @@ def test_no_exemption_survives_the_path_it_was_written_for() -> None:
 
 def test_the_charter_is_not_something_a_duplicate_has_to_write() -> None:
     """The product ships a palette *and* a motif, so a duplicate builds
-    without providing a design file. Both halves are asserted: the README
+    without providing a design file. Both halves are asserted: the page
     must not put the charter on the list, and the default it would fall
     back to must exist. Deleting `brand/convener/brand.json` and leaving
-    the README alone would otherwise turn a documented convenience into a
+    the page alone would otherwise turn a documented convenience into a
     build that fails on a fresh duplicate."""
     assert CHARTER not in _listed_paths(), (
-        f"{README.name} now tells a duplicate to write {CHARTER}. The "
+        f"{EDIT_LIST.name} now tells a duplicate to write {CHARTER}. The "
         f"product ships {PRODUCT_CHARTER.as_posix()} precisely so that it "
         "does not have to -- see D-16."
     )
     assert (ROOT / PRODUCT_CHARTER).is_file(), (
         f"{PRODUCT_CHARTER.as_posix()} is gone, so an instance that writes "
-        f"no {CHARTER} has no palette to fall back to and the README's list "
+        f"no {CHARTER} has no palette to fall back to and the page's list "
         "is a file short"
     )
 
 
 def test_the_list_is_short_enough_to_be_read() -> None:
     """The separation is only real if it is small. Four files or more and
-    the honest thing to do is fix the boundary, not lengthen the README:
+    the honest thing to do is fix the boundary, not lengthen the page:
     "a duplicate edits a short list" stops being true long before anybody
     edits the sentence that says it."""
     listed = _listed_paths()
     assert len(listed) <= 3, (
-        f"{README.name} now asks a duplicate to edit {len(listed)} files "
+        f"{EDIT_LIST.name} now asks a duplicate to edit {len(listed)} files "
         f"({listed}). Past three, the instance/product separation has "
         "failed and the fix is in config/boundary.yml, not here."
     )

@@ -209,6 +209,11 @@ PURPOSE: Final[Mapping[str, str]] = {
         "every test run: one file for each path the declaration hands over, "
         "at the same relative path."
     ),
+    "screenshots": (
+        "The pictures `README.md` shows, rendered from a real build of the "
+        "cockpit and the showcase by `tools/visuals/render-readme-shots.mjs`. "
+        "Nothing here is drawn by hand, and nothing else reads them."
+    ),
     "services": (
         "Three small Cloudflare Workers with no server of their own to "
         "maintain: `auth-proxy` relays a volunteer's GitHub sign-in; "

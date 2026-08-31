@@ -87,9 +87,9 @@ stop working.
 
 Every gate continuous integration runs is runnable locally, and none of
 them needs an account or a secret. `docs/engineering/architecture.md` has the
-per-directory commands; `README.md` has the day-to-day ones, and the
-optional pre-commit hook that runs the formatting, linting, secret and
-British-English spelling checks before each commit.
+per-directory commands, the day-to-day ones, and the optional pre-commit
+hook that runs the formatting, linting, secret and British-English spelling
+checks before each commit.
 
 Two conventions that are not obvious from the diff:
 

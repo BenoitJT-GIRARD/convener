@@ -80,6 +80,7 @@ publishes it.*
 | `fonts/` | product | The two typefaces both interfaces are set in, self-hosted so that no page fetches a font from anybody else, each beside its licence. |
 | `instance/` | instance | Everything this series owns rather than the code: the store itself under `data/`, the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. |
 | `instances/` | product | The invented second instance this repository builds itself as on every test run: one file for each path the declaration hands over, at the same relative path. |
+| `screenshots/` | product | The pictures `README.md` shows, rendered from a real build of the cockpit and the showcase by `tools/visuals/render-readme-shots.mjs`. Nothing here is drawn by hand, and nothing else reads them. |
 | `services/` | product | Three small Cloudflare Workers with no server of their own to maintain: `auth-proxy` relays a volunteer's GitHub sign-in; `form-relay` turns a speaker-proposal submission into a commit; `signup-relay` does the same for a registration or a survey response. |
 | `site/` | product | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
 | `tools/` | product | Every operational tool, whatever the language: the `convener_ops` package every automated workflow runs, the generators under `scripts/`, the one-shot migrations under `migrations/`, the Node rendering harness under `visuals/`, and the tests for all of them. |
@@ -245,6 +246,28 @@ cd site && npm install && npm start      # localhost, under <repository>/
 cd tools && uv sync
 ```
 
+The cockpit asks for a GitHub fine-grained personal access token scoped to
+this repository (`Contents: read & write`, `Issues: read & write`) — or
+`?demo=1` for the same application on the example instance's records, with
+no sign-in at all. The showcase needs neither.
+
+Two commands answer the two questions that come up before anything else
+does:
+
+```bash
+cd tools && uv run convener-validate       # do the records hold together?
+cd tools && uv run convener-check-config   # which integrations are set up?
+```
+
+The optional local hook runs the formatting, linting, secret detection and
+British-English spelling checks before each commit — the same ones the
+`quality.yml` and `security.yml` workflows run on every push. It is a
+convenience, not a gate; continuous integration remains the authority.
+
+```bash
+uvx pre-commit install
+```
+
 Both dev servers serve under the path prefix `instance/config.json`'s own
 `published_url` gives, never at a bare root: D-26 exists because a build
 served at a bare `localhost` root passed every local check while the
@@ -254,12 +277,16 @@ Each of `app/`, `site/` and `tools/` carries its own tests, and `services/`
 holds one small Cloudflare Worker per folder with its own. A pull request
 is expected to leave every one of them green — formatting, linting,
 British-English spelling, type-checking, and the test suite itself — the
-same gates continuous integration runs on every push. `README.md`'s own
-quickstart covers the day-to-day commands; nothing here needs an account
-or a secret to run.
+same gates continuous integration runs on every push. Nothing above needs
+an account or a secret to run.
 
 Handbook content — the volunteer-facing workflow and governance pages
 under `docs/` — is the one part of this repository anyone can propose a
 fix to without setting up a development environment at all: every page
 carries an "edit on GitHub" link, and an edit becomes an ordinary pull
-request.
+request. Once it is merged, the cockpit shows the new wording live, cached
+for about five minutes.
+
+The pictures on `README.md` are rendered rather than taken by hand:
+`screenshots/README.md` gives the three commands that rebuild both
+interfaces and re-capture them.

@@ -72,6 +72,7 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "fonts": ("Archivo-LICENSE.txt",),
     "instance": ("data/config.yml", "data/schema.md", "keys/signing/README.md"),
     "instances": ("example/README.md",),
+    "screenshots": ("README.md",),
     "services": ("auth-proxy/src/index.js",),
     "site": ("src/index.njk",),
     "tools": ("convener_ops/cli.py",),
