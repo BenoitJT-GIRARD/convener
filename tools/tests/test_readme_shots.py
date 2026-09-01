@@ -30,10 +30,21 @@ would satisfy the first test and fail the second.
 **The set of pictures is.** Every tracked raster under `screenshots/` has
 to be one `SHOTS` promises, so a fifth image cannot arrive beside the four
 without the renderer being taught to produce it.
+
+**And the day they are taken on is.** The cockpit prints a count of days
+(`app/src/state/sla.ts::lateness`), so an unfixed clock made
+`screenshots/cockpit.png` a file that changed overnight -- which meant
+refreshing any one of the four produced a diff on the cockpit as well.
+The renderer hands every page a fixed `Date` now, read off the committed
+certificate fixture. What is checkable here is that the fix is wired in
+the one order that works and takes its day from that file; that the
+resulting raster is the one the run produced stays outside anything this
+repository can read, for the reason above.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess  # nosec B404
@@ -63,6 +74,27 @@ _NEVER_RUN: Final = "the renderer's own refusal was never run"
 
 #: `name: 'cockpit',` in the renderer's own `SHOTS` table.
 _SHOT_NAME = re.compile(r"^\s*name: '([a-z-]+)',$", re.MULTILINE)
+
+#: The committed certificate the verification shot shows, and the source
+#: of the day all four are photographed on.
+FIXTURE: Final = Path("tools") / "tests" / "fixtures" / "certificate-verification.json"
+
+#: How the renderer builds that day. Quoted whole, because the parts that
+#: matter are all in it: the fixture's own payload, the date field the
+#: verification page prints, and midnight UTC.
+_INSTANT: Final = "`${example.payload_decoded.date}T00:00:00Z`"
+
+#: The call that installs the fixed clock, and the call that navigates the
+#: page. The first has to come before the second in the file.
+_FIXES_THE_CLOCK: Final = "await fixTheClock(page, certificate.photographedAt);"
+_NAVIGATES: Final = "await page.goto("
+
+#: What a day looks like in the fixture.
+_A_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _renderer() -> str:
+    return (ROOT / RENDERER).read_text(encoding="utf-8")
 
 
 def _node_or_skip() -> None:
@@ -189,6 +221,46 @@ def test_every_tracked_raster_is_one_the_renderer_promises() -> None:
 def test_each_promised_picture_is_committed(name: str) -> None:
     """One at a time, so a missing file says which one."""
     assert (ROOT / SHOTS_DIR / f"{name}.png").is_file()
+
+
+def test_the_clock_is_fixed_before_a_page_is_ever_navigated() -> None:
+    """Order is the whole of whether the fix works.
+
+    The cockpit's bundle reads the clock while it renders, so an override
+    installed after `page.goto` arrives after the number it was meant to
+    fix has been printed -- a run that looks like it pinned the clock and
+    photographed a page that never saw it.
+    """
+    text = _renderer()
+    assert _FIXES_THE_CLOCK in text, (
+        f"{RENDERER.as_posix()} does not install a fixed clock, so "
+        "screenshots/cockpit.png counts days from whenever it was taken"
+    )
+    assert text.index(_FIXES_THE_CLOCK) < text.index(_NAVIGATES), (
+        "the fixed clock is installed after the page is navigated, which is "
+        "after the bundle has already read the real one"
+    )
+
+
+def test_the_day_they_are_photographed_on_comes_off_the_committed_fixture() -> None:
+    """And is therefore one day rather than two.
+
+    The verification shot prints that date on screen; taking every picture
+    at that instant makes the four one moment. Written out here instead, it
+    would be a second copy of a day the fixture already carries, free to
+    drift from the one the picture shows.
+    """
+    assert _INSTANT in _renderer(), (
+        f"{RENDERER.as_posix()} no longer takes the day from "
+        f"{FIXTURE.as_posix()}, so the picture and the certificate on it can "
+        "be of different days"
+    )
+    fixture = json.loads((ROOT / FIXTURE).read_text(encoding="utf-8"))
+    day = fixture["signed_example"]["payload_decoded"]["date"]
+    assert _A_DAY.match(day), (
+        f"{FIXTURE.as_posix()} carries {day!r} where the renderer expects a "
+        "day it can put a time after"
+    )
 
 
 def test_the_only_documented_way_to_refresh_them_is_the_driver() -> None:

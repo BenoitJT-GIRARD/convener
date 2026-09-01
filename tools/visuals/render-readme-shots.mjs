@@ -90,6 +90,40 @@
  *   this project's own test certificate, which is what it would do on a
  *   real one.
  *
+ * The day all four are photographed on
+ * ====================================
+ * One day, fixed, and it is the day the certificate above was earned.
+ *
+ * The cockpit is the one of the four that reads a clock:
+ * `app/src/state/sla.ts::lateness` counts calendar days between a step's
+ * deadline and today, and the inbox prints the count -- "Forum summary is
+ * 277 days overdue". That number goes up by one every night, so the
+ * committed raster changes overnight for a reason that has nothing to do
+ * with the software, and nobody can refresh one of these four pictures
+ * without a diff appearing on the cockpit as well. Measured both ways
+ * before this was written: with the clock free, two runs on the same day
+ * leave all four byte-identical; with the clock fixed, moving it by a
+ * single day changes `cockpit.png` and leaves the other three
+ * byte-identical.
+ *
+ * So each page is handed a fixed `Date` before anything in it runs, and
+ * the instant comes off `FIXTURE`'s own payload -- the day the one signed
+ * certificate this repository commits says its holder attended. Read off a
+ * committed fixture rather than written out here, for the reason
+ * `visual.FIXTURE_ANNOUNCEMENT` is a fixture rather than a date somebody
+ * retypes; and that day rather than another because the verification shot
+ * already prints it on screen, so the four pictures are one moment in the
+ * example instance's life instead of four.
+ *
+ * Midnight *UTC* on that day, because Europe/Paris is never behind UTC:
+ * 00:00Z is the same calendar day in Paris at either offset, and the Paris
+ * day is what the app computes (`app/src/state/derived.ts::parisToday`).
+ * The browser's own zone is left as it is, having been measured and found
+ * not to matter -- with the instant fixed, a run under `TZ=UTC` and a run
+ * under Europe/Paris produce four byte-identical files, because every day
+ * this app computes it computes through `Intl` with `Europe/Paris` named
+ * outright.
+ *
  * Every one of the three pages carries the product's own **not
  * configured** band, and that is the build being honest rather than a
  * defect in the picture: the declaration these are rendered from *is*
@@ -311,7 +345,12 @@ async function stageTheTestCertificate(served) {
     JSON.stringify([{ identifier: example.identifier, state: fixture.states.issued }]),
     'utf8'
   );
-  return example.verification_url_path;
+  return {
+    path: example.verification_url_path,
+    // The day the module comment fixes all four pictures to, taken from
+    // the payload the verification shot itself prints on screen.
+    photographedAt: `${example.payload_decoded.date}T00:00:00Z`,
+  };
 }
 
 /**
@@ -374,15 +413,43 @@ async function scheduledEvent() {
   return `events/${scheduled[0].id.toLowerCase()}/`;
 }
 
+/** The fixed clock, installed in a page before anything in it runs.
+ *
+ *  `evaluateOnNewDocument` rather than `page.evaluate`: the bundle reads
+ *  the clock while it renders, so an override applied after navigation
+ *  would arrive after the number it was meant to fix had been printed.
+ *  The page's own `Date` global is replaced, in the page and for the life
+ *  of that one tab. Every constructor form but the empty one is passed
+ *  through -- a page that parses its own data's dates has to keep getting
+ *  them back -- so what is fixed is `new Date()` and `Date.now()`, which
+ *  is the whole of how this app asks what day it is
+ *  (`app/src/state/derived.ts::parisToday`). */
+async function fixTheClock(page, iso) {
+  await page.evaluateOnNewDocument((instant) => {
+    const fixed = new Date(instant).getTime();
+    const Real = Date;
+    Date = class extends Real {
+      constructor(...args) {
+        if (args.length === 0) super(fixed);
+        else super(...args);
+      }
+
+      static now() {
+        return fixed;
+      }
+    };
+  }, iso);
+}
+
 async function main() {
   await refuseUnlessTheExampleDeclares();
   const prefix = await pathPrefix();
   const served = await assemble(prefix);
-  const verificationPath = await stageTheTestCertificate(served);
+  const certificate = await stageTheTestCertificate(served);
   const bannerPath = await stageTheBanner(served);
   const eventPath = await scheduledEvent();
   for (const shot of SHOTS) {
-    if (shot.name === 'verification') shot.url = verificationPath;
+    if (shot.name === 'verification') shot.url = certificate.path;
     if (shot.name === 'banner') shot.url = bannerPath;
     if (shot.name === 'event-page') shot.url = eventPath;
   }
@@ -411,6 +478,7 @@ async function main() {
           height: shot.height,
           deviceScaleFactor: 2,
         });
+        await fixTheClock(page, certificate.photographedAt);
         await page.goto(`${base}${shot.url}`, {
           waitUntil: 'networkidle0',
           timeout: 30_000,
@@ -439,7 +507,10 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  console.log(`shots: wrote ${written} screenshot(s) into screenshots/`);
+  console.log(
+    `shots: wrote ${written} screenshot(s) into screenshots/, ` +
+      `photographed at ${certificate.photographedAt}`
+  );
 }
 
 await main();
