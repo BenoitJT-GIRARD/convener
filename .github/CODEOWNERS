@@ -31,4 +31,4 @@
 
 # instance/data/ is driven by the team app and validated by CI on every commit.
 # No required review here.
-/data/
+/instance/data/
