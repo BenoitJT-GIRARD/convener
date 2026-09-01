@@ -86,6 +86,12 @@ from convener_ops.publication.motifs import bracket
 
 ROOT = repo_root()
 
+#: Every charter this repository ships, by the name a declaration writes to
+#: choose it -- the directory it sits in. Off `brand.shipped` rather than
+#: listed, so a charter added tomorrow is in the tests below on the commit
+#: that adds it.
+ROOT_CHARTERS = {rel.parent.name: rel for rel in brand.shipped(ROOT)}
+
 #: The templates that draw the ribbon motif directly, outside any generated
 #: stylesheet. None may hand-type a colour `instance/data/brand.json` carries; each
 #: must take it from a generated token instead. `layout.njk` joined this list
@@ -853,6 +859,138 @@ def test_the_charter_in_force_is_the_products_when_the_instance_has_none(
 
 
 # --------------------------------------------------------------------------
+# `source`: named, written, neither -- and never both
+# --------------------------------------------------------------------------
+
+
+#: A charter this repository ships that is not the product's own default,
+#: read off `brand/` rather than typed: the tests below are about choosing
+#: one of the others, and which others exist is the directory's answer.
+_ANOTHER_CHARTER = next(
+    name for name in ROOT_CHARTERS if name != brand.DEFAULT_PATH.parent.name
+)
+
+
+def _name_a_charter(root: Path, name: str) -> None:
+    """Write `charter` into a throw-away repository's declaration -- the one
+    line a duplicate adds to choose a design it does not copy."""
+    path = root / published.INSTANCE_PATH
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data[published.CHARTER_KEY] = name
+    _write_json(path, data)
+
+
+def test_a_duplicate_that_names_a_charter_reads_it_where_upstream_keeps_it(
+    default_repo: Path,
+) -> None:
+    """The whole point of the key: the charter in force is a product file,
+    at the path the product maintains it at, and nothing was copied into
+    `instance/data/` for it to be chosen."""
+    _copy(default_repo, ROOT_CHARTERS[_ANOTHER_CHARTER])
+    _name_a_charter(default_repo, _ANOTHER_CHARTER)
+
+    assert brand.source(default_repo) == ROOT_CHARTERS[_ANOTHER_CHARTER]
+    assert brand.colours(brand.load(default_repo)) == _charter_colours(
+        ROOT_CHARTERS[_ANOTHER_CHARTER]
+    )
+    assert not (default_repo / brand.INSTANCE_PATH).exists()
+
+
+def test_a_duplicate_that_names_nothing_still_gets_the_products_own(
+    default_repo: Path,
+) -> None:
+    """`brand/convener/brand.json::_why_a_default`, unweakened by the key
+    above: no design file and no name is a duplicate that builds and looks
+    finished, which is the state this product has to survive."""
+    assert published.CHARTER_KEY not in json.loads(
+        (default_repo / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert brand.source(default_repo) == brand.DEFAULT_PATH
+
+
+def test_a_charter_this_product_does_not_ship_is_refused_and_the_rest_listed(
+    default_repo: Path,
+) -> None:
+    """Never a silent fall back to the default: a duplicate that misspelt
+    its charter would otherwise build, look finished, and wear a design
+    nobody chose. `motifs.family` refuses an unknown family exactly this
+    way one layer down, and the message lists what may be written
+    instead."""
+    _name_a_charter(default_repo, _NOT_A_CHARTER)
+    with pytest.raises(brand.UnknownCharterError) as raised:
+        brand.source(default_repo)
+    message = str(raised.value)
+    assert _NOT_A_CHARTER in message
+    assert published.CHARTER_KEY in message
+    for rel in brand.shipped(default_repo):
+        assert rel.parent.name in message
+
+
+def test_naming_a_charter_and_writing_one_is_refused_rather_than_ranked(
+    fake_repo: Path,
+) -> None:
+    """Two declarations of one notion, free to disagree. Whichever won, the
+    other would sit in a committed file doing nothing -- so neither does,
+    and the refusal names both files and the line to delete."""
+    _copy(fake_repo, ROOT_CHARTERS[_ANOTHER_CHARTER])
+    _name_a_charter(fake_repo, _ANOTHER_CHARTER)
+    with pytest.raises(brand.AmbiguousCharterError) as raised:
+        brand.source(fake_repo)
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert published.INSTANCE_PATH.as_posix() in message
+    assert _ANOTHER_CHARTER in message
+
+
+def test_the_conflict_is_refused_ahead_of_the_name_being_unknown(
+    fake_repo: Path,
+) -> None:
+    """When both are wrong the key is what has to go either way, so that is
+    the message: correcting the spelling first would only reach the second
+    refusal."""
+    _name_a_charter(fake_repo, _NOT_A_CHARTER)
+    with pytest.raises(brand.AmbiguousCharterError):
+        brand.source(fake_repo)
+
+
+def test_a_charter_committed_tomorrow_is_selectable_with_no_list_to_edit(
+    default_repo: Path,
+) -> None:
+    """`shipped` reads `brand/` off the directory and everything above
+    reads `shipped`: a charter is offered, chosen and drawn with on the
+    commit that adds the directory, with no entry to make anywhere."""
+    invented = "throwaway"
+    assert invented not in {rel.parent.name for rel in brand.shipped(default_repo)}
+    made = default_repo / brand.SHIPPED_DIR / invented / brand.SHIPPED_FILE
+    made.parent.mkdir(parents=True, exist_ok=True)
+    made.write_bytes((default_repo / brand.DEFAULT_PATH).read_bytes())
+
+    assert invented in brand.names(default_repo)
+    _name_a_charter(default_repo, invented)
+    assert brand.source(default_repo) == made.relative_to(default_repo)
+
+
+def test_a_named_charter_is_matched_never_built_into_a_path(
+    default_repo: Path,
+) -> None:
+    """A name is only ever answered by matching it against `shipped`, so a
+    declaration cannot address a file `brand/` does not hold however it is
+    spelt -- including by spelling its way back out of the directory."""
+    _name_a_charter(default_repo, "../" + brand.DEFAULT_PATH.parent.as_posix())
+    with pytest.raises(brand.UnknownCharterError):
+        brand.source(default_repo)
+
+
+def test_this_instance_writes_its_own_charter_and_names_none() -> None:
+    """The two routes are alternatives and this repository takes the first:
+    it has a designer, so it has a file, so its declaration carries no name
+    for the resolution above to refuse."""
+    assert (ROOT / brand.INSTANCE_PATH).is_file()
+    assert published.load_charter(ROOT) is None
+    assert brand.source(ROOT) == brand.INSTANCE_PATH
+
+
+# --------------------------------------------------------------------------
 # `motif`: absence is answered, incompleteness is refused
 # --------------------------------------------------------------------------
 
@@ -931,6 +1069,16 @@ def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> N
 #: against the registry below rather than typed into each test: the word
 #: that stood here was `lattice`, and `motifs/lattice.py` draws one now.
 _NOT_A_FAMILY = "no-such-drawing"
+
+#: An `instance/config.json::charter` naming a charter this product does not
+#: ship, held against `brand/` below for the reason above: a word that
+#: quietly becomes a real charter turns a test that proves a refusal into
+#: one that proves a lookup.
+_NOT_A_CHARTER = "no-such-charter"
+
+
+def test_the_name_the_charter_refusals_are_proved_with_is_not_a_charter() -> None:
+    assert _NOT_A_CHARTER not in ROOT_CHARTERS
 
 
 def test_the_name_these_refusals_are_proved_with_is_not_a_family() -> None:

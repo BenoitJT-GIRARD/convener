@@ -40,6 +40,18 @@ palette that does not build.
 `config/boundary.yml` hands that whole directory to the instance. Nothing
 about this instance's own colours moved: the file is what it was.
 
+**A duplicate with nobody to draw for it names one instead of writing
+one.** `brand/` holds several charters now, and until `charter` there was
+no way to build with any but the first: choosing the lattice meant copying
+`brand/lattice/brand.json` into `instance/data/`, which forks a product
+file into a duplicate's tree on the commit that copies it -- every later
+correction to that charter, a contrast remeasured or a token renamed,
+arrives as a merge conflict on a file the duplicate now owns, which is the
+opposite of what `brand/` is for. So the choice is a name in
+`instance/config.json` (`published.CHARTER_KEY`) and the file stays where
+upstream maintains it. `source` below is where the three answers -- named,
+written, neither -- are settled, and where naming both is refused.
+
 **`motif` has a default too, and its absence used to be the decision.**
 `motif` names the drawing (`family`), the colour it is stroked in, how
 wide that stroke is drawn, and the colour of the wordmark's dots. It
@@ -94,6 +106,7 @@ import json
 from pathlib import Path
 from typing import Any, Final
 
+from ..declaration import published
 from ..declaration.paths import DATA_DIR
 from . import motifs
 
@@ -111,18 +124,23 @@ __all__ = [
     "SHIPPED_FILE",
     "SUPERSEDED_COLOURS",
     "SUPERSEDED_MOTIF_FIELDS",
+    "AmbiguousCharterError",
     "MissingMotifError",
     "SupersededCharterError",
+    "UnknownCharterError",
     "charter",
+    "chosen",
     "colours",
     "contrast_problems",
     "contrast_ratio",
+    "declared",
     "hex_to_rgb",
     "load",
     "motif",
     "motif_family",
     "motif_stroke",
     "motif_width_ratio",
+    "names",
     "relative_luminance",
     "rgb_triplet",
     "rgba",
@@ -235,6 +253,39 @@ class SupersededCharterError(RuntimeError):
     """
 
 
+class UnknownCharterError(RuntimeError):
+    """An `instance/config.json::charter` naming a charter this product
+    does not ship.
+
+    Never a fall back to the product's own: a duplicate that misspelt
+    `chevrons` and got the default would build, look finished, and be
+    wearing a design nobody chose -- which is the defect
+    `motifs.UnknownMotifFamilyError` exists to prevent one layer down, and
+    this is the same refusal at the layer above it. Lists the charters
+    that do exist, for the same reason: the thing a person needs at the
+    moment a build stops is what they may write instead.
+
+    Carries the whole message rather than a code, for the reason
+    `MissingMotifError` gives.
+    """
+
+
+class AmbiguousCharterError(RuntimeError):
+    """An instance that both named a charter and wrote one of its own.
+
+    Two declarations of one notion, free to disagree, which is the defect
+    this repository refuses everywhere else. Whichever of the two won, the
+    other would be a value sitting in a committed file doing nothing --
+    the state D-16's drift lived in for months. So neither wins and the
+    build stops, naming both files and the one line to delete.
+
+    The two routes are both legitimate on their own, and the message says
+    so: a duplicate with nobody to draw for it names one of the product's
+    charters, and a duplicate with a designer writes
+    `instance/data/brand.json` and names none.
+    """
+
+
 class MissingMotifError(RuntimeError):
     """A `motif` that was written and left half-finished.
 
@@ -270,16 +321,119 @@ def shipped(root: Path) -> tuple[Path, ...]:
     return tuple(path.relative_to(root) for path in found)
 
 
+def names(root: Path) -> str:
+    """Every charter that exists, for a message that has to list them.
+
+    Off `shipped` above, so a charter committed tomorrow is offered by
+    every refusal on the commit that adds it.
+    """
+    return ", ".join(rel.parent.name for rel in shipped(root))
+
+
+def declared(root: Path) -> str | None:
+    """The name `instance/config.json` writes under `charter`, or `None`.
+
+    Absence answered twice, and neither is a fall back. A declaration that
+    carries no `charter` names none, which is `published.charter_from_data`
+    saying so. A tree carrying *no declaration at all* names none either:
+    a charter reader needs a charter, and `tests/publication/test_motif.py`
+    builds a root holding one file and nothing else to prove a family
+    dispatches. That second tolerance covers absence and stops there -- a
+    `charter` somebody wrote is always answered, by `charter_from_data` if
+    it is not a name and by `chosen` below if it is not one of ours -- and
+    a tree missing this declaration is refused by every other reader of it
+    (`published.load`, `load_identity`, `load_edition_prefix`), each for
+    its own reason.
+    """
+    if not (root / published.INSTANCE_PATH).is_file():
+        return None
+    return published.load_charter(root)
+
+
+def chosen(root: Path) -> Path | None:
+    """The charter this instance's declaration names, root-relative, or
+    `None` when it names none.
+
+    The name comes from `instance/config.json` (`published.CHARTER_KEY`,
+    which says why it is declared there); this is where it becomes a file.
+    A name is only ever answered by matching it against `shipped` above,
+    never by building a path out of it, so a declaration cannot address a
+    file `brand/` does not hold however it is spelt.
+    """
+    name = declared(root)
+    if name is None:
+        return None
+    return _shipped_as(root, name)
+
+
+def _shipped_as(root: Path, name: str) -> Path:
+    """`brand/<name>/brand.json`, or a refusal naming the charters there
+    are -- `motifs.family`'s own shape, one layer up."""
+    for rel in shipped(root):
+        if rel.parent.name == name:
+            return rel
+    known = names(root)
+    listed = (
+        f"The charters it ships are: {known}."
+        if known
+        else f"It ships none at all, which is {SHIPPED_DIR.as_posix()}/ being "
+        "broken rather than this declaration being wrong."
+    )
+    raise UnknownCharterError(
+        f"{published.INSTANCE_PATH.as_posix()}: {published.CHARTER_KEY} names "
+        f"{name!r}, which is not a charter this product ships. {listed} "
+        f"Delete the key to be drawn with the product's own "
+        f"({DEFAULT_PATH.as_posix()})."
+    )
+
+
 def source(root: Path) -> Path:
-    """Which of the two files `load` will read, root-relative.
+    """Which charter `load` will read, root-relative.
+
+    Three answers, in the order this asks for them.
+
+    1. **The declaration names one of the product's**, `charter` in
+       `instance/config.json`: `brand/<name>/brand.json`, read where
+       upstream maintains it. A duplicate that wanted the lattice used to
+       have to copy that file into `instance/data/`, which forks it: the
+       copy stops tracking upstream on the commit that makes it, and every
+       later correction to that charter arrives as a conflict on a file
+       the duplicate now owns.
+    2. **This instance wrote its own**, `instance/data/brand.json`: that
+       file. A duplicate with a designer keeps the route it has always
+       had, and nothing about this instance's own charter moved.
+    3. **Neither**: the product's own, `DEFAULT_PATH`, which is the whole
+       of `brand/convener/brand.json::_why_a_default` and is not weakened
+       by the key above. Design is never something a person has to supply
+       before the thing will run.
+
+    **Both is refused**, and the refusal is what makes the three above a
+    rule. Either answer would leave the other declaration sitting in a
+    committed file doing nothing, which is the shape this repository keeps
+    meeting -- one notion, two homes, free to disagree. Refused ahead of
+    an unknown name, because when both are wrong the key is what has to go
+    either way.
 
     Separate from `load` so that a message can name the file the values
     actually came from: a contrast that no longer recomputes and a
     `motif` left half-written are both reported against the file somebody
-    has to open, and which file that is depends on whether this instance
-    wrote one at all.
+    has to open.
     """
-    return INSTANCE_PATH if (root / INSTANCE_PATH).is_file() else DEFAULT_PATH
+    name = declared(root)
+    wrote_one = (root / INSTANCE_PATH).is_file()
+    if name is None:
+        return INSTANCE_PATH if wrote_one else DEFAULT_PATH
+    if wrote_one:
+        raise AmbiguousCharterError(
+            f"{published.INSTANCE_PATH.as_posix()} names the {name!r} charter "
+            f"and {INSTANCE_PATH.as_posix()} is a charter this instance wrote "
+            "itself. One of the two is the design in force and nothing here "
+            f"chooses between them. Delete the {published.CHARTER_KEY!r} key "
+            f"to be drawn with the file, or delete "
+            f"{INSTANCE_PATH.as_posix()} to be drawn with the charter that "
+            "key names."
+        )
+    return _shipped_as(root, name)
 
 
 def load(root: Path) -> dict[str, Any]:

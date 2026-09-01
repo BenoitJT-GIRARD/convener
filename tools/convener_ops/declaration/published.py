@@ -9,6 +9,16 @@ is the prefix its editions are numbered under. All three
 are in `instance/config.json`, all three are read here, and none of them
 is written down anywhere else.
 
+A fourth key sits beside them and is not identity: `charter`, the name of
+the design an instance is drawn with. It is optional where the three
+above are required, for the reason `CHARTER_KEY` gives, and it is read
+here for the reason every other key in this file is -- `_declaration` at
+the foot of this module is Python's one parse of this path, and a second
+one inside `publication/brand.py` would be the copy this whole design
+refuses wearing a smaller hat. What the name *means* is answered there:
+which charters exist is a property of the `brand/` directory, and this
+module knows nothing about the directory beside it.
+
 Every public address this repository emits is a suffix of a single value:
 the registration page a participant follows, the survey page an attendee
 is invited to, the certificate-verification page a token is checked on,
@@ -59,6 +69,7 @@ from urllib.parse import urlsplit
 from .paths import repo_root
 
 __all__ = [
+    "CHARTER_KEY",
     "DECLARATION_VERSION",
     "DEGRADABLE_FIELDS",
     "EDITION_PREFIX_KEY",
@@ -74,12 +85,14 @@ __all__ = [
     "EditionPrefix",
     "Identity",
     "Published",
+    "charter_from_data",
     "declared_values",
     "edition_prefix_from_data",
     "from_data",
     "identity_from_data",
     "is_placeholder",
     "load",
+    "load_charter",
     "load_edition_prefix",
     "load_identity",
     "unconfigured",
@@ -149,6 +162,33 @@ IDENTITY_KEY: Final = "identity"
 #: prose gets reworded -- and this value cannot be reworded, see
 #: `EditionPrefix` below for the three places that make it permanent.
 EDITION_PREFIX_KEY: Final = "edition_prefix"
+
+#: The key that says which of the charters the product ships this instance
+#: is drawn with -- the name of a directory under `brand/`, and the whole
+#: of what a duplicate writes to choose one.
+#:
+#: **A name rather than a copy.** Before this key the only way to build
+#: with a charter other than the product's own was to copy its
+#: `brand.json` into `instance/data/`, which forks a product file into a
+#: duplicate's tree: the copy stops tracking upstream on the commit that
+#: makes it, and every later correction to that charter -- a contrast
+#: remeasured, a token renamed -- arrives as a conflict on a file the
+#: duplicate now owns. Naming it leaves the file where upstream maintains
+#: it.
+#:
+#: **Optional, and read from here rather than from the charter itself.**
+#: `instance/data/brand.json` is a charter, so a name written there would
+#: be a charter saying it is not the charter -- a file that has to exist
+#: in order to say that nothing should read it. This file is the
+#: instance's declaration of what it *is*, it is already read from Python,
+#: from both Node builds and from the relays' own suites, and one more
+#: key here is one more line a duplicate edits in the file it was already
+#: editing.
+#:
+#: `charter_from_data` below reads it and `publication/brand.py` answers
+#: it: which charters exist is a property of the `brand/` directory, and
+#: this module knows nothing about the directory beside it.
+CHARTER_KEY: Final = "charter"
 
 #: How long a declared prefix may be. Nothing downstream breaks at nine:
 #: `eventkeys._EVENT_ID_MAX_LENGTH` and the signup relay's own
@@ -661,6 +701,42 @@ def edition_prefix_from_data(data: Any) -> EditionPrefix:
 def load_edition_prefix(root: Path | None = None) -> EditionPrefix:
     """The edition prefix as this repository declares it."""
     return edition_prefix_from_data(_declaration(root))
+
+
+def charter_from_data(data: Any) -> str | None:
+    """Which charter this declaration names, or `None` when it names none.
+
+    The one optional key in this file. Every other value here is identity
+    -- a name, an address, a prefix -- and identity is refused when it is
+    missing, because nothing can guess it. A charter is design, and
+    `brand/convener/brand.json::_why_a_default` is the argument for never
+    demanding it: a duplicate that names none is drawn with the product's
+    own and looks finished at its first build.
+
+    A key that is present and is not a name is refused, because a
+    declaration nobody can act on is worse than one nobody wrote. Whether
+    the name is one `brand/` actually holds is not asked here:
+    `publication/brand.py` reads that directory and answers it there, and
+    a name that has to pass through that set can never be a path.
+    """
+    named = INSTANCE_PATH.as_posix()
+    if not isinstance(data, dict) or data.get("v") != DECLARATION_VERSION:
+        raise ValueError(f"{named} is not a supported format version")
+    if CHARTER_KEY not in data:
+        return None
+    raw = data[CHARTER_KEY]
+    if isinstance(raw, str) and raw and raw == raw.strip():
+        return raw
+    raise ValueError(
+        f"{named}: {CHARTER_KEY} is the name of one of the charters the "
+        f"product ships, got {raw!r} -- delete the key outright to be drawn "
+        "with the product's own"
+    )
+
+
+def load_charter(root: Path | None = None) -> str | None:
+    """The charter this repository's declaration names, or `None`."""
+    return charter_from_data(_declaration(root))
 
 
 def declared_values(data: Any) -> dict[str, str]:
