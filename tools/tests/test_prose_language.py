@@ -450,7 +450,7 @@ def test_the_licence_is_not_spell_checked() -> None:
     digest. It is American English throughout ("license", "authorize",
     "defense") and a British-English check over it would report every one
     of those as an error nobody may fix. Quieting them would mean
-    teaching `project-words.txt` American spellings this product uses
+    teaching `cspell.json`'s own word list American spellings this product uses
     nowhere else, which would then stop the check catching them where it
     should.
     """

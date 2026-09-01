@@ -142,14 +142,17 @@ DEFERRED: Final = (
         ),
     ),
     Deferred(
-        path=Path("project-words.txt"),
-        owner="the cspell dictionary",
+        path=Path("cspell.json"),
+        owner="the spell checker's own vocabulary",
         reason=(
             "A list of words, not prose: the spell checker has to know "
             "this organisation's name is spelled that way because the "
-            "repository's own history and specs write it. Nothing builds "
-            "this file -- but it does ship, into the derived product "
-            "repository, which is why this entry was reread. "
+            "repository's own history writes it. Nothing builds this "
+            "file -- but it does ship, into the derived product "
+            "repository, which is why this entry was reread. The list "
+            "was `project-words.txt` beside this file until 2026-09-01, "
+            "and is `words` inside `cspell.json` now: the same vocabulary "
+            "in the one file that reads it. "
             "Eight of its entries were parts of people's names, and "
             "not one of them was reachable from anything cspell actually "
             "lints -- `cspell.json` ignores `instance/data/speakers.yml` outright "
@@ -163,7 +166,7 @@ DEFERRED: Final = (
             "occurrences the moment either word went. Those two pages "
             "name roles now, nothing linted spells either word, and the "
             "entries came out with the prose that held them. What is "
-            "left in this file that names anybody is this organisation, "
+            "left in this list that names anybody is this organisation, "
             "which is the whole of the reason above."
         ),
     ),

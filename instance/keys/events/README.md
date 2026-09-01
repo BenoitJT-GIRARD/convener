@@ -1,4 +1,4 @@
-# `instance/keys/events/`
+# The published half of each event key
 
 The published public half of each event key: one `<event id>.pub` file per
 edition, PEM (`SubjectPublicKeyInfo`), ASCII, the id lower-cased.

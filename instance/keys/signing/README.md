@@ -1,4 +1,4 @@
-# `instance/keys/signing/`
+# The published halves of the signing key
 
 Published public halves of the certificate signing key -- see
 `tools/convener_ops/journey/signing.py`'s module docstring for the full design, and

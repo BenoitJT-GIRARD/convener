@@ -65,7 +65,6 @@ on:
       - 'site/**'
       - 'services/**'
       - 'cspell.json'
-      - 'project-words.txt'
       - 'README.md'
   workflow_dispatch:
 

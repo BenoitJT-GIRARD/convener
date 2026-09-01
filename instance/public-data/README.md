@@ -1,4 +1,4 @@
-# `instance/public-data/`
+# What this instance publishes about itself
 
 Everything this instance publishes about itself, derived from
 `instance/data/` by the product's own commands and committed by

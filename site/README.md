@@ -1,4 +1,4 @@
-# site
+# The public showcase
 
 Source of the public showcase. Which series, under whose name, is in
 `instance/config.json` and nowhere else. Built with

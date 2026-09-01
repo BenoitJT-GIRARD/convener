@@ -1,4 +1,4 @@
-# screenshots
+# The pictures the front page shows
 
 The four pictures `README.md` shows. Nothing else reads them, and nothing
 here is drawn by hand.
