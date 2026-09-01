@@ -216,6 +216,21 @@ BACKGROUND_PATH: Final = ASSETS_DIR / "video-call-background.svg"
 #: from `formats.PRINT_PAPER_MM` rather than from 210 and 297 typed again.
 UNITS_PER_MM: Final = 10
 
+#: The class every element the composition *places* carries, and the whole
+#: of the contract `tools/visuals/check-templates.mjs` reads it under: a
+#: block is a rectangle or a device this file sets against the drawing's
+#: corridor, and no two blocks may run into each other. Type carries it
+#: implicitly -- every `<text>` line is a block -- so what is marked here
+#: is the three that are not type: the white plate a photograph goes on,
+#: the registration slot, and the wordmark's own device.
+#:
+#: The grounds and the bands are deliberately *not* blocks. A band is the
+#: composition's own ground and type sits inside it on purpose, which is
+#: the same reason the sweep exempts a pair where one block wholly
+#: contains the other: "QR code" inside the slot is the design, and the
+#: column crossing the slot's edge is not.
+BLOCK: Final = "block"
+
 #: The placeholders both files carry into the volunteer's editor, spelled
 #: exactly as `app/src/content/render.ts::substitute` resolves them -- an
 #: invented one would send somebody looking for a field that does not
@@ -485,7 +500,8 @@ def _mark(
         ink=ink,
         dots=dots,
         attributes=(
-            f'x="{_num(x)}" y="{_num(y)}" width="{_num(size)}" height="{_num(size)}"'
+            f'class="{BLOCK}" x="{_num(x)}" y="{_num(y)}" '
+            f'width="{_num(size)}" height="{_num(size)}"'
         ),
         indent=" " * 4,
     )
@@ -610,6 +626,7 @@ def _values(root: Path) -> dict[str, str]:
     return {
         **_SPEAKER,
         **colours,
+        "block": BLOCK,
         # The address exactly as the wordmark sets it, without the tones it
         # is set in: `_wordmark_values` sizes that line to the room it has,
         # and a size is a property of the string and not of its colours.
@@ -722,7 +739,8 @@ _ANNOUNCEMENT: Final = """\
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
     <g transform="rotate(4 {frame_pivot_x} 900)">
-      <rect x="{frame_x}" y="690" width="420" height="470" fill="{white}"/>
+      <rect class="{block}" x="{frame_x}" y="690" width="420" height="470"
+            fill="{white}"/>
       <rect x="{frame_photo_x}" y="712" width="376" height="376"
             fill="{field_tint}"/>
       <text x="{frame_caption_x}" y="912" text-anchor="middle" font-size="26"
@@ -762,7 +780,7 @@ _ANNOUNCEMENT: Final = """\
           fill="{black}">REGISTER</text>
     <text x="{slot_x}" y="936" font-size="{register_size}" font-weight="800"
           fill="{black}">HERE</text>
-    <rect x="{slot_x}" y="960" width="{slot_side}" height="{slot_side}"
+    <rect class="{block}" x="{slot_x}" y="960" width="{slot_side}" height="{slot_side}"
           fill="{white}"/>
     <rect x="{slot_dash_x}" y="{slot_dash_y}" width="{slot_dash_side}"
           height="{slot_dash_side}" fill="none"
@@ -841,7 +859,8 @@ _FLYER: Final = """\
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
     <g transform="rotate(4 {frame_pivot_x} 1900)">
-      <rect x="{frame_x}" y="1440" width="700" height="810" fill="{white}"/>
+      <rect class="{block}" x="{frame_x}" y="1440" width="700" height="810"
+            fill="{white}"/>
       <rect x="{frame_photo_x}" y="1478" width="624" height="624"
             fill="{field_tint}"/>
       <text x="{frame_caption_x}" y="1800" text-anchor="middle" font-size="44"
@@ -882,7 +901,8 @@ _FLYER: Final = """\
          this corner, and the slot keeps the column's own indent. -->
     <text x="{slot_x}" y="2360" font-size="{register_size}" font-weight="800"
           fill="{black}">REGISTER HERE</text>
-    <rect x="{slot_x}" y="2400" width="{slot_w}" height="340" fill="{white}"/>
+    <rect class="{block}" x="{slot_x}" y="2400" width="{slot_w}" height="340"
+          fill="{white}"/>
     <rect x="{slot_dash_x}" y="2430" width="{slot_dash_w}" height="280"
           fill="none"
           stroke="{rule_strong}" stroke-width="5" stroke-dasharray="18 14"/>
@@ -1679,7 +1699,8 @@ _BACKGROUND: Final = """\
        it. All three lines are declared values set in capitals, and each is
        sized to fit this plate rather than at a fixed size, so a longer
        name shrinks instead of running off the edge. -->
-  <rect x="{plate_x}" y="{plate_y}" width="{plate_w}" height="{plate_h}"
+  <rect class="{block}" x="{plate_x}" y="{plate_y}" width="{plate_w}"
+        height="{plate_h}"
         fill="{white}" stroke="{black}" stroke-width="{plate_rule}"/>
   <g text-anchor="middle" fill="{black}">
     <text x="{plate_mid}" y="{name_y}" font-size="{name_size}"
@@ -1700,7 +1721,8 @@ _BACKGROUND: Final = """\
     <text x="{code_mid}" y="{label_top_y}">{label_top}</text>
     <text x="{code_mid}" y="{label_bottom_y}">{label_bottom}</text>
   </g>
-  <rect x="{code_x}" y="{code_y}" width="{code_side}" height="{code_side}"
+  <rect class="{block}" x="{code_x}" y="{code_y}" width="{code_side}"
+        height="{code_side}"
         fill="{white}"/>
   <svg x="{code_x}" y="{code_y}" width="{code_side}"
        height="{code_side}">{code}</svg>

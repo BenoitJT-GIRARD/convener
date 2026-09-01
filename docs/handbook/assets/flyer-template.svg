@@ -60,7 +60,7 @@
     <!-- Wordmark: the charter's own drawing at the size of a mark,
          clipped to its box, with the dot the mark closes on. Nothing here
          is anybody's logo: put your own in its place if you have one. -->
-    <svg x="280" y="92" width="175" height="175"
+    <svg class="block" x="280" y="92" width="175" height="175"
          viewBox="0 0 100 100"
          aria-hidden="true" focusable="false">
       <path d="M 10.6 0
@@ -130,7 +130,8 @@
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
     <g transform="rotate(4 1488.96 1900)">
-      <rect x="1218.96" y="1440" width="700" height="810" fill="#ffffff"/>
+      <rect class="block" x="1218.96" y="1440" width="700" height="810"
+            fill="#ffffff"/>
       <rect x="1256.96" y="1478" width="624" height="624"
             fill="#fedad4"/>
       <text x="1568.96" y="1800" text-anchor="middle" font-size="44"
@@ -171,7 +172,8 @@
          this corner, and the slot keeps the column's own indent. -->
     <text x="600" y="2360" font-size="56" font-weight="800"
           fill="#000000">REGISTER HERE</text>
-    <rect x="600" y="2400" width="360" height="340" fill="#ffffff"/>
+    <rect class="block" x="600" y="2400" width="360" height="340"
+          fill="#ffffff"/>
     <rect x="630" y="2430" width="300" height="280"
           fill="none"
           stroke="#b18f9b" stroke-width="5" stroke-dasharray="18 14"/>

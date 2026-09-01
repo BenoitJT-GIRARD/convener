@@ -1,6 +1,7 @@
 /* Does any stroke of the motif cross any word of the three downloadable
- * templates? Measured, on the pinned engine, for every charter this
- * repository holds crossed with every family it draws.
+ * templates -- and does any block of the composition cross any other?
+ * Measured, on the pinned engine, for every charter this repository holds
+ * crossed with every family it draws.
  *
  * Why this file exists
  * ---------------------
@@ -35,6 +36,46 @@
  *    each sample to each block, less half the stroke's width -- which is
  *    how far the *painted* edge of the drawing stays from the *inked*
  *    extent of the words. Negative means a stroke crosses a word.
+ *
+ * The second measurement: block against block
+ * ---------------------------------------------
+ * Everything above measures **strokes against words**, and that is the
+ * whole of what this file did until a family shipped that satisfied it
+ * completely and still put the announcement's registration slot through
+ * the "what to expect" column at every charter. It was found by rendering
+ * the fixture and looking at it.
+ *
+ * The cause is that each block is placed against the *drawing* and none
+ * against any other block. `brand_templates._register_values` sets the
+ * slot at `free(870, 1140)[0].start + gutter`, while
+ * `_ANNOUNCEMENT_COLUMN.indent` is a fixed 320, and nothing compared the
+ * two: the four older families escape only because their drawing is
+ * absent from those rows, so `free[0]` is the whole page and the slot
+ * lands against the left edge.
+ *
+ * So the same renderings are measured a second time, and this half needs
+ * no new infrastructure at all:
+ *
+ * 4. Every **placed block**, as a convex quadrilateral in the page's own
+ *    coordinates -- each line of type (the runs of one line unioned, a
+ *    `<tspan>` carrying a `y` of its own opening the next), and each
+ *    element carrying the class `brand_templates.BLOCK` names: the plate a
+ *    photograph goes on, the registration slot, the wordmark's own device,
+ *    the background's plate and its code. A ground or a band is
+ *    deliberately not one -- type sits inside a band on purpose.
+ * 5. Every pair of them, by the separating-axis theorem, keeping the least
+ *    overlap: the distance one would have to move by to stop touching the
+ *    other. A pair where one wholly contains the other is the composition
+ *    rather than a collision ("QR code" inside the slot, the speaker's
+ *    name on the plate), and only that exemption exists.
+ *
+ * What it caught on its first run, with `motifs/steps.py` set back to the
+ * configurations that module's own docstring records: fourteen risers put
+ * the slot 6.7 units into the column, and **fifteen -- which that
+ * docstring called landing "exactly on the column's own indent" -- puts
+ * it 1.0 unit into it**, because the bold `A` of `AFTER: ` inks a unit
+ * west of the pen position the arithmetic places. That unit is the whole
+ * argument for measuring this in a browser rather than in Python.
  *
  * The face it measures in is the one the charter names and this repository
  * self-hosts (D-17), injected as an `@font-face` the way `visual.py`'s own
@@ -81,6 +122,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  right. The clearance every block actually achieves is printed, so a
  *  margin that is merely thin is visible without being fatal. */
 const MINIMUM_CLEARANCE = 0;
+
+/** How deep two lines of type may run into each other before this is a
+ *  collision, in the page's own units.
+ *
+ *  Zero would be the honest number and is not usable: an SVG glyph box
+ *  carries the face's own ascent and descent, so two lines set at a
+ *  leading a designer would call generous still have boxes that graze at
+ *  the hundredth of a unit. What is not a design decision is *how much*:
+ *  a fifth of a unit on a page 1200 across is a hundredth of a millimetre
+ *  in print and cannot be the difference between a legible poster and an
+ *  illegible one, while the collision this exists to catch ran 49 to 70
+ *  units deep. The depth every colliding pair achieves is printed, so a
+ *  pair that merely grazes is visible without being fatal. */
+const MINIMUM_SEPARATION = 0.2;
 
 /** How far apart the samples along the motif's path are, in the page's own
  *  units, before the search is refined.
@@ -214,9 +269,17 @@ async function measureTemplate(page) {
       }
 
       const blocks = [];
+      // Every line of type, as the runs it is actually set in. A `<tspan>`
+      // carrying a `y` of its own opens a line; one carrying none
+      // continues the line before it, which is exactly what SVG's own
+      // current-text-position does -- so `BEFORE: ` and `Ask your` are one
+      // line and the nine lines under them are nine.
+      const lines = [];
       for (const text of svg.querySelectorAll('text')) {
         const spans = [...text.querySelectorAll('tspan')];
-        for (const element of spans.length ? spans : [text]) {
+        const runs = spans.length ? spans : [text];
+        let line = null;
+        for (const element of runs) {
           const box = element.getBBox();
           if (box.width <= 0 || box.height <= 0) continue;
           blocks.push({
@@ -224,6 +287,157 @@ async function measureTemplate(page) {
             size: parseFloat(getComputedStyle(element).fontSize),
             box: [box.x, box.y, box.width, box.height],
             quad: quadOf(element),
+          });
+          if (!line || element === runs[0] || element.hasAttribute('y')) {
+            // Field by field: an `SVGRect`'s own four values are accessors
+            // on its prototype, so spreading one gives an empty object and
+            // every arithmetic below it a NaN.
+            line = {
+              text: '',
+              local: { x: box.x, y: box.y, width: box.width, height: box.height },
+              owner: text,
+            };
+            lines.push(line);
+          } else {
+            const right = Math.max(line.local.x + line.local.width, box.x + box.width);
+            const bottom = Math.max(line.local.y + line.local.height, box.y + box.height);
+            line.local.x = Math.min(line.local.x, box.x);
+            line.local.y = Math.min(line.local.y, box.y);
+            line.local.width = right - line.local.x;
+            line.local.height = bottom - line.local.y;
+          }
+          line.text = `${line.text}${element.textContent || ''}`;
+        }
+      }
+      // One quad per line, mapped through the owning `<text>`'s own matrix
+      // -- every run on a line shares it, which is why the union can be
+      // taken in the local space and mapped once. The tilted plate's own
+      // two lines come back as the tilted quadrilaterals they are, rather
+      // than as upright boxes an overlap test would inflate by the width
+      // of the line times the sine of the tilt.
+      const placed = lines.map((line) => {
+        const matrix = rootMatrix.multiply(line.owner.getScreenCTM());
+        const { x, y, width, height } = line.local;
+        return {
+          text: line.text.trim(),
+          box: [x, y, width, height],
+          quad: [
+            [x, y],
+            [x + width, y],
+            [x + width, y + height],
+            [x, y + height],
+          ].map(([px, py]) => {
+            const point = svg.createSVGPoint();
+            point.x = px;
+            point.y = py;
+            const mapped = point.matrixTransform(matrix);
+            return [mapped.x, mapped.y];
+          }),
+        };
+      });
+
+      // The blocks that are not type: the plate a photograph goes on, the
+      // registration slot, the wordmark's own device. Each carries the
+      // class `brand_templates.BLOCK` names, which is the whole contract
+      // -- a ground or a band is deliberately not one, because type sits
+      // inside a band on purpose.
+      for (const element of svg.querySelectorAll('.block')) {
+        // A nested `<svg>` is its own viewport and clips to it, so what it
+        // occupies is that rectangle -- never `getBBox()`, which reports
+        // the whole geometry of the children *inside* the viewBox, in the
+        // viewBox's units. The device's own drawing runs off its box by
+        // design (every family does), and measuring the unclipped path
+        // would report a block three times its size, crossing every word
+        // in the top band.
+        const nested = element.tagName === 'svg';
+        const box = nested
+          ? {
+              x: parseFloat(element.getAttribute('x')),
+              y: parseFloat(element.getAttribute('y')),
+              width: parseFloat(element.getAttribute('width')),
+              height: parseFloat(element.getAttribute('height')),
+            }
+          : element.getBBox();
+        if (!(box.width > 0) || !(box.height > 0)) continue;
+        const matrix = rootMatrix.multiply(
+          (nested ? element.parentNode : element).getScreenCTM()
+        );
+        placed.push({
+          text: `<${element.tagName} class="block">`,
+          box: [box.x, box.y, box.width, box.height],
+          quad: [
+            [box.x, box.y],
+            [box.x + box.width, box.y],
+            [box.x + box.width, box.y + box.height],
+            [box.x, box.y + box.height],
+          ].map(([px, py]) => {
+            const point = svg.createSVGPoint();
+            point.x = px;
+            point.y = py;
+            const mapped = point.matrixTransform(matrix);
+            return [mapped.x, mapped.y];
+          }),
+        });
+      }
+
+      /** How deep two convex quadrilaterals run into each other, zero when
+       *  a separating axis exists. The separating-axis theorem, with the
+       *  least overlap kept: that least is the distance one would have to
+       *  be moved by to stop touching the other, which is the number a
+       *  person needs to see. */
+      function penetration(a, b) {
+        let least = Infinity;
+        for (const quad of [a, b]) {
+          for (let i = 0; i < 4; i += 1) {
+            const [ax, ay] = quad[i];
+            const [bx, by] = quad[(i + 1) % 4];
+            const length = Math.hypot(bx - ax, by - ay);
+            if (!length) continue;
+            const nx = -(by - ay) / length;
+            const ny = (bx - ax) / length;
+            const project = (quadrilateral) =>
+              quadrilateral.map(([x, y]) => x * nx + y * ny);
+            const pa = project(a);
+            const pb = project(b);
+            const overlap =
+              Math.min(Math.max(...pa), Math.max(...pb)) -
+              Math.max(Math.min(...pa), Math.min(...pb));
+            if (overlap <= 0) return 0;
+            least = Math.min(least, overlap);
+          }
+        }
+        return least === Infinity ? 0 : least;
+      }
+
+      /** Whether every corner of `inner` lies inside `outer`. Type set
+       *  inside a plate is the composition -- "QR code" inside the
+       *  registration slot, the speaker's name on the photographic frame
+       *  -- and a block that crosses a plate's *edge* is the collision.
+       *  Geometric rather than by ancestry, because the plate and the
+       *  words on it are siblings in the markup: one is drawn, then the
+       *  other is drawn over it. */
+      function contains(outer, inner) {
+        return inner.every(([px, py]) => {
+          for (let i = 0; i < 4; i += 1) {
+            const [ax, ay] = outer[i];
+            const [bx, by] = outer[(i + 1) % 4];
+            if ((bx - ax) * (py - ay) - (by - ay) * (px - ax) < 0) return false;
+          }
+          return true;
+        });
+      }
+
+      const collisions = [];
+      for (let i = 0; i < placed.length; i += 1) {
+        for (let j = i + 1; j < placed.length; j += 1) {
+          const depth = penetration(placed[i].quad, placed[j].quad);
+          if (depth <= 0) continue;
+          if (contains(placed[i].quad, placed[j].quad)) continue;
+          if (contains(placed[j].quad, placed[i].quad)) continue;
+          collisions.push({
+            depth,
+            first: { text: placed[i].text, box: placed[i].box },
+            second: { text: placed[j].text, box: placed[j].box },
           });
         }
       }
@@ -299,7 +513,7 @@ async function measureTemplate(page) {
           nearestPoint: where,
         };
       });
-      return { strokeWidth, pathLength: total, blocks: measured };
+      return { strokeWidth, pathLength: total, blocks: measured, collisions, placed: placed.length };
     },
     FACE_CSS,
     SAMPLE_STEP,
@@ -385,8 +599,9 @@ async function main() {
   for (const result of results) {
     const worst = result.blocks.reduce((a, b) => (a.clearance <= b.clearance ? a : b));
     console.log(
-      `templates: ${result.name} -- ${result.blocks.length} block(s) of type, ` +
-        `stroke ${result.strokeWidth}, closest ${worst.clearance.toFixed(1)} units ` +
+      `templates: ${result.name} -- ${result.blocks.length} block(s) of type in ` +
+        `${result.placed} placed block(s), stroke ${result.strokeWidth}, closest ` +
+        `${worst.clearance.toFixed(1)} units ` +
         `(${JSON.stringify(worst.text.slice(0, 40))})`
     );
     for (const block of result.blocks) {
@@ -399,6 +614,19 @@ async function main() {
           `set at ${block.size} and inking x[${x.toFixed(1)}-${(x + w).toFixed(1)}] ` +
           `y[${y.toFixed(1)}-${(y + h).toFixed(1)}]. Nearest point on the stroke: ` +
           `(${block.nearestPoint[0].toFixed(1)}, ${block.nearestPoint[1].toFixed(1)}).`
+      );
+    }
+    for (const collision of result.collisions) {
+      if (collision.depth <= MINIMUM_SEPARATION) continue;
+      failed = true;
+      const where = ({ box: [x, y, w, h] }) =>
+        `x[${x.toFixed(1)}-${(x + w).toFixed(1)}] y[${y.toFixed(1)}-${(y + h).toFixed(1)}]`;
+      console.log(
+        `::error::${result.name} -- two placed blocks run into each other by ` +
+          `${collision.depth.toFixed(1)} units: ` +
+          `${JSON.stringify(collision.first.text.slice(0, 40))} at ${where(collision.first)} ` +
+          `and ${JSON.stringify(collision.second.text.slice(0, 40))} at ${where(collision.second)}. ` +
+          'Each was placed against the drawing and neither against the other.'
       );
     }
   }
@@ -420,9 +648,14 @@ async function main() {
   if (failed) {
     process.exitCode = 1;
   } else {
+    const pairs = results.reduce(
+      (total, result) => total + (result.placed * (result.placed - 1)) / 2,
+      0
+    );
     console.log(
-      `templates: no stroke crosses any word, in ${results.length} rendering(s) of ` +
-        'every template at every charter and every family'
+      `templates: no stroke crosses any word and no placed block crosses ` +
+        `another, in ${results.length} rendering(s) of every template at every ` +
+        `charter and every family (${pairs} pair(s) of blocks measured)`
     );
   }
 }

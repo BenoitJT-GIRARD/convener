@@ -27,6 +27,7 @@ from typing import Final, NamedTuple
 
 import pytest
 
+from convener_ops import cli
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand, brand_templates, motifs, typeface
@@ -227,7 +228,7 @@ def test_the_announcement_puts_its_registration_slot_west_of_the_ribbon(
     """
     root = _fixture_root(tmp_path, "ribbon")
     svg = brand_templates.render_announcement_template(root)
-    slot = re.search(r'<rect x="([\d.]+)" y="960" width="([\d.]+)"', svg)
+    slot = re.search(r'<rect class="\w+" x="([\d.]+)" y="960" width="([\d.]+)"', svg)
     assert slot is not None
     left, side = float(slot.group(1)), float(slot.group(2))
     ratio = brand.motif_width_ratio(root)
@@ -290,3 +291,139 @@ def test_the_column_lines_are_the_lines_the_markup_actually_sets() -> None:
                 lines.append(run)
         rendered = {line.replace("{forum_host}", host) for line in lines}
         assert rendered == declared
+
+
+# --------------------------------------------------------------------------
+# Block against block: the arithmetic half
+# --------------------------------------------------------------------------
+#
+# Every block on these pages is placed against the *drawing*, and until
+# `tools/visuals/check-templates.mjs` grew its second measurement none was
+# placed against any other block. `motifs/steps.py`'s own docstring said as
+# much -- "nothing in this repository measures a slot against a column" --
+# and its first family shipped an announcement whose registration slot ran
+# through the column at every charter, satisfying every gate.
+#
+# The browser is what actually proves it: a glyph's own side bearing is not
+# something arithmetic over indents can see, and one unit of it is the
+# difference between the fifteen-riser configuration "landing exactly on
+# the column's indent" and standing a unit inside it. What this half adds
+# is that it runs in every `pytest`, with no browser in the room and no
+# path filter deciding whether the workflow that owns the browser ran at
+# all -- the same division of labour the module docstring above states for
+# the corridor.
+#
+# Only the upright blocks. The photographic plate is tilted, and a tilted
+# rectangle against nine lines of type is exactly the arithmetic the
+# browser does properly and this would do approximately.
+
+
+def _marked(svg: str) -> list[tuple[str, float, float, float, float]]:
+    """Every block the composition marks, that carries no transform.
+
+    `<rect>` and nested `<svg>` alike are read from their own four
+    attributes: a nested `<svg>` clips to that rectangle, so it is what the
+    device occupies however far its drawing runs.
+    """
+    found: list[tuple[str, float, float, float, float]] = []
+
+    def walk(element: ElementTree.Element, tilted: bool) -> None:
+        tilted = tilted or element.get("transform") is not None
+        for child in element:
+            if child.get("class") == brand_templates.BLOCK and not tilted:
+                x = float(str(child.get("x")))
+                y = float(str(child.get("y")))
+                found.append(
+                    (
+                        child.tag.removeprefix(SVG),
+                        x,
+                        y,
+                        x + float(str(child.get("width"))),
+                        y + float(str(child.get("height"))),
+                    )
+                )
+            walk(child, tilted)
+
+    walk(ElementTree.fromstring(svg), False)
+    return found
+
+
+#: Every charter this repository holds and the declaration each is drawn
+#: against, read off `cli` rather than listed again: the same cross
+#: product `convener-render-template-fixtures` writes and
+#: `check-templates.mjs` sweeps. It matters that this is the whole list
+#: and not this instance's charter alone -- the fourteen-riser
+#: configuration that put the registration slot through the column did so
+#: at the *example's* charter and at no other, because the slot's own
+#: place is a function of the stroke weight the charter names.
+CHARTERS: Final = cli._template_charters(ROOT)
+
+
+def _charter_root(tmp_path: Path, entry: tuple[str, Path, Path], family: str) -> Path:
+    """One charter, one family, laid out the way the fixture renderer lays
+    one out -- through `cli`'s own function, so a tree this measures and a
+    tree the browser measures cannot differ."""
+    label, charter, declaration = entry
+    made = tmp_path / label / family
+    made.mkdir(parents=True, exist_ok=True)
+    return cli._template_fixture_root(made, ROOT, charter, declaration, family)
+
+
+@pytest.mark.parametrize("family", sorted(motifs.FAMILIES))
+@pytest.mark.parametrize("charter", CHARTERS, ids=lambda entry: entry[0])
+@pytest.mark.parametrize("page", PAGES, ids=lambda page: page[0])
+def test_no_upright_block_runs_into_a_line_of_type(
+    tmp_path: Path,
+    page: tuple[str, object, float, float],
+    charter: tuple[str, Path, Path],
+    family: str,
+) -> None:
+    """A plate and a line of type either miss each other or the line sits
+    wholly inside the plate. Anything between the two is a block placed
+    against the drawing and against nothing else.
+    """
+    name, render, width, height = page
+    root = _charter_root(tmp_path, charter, family)
+    canvas = brand_templates._Canvas(
+        family, width, height, brand.motif_width_ratio(root)
+    )
+    svg = render(root)  # type: ignore[operator]
+    blocks = _marked(svg)
+    assert blocks, f"{name} marks no block at all"
+    for block in _blocks(svg):
+        start, end = _extent(block)
+        top, bottom = canvas.rows(block.baseline, block.size)
+        for tag, x0, y0, x1, y1 in blocks:
+            if end <= x0 or start >= x1 or bottom <= y0 or top >= y1:
+                continue
+            if start >= x0 and end <= x1 and top >= y0 and bottom <= y1:
+                continue
+            raise AssertionError(
+                f"{name} at {family}: {block.text.strip()!r} inks "
+                f"x[{start:.1f}-{end:.1f}] y[{top:.1f}-{bottom:.1f}] and the "
+                f"<{tag}> block beside it occupies x[{x0:.1f}-{x1:.1f}] "
+                f"y[{y0:.1f}-{y1:.1f}] -- neither was placed against the other"
+            )
+
+
+@pytest.mark.parametrize("family", sorted(motifs.FAMILIES))
+@pytest.mark.parametrize("charter", CHARTERS, ids=lambda entry: entry[0])
+def test_the_announcements_slot_stops_west_of_the_column(
+    tmp_path: Path, charter: tuple[str, Path, Path], family: str
+) -> None:
+    """The one comparison `motifs/steps.py` had to write down because
+    nothing made it: the slot's own east edge against the column's own
+    indent, at every family the registry draws and every charter it is
+    inked by.
+    """
+    root = _charter_root(tmp_path, charter, family)
+    canvas = brand_templates._Canvas(
+        family, 1200.0, 1200.0, brand.motif_width_ratio(root)
+    )
+    values = brand_templates._register_values(canvas)
+    east = float(values["slot_x"]) + float(values["slot_side"])
+    assert east <= brand_templates._ANNOUNCEMENT_COLUMN.indent, (
+        f"the {family} motif pushes the registration slot to {east:.1f}, "
+        f"east of the {brand_templates._ANNOUNCEMENT_COLUMN.indent} the "
+        "column is indented to"
+    )

@@ -56,14 +56,24 @@ repository already measures:
   therefore has 320 less 24 less 180, that is 116 units of a 1200-unit
   page, for its own ledge and the clearance around it -- and the
   clearance is 36 at the heaviest charter this repository holds. Sixteen
-  levels lay a ledge of 75 and fit; fifteen lay one of 80 and land the
-  slot exactly on the column's own indent; fourteen lay one of 85.7 and
-  push it through. Sixteen is therefore the fewest, and the fewest is the
-  deepest ledge this page has room for. The bracket's own reach, 0.1403
-  of the shorter side, is the bound every other family here is measured
-  against and it is the looser of the two: nothing in this repository
-  measures a slot against a column, which is why the figure is written
-  down here.
+  levels lay a ledge of 75 and fit; fifteen lay one of 80 and fourteen
+  one of 85.7, and both put the slot into the column. Sixteen is
+  therefore the fewest, and the fewest is the deepest ledge this page has
+  room for. The bracket's own reach, 0.1403 of the shorter side, is the
+  bound every other family here is measured against and it is the looser
+  of the two.
+
+  **The two figures are measured now, and one of them was wrong.** This
+  paragraph used to end "nothing in this repository measures a slot
+  against a column, which is why the figure is written down here", and
+  said fifteen levels landed the slot *exactly* on the column's own
+  indent. `tools/visuals/check-templates.mjs` sweeps every placed block
+  against every other now, over the same ninety renderings, and reports
+  fourteen at 6.7 units into the column and fifteen at 1.0 -- not zero,
+  because the bold `A` of `AFTER: ` inks about a unit west of the pen
+  position 320 that the arithmetic places it at. A side bearing is not
+  something arithmetic over indents can see, which is why the figure is
+  no longer only written down.
 - **`_STEP`, the drawing's one unit.** Not a figure of its own: it is one
   level, `1 / _RISERS`, read against the shorter side for a ledge and
   against the height for a riser. On the 1200-unit square the

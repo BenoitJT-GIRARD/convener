@@ -62,7 +62,7 @@
          travels broken. The dot is the one the mark closes on. The rule
          underlines the two together. Nothing here is anybody's logo: put
          your own in its place if you have one. -->
-    <svg x="165" y="57" width="100" height="100"
+    <svg class="block" x="165" y="57" width="100" height="100"
          viewBox="0 0 100 100"
          aria-hidden="true" focusable="false">
       <path d="M 10.6 0
@@ -130,7 +130,8 @@
          File &gt; Import, then send the image behind this white frame. Keep
          the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
     <g transform="rotate(4 885.89 900)">
-      <rect x="685.89" y="690" width="420" height="470" fill="#ffffff"/>
+      <rect class="block" x="685.89" y="690" width="420" height="470"
+            fill="#ffffff"/>
       <rect x="707.89" y="712" width="376" height="376"
             fill="#fedad4"/>
       <text x="895.89" y="912" text-anchor="middle" font-size="26"
@@ -170,7 +171,7 @@
           fill="#000000">REGISTER</text>
     <text x="24" y="936" font-size="31.5" font-weight="800"
           fill="#000000">HERE</text>
-    <rect x="24" y="960" width="180" height="180"
+    <rect class="block" x="24" y="960" width="180" height="180"
           fill="#ffffff"/>
     <rect x="42" y="978" width="144"
           height="144" fill="none"
