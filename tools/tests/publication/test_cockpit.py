@@ -89,8 +89,10 @@ def test_every_pairing_the_cockpit_sets_clears_aa_at_every_charter() -> None:
 
 def test_white_on_the_field_is_the_pairing_every_charter_forbids() -> None:
     """The measurement behind the fix, recomputed rather than quoted: the
-    field is a ground, and white on it is 1.61 to 1.71 wherever it is
-    tried. Each charter says so in its own `contrast._forbidden`."""
+    field is a ground, and white on it is 1.60 to 1.71 wherever it is
+    tried -- 1.60 at the example's, which is the charter in force in a
+    repository `convener-derive` has produced. Each charter says so in
+    its own `contrast._forbidden`."""
     for rel in CHARTERS:
         tokens = _tokens(rel)
         ratio = brand.contrast_ratio(cockpit.BUILT_IN_COLOURS["white"], tokens["field"])
@@ -265,17 +267,28 @@ def test_an_inert_control_is_not_measured(tmp_path: Path) -> None:
 def test_an_opacity_the_class_list_names_its_type_for_is_composited(
     tmp_path: Path,
 ) -> None:
-    """The agenda's archived card, as it stood: ink-muted on paper is 7.43
-    at this instance's charter and 2.84 once the whole element is painted
-    at 60%. Found by this sweep on its first run over the repository."""
+    """The agenda's archived card, as it stood: ink-muted on paper is 7.42
+    at the product's own charter and 2.88 once the whole element is
+    painted at 60%. Found by this sweep on its first run over the
+    repository.
+
+    Measured against `brand.DEFAULT_PATH` rather than against the charter
+    in force, which is what it read until a derived repository failed
+    here: `convener-derive` lays the example instance into
+    `instance/data/`, so "the charter in force" is a different palette on
+    the other side of the derivation and a figure written down beside it
+    cannot be right in both trees. The product's own charter is the one
+    palette every duplicate has and no derivation replaces. What is
+    proved here is that an opacity changes the measurement, and any
+    palette proves it."""
     found, refused = _scan(
         tmp_path, 'const c = "bg-paper border-border text-ink-muted opacity-60";\n'
     )
     assert refused == []
-    tokens = _tokens(brand.INSTANCE_PATH)
+    tokens = _tokens(brand.DEFAULT_PATH)
     (pairing,) = found
-    assert round(cockpit.measure(pairing, tokens), 2) == 2.84
-    assert round(brand.contrast_ratio(tokens["ink-muted"], tokens["paper"]), 2) == 7.43
+    assert round(cockpit.measure(pairing, tokens), 2) == 2.88
+    assert round(brand.contrast_ratio(tokens["ink-muted"], tokens["paper"]), 2) == 7.42
 
 
 def test_an_opacity_dimming_type_it_does_not_name_is_refused(
@@ -348,11 +361,16 @@ def test_both_branches_of_a_conditional_inside_a_template_are_read(
 
 def test_a_ground_opacity_is_composited_over_the_page(tmp_path: Path) -> None:
     """`bg-field/10` is not a colour any charter holds, and it is a colour
-    somebody reads type on."""
+    somebody reads type on.
+
+    Against the product's own charter, for the reason
+    `test_an_opacity_the_class_list_names_its_type_for_is_composited`
+    gives: the charter in force is not the same palette on both sides of
+    the derivation."""
     found, _ = _scan(tmp_path, "const c = 'bg-field/10 text-field-text';\n")
     (pairing,) = found
     assert pairing.ground_alpha == 0.10
-    tokens = _tokens(brand.INSTANCE_PATH)
+    tokens = _tokens(brand.DEFAULT_PATH)
     assert round(cockpit.measure(pairing, tokens), 2) == 5.82
 
 

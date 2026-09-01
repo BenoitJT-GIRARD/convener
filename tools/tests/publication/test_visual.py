@@ -22,13 +22,16 @@ import json
 import re
 from dataclasses import replace
 from datetime import date, datetime, timedelta, tzinfo
+from pathlib import Path
 from typing import Any, Final
 
 import pytest
 from conftest import speaker
 
 import convener_ops.publication.visual as visual
+from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand
 from convener_ops.publication.formats import BANNER, FORMATS, PRINT, SQUARE
 from convener_ops.publication.motifs.ribbon import waypoints
 from convener_ops.publication.public_data import to_public
@@ -541,7 +544,39 @@ def test_the_ribbon_geometry_matches_the_requested_canvas() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
+@pytest.fixture(scope="module")
+def ribbon_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A repository root whose charter names the ribbon.
+
+    The two tests below are about one family's own drawing, and
+    `_motif_safe_margins` answers for whichever family the charter in
+    force names. Handed `ROOT` they were a statement about this
+    instance's charter rather than about the ribbon, and they failed in a
+    repository `convener-derive` had produced for that reason alone: the
+    example instance is the charter in force there and it names the
+    bracket, whose corridor is narrower than the ribbon's reach. Every
+    other family's clearance is measured by
+    `convener-render-poster-fixtures` and `tools/visuals/
+    check-posters.mjs`, at every charter and every canvas; what is left
+    here is the ribbon's, so the ribbon is what this hands them.
+
+    The two files `cli._template_fixture_root` lays down, with
+    `motif.family` overridden the way that function overrides it.
+    """
+    made = tmp_path_factory.mktemp("ribbon")
+    (made / brand.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
+    (made / published.INSTANCE_PATH).write_bytes(
+        (ROOT / published.INSTANCE_PATH).read_bytes()
+    )
+    charter = json.loads((ROOT / brand.source(ROOT)).read_text(encoding="utf-8"))
+    charter[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = "ribbon"
+    (made / brand.INSTANCE_PATH).write_text(
+        json.dumps(charter, indent=2), encoding="utf-8"
+    )
+    return made
+
+
+def test_the_safe_area_clears_every_ribbon_waypoint(ribbon_root: Path) -> None:
     """The property this whole fix rests on: no on-curve point of the
     ribbon -- either loop's own arc, the left tail's fitted bulge, the
     points where the stroke crosses an edge -- lies inside the horizontal
@@ -565,7 +600,7 @@ def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
     evidence of that.
     """
     for width, height in ((1200.0, 1200.0), (1200.0, 630.0), (900.0, 1200.0)):
-        left_vw, right_vw = _motif_safe_margins(width, height, ROOT)
+        left_vw, right_vw = _motif_safe_margins(width, height, ribbon_root)
         left_px = left_vw / 100.0 * width
         right_px = right_vw / 100.0 * width
 
@@ -843,14 +878,16 @@ def test_a_long_real_title_composes_without_clipping_in_every_format() -> None:
 # named formats rather than assumed to transfer. ---
 
 
-def test_the_safe_area_clears_every_ribbon_waypoint_at_each_named_format() -> None:
+def test_the_safe_area_clears_every_ribbon_waypoint_at_each_named_format(
+    ribbon_root: Path,
+) -> None:
     """The same property `test_the_safe_area_clears_every_ribbon_waypoint`
     already pins at three generic aspect ratios, re-checked here at the
     three real, named sizes (`formats.py`) -- pinning
     the actual numbers a caller really renders at, not only placeholders
     that happen to share their shape."""
     for fmt in FORMATS:
-        left_vw, right_vw = _motif_safe_margins(fmt.width, fmt.height, ROOT)
+        left_vw, right_vw = _motif_safe_margins(fmt.width, fmt.height, ribbon_root)
         left_px = left_vw / 100.0 * fmt.width
         right_px = right_vw / 100.0 * fmt.width
 
