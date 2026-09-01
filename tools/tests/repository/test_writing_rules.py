@@ -60,9 +60,8 @@ import re
 import subprocess
 from pathlib import Path
 
-from repository.test_no_literal_copies import served_pages
-
 from convener_ops.declaration.paths import repo_root
+from repository.test_no_literal_copies import served_pages
 
 ROOT = repo_root()
 

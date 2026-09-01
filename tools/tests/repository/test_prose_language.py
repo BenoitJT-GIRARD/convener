@@ -132,9 +132,8 @@ import json
 import re
 from pathlib import Path
 
-from repository.test_cross_references import _tracked, prose_of
-
 from convener_ops.declaration.paths import repo_root
+from repository.test_cross_references import _tracked, prose_of
 
 ROOT = repo_root()
 

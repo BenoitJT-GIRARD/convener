@@ -45,9 +45,9 @@ from collections.abc import Iterable, Mapping
 from typing import Final
 
 import pytest
-from repository.test_cross_references import _tracked
 
 from convener_ops.declaration.paths import repo_root
+from repository.test_cross_references import _tracked
 
 ROOT: Final = repo_root()
 
