@@ -1720,7 +1720,7 @@ def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> Non
     over the whole file said it all: `contents: read` to check out,
     `issues: write` to post, nothing else. The sweep now shares the file,
     and it genuinely needs more -- it commits `instance/data/speakers.yml` and
-    dispatches `publish-vitrine.yml`. So the property is asserted per job
+    dispatches `publish-showcase.yml`. So the property is asserted per job
     instead of per file, which is stricter rather than looser: the push
     path (`immediate`) must still carry *exactly* what it always did, and
     the daily job must carry the union of the two merged jobs and not one
@@ -1747,7 +1747,7 @@ def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> Non
         "issues": "write",
     }, (
         "the daily job carries the union of the sweep's own scopes "
-        "(commit instance/data/speakers.yml, dispatch publish-vitrine.yml) and the "
+        "(commit instance/data/speakers.yml, dispatch publish-showcase.yml) and the "
         "digest's own (post a comment) -- and nothing beyond that union"
     )
 

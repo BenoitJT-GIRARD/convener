@@ -264,7 +264,7 @@ register the same way `public_data.to_public` builds `events-public.json`
 from the speaker list -- an allowlist of exactly two columns, not a
 denylist of the one column (`fingerprint`) that must never leave. `cli.py`
 writes the result to `instance/public-data/certificates-public.json`, following
-`events-public.json`'s own precedent (`publish-vitrine.yml` copies that
+`events-public.json`'s own precedent (`publish-showcase.yml` copies that
 file to the public showcase; a future workflow does the same for this
 one). The verification page fetches this file for exactly one
 purpose -- learning whether the identifier a certificate's own token

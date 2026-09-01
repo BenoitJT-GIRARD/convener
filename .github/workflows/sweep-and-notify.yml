@@ -40,7 +40,7 @@
 # below watches. That is not a loop: the commit is made with the job's own
 # GITHUB_TOKEN, and GitHub does not start a workflow run from an event a
 # GITHUB_TOKEN produced (its recursion guard). It is the same guard that
-# makes the `gh workflow run publish-vitrine.yml` dispatch in the sweep
+# makes the `gh workflow run publish-showcase.yml` dispatch in the sweep
 # step below load-bearing rather than a nicety -- without it the showcase
 # never reflects the sweep, a live defect this repository has already had
 # once (see that step's own comment).
@@ -177,7 +177,7 @@ jobs:
     permissions:
       # The union of what the two files carried, and nothing past it.
       # `contents: write` is the sweep committing instance/data/speakers.yml;
-      # `actions: write` is the same sweep dispatching publish-vitrine.yml
+      # `actions: write` is the same sweep dispatching publish-showcase.yml
       # afterwards, which the recursion guard makes necessary (see the
       # sweep step below, and visuals-production.yml's own copy of the
       # identical pair); `issues: write` is the digest's one way of
@@ -200,7 +200,7 @@ jobs:
           # checks.
           enable-cache: true
       # The commit below pushes with this job's
-      # own GITHUB_TOKEN, which cannot fire publish-vitrine.yml's `push`-
+      # own GITHUB_TOKEN, which cannot fire publish-showcase.yml's `push`-
       # triggered `paths:` trigger (`instance/data/speakers.yml` is one of the paths
       # it names) -- GitHub's recursion guard. That is not a hypothetical:
       # `events-public.json` had in fact never been republished after a
@@ -242,8 +242,8 @@ jobs:
             fi
             git commit -m "data: sweep elapsed events and expired vote windows"
             if git push; then
-              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
-                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              gh workflow run publish-showcase.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-showcase.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
@@ -813,7 +813,7 @@ jobs:
       # actions-budget.yml.
       #
       # `actions: read` is not added below because this job already
-      # declares `actions: write` for its publish-vitrine dispatch, and
+      # declares `actions: write` for its publish-showcase dispatch, and
       # write includes read. Nothing here writes: the two endpoints called
       # are GET /actions/runs and GET /actions/runs/<id>/timing.
       #

@@ -1,4 +1,4 @@
-"""The app publishes to the vitrine, not to GitHub Pages on this repo.
+"""The app publishes to the showcase, not to GitHub Pages on this repo.
 
 `example-cockpit` is private; GitHub Pages does not serve a private repo without
 a paid plan, so the three Pages actions (`configure-pages`,
@@ -13,7 +13,7 @@ Two things are asserted, and neither is the obvious one:
   (slow, and this suite runs on every push), the base path is asserted
   straight from `app/vite.config.ts` — the one source Vite reads it from.
 * The publish step is a hand-written shell script, the same shape as
-  `publish-vitrine.yml`'s own push step. It is asserted against as text
+  `publish-showcase.yml`'s own push step. It is asserted against as text
   (`in` checks on the parsed `run:` block) rather than executed, because
   running it means a real clone of a real repo, which is exactly the kind
   of network access this suite must not take on.
@@ -109,13 +109,13 @@ def _push_step_script() -> str:
     """
     for step in _build_job()["steps"]:
         env = step.get("env", {})
-        if any("VITRINE_DEPLOY_TOKEN" in str(value) for value in env.values()):
+        if any("SHOWCASE_DEPLOY_TOKEN" in str(value) for value in env.values()):
             run = step["run"]
             assert isinstance(run, str)
             return run
     raise AssertionError(
-        "no step in the build job reads VITRINE_DEPLOY_TOKEN — "
-        "the push-to-vitrine step is missing or was renamed away from it"
+        "no step in the build job reads SHOWCASE_DEPLOY_TOKEN — "
+        "the push-to-showcase step is missing or was renamed away from it"
     )
 
 
@@ -231,7 +231,7 @@ def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() ->
     assert "for attempt in 1 2 3; do" in script
 
 
-def test_vite_config_base_path_targets_the_vitrine_app_subtree() -> None:
+def test_vite_config_base_path_targets_the_showcase_app_subtree() -> None:
     """`base` is no longer a literal in this file, so
     what is checked here is that it is *derived* -- from the declaration,
     through the same reader the build runs. That it resolves to
@@ -458,8 +458,8 @@ def test_registration_signup_base_matches_the_event_page_permalink() -> None:
 
 
 def test_registration_signup_base_no_longer_targets_the_app_subtree() -> None:
-    """Same gap `test_certificate_verification_base_targets_the_vitrine_
-    app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`
+    """Same gap `test_certificate_verification_base_targets_the_showcase_
+    app_subtree` and `test_survey_base_targets_the_showcase_app_subtree`
     guard for their own bases, inverted for this one: unlike verification
     and the survey, which still live on `App.tsx` routes, a published
     signup link that still carried `_expected_base_path()` would
@@ -483,7 +483,7 @@ def test_deploy_workflow_has_a_single_self_sufficient_job() -> None:
 
 def test_deploy_workflow_cancels_stale_runs_of_itself() -> None:
     """Two overlapping `deploy.yml` runs both rewrite all of `app/` -- unlike
-    this workflow and `publish-vitrine.yml`, which write disjoint subtrees and
+    this workflow and `publish-showcase.yml`, which write disjoint subtrees and
     so can safely race through the retry-with-rebase loop instead. Left
     unserialised, the loser's rebase either conflicts on `index.html` or
     replays cleanly and lets the older build silently overwrite the newer
@@ -514,16 +514,16 @@ def test_deploy_workflow_concurrency_group_cannot_collide_with_another_workflow(
     )
 
 
-def test_deploy_workflow_concurrency_is_not_shared_with_publish_vitrine() -> None:
-    """`publish-vitrine.yml` writes a disjoint subtree of example-showcase and its
+def test_deploy_workflow_concurrency_is_not_shared_with_publish_showcase() -> None:
+    """`publish-showcase.yml` writes a disjoint subtree of example-showcase and its
     overlapping pushes are both legitimate -- the retry-with-rebase loop
     already handles that case more cheaply. Grouping the two workflows
     together here would serialise a job that does not need to wait."""
-    publish_vitrine = safe_load(
-        (ROOT / ".github/workflows/publish-vitrine.yml").read_text(encoding="utf-8")
+    publish_showcase = safe_load(
+        (ROOT / ".github/workflows/publish-showcase.yml").read_text(encoding="utf-8")
     )
-    assert "concurrency" not in publish_vitrine, (
-        "publish-vitrine.yml must not gain a concurrency group shared with "
+    assert "concurrency" not in publish_showcase, (
+        "publish-showcase.yml must not gain a concurrency group shared with "
         "deploy.yml's -- their overlapping pushes are both legitimate and "
         "the existing retry loop already reconciles them"
     )
@@ -571,7 +571,7 @@ def test_deploy_workflow_push_step_guards_on_missing_token() -> None:
     assert end_at != -1, "the token-check `if` has no matching `fi`"
     guard = script[check_at : end_at + len("\nfi")]
     assert "exit 0" in guard, (
-        "a missing VITRINE_DEPLOY_TOKEN must be a normal, silent no-op "
+        "a missing SHOWCASE_DEPLOY_TOKEN must be a normal, silent no-op "
         "(decision D-13), not a failed job"
     )
 
@@ -580,7 +580,7 @@ def test_deploy_workflow_push_step_only_touches_the_app_subtree() -> None:
     script = _push_step_script()
     assert "git add --force app" in script, (
         "the push step must stage only the target repo's app/ subtree, the "
-        "same discipline publish-vitrine.yml uses for the site's own "
+        "same discipline publish-showcase.yml uses for the site's own "
         "root-level files -- and with --force, since `git add` still "
         "honours the target repository's own .gitignore"
     )
@@ -605,7 +605,7 @@ def test_deploy_workflow_push_step_skips_committing_when_nothing_changed() -> No
     script = _push_step_script()
     assert "git diff --staged --quiet" in script, (
         "an unchanged build must not produce an empty commit, the same "
-        "guard publish-vitrine.yml already applies"
+        "guard publish-showcase.yml already applies"
     )
 
 
@@ -627,9 +627,9 @@ def test_deploy_workflow_builds_the_certificates_public_data() -> None:
     carries fourteen assertions about deploy.yml. Deleting the step left
     the suite green while certificates.json -- the file the verification
     page actually fetches -- shipped permanently empty. (This same step
-    also once existed, pinned, in publish-vitrine.yml;
+    also once existed, pinned, in publish-showcase.yml;
     that copy is gone now that this one is the only writer -- see
-    test_publish_vitrine_no_longer_builds_the_certificates_public_data.)"""
+    test_publish_showcase_no_longer_builds_the_certificates_public_data.)"""
     assert "convener-certificates-public-data" in _deploy_build_public_data_step(), (
         "deploy.yml's 'Build public data' step no longer runs "
         "convener-certificates-public-data -- app/public/certificates.json "
@@ -702,7 +702,7 @@ def test_deploy_workflow_builds_survey_status_before_the_npm_build() -> None:
 
 
 # ------------------------------------------------------------------ #
-# publish-vitrine.yml: the certificate register's public projection.
+# publish-showcase.yml: the certificate register's public projection.
 # There was a time when a revocation -- a change to
 # instance/data/events/<id>/certificates.yml -- did not even fire this workflow,
 # and the file it would have built was never copied to the showcase, so
@@ -714,43 +714,43 @@ def test_deploy_workflow_builds_survey_status_before_the_npm_build() -> None:
 # suite must not take on (see this module's own docstring).
 # ------------------------------------------------------------------ #
 
-PUBLISH_VITRINE_WORKFLOW = Path(".github/workflows/publish-vitrine.yml")
+PUBLISH_SHOWCASE_WORKFLOW = Path(".github/workflows/publish-showcase.yml")
 
 
-def _publish_vitrine_workflow() -> dict[str, Any]:
-    loaded = safe_load((ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8"))
+def _publish_showcase_workflow() -> dict[str, Any]:
+    loaded = safe_load((ROOT / PUBLISH_SHOWCASE_WORKFLOW).read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
 
-def _publish_vitrine_build_step() -> str:
-    job = _publish_vitrine_workflow()["jobs"]["publish"]
+def _publish_showcase_build_step() -> str:
+    job = _publish_showcase_workflow()["jobs"]["publish"]
     for step in job["steps"]:
         if step.get("name") == "Build public data":
             run = step["run"]
             assert isinstance(run, str)
             return run
     raise AssertionError(
-        "publish-vitrine.yml has no 'Build public data' step -- renamed "
+        "publish-showcase.yml has no 'Build public data' step -- renamed "
         "away from the name this test looks for"
     )
 
 
-def _publish_vitrine_push_script() -> str:
-    job = _publish_vitrine_workflow()["jobs"]["publish"]
+def _publish_showcase_push_script() -> str:
+    job = _publish_showcase_workflow()["jobs"]["publish"]
     for step in job["steps"]:
         env = step.get("env", {})
-        if any("VITRINE_DEPLOY_TOKEN" in str(value) for value in env.values()):
+        if any("SHOWCASE_DEPLOY_TOKEN" in str(value) for value in env.values()):
             run = step["run"]
             assert isinstance(run, str)
             return run
     raise AssertionError(
-        "no step in the publish job reads VITRINE_DEPLOY_TOKEN -- the "
-        "push-to-vitrine step is missing or was renamed away from it"
+        "no step in the publish job reads SHOWCASE_DEPLOY_TOKEN -- the "
+        "push-to-showcase step is missing or was renamed away from it"
     )
 
 
-def test_publish_vitrine_paths_trigger_includes_the_certificate_register() -> None:
+def test_publish_showcase_paths_trigger_includes_the_certificate_register() -> None:
     """Half the original defect: a revocation is a change to
     `instance/data/events/<id>/certificates.yml`, and the old `paths:` trigger
     (`instance/data/speakers.yml`, `tools/**`) would not even fire this workflow
@@ -761,12 +761,12 @@ def test_publish_vitrine_paths_trigger_includes_the_certificate_register() -> No
     `"on"` -- a real gotcha, not a reason to trust this file less than
     `notify.yml`'s own text assertions already do (test_notify.py's own
     idiom, followed here for exactly this reason)."""
-    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    text = (ROOT / PUBLISH_SHOWCASE_WORKFLOW).read_text(encoding="utf-8")
     trigger = text.split("jobs:")[0]
     assert "'instance/data/events/*/certificates.yml'" in trigger
 
 
-def test_publish_vitrine_no_longer_builds_the_certificates_public_data() -> None:
+def test_publish_showcase_no_longer_builds_the_certificates_public_data() -> None:
     """This step used to also run
     `convener-certificates-public-data`, to feed the push step's own (equally
     removed) copy into the showcase's `src/_data/certificates.json` -- a
@@ -775,13 +775,13 @@ def test_publish_vitrine_no_longer_builds_the_certificates_public_data() -> None
     a verifier actually reads is built by deploy.yml instead (see that
     workflow's own 'Build public data' step and
     test_deploy_workflow_builds_the_certificates_public_data, above)."""
-    assert "convener-certificates-public-data" not in _publish_vitrine_build_step(), (
-        "publish-vitrine.yml still builds the certificates projection "
+    assert "convener-certificates-public-data" not in _publish_showcase_build_step(), (
+        "publish-showcase.yml still builds the certificates projection "
         "though nothing here writes it anywhere any more"
     )
 
 
-def test_publish_vitrine_push_step_no_longer_copies_certificates_data() -> None:
+def test_publish_showcase_push_step_no_longer_copies_certificates_data() -> None:
     """Confirmed independently, at
     at the address `instance/config.json` declares, and verified
     against the showcase checkout itself, that no Eleventy template reads
@@ -790,43 +790,43 @@ def test_publish_vitrine_push_step_no_longer_copies_certificates_data() -> None:
     certificate workflows *look* like they refreshed the public register,
     which was the root cause of a real defect; removing it is the other
     half of that fix."""
-    script = _publish_vitrine_push_script()
+    script = _publish_showcase_push_script()
     assert "certificates.json" not in script, (
-        "publish-vitrine.yml's push step still mentions certificates.json "
+        "publish-showcase.yml's push step still mentions certificates.json "
         "-- the dead write this test exists to keep gone"
     )
 
 
-def test_publish_vitrine_workflow_permissions_are_read_only() -> None:
-    job = _publish_vitrine_workflow()["jobs"]["publish"]
+def test_publish_showcase_workflow_permissions_are_read_only() -> None:
+    job = _publish_showcase_workflow()["jobs"]["publish"]
     assert job["permissions"] == {"contents": "read"}
 
 
 # ------------------------------------------------------------------ #
-# publish-vitrine.yml: the showcase's own templates
+# publish-showcase.yml: the showcase's own templates
 # moved from `example-showcase` into this repository's `site/` (D-15). This job
-# now builds the whole site and pushes the built output to the vitrine's
+# now builds the whole site and pushes the built output to the showcase's
 # root, rather than copying one generated data file into a checkout of a
 # separate Eleventy project living there.
 # ------------------------------------------------------------------ #
 
 
-def test_publish_vitrine_paths_trigger_includes_the_site_templates() -> None:
+def test_publish_showcase_paths_trigger_includes_the_site_templates() -> None:
     """A change under `site/` has no effect on `events-public.json`, so
     without this the old `paths:` trigger (data + `tools/**`) would never
     rebuild or republish the site at all -- the same gap closed above for
     `certificates.yml`."""
-    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    text = (ROOT / PUBLISH_SHOWCASE_WORKFLOW).read_text(encoding="utf-8")
     trigger = text.split("jobs:")[0]
     assert "'site/**'" in trigger
 
 
-def test_publish_vitrine_refreshes_site_data_before_building() -> None:
+def test_publish_showcase_refreshes_site_data_before_building() -> None:
     """`site/src/_data/events.json` is committed only as a build fixture
     (see site/README.md); this step overwrites it from the file 'Build
     public data' just generated, so the build that follows always reflects
     current private data, not whatever a contributor last committed."""
-    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    job = _publish_showcase_workflow()["jobs"]["publish"]
     names = [step.get("name") for step in job["steps"]]
     assert "Refresh site data" in names
     assert names.index("Refresh site data") > names.index("Build public data"), (
@@ -839,8 +839,8 @@ def test_publish_vitrine_refreshes_site_data_before_building() -> None:
             assert "site/src/_data/events.json" in step["run"]
 
 
-def test_publish_vitrine_builds_the_site_before_pushing() -> None:
-    job = _publish_vitrine_workflow()["jobs"]["publish"]
+def test_publish_showcase_builds_the_site_before_pushing() -> None:
+    job = _publish_showcase_workflow()["jobs"]["publish"]
     names = [step.get("name") for step in job["steps"]]
     assert "Install site" in names and "Build site" in names
     assert names.index("Refresh site data") < names.index("Build site"), (
@@ -854,11 +854,11 @@ def test_publish_vitrine_builds_the_site_before_pushing() -> None:
     )
 
 
-def test_publish_vitrine_push_step_only_touches_the_root_site_files() -> None:
+def test_publish_showcase_push_step_only_touches_the_root_site_files() -> None:
     """The disjoint-subtree argument the retry loop relies on: this step
     must never remove or restage `app/`, deploy.yml's own subtree of the
     same repository."""
-    script = _publish_vitrine_push_script()
+    script = _publish_showcase_push_script()
     assert "! -name 'app'" in script, (
         "the push step's wipe must exclude app/ -- deploy.yml's own "
         "disjoint subtree -- or a site publish would delete the deployed "
@@ -872,7 +872,7 @@ def test_publish_vitrine_push_step_only_touches_the_root_site_files() -> None:
     )
 
 
-def test_publish_vitrine_push_step_refuses_to_publish_an_empty_build() -> None:
+def test_publish_showcase_push_step_refuses_to_publish_an_empty_build() -> None:
     """D-25: Eleventy exits 0 on 'Wrote 0 files' -- a wrong
     dir.input, a template error that skips every page, or any config change
     that makes the build emit nothing all 'succeed' as far as the 'Build
@@ -881,7 +881,7 @@ def test_publish_vitrine_push_step_refuses_to_publish_an_empty_build() -> None:
     working one -- D-25's own "a control that cannot fail loudly is not a
     control", except here the silent success is destructive rather than
     merely useless."""
-    script = _publish_vitrine_push_script()
+    script = _publish_showcase_push_script()
     guard_at = script.find('if [ ! -f "$SITE_OUTPUT/index.html" ]')
     count_at = script.find("site_file_count=")
     wipe_at = script.find("find /tmp/vit")
@@ -906,8 +906,8 @@ def test_publish_vitrine_push_step_refuses_to_publish_an_empty_build() -> None:
     )
 
 
-def test_publish_vitrine_push_step_clears_stale_files_before_copying() -> None:
-    script = _publish_vitrine_push_script()
+def test_publish_showcase_push_step_clears_stale_files_before_copying() -> None:
+    script = _publish_showcase_push_script()
     wipe_at = script.find("find /tmp/vit")
     copy_at = script.find("cp -r")
     assert wipe_at != -1 and copy_at != -1 and wipe_at < copy_at, (
@@ -916,7 +916,7 @@ def test_publish_vitrine_push_step_clears_stale_files_before_copying() -> None:
     )
 
 
-def test_publish_vitrine_push_step_retry_re_derives_rather_than_rebases() -> None:
+def test_publish_showcase_push_step_retry_re_derives_rather_than_rebases() -> None:
     """The same defence deploy.yml's own 'Commit survey status' step uses
     (test_deploy_workflow_survey_status_retry_re_derives_rather_than_
     rebases, above), for the identical reason: this commit is a wholesale
@@ -925,7 +925,7 @@ def test_publish_vitrine_push_step_retry_re_derives_rather_than_rebases() -> Non
     exactly where it conflicts instead of applying; re-deriving discards
     the local commit and reproduces the identical output against whatever
     landed on main in the meantime."""
-    script = _publish_vitrine_push_script()
+    script = _publish_showcase_push_script()
     commands = [
         line for line in script.splitlines() if not line.strip().startswith("#")
     ]
@@ -942,8 +942,8 @@ def test_publish_vitrine_push_step_retry_re_derives_rather_than_rebases() -> Non
     assert "git commit" in retry_block
 
 
-def test_publish_vitrine_site_ships_nojekyll() -> None:
-    """The consequence of moving the templates here: the vitrine's root is a full site
+def test_publish_showcase_site_ships_nojekyll() -> None:
+    """The consequence of moving the templates here: the showcase's root is a full site
     (`index.html`, `style.css`, `fonts/`, `app/`), exactly what its
     already-active GitHub Pages setting ('branch main, folder root')
     serves -- but GitHub's default Jekyll processing swallows anything at
@@ -972,16 +972,16 @@ def test_publish_vitrine_site_ships_nojekyll() -> None:
 #: this project does not administer -- so this scans every workflow file
 #: rather than naming the ones known to commit today. A hardcoded list is
 #: what let `deploy.yml` through the first time: it copied
-#: `publish-vitrine.yml`'s push step, including its stale address on
+#: `publish-showcase.yml`'s push step, including its stale address on
 #: this organisation's own domain, and the list here named only
-#: `candidate-form.yml` and `publish-vitrine.yml`, so nothing caught it.
+#: `candidate-form.yml` and `publish-showcase.yml`, so nothing caught it.
 #: A scan covers a workflow nobody has written yet, which a list never can.
 WORKFLOWS_DIR = Path(".github/workflows")
 
 #: The check used to look for one
 #: syntax only -- `user\.email\s+"..."`, a double-quoted literal directly
 #: after `user.email` -- because that is the shape the defect it was built
-#: to catch happened to take (`deploy.yml` copying `publish-vitrine.yml`'s
+#: to catch happened to take (`deploy.yml` copying `publish-showcase.yml`'s
 #: push step, stale off-domain address and all). An unquoted
 #: address, a single-quoted one, an identity set through an
 #: `actions/github-script` object literal instead of `git config`, or one
@@ -2107,7 +2107,7 @@ def test_certificate_workflows_accept_only_the_allowlisted_inputs() -> None:
     """The one property every input list in this trio must hold. A
     scan over the raw `on:` trigger block's own text, the same "read
     around `on:` as raw text" idiom
-    `test_publish_vitrine_paths_trigger_includes_the_certificate_register`
+    `test_publish_showcase_paths_trigger_includes_the_certificate_register`
     already uses -- PyYAML's YAML-1.1 bool resolver reads a bare `on:` key
     as `True`, not `"on"`, so `safe_load` would silently drop this
     section's own key if it were relied on here instead."""
@@ -2254,7 +2254,7 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
     loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
     job_data = loaded["jobs"][job]
     # `actions: write` joined `contents: write`
-    # in all three jobs -- each now dispatches publish-vitrine.yml as its
+    # in all three jobs -- each now dispatches publish-showcase.yml as its
     # own last step once it has actually committed something, which needs
     # that permission (`workflow_dispatch` is the documented exception to
     # GitHub's recursion guard, so no new secret is needed).
@@ -2264,7 +2264,7 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
     }, (
         f"{workflow_path.as_posix()}::{job} commits a change to "
         "certificates.yml (needs contents: write) and dispatches "
-        "publish-vitrine.yml afterwards (needs actions: write)"
+        "publish-showcase.yml afterwards (needs actions: write)"
     )
     assert isinstance(job_data.get("timeout-minutes"), int), (
         f"{workflow_path.as_posix()}::{job} has no timeout-minutes"
@@ -2275,9 +2275,9 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
 # GitHub does not start a new workflow run from
 # an event triggered by a job's own GITHUB_TOKEN (the recursion guard),
 # so a push made by any of the three certificate workflows -- or by
-# sweep.yml -- could never fire publish-vitrine.yml's own `push`-triggered
+# sweep.yml -- could never fire publish-showcase.yml's own `push`-triggered
 # `paths:` trigger, however carefully that trigger was worded.
-# Each of those four jobs now dispatches publish-vitrine.yml directly,
+# Each of those four jobs now dispatches publish-showcase.yml directly,
 # with `gh workflow run`, as its own last step -- `workflow_dispatch` is
 # the one documented exception to the recursion guard. Text assertions on
 # the parsed `run:` block, the same idiom this module already uses
@@ -2286,7 +2286,7 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
 # must not take on).
 # ------------------------------------------------------------------ #
 
-PUBLISH_VITRINE_DISPATCH = "gh workflow run publish-vitrine.yml"
+PUBLISH_SHOWCASE_DISPATCH = "gh workflow run publish-showcase.yml"
 #: The nightly sweep and the board digest are
 #: one workflow now (`sweep-and-notify.yml`), and the sweep is the first
 #: step of its `daily` job rather than a file and a cron of its own. The
@@ -2354,9 +2354,9 @@ def test_certificate_workflow_dispatches_deploy_only_after_a_real_push(
     reflect.
 
     This used to assert the identical shape
-    for `publish-vitrine.yml`, dispatched here unconditionally alongside
+    for `publish-showcase.yml`, dispatched here unconditionally alongside
     deploy.yml. That dispatch is gone now (dead motion -- see
-    `test_certificate_register_workflows_no_longer_dispatch_publish_vitrine`),
+    `test_certificate_register_workflows_no_longer_dispatch_publish_showcase`),
     so this test follows the one dispatch that remains and still matters:
     deploy.yml, the file a verification page actually depends on."""
     script = _job_step_script(workflow_path, job, run_contains)
@@ -2376,7 +2376,7 @@ def test_certificate_workflow_dispatches_deploy_only_after_a_real_push(
     )
 
 
-def test_sweep_workflow_dispatches_publish_vitrine_only_after_a_real_push() -> None:
+def test_sweep_workflow_dispatches_publish_showcase_only_after_a_real_push() -> None:
     """The same fix, and the same two-halves guard, for the sweep -- a
     re-read found the identical suppression there: `events-public.json`
     had never been republished after a nightly sweep,
@@ -2392,27 +2392,27 @@ def test_sweep_workflow_dispatches_publish_vitrine_only_after_a_real_push() -> N
     script = _job_step_script(SWEEP_WORKFLOW, SWEEP_JOB, "git commit -m")
 
     pushed = _guarded_block(script, "if git push; then")
-    assert PUBLISH_VITRINE_DISPATCH in pushed, (
-        "the sweep does not dispatch publish-vitrine.yml once a change is "
+    assert PUBLISH_SHOWCASE_DISPATCH in pushed, (
+        "the sweep does not dispatch publish-showcase.yml once a change is "
         "genuinely pushed -- events-public.json would never be republished "
         "after a sweep"
     )
 
     unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
-    assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
-        "the sweep dispatches publish-vitrine.yml even when nothing changed this run"
+    assert PUBLISH_SHOWCASE_DISPATCH not in unchanged, (
+        "the sweep dispatches publish-showcase.yml even when nothing changed this run"
     )
 
 
 # ------------------------------------------------------------------ #
-# Dispatching publish-vitrine.yml alone
+# Dispatching publish-showcase.yml alone
 # was never enough for a workflow that changes the certificate register --
 # that workflow rebuilt src/_data/certificates.json in the showcase,
 # which nothing there ever served (that write is gone). The file
 # `src/verify/register.ts` actually fetches is only rebuilt by
 # deploy.yml's own "Build public data" step, and nothing dispatched it:
 # `grep -rn "gh workflow run" .github/workflows/` returned four hits, all
-# four naming publish-vitrine.yml, none naming deploy.yml. This had
+# four naming publish-showcase.yml, none naming deploy.yml. This had
 # already failed four rounds in a row -- published by no workflow, then a
 # trigger no push could fire, then a destination that serves nothing, now
 # a rebuild nobody triggers -- so this test is written to catch the whole
@@ -2504,9 +2504,9 @@ def test_workflow_that_writes_the_certificate_register_dispatches_deploy(
     fetches.
 
     This used to also require
-    publish-vitrine.yml dispatched in the same guard. That requirement is
+    publish-showcase.yml dispatched in the same guard. That requirement is
     gone on purpose, not merely relaxed -- see
-    `test_certificate_register_workflows_no_longer_dispatch_publish_vitrine`
+    `test_certificate_register_workflows_no_longer_dispatch_publish_showcase`
     just below, which pins the opposite: none of these jobs dispatch it
     any more, because nothing a certificate change writes ever touches
     `instance/data/speakers.yml`, the only input that dispatch ever did anything
@@ -2532,10 +2532,10 @@ def test_workflow_that_writes_the_certificate_register_dispatches_deploy(
     _register_writing_jobs(),
     ids=lambda value: value if isinstance(value, str) else value.name,
 )
-def test_certificate_register_workflows_no_longer_dispatch_publish_vitrine(
+def test_certificate_register_workflows_no_longer_dispatch_publish_showcase(
     workflow_path: Path, job: str
 ) -> None:
-    """Dispatching publish-vitrine.yml
+    """Dispatching publish-showcase.yml
     alongside deploy.yml was dead motion for every workflow that only
     ever changes `certificates.yml` -- that dispatch's own job never
     touches anything but `instance/data/speakers.yml`, so a certificate-only push
@@ -2551,8 +2551,8 @@ def test_certificate_register_workflows_no_longer_dispatch_publish_vitrine(
         if isinstance(step.get("run"), str)
         and _CERTIFICATES_STAGED_RE.search(step["run"])
     )
-    assert PUBLISH_VITRINE_DISPATCH not in run, (
-        f"{workflow_path.as_posix()}::{job} dispatches publish-vitrine.yml "
+    assert PUBLISH_SHOWCASE_DISPATCH not in run, (
+        f"{workflow_path.as_posix()}::{job} dispatches publish-showcase.yml "
         "for a certificate-only change -- dead motion, carried item 4"
     )
 
@@ -2581,17 +2581,17 @@ def test_certificate_workflow_dispatch_step_authenticates_with_the_job_token(
     )
 
 
-def test_publish_vitrine_workflow_dispatch_is_enabled() -> None:
+def test_publish_showcase_workflow_dispatch_is_enabled() -> None:
     """The `paths:` trigger alone is
     unreachable from any of the four jobs that write the paths it names,
     since all four commit with their own GITHUB_TOKEN (the recursion
     guard) -- `workflow_dispatch` is what each of those jobs' own
     dispatch step (above) actually calls."""
-    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    text = (ROOT / PUBLISH_SHOWCASE_WORKFLOW).read_text(encoding="utf-8")
     trigger = text.split("jobs:")[0]
     assert "workflow_dispatch:" in trigger, (
-        "publish-vitrine.yml has no workflow_dispatch trigger -- nothing "
-        "could ever call `gh workflow run publish-vitrine.yml`"
+        "publish-showcase.yml has no workflow_dispatch trigger -- nothing "
+        "could ever call `gh workflow run publish-showcase.yml`"
     )
 
 
@@ -2941,7 +2941,7 @@ def test_retention_workflow_job_has_write_permission_and_a_timeout() -> None:
 def test_retention_workflow_dispatches_both_publish_targets_after_a_real_push() -> None:
     """`record_destructions` deletes a
     destroyed event's `instance/keys/events/<id>.pub` and this job pushes that
-    deletion with `GITHUB_TOKEN`, the recursion guard `publish-vitrine.
+    deletion with `GITHUB_TOKEN`, the recursion guard `publish-showcase.
     yml`'s own header comment names. Without a direct dispatch, nothing
     ever reruns `copy-event-keys.mjs`, so the deployed app bundle keeps
     serving a destroyed event's public key -- the signup relay's own
@@ -2955,9 +2955,9 @@ def test_retention_workflow_dispatches_both_publish_targets_after_a_real_push() 
     )
 
     pushed = _guarded_block(script, "if git push; then")
-    assert PUBLISH_VITRINE_DISPATCH in pushed, (
+    assert PUBLISH_SHOWCASE_DISPATCH in pushed, (
         "retention.yml changes instance/keys/events and the destruction registry "
-        "and pushes it, but does not dispatch publish-vitrine.yml"
+        "and pushes it, but does not dispatch publish-showcase.yml"
     )
     assert DEPLOY_DISPATCH in pushed, (
         "retention.yml changes instance/keys/events and the destruction registry "
@@ -2967,8 +2967,8 @@ def test_retention_workflow_dispatches_both_publish_targets_after_a_real_push() 
     )
 
     unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
-    assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
-        "retention.yml dispatches publish-vitrine.yml even when nothing "
+    assert PUBLISH_SHOWCASE_DISPATCH not in unchanged, (
+        "retention.yml dispatches publish-showcase.yml even when nothing "
         "changed this run"
     )
     assert DEPLOY_DISPATCH not in unchanged, (

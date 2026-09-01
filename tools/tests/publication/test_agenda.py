@@ -409,7 +409,7 @@ def test_seminar_duration_reads_a_real_configured_value() -> None:
 def test_nothing_in_the_build_ever_names_the_internal_agenda_feed() -> None:
     """The internal feed is never published to the public site (a project
     constraint, not merely today's behaviour): this sweeps every app/
-    build-copy script and both `deploy.yml`/`publish-vitrine.yml`'s own
+    build-copy script and both `deploy.yml`/`publish-showcase.yml`'s own
     "Push to example-showcase" steps for the one string that would put it
     there, the same allowlist discipline `registry.ts`/`public_data.py`
     already apply to what may leave this repository at all -- here,
@@ -420,7 +420,7 @@ def test_nothing_in_the_build_ever_names_the_internal_agenda_feed() -> None:
     scripts_dir = _ROOT / "app" / "scripts"
     for script in sorted(scripts_dir.glob("copy-*.mjs")):
         haystacks.append((str(script), script.read_text(encoding="utf-8")))
-    for workflow_name in ("deploy.yml", "publish-vitrine.yml"):
+    for workflow_name in ("deploy.yml", "publish-showcase.yml"):
         workflow_path = _ROOT / ".github" / "workflows" / workflow_name
         haystacks.append(
             (str(workflow_path), workflow_path.read_text(encoding="utf-8"))

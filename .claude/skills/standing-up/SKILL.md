@@ -196,7 +196,7 @@ it over.
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 11 | `vitrine_deploy_token` | hand over | The token that lets the cockpit push into the showcase |
+| 11 | `showcase_deploy_token` | hand over | The token that lets the cockpit push into the showcase |
 | 12 | `first_publish` | carry out | The first publish, and reading it in a browser |
 
 ### Stage 5 — The three workers

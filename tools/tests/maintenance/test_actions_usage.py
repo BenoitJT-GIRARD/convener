@@ -957,7 +957,7 @@ def test_the_daily_job_reads_the_billed_timing_not_a_wall_clock() -> None:
 
 def test_the_daily_job_needs_no_permission_beyond_what_it_already_had() -> None:
     """`actions: read` is what the two endpoints need, and `actions:
-    write` -- already there for the publish-vitrine dispatch -- includes
+    write` -- already there for the publish-showcase dispatch -- includes
     it. Least privilege here means adding nothing, not adding a line."""
     permissions = _loaded(_SWEEP_PATH)["jobs"]["daily"]["permissions"]
     assert permissions == {

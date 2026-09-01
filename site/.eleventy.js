@@ -1,6 +1,6 @@
 // The path-prefix defect: GitHub Pages serves this project's
 // build output one path segment below a bare domain root -- there is no
-// CNAME and no custom domain (`publish-vitrine.yml`'s own "already-active
+// CNAME and no custom domain (`publish-showcase.yml`'s own "already-active
 // GitHub Pages setting" is "branch main, folder root" on the published
 // repository, so the address is that repository's own name). Every
 // template used to write its internal links as a bare `/foo`, which
@@ -518,8 +518,8 @@ module.exports = function (cfg) {
   // site is reproducible from this repository alone.
   cfg.addPassthroughCopy('src/.nojekyll');
   // The published repository's own front page and its ignore file. They must
-  // be *emitted by this build*, not merely committed once to the vitrine:
-  // `publish-vitrine.yml::refresh_published_site` wipes everything at that
+  // be *emitted by this build*, not merely committed once to the showcase:
+  // `publish-showcase.yml::refresh_published_site` wipes everything at that
   // root except `.git` and `app/` before copying this output in, so anything
   // that lives only there is destroyed by the first publish. A public
   // repository whose landing page is a bare file listing explains nothing.
@@ -536,7 +536,7 @@ module.exports = function (cfg) {
   // about. A `.njk` under `src/` is fine where a `.md` was not: only `md`
   // is in `templateFormats` as a page-producing extension whose permalink
   // would have landed at `/README/`.
-  cfg.addPassthroughCopy({ 'publish/gitignore-for-vitrine': '.gitignore' });
+  cfg.addPassthroughCopy({ 'publish/gitignore-for-showcase': '.gitignore' });
   // The share banner(s) `visuals-production.yml` commits
   // under `src/banners/`. A plain string, anchored to this project's own
   // root exactly like the three passthrough copies above -- confirmed

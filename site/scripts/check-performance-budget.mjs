@@ -159,7 +159,7 @@ function parseArgs(argv) {
 }
 
 /** Merges the site's own build and the app's, addressed exactly the way
- *  `deploy.yml` and `publish-vitrine.yml` together publish them: the
+ *  `deploy.yml` and `publish-showcase.yml` together publish them: the
  *  site's own files at the root, the app's (including every island
  *  bundle) under `app/`. The same merge `check-a11y.mjs`'s own
  *  `assembleTree` performs, for the identical reason -- both scripts need

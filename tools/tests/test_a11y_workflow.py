@@ -236,6 +236,6 @@ def test_the_workflow_never_pushes_or_writes_repository_state() -> None:
         "git push",
         "git commit",
         "actions-bot",
-        "secrets.VITRINE_DEPLOY_TOKEN",
+        "secrets.SHOWCASE_DEPLOY_TOKEN",
     ):
         assert forbidden not in _WORKFLOW

@@ -129,7 +129,7 @@ def test_retention_workflow_last_run_step_stages_the_liveness_file() -> None:
 
 def test_retention_workflow_last_run_step_re_derives_rather_than_rebases() -> None:
     """The same defence every other retry loop in this file uses (see
-    deploy.yml's and publish-vitrine.yml's own pins in test_workflows.py
+    deploy.yml's and publish-showcase.yml's own pins in test_workflows.py
     for the identical reasoning): a rejected push is handled by fetching
     the branch tip and hard-resetting, never `git pull --rebase` or
     `git rebase`."""

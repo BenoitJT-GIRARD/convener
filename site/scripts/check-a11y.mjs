@@ -143,7 +143,7 @@ function parseArgs(argv) {
 }
 
 /** Merges the site's own build and (optionally) the app's, into one tree
- *  addressed exactly the way `publish-vitrine.yml` and `deploy.yml`
+ *  addressed exactly the way `publish-showcase.yml` and `deploy.yml`
  *  together publish it: the site's own files at the root, the app's under
  *  `app/`. `appDir` is optional -- a quick, site-only run (used while
  *  iterating on a template-only fix) still serves real pages under the
@@ -486,8 +486,8 @@ async function main() {
 
   try {
     browser = await puppeteer.launch({ executablePath: args.chrome, headless: true });
-    const vitrineRoot = path.join(publishRoot, prefixSegment);
-    const htmlFiles = await discoverHtmlPages(vitrineRoot);
+    const showcaseRoot = path.join(publishRoot, prefixSegment);
+    const htmlFiles = await discoverHtmlPages(showcaseRoot);
 
     console.log(
       `check-a11y: examined ${htmlFiles.length} of ${expected} expected page(s) ` +
@@ -509,7 +509,7 @@ async function main() {
 
     for (const filePath of htmlFiles) {
       const relUrl = path
-        .relative(vitrineRoot, filePath)
+        .relative(showcaseRoot, filePath)
         .split(path.sep)
         .join('/');
       const url = `${baseUrl}${relUrl === 'index.html' ? '' : relUrl.replace(/index\.html$/, '')}`;

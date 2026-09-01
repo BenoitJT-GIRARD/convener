@@ -183,9 +183,9 @@ jobs:
               # of deploy.yml.
               #
               # This used to *also* dispatch
-              # publish-vitrine.yml. Deliberately not, any more: nothing
+              # publish-showcase.yml. Deliberately not, any more: nothing
               # this job writes touches instance/data/speakers.yml, the only input
-              # publish-vitrine.yml's own "Build public data" step turns
+              # publish-showcase.yml's own "Build public data" step turns
               # into anything it pushes (events.json) -- a certificate
               # change was always a no-op run there ("no changes", exit
               # 0), never a second publication this dispatch was actually

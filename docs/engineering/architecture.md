@@ -129,7 +129,7 @@ flowchart LR
     subgraph cockpit["example-cockpit — private repository, source of truth"]
         direction TB
         siteSource["site/ + app/ source"]
-        deployJob["deploy.yml / publish-vitrine.yml<br/>CI job — VITRINE_DEPLOY_TOKEN"]
+        deployJob["deploy.yml / publish-showcase.yml<br/>CI job — SHOWCASE_DEPLOY_TOKEN"]
         regJob["registration.yml — CI job<br/>decrypts once, only inside this job"]
         store[("registrations.enc<br/>one encrypted envelope per person")]
         eventSecret{{"CONVENER_EVENT_KEY_&lt;id&gt;<br/>repository secret, the private half"}}
@@ -140,7 +140,7 @@ flowchart LR
         retentionJob -->|"90 days after the event:<br/>deletes the secret"| eventSecret
     end
 
-    subgraph vitrine["example-showcase — public repository, generated only"]
+    subgraph showcase["example-showcase — public repository, generated only"]
         direction TB
         pages["Static event page + signup island<br/>app bundle, verification page"]
         pubkey["Event's public key<br/>instance/keys/events/&lt;id&gt;.pub — not a secret"]

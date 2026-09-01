@@ -21,7 +21,7 @@
 #
 # This deliberately excludes secrets that only CI ever reads (a workflow
 # step's `env:`, never something convener-check-config's own process sees) --
-# TALLY_WEBHOOK_SECRET, VITRINE_DEPLOY_TOKEN, CLOUDFLARE_API_TOKEN. Declaring
+# TALLY_WEBHOOK_SECRET, SHOWCASE_DEPLOY_TOKEN, CLOUDFLARE_API_TOKEN. Declaring
 # them here would make `convener-check-config` report them permanently "absent"
 # on every machine that isn't the CI runner, which is noise, not
 # information. They are documented instead in docs/operating/operations.md,

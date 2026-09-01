@@ -120,7 +120,7 @@ def _absolute(path: str) -> str:
 #: be nonsensical, not just noisy.
 _TEXT_GLOBS = ("**/*.njk", "**/*.css", "**/*.js")
 
-#: D-17: the vitrine used to load Archivo and JetBrains Mono from Google,
+#: D-17: the showcase used to load Archivo and JetBrains Mono from Google,
 #: which discloses every visitor's address to a third party. Both hostnames
 #: are named, not only `googleapis.com`: a stylesheet link alone should
 #: resolve to `fonts.googleapis.com`, but the font files themselves are
@@ -332,7 +332,7 @@ def test_every_page_carries_an_explicit_referrer_policy(built_site: Path) -> Non
 def built_site_with_signup_relay(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The real `site/` project, built exactly like `built_site` above but
     with `VITE_SIGNUP_RELAY_URL` set -- the configured state `deploy.yml`
-    forwards into the application build and `publish-vitrine.yml`'s own
+    forwards into the application build and `publish-showcase.yml`'s own
     "Build site" step now forwards here too. Proves the other half of
     `csp.js`'s own D-13 handling: an address actually appears in
     connect-src once one is actually configured, not just that its
@@ -2785,15 +2785,15 @@ def test_the_organiser_link_points_at_the_apps_real_published_base(
         "built pages still name the cockpit's old directory: "
         f"{stale} -- the repository is example-cockpit, is private, and never "
         "serves the application; the application is published under the "
-        "vitrine's own prefix"
+        "showcase's own prefix"
     )
 
 
 def test_the_build_emits_the_published_repositorys_own_readme(
     built_site: Path,
 ) -> None:
-    """`publish-vitrine.yml::refresh_published_site` deletes everything at the
-    vitrine's root except `.git` and `app/`, then copies this build's output
+    """`publish-showcase.yml::refresh_published_site` deletes everything at the
+    showcase's root except `.git` and `app/`, then copies this build's output
     in. So anything that exists only as a commit in that repository -- its
     README, its ignore file -- is destroyed by the first publish, and the
     public repository anyone lands on becomes a bare listing of built HTML
@@ -2801,17 +2801,17 @@ def test_the_build_emits_the_published_repositorys_own_readme(
 
     They therefore have to be *emitted here*, on every build, which also
     makes this repository their single source. The README must keep saying
-    the thing that stops someone editing the wrong tree: that the vitrine
+    the thing that stops someone editing the wrong tree: that the showcase
     holds no source.
     """
     readme = built_site / "README.md"
     assert readme.is_file(), (
         "the build wrote no README.md -- the first publish would wipe the "
-        "vitrine's own copy and leave the public repository unexplained"
+        "showcase's own copy and leave the public repository unexplained"
     )
     text = readme.read_text(encoding="utf-8")
     assert "holds no source" in text, (
-        "the published README no longer warns that the vitrine holds no "
+        "the published README no longer warns that the showcase holds no "
         "source; that warning is what stops someone editing the generated "
         "tree and losing the change on the next publish"
     )

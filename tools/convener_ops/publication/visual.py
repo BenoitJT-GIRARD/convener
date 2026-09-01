@@ -224,7 +224,7 @@ The variable parts, and how each is handled
   string. `paris_standing_start` derives the real Europe/Paris UTC offset
   and abbreviation for this project's standing 12:30 local start time on
   that calendar day, exactly the computation this project already made
-  once for the vitrine (`site/.eleventy.js::parisStandingStart`) after
+  once for the showcase (`site/.eleventy.js::parisStandingStart`) after
   finding the reference poster's own defect: a hard-typed "12h30 (CET)",
   wrong for the three of this project's five fixture editions that fall in
   daylight-saving time. D-14 governs the relationship between the two
@@ -380,7 +380,7 @@ def date_line(talk_date: date) -> str:
     whichever edition the original was drawn for, and the zone label comes
     from `paris_standing_start` rather than a hard-typed "(CET)". The
     "12h30 (CET)" spelling is not reproduced either -- this project's own
-    vitrine already settled on "12:30 CET"/"12:30 CEST" with no parentheses
+    showcase already settled on "12:30 CET"/"12:30 CEST" with no parentheses
     (`site/.eleventy.js::parisStandingStart`'s own `label`), and stating
     the time two different ways on two surfaces of the same announcement
     would be its own small disagreement.

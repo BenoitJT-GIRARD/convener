@@ -392,7 +392,7 @@ cleanly at its own first push step, so the Actions tab shows green runs while
 nothing is pushed anywhere and there is no public site at all. There is no
 fallback publishing route, and nothing about the green run says so.
 
-**Credentials.** `VITRINE_DEPLOY_TOKEN`
+**Credentials.** `SHOWCASE_DEPLOY_TOKEN`
 
 **In a browser, in full:**
 
@@ -411,14 +411,14 @@ fallback publishing route, and nothing about the green run says so.
    shared store beside the token.
 6. Generate it, copy it once, and paste it into the private repository's
    Settings → Secrets and variables → Actions → Secrets → New repository
-   secret, named `VITRINE_DEPLOY_TOKEN`. Then paste it into the shared store.
+   secret, named `SHOWCASE_DEPLOY_TOKEN`. Then paste it into the shared store.
    GitHub will not show it again.
 
 ### 12. The first publish, and reading it in a browser
 
 **Who:** an agent, or a person.
 
-Run *Publish vitrine* and *Deploy app* from the private repository's Actions
+Run *Publish showcase* and *Deploy app* from the private repository's Actions
 tab, and then open what they produced. This is the first moment anything in
 this sequence has been checked against a deployment rather than against a
 local run.
@@ -1205,7 +1205,7 @@ it.
 
 | Credential | Kind | Where | Set through |
 |---|---|---|---|
-| `VITRINE_DEPLOY_TOKEN` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
+| `SHOWCASE_DEPLOY_TOKEN` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CLOUDFLARE_API_TOKEN` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `VITE_AUTH_PROXY_URL` | repository-variable | `cockpit` | Settings → Secrets and variables → Actions → Variables → New repository variable |
 | `VITE_GITHUB_APP_CLIENT_ID` | repository-variable | `cockpit` | Settings → Secrets and variables → Actions → Variables → New repository variable |

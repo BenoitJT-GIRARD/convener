@@ -329,8 +329,8 @@ public artefact), so `example-showcase` is now **purely generated** — every
 byte there is reproducible from this repository, nothing hand-edited —
 and retired `example-showcase`'s own `build.yml` along with them: two workflows
 *here* now own the whole of `example-showcase`'s root between them, each
-touching only its own disjoint subtree. *Publish vitrine*
-(`.github/workflows/publish-vitrine.yml`) builds `site/` and pushes the
+touching only its own disjoint subtree. *Publish showcase*
+(`.github/workflows/publish-showcase.yml`) builds `site/` and pushes the
 result to that root, `.nojekyll` included (`site/src/.nojekyll`, carried
 through the build as a passthrough copy) — the file that stops GitHub
 Pages falling back to rendering the repository's own `README.md` instead
@@ -382,7 +382,7 @@ registered above under *Authentication relay*) still reads
 setting, not code — no test, no CI job and no type will ever notice it
 drifting, so this paragraph is the only mechanism that gets it corrected.
 
-**To verify:** push to `main`; both *Publish vitrine* and *Deploy app* end
+**To verify:** push to `main`; both *Publish showcase* and *Deploy app* end
 green, and the showcase and the cockpit answer at the addresses above.
 
 **Not currently reachable.** No remote is connected to this repository
@@ -391,8 +391,8 @@ command locally, never by a real deployment, and the honest current state
 is that none of the four addresses above answers anything today. Two
 things are worth keeping separate once a push does happen:
 
-- `VITRINE_DEPLOY_TOKEN` unset is D-13's ordinary "absent is normal"
-  state: both *Publish vitrine* and *Deploy app* log a message and exit
+- `SHOWCASE_DEPLOY_TOKEN` unset is D-13's ordinary "absent is normal"
+  state: both *Publish showcase* and *Deploy app* log a message and exit
   cleanly at their first push step, rather than failing loudly, and simply
   push nothing.
 - Independently of that, a review found a second, real
@@ -916,7 +916,7 @@ a new workflow run on its own, so without this the deployed app bundle —
 built from `copy-event-keys.mjs`'s own copy of `instance/keys/events/` — would
 keep serving a destroyed event's public key until some unrelated push to
 `main` happened to rebuild it, the same suppression trap the certificate
-workflows already dispatch around. `publish-vitrine.yml` is dispatched
+workflows already dispatch around. `publish-showcase.yml` is dispatched
 alongside it for consistency with those workflows, though it watches
 neither path this job changes and runs as a no-op. One event failing to
 delete does not stop the run from still recording and closing every
@@ -944,7 +944,7 @@ carry, no matter what `permissions:` a workflow grants it — so this is a
 **fine-grained personal access token, scoped to this repository, with
 the "Secrets" repository permission set to Read and write, and nothing
 else** (the same "one narrow scope, nothing more" shape
-`VITRINE_DEPLOY_TOKEN` already uses for a different repository — see *CI-only
+`SHOWCASE_DEPLOY_TOKEN` already uses for a different repository — see *CI-only
 secrets*, below — except this one *is* declared in
 `config/integrations.yml`, because its absence is not ordinary noise:
 `convener-check-config` reports it, exactly like `CONVENER_EVENT_KEY_<ID>`, marked
@@ -1354,7 +1354,7 @@ with no trade-off at all, and why registration could not.
 **To verify:** with an event's `survey_enabled` set to `true` in
 `instance/data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
 (`AdminOverride.tsx`) — submit the survey form
-(`/survey/<event id>/` on the vitrine, its own island). **Nothing runs at
+(`/survey/<event id>/` on the showcase, its own island). **Nothing runs at
 that moment, and that is the change:** a file
 appears under `queue/survey/` on the `submission-queue` branch. Run *Sweep
 and notify the board* by hand (`workflow_dispatch`) rather than waiting
@@ -1648,8 +1648,8 @@ fires once a change was genuinely pushed, never on a run that wrote
 nothing. *Deploy app*'s own "Build public data" step is what actually
 rebuilds `certificates.json` inside the app's built `dist/` -- the file
 `src/verify/register.ts` fetches -- so this dispatch, not a *Publish
-vitrine data* one, is what a verifier's page depends on. These three jobs
-used to *also* dispatch *Publish vitrine data* alongside it, but nothing
+showcase data* one, is what a verifier's page depends on. These three jobs
+used to *also* dispatch *Publish showcase data* alongside it, but nothing
 a certificate change writes ever touches `instance/data/speakers.yml`, the only
 input that workflow's own "Build public data" step turns into anything
 it pushes -- so that second dispatch was always a no-op run there, never
@@ -1888,11 +1888,11 @@ repository still needs to know they exist and where they live.
   secret on `services/form-relay/` (see *Form relay* above), which checks
   this signature first, before it ever sends the dispatch this workflow
   reads.
-- **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
+- **`SHOWCASE_DEPLOY_TOKEN`** — a fine-grained personal access token,
   scoped to the separate published repository (contents: read & write
   only) — `instance/config.json`'s `published_url` says which one — that
-  both *Publish vitrine*
-  (`.github/workflows/publish-vitrine.yml`) and *Deploy app*
+  both *Publish showcase*
+  (`.github/workflows/publish-showcase.yml`) and *Deploy app*
   (`.github/workflows/deploy.yml`) use to push into it — the built
   showcase at that repository's root, and the built cockpit application
   under `app/`, two disjoint subtrees each workflow only ever touches (see

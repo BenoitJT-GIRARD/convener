@@ -5,7 +5,7 @@ permalink: "/README.md"
 {#
   The published repository's own landing page. It must be *emitted by this
   build*, not merely committed once to the published repository:
-  `publish-vitrine.yml::refresh_published_site` wipes everything at that root
+  `publish-showcase.yml::refresh_published_site` wipes everything at that root
   except `.git` and `app/` before copying this output in, so anything living
   only there is destroyed by the first publish. A public repository whose
   landing page is a bare file listing explains nothing.
@@ -26,7 +26,7 @@ Public showcase of {{ site.title }} — and nothing else.
 the private `{{ site.repository }}` repository's CI (D-15: private source, public artefact):
 
 - The site itself (`index.html`, `style.css`, `fonts/`, `.nojekyll`) is built from
-  `site/` there and pushed by `.github/workflows/publish-vitrine.yml`.
+  `site/` there and pushed by `.github/workflows/publish-showcase.yml`.
 - `app/` is the organiser cockpit application, built from `app/` there and pushed
   by `.github/workflows/deploy.yml`.
 

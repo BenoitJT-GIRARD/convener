@@ -76,7 +76,7 @@ name: Preview
 # `site/src/_data/events.json` carries a deliberately poisoned
 # `registration_link` (`SHOULD-NEVER-APPEAR-IN-BUILT-HTML`) to keep this
 # guard exercised on every build that uses the fixture -- this job builds
-# from that exact fixture, so the same sweep `publish-vitrine.yml` runs
+# from that exact fixture, so the same sweep `publish-showcase.yml` runs
 # against the real data applies here too, against the assembled preview
 # rather than a checkout of a second repository.
 # This workflow was unfiltered once, so every
@@ -183,7 +183,7 @@ jobs:
             app/package-lock.json
       # `site/src/_data/events.json` is committed as a build fixture (see
       # site/README.md); this job never regenerates it from private data,
-      # unlike `publish-vitrine.yml`'s own "Refresh site data" step -- a
+      # unlike `publish-showcase.yml`'s own "Refresh site data" step -- a
       # pull request from a fork has no access to that data and does not
       # need it: this preview exists to reread a template or layout
       # change, not this week's real programme.
@@ -322,7 +322,7 @@ jobs:
           # Never counts app/: a real app build merged on top of an empty
           # site build would otherwise inflate this count and hide exactly
           # the failure this floor exists to catch. Five, the same floor
-          # publish-vitrine.yml's own identical guard uses for this same
+          # publish-showcase.yml's own identical guard uses for this same
           # site build -- low enough that a future page never needs this
           # number touched, high enough that a build producing one or two
           # files still trips it.
@@ -338,7 +338,7 @@ jobs:
             fi
           done
           echo "preview looks like a site: $site_file_count file(s) under $root (excluding app/), both islands present"
-      # The same guard publish-vitrine.yml runs against the real,
+      # The same guard publish-showcase.yml runs against the real,
       # currently-private room links, applied here to the fixture's own
       # deliberately poisoned one instead (site/src/_data/events.json's
       # own registration_link, kept exactly for this) -- swept across the

@@ -47,7 +47,7 @@ jobs:
       contents: write
       # This job's own commit below (deleting
       # a destroyed event's `instance/keys/events/<id>.pub` among it) pushes with
-      # `GITHUB_TOKEN`, the recursion guard `publish-vitrine.yml`'s own
+      # `GITHUB_TOKEN`, the recursion guard `publish-showcase.yml`'s own
       # header comment names -- GitHub does not start a new workflow run
       # from a push made with that token. Without a direct dispatch,
       # nothing ever rebuilds the app bundle `copy-event-keys.mjs`
@@ -204,15 +204,15 @@ jobs:
             fi
             git commit -m "data: record the destruction of an event registration key"
             if git push; then
-              # publish-vitrine.yml watches
+              # publish-showcase.yml watches
               # instance/data/speakers.yml and instance/data/events/*/certificates.yml, not
               # instance/keys/ or the destruction registry, so this dispatch finds
               # nothing changed and exits as a no-op -- dispatched anyway,
               # the same way the three certificate workflows dispatch it
               # unconditionally, so this workflow's own trigger shape
               # never has to be reasoned about specially.
-              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
-                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              gh workflow run publish-showcase.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-showcase.yml -- rerun it manually from the Actions tab"
               # The dispatch that actually matters: deploy.yml's own build
               # runs copy-event-keys.mjs, which is the only thing that
               # ever removes a destroyed event's instance/keys/events/<id>.pub from

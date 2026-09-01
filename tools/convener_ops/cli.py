@@ -5958,7 +5958,7 @@ def render_visuals() -> int:
     demand, from a plain checkout, no CI needed.
 
     Only touches the target directory once a valid state has actually been
-    computed (mirrors `publish-vitrine.yml`'s own "a build that cannot
+    computed (mirrors `publish-showcase.yml`'s own "a build that cannot
     replace what it would remove must never be allowed to begin removing
     it"), and then regenerates it whole rather than accumulating into it
     (the same discipline `render_visual_fixtures`'s own `fonts/` handling

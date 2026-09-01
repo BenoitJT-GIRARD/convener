@@ -181,7 +181,7 @@ def lay_out(root: Path) -> None:
 def publish(root: Path) -> None:
     """Everything the scheduled jobs derive, in the order they derive it.
 
-    The same commands `deploy.yml` and `publish-vitrine.yml` run, and in
+    The same commands `deploy.yml` and `publish-showcase.yml` run, and in
     their order: the charter's stylesheets and templates before either
     bundler reads them, the public projection before the showcase's
     fixture is refreshed from it.
@@ -219,7 +219,7 @@ def publish(root: Path) -> None:
         env=env,
         what="convener-render-visuals",
     )
-    # `publish-vitrine.yml`'s own "Refresh site data" step: the showcase
+    # `publish-showcase.yml`'s own "Refresh site data" step: the showcase
     # builds from a committed fixture, refreshed from the public
     # projection before every real build.
     shutil.copyfile(

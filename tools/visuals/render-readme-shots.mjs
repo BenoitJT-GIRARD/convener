@@ -18,7 +18,7 @@
  * only way to keep that claim true is to take it from the thing itself,
  * so this script refuses to run against anything but `app/dist` and
  * `site/_site`, and it assembles them into the exact tree
- * `deploy.yml` and `publish-vitrine.yml` push -- the showcase at the path
+ * `deploy.yml` and `publish-showcase.yml` push -- the showcase at the path
  * prefix `instance/config.json` declares, the cockpit one level under it
  * at `app/`. D-26's rule, applied to the pictures: a page served at a
  * bare local root looks right and is not the shape anybody visits.
@@ -73,7 +73,7 @@
  *   invents data for it.
  * - **A public event page**, from `site/src/_data/events.json`, which the
  *   build this runs against has already refreshed from the example
- *   instance's own public projection the way `publish-vitrine.yml`
+ *   instance's own public projection the way `publish-showcase.yml`
  *   refreshes it from the real records. The edition is the one that file
  *   leaves `scheduled`, read from it rather than named here: an edition
  *   code carries the declared prefix, so a code written into this file

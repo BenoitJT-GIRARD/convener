@@ -118,7 +118,7 @@ DEFERRED: Final = (
         reason=(
             "The showcase's committed build fixture: a copy of "
             "`instance/public-data/events-public.json`, refreshed by "
-            "`publish-vitrine.yml` before every real build. It carries "
+            "`publish-showcase.yml` before every real build. It carries "
             "this instance's identity and not only its programme, which "
             "is why the entry is load-bearing rather than a courtesy: "
             "every record's id, and both `forum_thread` slugs, carry the "

@@ -82,7 +82,7 @@ def test_the_workflow_triggers_only_on_pull_request() -> None:
     """Read as raw text, not through `safe_load`: PyYAML's YAML-1.1 bool
     resolver reads a bare `on:` key as the boolean `True`, not the string
     `"on"` -- the same gotcha `test_workflows.py::
-    test_publish_vitrine_paths_trigger_includes_the_certificate_register`
+    test_publish_showcase_paths_trigger_includes_the_certificate_register`
     already documents and works around for the identical reason. A preview
     belongs *on a pull request*; this must never also fire on a push
     to `main` (that is `quality.yml`'s and `a11y.yml`'s own job), or every
@@ -116,7 +116,7 @@ def test_the_workflow_reads_no_repository_secret() -> None:
     for in its own `permissions:` or `env:` blocks -- so a preview that
     depended on one would work for a same-repo PR and silently do
     something different for a fork one. Asserted the strong way: no `secrets.` reference
-    anywhere in the file, not merely "no secret named `VITRINE_DEPLOY_
+    anywhere in the file, not merely "no secret named `SHOWCASE_DEPLOY_
     TOKEN`" (`test_a11y_workflow.py::
     test_the_workflow_never_pushes_or_writes_repository_state` checks only
     the latter, narrower property for its own file)."""
@@ -131,7 +131,7 @@ def test_the_workflow_never_writes_or_pushes_repository_state() -> None:
     exactly the secret `eventkeys.py`'s own module docstring says must
     never touch disk outside a job holding the matching secret, which
     this job never does."""
-    for forbidden in ("git push", "git commit", "secrets.VITRINE_DEPLOY_TOKEN"):
+    for forbidden in ("git push", "git commit", "secrets.SHOWCASE_DEPLOY_TOKEN"):
         assert forbidden not in _WORKFLOW_TEXT
 
 
@@ -168,7 +168,7 @@ def test_the_workflow_generates_event_keys_before_building_the_app() -> None:
 
 
 def test_the_site_build_never_regenerates_data_from_the_private_repository() -> None:
-    """Unlike `publish-vitrine.yml`'s own "Refresh site data" step, this
+    """Unlike `publish-showcase.yml`'s own "Refresh site data" step, this
     job must never run `uv run convener-public-data` (or an equivalent) to
     overwrite `site/src/_data/events.json` from `instance/data/speakers.yml` --
     that data is private, a fork PR has no access to it, and this preview
@@ -179,7 +179,7 @@ def test_the_site_build_never_regenerates_data_from_the_private_repository() -> 
     # Checked against the parsed steps, not the raw file text: this
     # workflow's own header comment legitimately *names*
     # "Refresh site data" in prose, contrasting itself with
-    # `publish-vitrine.yml`'s own step of that name -- a raw text search
+    # `publish-showcase.yml`'s own step of that name -- a raw text search
     # would trip on its own explanation.
     step_texts = [step.get("name", "") for step in _job()["steps"]]
     step_texts += [step["run"] for step in _job()["steps"] if "run" in step]
@@ -256,7 +256,7 @@ def test_the_empty_site_guard_never_counts_the_app_subtree() -> None:
 
 def test_the_empty_site_guard_checks_index_html_and_can_fail_the_run() -> None:
     """D-25: the guard must be able to actually stop the job, not merely
-    print a warning -- the same shape `publish-vitrine.yml`'s own
+    print a warning -- the same shape `publish-showcase.yml`'s own
     identical `index.html` check already uses (deliberately the same
     guard, run one step earlier, before an artefact
     is ever produced rather than before a push)."""
@@ -293,7 +293,7 @@ def test_the_leak_guard_reads_the_fixture_never_the_private_speakers_file() -> N
     `test_the_site_build_never_regenerates_data_from_the_private_
     repository`, above), so the only place a room link could come from
     here is that same fixture's own `registration_link` field -- never
-    `instance/data/speakers.yml`'s `zoom_link`, which `publish-vitrine.yml`'s own
+    `instance/data/speakers.yml`'s `zoom_link`, which `publish-showcase.yml`'s own
     analogous guard reads instead, and which this job has no access to
     build from in the first place."""
     leak_guard = _step_run(_LEAK_STEP)

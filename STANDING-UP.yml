@@ -432,7 +432,7 @@ steps:
       design, and a file full of measured, AA-clearing values is exactly what
       a charter is supposed to hold.
 
-  - id: vitrine_deploy_token
+  - id: showcase_deploy_token
     stage: publishing
     title: The token that lets the cockpit push into the showcase
     actor: human
@@ -446,7 +446,7 @@ steps:
       value cannot be read back — GitHub shows only that it is set, and that
       is the check.
     sets:
-      - VITRINE_DEPLOY_TOKEN
+      - SHOWCASE_DEPLOY_TOKEN
     degraded: >-
       Neither publishing workflow fails. Each logs a line and exits cleanly at
       its own first push step, so the Actions tab shows green runs while
@@ -468,7 +468,7 @@ steps:
         the shared store beside the token.
       - Generate it, copy it once, and paste it into the private repository's
         Settings → Secrets and variables → Actions → Secrets → New repository
-        secret, named `VITRINE_DEPLOY_TOKEN`. Then paste it into the shared
+        secret, named `SHOWCASE_DEPLOY_TOKEN`. Then paste it into the shared
         store. GitHub will not show it again.
 
   - id: first_publish
@@ -476,7 +476,7 @@ steps:
     title: The first publish, and reading it in a browser
     actor: agent
     does: >-
-      Run *Publish vitrine* and *Deploy app* from the private repository's
+      Run *Publish showcase* and *Deploy app* from the private repository's
       Actions tab, and then open what they produced. This is the first moment
       anything in this sequence has been checked against a deployment rather
       than against a local run.
@@ -1068,7 +1068,7 @@ steps:
 # different tokens under one name on two different workers, deliberately not
 # shared.
 secrets:
-  - name: VITRINE_DEPLOY_TOKEN
+  - name: SHOWCASE_DEPLOY_TOKEN
     kind: repository-secret
     home: cockpit
     set_through: >-

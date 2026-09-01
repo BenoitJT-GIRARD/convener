@@ -23,7 +23,7 @@ name: Visuals production
 # the same talk, together, rather than two separate places to look.
 #
 # Deliberately its own workflow, not a step folded into
-# publish-vitrine.yml's own job: that job's own "wipe everything under
+# publish-showcase.yml's own job: that job's own "wipe everything under
 # the published repository's root except .git and app/, then copy site/_site over it
 # whole" step (see that file's own `refresh_published_site`) would delete
 # anything a second publisher wrote there on its very next run -- there is
@@ -31,7 +31,7 @@ name: Visuals production
 # and expect to survive. Publishing to a stable public address therefore
 # has to mean *this repository's own* address, committed here, so
 # `site/`'s own build (a file this job never touches) picks it up as an
-# ordinary source file and `publish-vitrine.yml`'s existing wipe-and-copy
+# ordinary source file and `publish-showcase.yml`'s existing wipe-and-copy
 # carries it the same way it already carries every other file `site/`
 # writes -- never a second publisher racing that workflow's own wipe.
 #
@@ -171,7 +171,7 @@ jobs:
       # committing `site/src/banners/` back to this same repository (never
       # a repository secret -- see this file's own "reads no repository
       # secret" test); `actions: write` is what lets it dispatch
-      # `publish-vitrine.yml` afterwards. Both are the exact pair
+      # `publish-showcase.yml` afterwards. Both are the exact pair
       # `sweep-and-notify.yml`, `retention.yml` and the three certificate
       # workflows
       # already carry for the identical reason: a push made with this
@@ -307,7 +307,7 @@ jobs:
       # The one format a link-preview bot fetches on its
       # own, carried to this repository's own `site/src/banners/` -- see
       # this file's own header comment for why this one format, and why
-      # here rather than publish-vitrine.yml. Unconditional (no `if:`),
+      # here rather than publish-showcase.yml. Unconditional (no `if:`),
       # unlike the browser pipeline above: this step also has to run when
       # `steps.pages.outputs.count` is `'0'`, because that is exactly the
       # case an edition just left `scheduled` and its banner has to come
@@ -385,8 +385,8 @@ jobs:
 
           for attempt in 1 2 3; do
             if git push; then
-              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
-                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              gh workflow run publish-showcase.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-showcase.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"

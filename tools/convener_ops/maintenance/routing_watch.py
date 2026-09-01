@@ -40,7 +40,7 @@ mechanical reasons rather than a preference:
 * This repository's own jobs push to the default branch with the run's
   `GITHUB_TOKEN`, which GitHub's recursion guard stops from starting
   `deploy.yml` (`sweep-and-notify.yml`'s own comment records this and
-  dispatches `publish-vitrine.yml` by hand because of it). A healthy
+  dispatches `publish-showcase.yml` by hand because of it). A healthy
   repository can therefore go a long time with no deploy at all.
 
 There was a third, and it stopped being true twice over. It read

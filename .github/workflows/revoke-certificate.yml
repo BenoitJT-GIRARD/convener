@@ -100,7 +100,7 @@ jobs:
               # signature still verifies (see "the signature
               # remains valid"), and only the register's own state can
               # tell a visitor it was revoked. Carried item 4 (fix wave
-              # 2): no publish-vitrine.yml dispatch beside this one any
+              # 2): no publish-showcase.yml dispatch beside this one any
               # more -- see issue-certificates.yml's own comment on why
               # that was dead motion for every certificate workflow.
               gh workflow run deploy.yml --ref "$TARGET_BRANCH" ||

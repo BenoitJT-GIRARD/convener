@@ -132,7 +132,7 @@ jobs:
             if git push; then
               # See issue-certificates.yml's own
               # comment on this same dispatch. There is no
-              # publish-vitrine.yml dispatch beside this one any
+              # publish-showcase.yml dispatch beside this one any
               # more -- see issue-certificates.yml's own comment on why
               # that was dead motion for every certificate workflow.
               gh workflow run deploy.yml --ref "$TARGET_BRANCH" ||

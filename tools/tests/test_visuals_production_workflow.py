@@ -177,7 +177,7 @@ def test_the_workflow_names_its_own_file_in_its_own_filter() -> None:
 
 def test_job_permissions_cover_the_commit_and_dispatch_with_a_bounded_timeout() -> None:
     """This job commits `site/src/banners/` back to
-    this repository and dispatches `publish-vitrine.yml` -- `contents:
+    this repository and dispatches `publish-showcase.yml` -- `contents:
     write` and `actions: write` are exactly the pair `sweep.yml`,
     `retention.yml` and the three certificate workflows already carry for
     the identical reason (this file's own header comment). Nothing else:
@@ -192,8 +192,8 @@ def test_the_workflow_reads_no_repository_secret() -> None:
     checkout, and its own commit-and-dispatch step authenticates
     with `github.token` -- the ambient, scoped token every job already
     receives, granted through the `permissions:` block above, never a
-    repository secret. Unlike publish-vitrine.yml, this workflow needs no
-    `VITRINE_DEPLOY_TOKEN` or any other secret at all. The same check
+    repository secret. Unlike publish-showcase.yml, this workflow needs no
+    `SHOWCASE_DEPLOY_TOKEN` or any other secret at all. The same check
     `test_preview_workflow.py`'s own `test_the_workflow_reads_no_
     repository_secret` makes for preview.yml, for the identical reason."""
     assert "secrets." not in _WORKFLOW
@@ -212,16 +212,16 @@ def test_the_commit_step_uses_a_distinct_bot_identity() -> None:
     )
 
 
-def test_the_commit_step_dispatches_publish_vitrine_after_a_successful_push() -> None:
+def test_the_commit_step_dispatches_publish_showcase_after_a_successful_push() -> None:
     """GitHub's recursion guard: a push made with this job's own
-    `GITHUB_TOKEN` cannot fire `publish-vitrine.yml`'s own `push` trigger,
+    `GITHUB_TOKEN` cannot fire `publish-showcase.yml`'s own `push` trigger,
     even though `site/**` (which `site/src/banners/` sits under) is one of
     the paths that trigger names -- the identical mechanism `sweep.yml`'s
     own header comment documents for `instance/data/speakers.yml`. Without this
     dispatch, a freshly committed banner would sit in this repository
     unpublished until something else happened to touch `site/**` or
     `tools/**`."""
-    assert "gh workflow run publish-vitrine.yml" in _WORKFLOW
+    assert "gh workflow run publish-showcase.yml" in _WORKFLOW
     assert '--ref "$TARGET_BRANCH"' in _WORKFLOW
 
 

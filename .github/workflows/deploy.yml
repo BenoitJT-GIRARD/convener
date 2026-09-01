@@ -20,7 +20,7 @@ on:
     # runs this workflow when it did not strictly have to. For a workflow
     # whose *absence* is the defect, that is the only safe direction, so
     # this list holds only what provably cannot reach the bundle -- the
-    # showcase (`site/`, published by `publish-vitrine.yml`), the relays
+    # showcase (`site/`, published by `publish-showcase.yml`), the relays
     # (each with its own deploy workflow), and the three repository-root
     # files nothing under `app/` reads.
     # Nothing under `docs/` is on it any more, which is the plainest
@@ -71,7 +71,7 @@ on:
 
 # Three other workflows push to main, so two "Deploy app" runs overlapping is
 # ordinary, not exotic. That is a different race from the one the retry loop
-# below handles: this job and `publish-vitrine.yml` write disjoint subtrees
+# below handles: this job and `publish-showcase.yml` write disjoint subtrees
 # of the published repository (`app/` here, the site's own root-level files there --
 # `index.html`, `style.css`, `fonts/`, `.nojekyll`), so re-deriving
 # against a push made by the other one always reproduces cleanly and both
@@ -90,7 +90,7 @@ on:
 # overwritten). The group is scoped to `github.workflow`, this workflow's
 # own name, so pasting this block into a future workflow file gives that
 # workflow its own group automatically instead of silently colliding with
-# this one -- and it is deliberately not shared with `publish-vitrine.yml`,
+# this one -- and it is deliberately not shared with `publish-showcase.yml`,
 # which would serialise two jobs where only their pushes need ordering.
 concurrency:
   group: deploy-app-${{ github.workflow }}
@@ -129,11 +129,11 @@ jobs:
       # this workflow does -- which a certificate issuance or revocation's
       # own push (made with the checkout's own GITHUB_TOKEN) can never
       # trigger via the `push:` clause above (the same recursion guard
-      # `publish-vitrine.yml`'s own header comment explains). Each of
+      # `publish-showcase.yml`'s own header comment explains). Each of
       # issue-certificates.yml, reissue-certificate.yml and
       # revoke-certificate.yml dispatches this workflow directly with
       # `gh workflow run deploy.yml` as its own last step. The
-      # `publish-vitrine.yml` dispatch each of those three used to send
+      # `publish-showcase.yml` dispatch each of those three used to send
       # alongside it is gone, once and for all: that workflow no longer
       # touches certificate data at all,
       # so the dispatch was always a no-op run there, never a second
@@ -329,11 +329,11 @@ jobs:
         run: npm run build
       - name: Push to the published repository
         env:
-          DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
+          DEPLOY_TOKEN: ${{ secrets.SHOWCASE_DEPLOY_TOKEN }}
         run: |
           set -e
           if [ -z "$DEPLOY_TOKEN" ]; then
-            echo "VITRINE_DEPLOY_TOKEN not set — skipping push (set up the secret to enable)."
+            echo "SHOWCASE_DEPLOY_TOKEN not set — skipping push (set up the secret to enable)."
             exit 0
           fi
           git config --global user.name "convener-publisher"
@@ -350,7 +350,7 @@ jobs:
           # (`published.Published.publish_repository`, which refuses rather
           # than guessing for an address that is not a Pages one) -- the
           # same `uv run --project tools python -c` shape
-          # `publish-vitrine.yml`'s own room-link guard already uses, rather
+          # `publish-showcase.yml`'s own room-link guard already uses, rather
           # than a fourth parser written in shell.
           target="$(uv run --project tools python -c \
             'from convener_ops.declaration.published import load; print(load().publish_repository)')"
@@ -389,7 +389,7 @@ jobs:
             exit 0
           fi
           git commit -m "app: refresh build"
-          # This job and Publish vitrine both clone the published repository fresh and
+          # This job and Publish showcase both clone the published repository fresh and
           # each only ever stages its own disjoint subtree (app/ here, the
           # site's own root-level files there) -- but that makes the
           # *commits* conflict-free, not the *push*. git push is
@@ -398,7 +398,7 @@ jobs:
           # non-fast-forward rejection.
           #
           # The retry re-derives rather than rebases, the same shape
-          # publish-vitrine.yml's own "Publish" step uses for the identical
+          # publish-showcase.yml's own "Publish" step uses for the identical
           # race. A rebase would in fact replay cleanly
           # here -- the two subtrees never overlap, so there is nothing for
           # it to conflict on -- but it stays a second shape for a problem

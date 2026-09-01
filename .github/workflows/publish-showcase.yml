@@ -1,4 +1,4 @@
-name: Publish vitrine
+name: Publish showcase
 
 # A revocation is a change to
 # instance/data/events/<id>/certificates.yml, and until this trigger named that
@@ -46,8 +46,8 @@ name: Publish vitrine
 # this workflow, unaffected: the sweep genuinely can change
 # `instance/data/speakers.yml`, this workflow's own input.
 #
-# Renamed from "Publish vitrine data" when
-# the showcase's own templates (`index.njk`, `layout.njk`, `style.css`,
+# Named after the one generated data file it published, until the
+# showcase's own templates (`index.njk`, `layout.njk`, `style.css`,
 # `.eleventy.js`, fonts) moved from the published repository into this repository's own
 # `site/`, so that repository holds no source any more (D-15: private
 # source, public artefact). This job used to copy one generated data file
@@ -187,11 +187,11 @@ jobs:
           fi
       - name: Push to the published repository
         env:
-          DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
+          DEPLOY_TOKEN: ${{ secrets.SHOWCASE_DEPLOY_TOKEN }}
         run: |
           set -e
           if [ -z "$DEPLOY_TOKEN" ]; then
-            echo "VITRINE_DEPLOY_TOKEN not set — skipping push (set up the secret to enable)."
+            echo "SHOWCASE_DEPLOY_TOKEN not set — skipping push (set up the secret to enable)."
             exit 0
           fi
           git config --global user.name "convener-publisher"
@@ -241,7 +241,7 @@ jobs:
           # ever starts touching /tmp/vit -- a build that cannot replace what
           # it would remove must never be allowed to begin removing it.
           if [ ! -f "$SITE_OUTPUT/index.html" ]; then
-            echo "::error::$SITE_OUTPUT/index.html is missing -- refusing to publish; the vitrine's published root was left untouched"
+            echo "::error::$SITE_OUTPUT/index.html is missing -- refusing to publish; the showcase's published root was left untouched"
             exit 1
           fi
           # A file-count floor beside the index.html check: passthrough
@@ -255,11 +255,11 @@ jobs:
           # that a build producing only one or two files still trips it.
           site_file_count=$(find "$SITE_OUTPUT" -type f | wc -l)
           if [ "$site_file_count" -lt 5 ]; then
-            echo "::error::$SITE_OUTPUT only holds $site_file_count file(s) -- refusing to publish; the vitrine's published root was left untouched"
+            echo "::error::$SITE_OUTPUT only holds $site_file_count file(s) -- refusing to publish; the showcase's published root was left untouched"
             exit 1
           fi
 
-          # Wipe everything this job owns at the vitrine's root -- every
+          # Wipe everything this job owns at the showcase's root -- every
           # entry except .git and app/, Deploy app's own disjoint subtree --
           # then lay the fresh build over it whole. A wipe-then-copy, not a
           # diff, so a page removed from site/ disappears from the
@@ -298,7 +298,7 @@ jobs:
           # is exactly where it conflicts instead of applying. Re-copying
           # the already-built site/_site over a freshly reset tree
           # reproduces the identical output on every attempt: nothing here
-          # depends on what is currently on the vitrine's main branch.
+          # depends on what is currently on the showcase's main branch.
           for attempt in 1 2 3; do
             if git push; then
               exit 0

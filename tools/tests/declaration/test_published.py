@@ -820,12 +820,12 @@ def _push_step_scripts() -> dict[Path, str]:
     found: dict[Path, str] = {}
     for name, job in (
         (Path(".github/workflows/deploy.yml"), "build"),
-        (Path(".github/workflows/publish-vitrine.yml"), "publish"),
+        (Path(".github/workflows/publish-showcase.yml"), "publish"),
     ):
         workflow = yaml.safe_load((ROOT / name).read_text(encoding="utf-8"))
         for step in workflow["jobs"][job]["steps"]:
             env = step.get("env", {})
-            if any("VITRINE_DEPLOY_TOKEN" in str(value) for value in env.values()):
+            if any("SHOWCASE_DEPLOY_TOKEN" in str(value) for value in env.values()):
                 found[name] = str(step["run"])
                 break
         else:  # pragma: no cover - the assertion below is the report
