@@ -37,7 +37,7 @@ the same AA floor under the same `--check`; a palette that does not is a
 palette that does not build.
 
 **The values are the instance's**, `instance/data/brand.json`, and
-`config/boundary.yml` hands that whole directory to the instance. Nothing
+`declarations/boundary.yml` hands that whole directory to the instance. Nothing
 about this instance's own colours moved: the file is what it was.
 
 **A duplicate with nobody to draw for it names one instead of writing
@@ -150,7 +150,7 @@ __all__ = [
 
 #: The instance's own values, relative to a repository root. Optional: a
 #: duplicate that has not chosen its colours yet simply does not have this
-#: file, and `config/boundary.yml` hands the directory it sits in to the
+#: file, and `declarations/boundary.yml` hands the directory it sits in to the
 #: instance so that upstream never edits it.
 INSTANCE_PATH: Final = DATA_DIR / "brand.json"
 
@@ -441,7 +441,7 @@ def load(root: Path) -> dict[str, Any]:
     product's default otherwise.
 
     Whole file or whole file, never a merge of the two. Ownership in this
-    repository is a property of a *file* (`config/boundary.yml`), and a
+    repository is a property of a *file* (`declarations/boundary.yml`), and a
     half-merged charter would be a third set of values nobody chose --
     an instance that overrode two colours and inherited six would be
     measured against a palette that exists in no file.

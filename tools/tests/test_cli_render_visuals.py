@@ -29,7 +29,7 @@ _REAL_ROOT = repo_root()
 
 
 #: Read on demand, never while this module loads.
-#: Both are paths `config/boundary.yml` hands to the instance, and a
+#: Both are paths `declarations/boundary.yml` hands to the instance, and a
 #: derived repository is entitled not to have them until the derivation
 #: lays an example's own files there. At module scope the read took this
 #: whole module down at collection; from here it fails the tests that

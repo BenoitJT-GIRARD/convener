@@ -1,5 +1,5 @@
-"""Every figure a `config/` header works out, against the declarations it
-works it out from.
+"""Every figure a configuration file's header works out, against the
+declarations it works it out from.
 
 `instance/queue-drain.yml` and `instance/registration-lanes.yml` bound each
 other. The alarm's floor is twice the drain's own cron period; its ceiling
@@ -11,7 +11,7 @@ about another file's value, which is the arrangement
 `tools/tests/test_handbook_claims.py` exists for, one level below the
 handbook: same drift, same remedy, a different set of readers.
 
-**Why the figures stay written out.** Rendering a `config/` header from the
+**Why the figures stay written out.** Rendering such a header from the
 declarations would mean generating the one file a maintainer is most likely
 to open in an editor, and a paragraph nobody may edit is not a comment. So
 the worked example stays where it reads best and the claim is bound
@@ -307,7 +307,7 @@ def test_a_header_stating_a_stale_figure_is_reported() -> None:
     """The reader, driven over a header whose every figure is wrong.
 
     Written out rather than read from the files, and that is the point: in
-    a repository whose `config/` is still the product's example, the files
+    a repository whose instance files are still the product's example, the files
     state no figures at all and a check over them can only pass. This one
     fails wherever it runs if a pattern stops reading its sentence or a
     comparison stops biting -- every claim above has to appear in the

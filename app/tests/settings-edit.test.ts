@@ -1,5 +1,5 @@
 /**
- * Changing a number in a `config/` file without deleting the argument for
+ * Changing a number in a configuration file without deleting the argument for
  * it.
  *
  * `instance/queue-drain.yml` is five and a half kilobytes of which two lines

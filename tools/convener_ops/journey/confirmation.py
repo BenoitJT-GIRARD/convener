@@ -17,7 +17,7 @@ own output and the documentation copy
 say different things.
 
 `matching_code` (`registration.py`) returns `None` when `CONVENER_MATCHING_SALT`
-is unset, and `config/integrations.yml`'s own `matching_salt` row calls that
+is unset, and `declarations/integrations.yml`'s own `matching_salt` row calls that
 an *ordinary* D-13 absence, with the matching cascade (exact address, then
 normalised name) as the documented fallback. `compose` below does not
 refuse to send without a code for that reason; it sends a message that
@@ -50,7 +50,7 @@ than describing an update, so it must never claim one.
 The transport, and the one place D-13's "inspectable log" does not mean
 stdout
 -------------------------------------------------------------------------
-`config/integrations.yml`'s `email_transport` row promises: without its five
+`declarations/integrations.yml`'s `email_transport` row promises: without its five
 secrets, a message is "written to an inspectable log instead of being sent".
 `notify.py` meets that promise, for board notifications, by printing
 straight to the job's own stdout -- safe there because that module holds no
@@ -397,7 +397,7 @@ def compose(
 # inspectable log" has to mean once a message carries personal data.
 # ------------------------------------------------------------------ #
 
-#: The five `email_transport` secrets (`config/integrations.yml`), read the
+#: The five `email_transport` secrets (`declarations/integrations.yml`), read the
 #: same "all five or none" way `notify.resolve_channel` reads its own two
 #: and `platform_fcc.platform_from_env` reads its one: a partly-set
 #: integration is not a working one.

@@ -91,7 +91,7 @@ Best regards,
   so calling it again reproduces exactly the code the first message
   carried.
 - Without `email_transport`'s five secrets configured
-  (`config/integrations.yml`), nothing here is actually sent: the composed
+  (`declarations/integrations.yml`), nothing here is actually sent: the composed
   message is written to a local file inside the job's own workspace instead,
   never printed — see `tools/convener_ops/journey/confirmation.py`'s module docstring for
   why a message carrying an address and a matching code cannot use the same

@@ -115,7 +115,7 @@ def test_load_valid_yaml_returns_data_and_no_errors(tmp_path: Path) -> None:
 #: declaration here would be a second answer to what this instance is --
 #: the same choice `test_cli_render_visuals.py::_fake_root` already makes.
 #: Read on demand, never while this module loads.
-#: `config/boundary.yml` hands this path to the instance, and a derived
+#: `declarations/boundary.yml` hands this path to the instance, and a derived
 #: repository is entitled not to have it until the derivation lays an
 #: example's own file there. At module scope the read took the whole
 #: module down at collection, every test in it with a stack trace; from
@@ -3242,7 +3242,7 @@ def test_issue_certificates_without_a_matching_salt_issues_nothing_and_returns_0
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The one deliberate exception to D-13 here: an absent
-    CONVENER_MATCHING_SALT is not the ordinary state `config/integrations.yml`
+    CONVENER_MATCHING_SALT is not the ordinary state `declarations/integrations.yml`
     documents for `matching_code` -- a certificate fingerprint cannot be
     computed safely without it, so this run issues nothing rather than
     writing one unsafely. Same outward shape as the signing-key case

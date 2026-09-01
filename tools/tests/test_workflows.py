@@ -76,7 +76,7 @@ APP_TSX = Path("app/src/App.tsx")
 #: what that prefix is.
 #: Read on demand, never while this module loads.
 #: `published.load` reads `instance/config.json`, a path
-#: `config/boundary.yml` hands to the instance, and a derived repository is
+#: `declarations/boundary.yml` hands to the instance, and a derived repository is
 #: entitled not to have it until the derivation lays an example's own file
 #: there. At module scope that read took this whole module down at
 #: collection, with a stack trace in place of the one failing assertion.
@@ -168,7 +168,7 @@ def test_the_deploy_runs_for_the_files_the_settings_screen_writes() -> None:
     written.append("config.json")
     for pattern in ignored:
         head = pattern.split("*")[0].rstrip("/")
-        assert head not in ("instance", "config"), (
+        assert head not in ("instance", "declarations"), (
             f"deploy.yml declines to run for {pattern!r}, which covers the "
             "files the settings screen writes. app/src/settings/form.ts "
             "tells a volunteer that saving starts this workflow; that "
@@ -2611,7 +2611,7 @@ def test_certificate_workflow_warns_when_a_dispatched_run_writes_nothing(
     still exits 0 (D-13 still holds -- this is not turned into a
     failure), but a `::warning::` annotation is what stops "it worked" and
     "it skipped" from looking identical on the run's own summary page,
-    which matters most for `config/integrations.yml`'s own
+    which matters most for `declarations/integrations.yml`'s own
     `certificate_fingerprint` row -- the one absence it deliberately
     declares `absent_is_normal: false`."""
     script = _job_step_script(workflow_path, job, run_contains)
@@ -4563,7 +4563,7 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 #      'events')`), and so would an app source file importing across the
 #      boundary. The instance's own paths reach those scripts through
 #      `app/scripts/instance-paths.mjs`, which reads them from
-#      `config/boundary.yml`; `_JS_INSTANCE_PATHS` below reads the same
+#      `declarations/boundary.yml`; `_JS_INSTANCE_PATHS` below reads the same
 #      declaration through `convener_ops.declaration.paths` and resolves each name to
 #      the path it stands for.
 #   2. `_published_handbook_paths` -- the one input directory whose
@@ -4645,7 +4645,7 @@ _JS_PATH_BINDING_RE = re.compile(
 )
 
 #: The names `app/scripts/instance-paths.mjs` gives the paths
-#: `config/boundary.yml` hands to the instance, against the same paths as
+#: `declarations/boundary.yml` hands to the instance, against the same paths as
 #: `convener_ops.declaration.paths` reads them. Both sides answer from that one
 #: declaration, so a copy script that reaches `instance/keys/` through `keysDir()`
 #: is read here as reaching `instance/keys/`.
@@ -4794,8 +4794,8 @@ def test_the_input_reader_sees_a_new_repository_input_for_what_it_is(
             source, where, root=tmp_path, inside=inside
         )
 
-    segments = "const SRC = resolve(__dirname, '..', '..', 'config', 'x.yml');"
-    assert reached(segments) == {"config/x.yml"}
+    segments = "const SRC = resolve(__dirname, '..', '..', 'declarations', 'x.yml');"
+    assert reached(segments) == {"declarations/x.yml"}
 
     two_step = (
         "const ROOT = resolve(__dirname, '..', '..');\n"
@@ -5028,7 +5028,7 @@ def test_the_python_input_reader_sees_a_command_reading_a_new_directory() -> Non
     """Positive control for the third reader, on a probe source rather
     than on the real commands.
 
-    `config/integrations.yml` is not an idle example: `convener_ops.cli`
+    `declarations/integrations.yml` is not an idle example: `convener_ops.cli`
     already reads exactly that file, from `check_config` -- a command
     `deploy.yml` does not run, which is precisely why `config/**` may sit
     in the ignore list today. The day one of the three commands it *does*
@@ -5037,14 +5037,14 @@ def test_the_python_input_reader_sees_a_command_reading_a_new_directory() -> Non
         """
         def probe() -> int:
             root = repo_root()
-            declaration = root / "config" / "integrations.yml"
+            declaration = root / "declarations" / "integrations.yml"
             events = root / EVENTS_DIR
             return 0
         """
     )
     found = _repository_paths_in_source(probe, cli_module)
-    assert "config/integrations.yml" in found, (
-        f"a command reading config/integrations.yml went unseen: {found}"
+    assert "declarations/integrations.yml" in found, (
+        f"a command reading declarations/integrations.yml went unseen: {found}"
     )
     assert "instance/data/events" in found, (
         "a path segment held in a module constant went unresolved: "
@@ -5183,11 +5183,11 @@ def test_the_overlap_rule_reproduces_the_distinction_it_exists_to_draw() -> None
     """Positive control. The whole of this filter's correctness sits on one
     distinction: `docs/reference` and `docs/handbook/governance/board-rules.md`
     do *not* overlap even though both live under `docs/`, while `config`
-    and `config/integrations.yml` do. A rule that could not draw that
+    and `declarations/integrations.yml` do. A rule that could not draw that
     line would either pass on a broken list or fail on the correct one."""
     assert not _overlaps("docs/reference", "docs/handbook/governance/board-rules.md")
     assert not _overlaps("site", "site-map.md")
-    assert _overlaps("config", "config/integrations.yml")
+    assert _overlaps("declarations", "declarations/integrations.yml")
     assert _overlaps("instance/data/events", "instance/data")
     assert _overlaps("cspell.json", "cspell.json")
 

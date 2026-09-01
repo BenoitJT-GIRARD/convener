@@ -5,12 +5,12 @@
  * what does this instance own, and what may each of its numbers be --
  * and none of them is a list typed into a component:
  *
- * - `config/boundary.yml` names the directories the instance owns whole;
+ * - `declarations/boundary.yml` names the directories the instance owns whole;
  * - every configuration file `CONFIG_DIRS` holds directly states its own
  *   owner in its own header, so those directories are listed rather than
  *   enumerated here: a file added to one of them appears on this screen
  *   because it exists, not because somebody remembered;
- * - `config/integrations.yml` says what each external dependency is for
+ * - `declarations/integrations.yml` says what each external dependency is for
  *   and what breaks without it;
  * - `.github/workflows/sweep-and-notify.yml` carries the drain's own cron,
  *   which is where every threshold's floor comes from.

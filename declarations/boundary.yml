@@ -23,14 +23,15 @@
 # Because a merge is a file-level event. A file holding one instance-owned
 # value is an instance file even when its other values would have made
 # perfectly good product defaults: upstream cannot ship half a file. That is
-# the rule that settled `config/`, which held both owners until the four
-# files that were the instance's moved into `instance/` beside its records.
+# the rule that settled this directory, which held both owners under its
+# old name `config/` until the four files that were the instance's moved
+# into `instance/` beside its records.
 #
 # The list below names directories, and a configuration file is not one of
 # them: each states its own answer in its own header, next to the argument
 # for it -- see `owner:` in `instance/config.json`,
 # `instance/actions-budget.yml`, `instance/queue-drain.yml`,
-# `instance/registration-lanes.yml`, `config/integrations.yml`, and in this
+# `instance/registration-lanes.yml`, `declarations/integrations.yml`, and in this
 # file itself. `boundary.CONFIG_DIRS` is where those two directories are
 # named and `boundary.states_its_own_owner` is the same set seen from the
 # other end: `test_boundary.py` refuses such a file named in the list below,
@@ -47,7 +48,7 @@
 # from there for every template. The file entry went with the file. That is
 # one-notion-one-home applied
 # to this declaration itself: leaving four identity keys in `site/` and
-# putting the rest in `config/` would have given one notion two homes and
+# putting the rest in `declarations/` would have given one notion two homes and
 # a duplicate two files to edit before its first build. Nothing under
 # `site/` is the instance's now.
 #
@@ -102,6 +103,22 @@
 # its blobs are reachable from every commit that added them. It was
 # instance data with no entry anywhere from the day it went, which is the
 # hole this list closes as well as the one the move opened.
+#
+# A *product* path that moves needs no entry here, and adding one does
+# real damage rather than none. The reflex is the wrong way round: this
+# list widens **instance** ownership, and the derivation reads it to
+# decide what a public repository may not carry, so retiring `brand/` on
+# the day it becomes `assets/brand/` would delete every earlier version
+# of the product's own charters from the repository the product is
+# published from. Nothing about such an entry looks wrong -- it names a
+# path that existed, does not exist now, and is not handed to the
+# instance, which is all the parser can see -- so it is measured instead:
+# `tools/tests/derivation/test_retirement.py` takes every blob ever
+# stored under a retired path and refuses the entry if those same bytes
+# are tracked today at a path the product owns. `config/` becoming
+# `declarations/`, `instances/` becoming `examples/` and `brand/` and
+# `fonts/` moving under `assets/` are all that shape, and none of them
+# is below.
 
 # `kept:` -- the product's own files inside a directory the instance owns
 # ----------------------------------------------------------------------

@@ -184,7 +184,7 @@ def test_no_inline_program_reaches_a_path_the_instance_has_left() -> None:
     assert not offences, (
         "these workflow steps reach for a path the instance no longer owns: "
         + "; ".join(offences)
-        + ". config/boundary.yml's retired list says where each went."
+        + ". declarations/boundary.yml's retired list says where each went."
     )
 
 

@@ -22,7 +22,7 @@ Not by overriding values, and not by patching this repository in place --
 by building a repository that *is* another instance:
 
 1. every tracked file is copied into a scratch tree;
-2. every file `config/boundary.yml` hands to the instance is **deleted**
+2. every file `declarations/boundary.yml` hands to the instance is **deleted**
    from that tree (`boundary.instance_files`, so `kept:` files stay);
 3. `instances/example/` is laid into the holes that leaves.
 
@@ -384,7 +384,7 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
 
 
 def test_the_example_instance_answers_every_path_an_instance_owns() -> None:
-    """`config/boundary.yml` enumerates what an instance owns; this is the
+    """`declarations/boundary.yml` enumerates what an instance owns; this is the
     clause that makes the example answer all of it.
 
     Both directions. A declared path with no counterpart and no stated
@@ -406,7 +406,7 @@ def test_the_example_instance_answers_every_path_an_instance_owns() -> None:
     unstated = [path for path in missing if path not in DELIBERATELY_ABSENT]
     assert unstated == [], (
         f"{EXAMPLE.as_posix()} answers nothing for these paths, which "
-        "config/boundary.yml hands to the instance -- give it a "
+        "declarations/boundary.yml hands to the instance -- give it a "
         "counterpart, or state in DELIBERATELY_ABSENT why it deliberately "
         f"has none: {unstated}"
     )

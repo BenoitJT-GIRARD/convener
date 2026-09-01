@@ -5,14 +5,14 @@ integration is optional: without it the feature degrades visibly and
 nothing breaks -- with three exceptions, *Event registration encryption*,
 *Retention sweep credential* and *Certificate register fingerprint*, which
 fail closed rather than degrading. Those are the rows
-`config/integrations.yml` marks `absent_is_normal: false`, and each one's
+`declarations/integrations.yml` marks `absent_is_normal: false`, and each one's
 own section below says what its absence forbids and why: two of them
 protect personal data rather than a feature, and the third is a promise
 with legal weight that must not exit quietly.
 
 Run `cd tools && uv run convener-check-config` at any time to see what is
 configured and what is still waiting. That declaration
-(`config/integrations.yml`) covers only what `tools/convener_ops` and `app/src`
+(`declarations/integrations.yml`) covers only what `tools/convener_ops` and `app/src`
 themselves read at runtime — three further secrets exist to gate CI
 workflow behaviour and are documented in their own section below instead,
 since `convener-check-config` running on a laptop would otherwise report them
@@ -856,7 +856,7 @@ decrypts that event's registrations, not in this general-purpose report.
 The row is marked `(not a normal absence -- see below)` and the report's
 closing line names it explicitly, because — unlike the other five rows —
 this absence is not a harmless fallback (`absent_is_normal: false` in
-`config/integrations.yml`).
+`declarations/integrations.yml`).
 
 **Destroying a key:** at the end of an event's retention window,
 remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
@@ -946,7 +946,7 @@ the "Secrets" repository permission set to Read and write, and nothing
 else** (the same "one narrow scope, nothing more" shape
 `SHOWCASE_DEPLOY_TOKEN` already uses for a different repository — see *CI-only
 secrets*, below — except this one *is* declared in
-`config/integrations.yml`, because its absence is not ordinary noise:
+`declarations/integrations.yml`, because its absence is not ordinary noise:
 `convener-check-config` reports it, exactly like `CONVENER_EVENT_KEY_<ID>`, marked
 "not a normal absence"). Free — a personal access token costs nothing —
 so the zero-cost constraint holds.
@@ -1385,7 +1385,7 @@ matching falls back to the address-and-name cascade instead of the typed
 code. This is an ordinary D-13
 absence: nothing here fails closed, because that cascade is a documented,
 working fallback, not personal data landing somewhere it should not — see
-`config/integrations.yml`'s own comment on why this row exists at all
+`declarations/integrations.yml`'s own comment on why this row exists at all
 despite that.
 
 **Why a secret, and not a constant:** the matching code has to prove that
@@ -2039,7 +2039,7 @@ in both directions rather than only on bad news:
 
 ## Settling the thresholds, and where the cockpit refuses
 
-The cockpit's **Settings** screen is where the numbers in `config/` are
+The cockpit's **Settings** screen is where the numbers in `instance/` are
 changed. It exists to *validate*, not to host: a file accepts whatever is
 written into it and nothing looks at the value until a scheduled job runs on
 it, whereas the screen computes each bound from the declarations it is
@@ -2104,7 +2104,7 @@ warning about it would be a warning people learn to ignore.
 **The screen never accepts a secret**, and cannot: the cockpit is a static
 bundle that writes with the signed-in person's own token, so a token able to
 write a repository secret would be a right every Board member held. What it
-does instead is *report* — for each row of `config/integrations.yml`, whether
+does instead is *report* — for each row of `declarations/integrations.yml`, whether
 the names it declares exist among this repository's Actions secrets and
 variables, and what the code does without them. Names only; no endpoint
 returns a secret's value, and the screen asks for none. Set them where this

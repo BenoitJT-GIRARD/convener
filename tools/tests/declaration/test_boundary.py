@@ -27,9 +27,10 @@ The formulation held is the one that survives being read twice:
 Three decidable clauses come out of that, one test each:
 
 1. **Decided once.** Every path an instance owns is named in exactly one
-   place -- `config/boundary.yml` for the paths outside `config/`, and each
-   `config/` file's own `owner:` key for the ones inside it. A file in
-   `config/` with no answer is refused by name; a `config/` path named in
+   place -- `declarations/boundary.yml` for the paths outside
+   `declarations/`, and each configuration file's own `owner:` key for the
+   ones inside it. A file in `declarations/` with no answer is refused by
+   name; a configuration path named in
    the declaration as well is refused too, because one fact in two places
    is how this repository has drifted every previous time.
 
@@ -99,7 +100,7 @@ from convener_ops.maintenance import actions_usage, queue_watch
 ROOT = repo_root()
 
 #: A declaration in the shape the real one has, for the synthetic roots
-#: below. Deliberately not a copy of `config/boundary.yml`: a fixture that
+#: below. Deliberately not a copy of `declarations/boundary.yml`: a fixture that
 #: tracked the real file would make every assertion here restate the thing
 #: it is meant to check.
 _MINIMAL = {
@@ -161,7 +162,8 @@ def test_this_repository_declares_a_boundary_that_reads() -> None:
 
 
 def test_every_file_in_config_states_which_it_is() -> None:
-    """`config/` filled up by accumulation and nobody ever decided. Now
+    """The self-declaring directory filled up by accumulation and nobody
+    ever decided. Now
     every file answers, and both answers are actually used -- a directory
     where everything said `product` would satisfy a weaker test while
     saying nothing at all.
@@ -170,7 +172,7 @@ def test_every_file_in_config_states_which_it_is() -> None:
     the directories `boundary.CONFIG_DIRS` names, compared against what
     they really hold: `instance/config.json` is JSON, and a check that
     only ever globbed `*.yml` would have let a second format arrive with
-    nobody deciding what it is -- the exact silence `config/` was in
+    nobody deciding what it is -- the exact silence that directory was in
     before.
     """
     owners = load().config_owners
@@ -181,8 +183,8 @@ def test_every_file_in_config_states_which_it_is() -> None:
         for path in (ROOT / directory).glob(f"*{suffix}")
     }
     assert set(owners.values()) == {INSTANCE, PRODUCT}
-    assert owners["config/integrations.yml"] == PRODUCT
-    assert owners["config/boundary.yml"] == PRODUCT
+    assert owners["declarations/integrations.yml"] == PRODUCT
+    assert owners["declarations/boundary.yml"] == PRODUCT
     assert owners["instance/config.json"] == INSTANCE
 
 
@@ -194,7 +196,7 @@ def test_the_packages_own_config_constants_agree_with_the_declaration() -> None:
     assert board.owner_of(actions_usage.BUDGET_PATH) == INSTANCE
     assert board.owner_of(queue_watch.CONFIG_PATH) == INSTANCE
     assert board.owner_of(registration_routing.CONFIG_PATH) == INSTANCE
-    assert board.owner_of(Path("config") / "integrations.yml") == PRODUCT
+    assert board.owner_of(Path("declarations") / "integrations.yml") == PRODUCT
 
 
 def test_every_path_this_package_names_is_classified() -> None:
@@ -233,12 +235,14 @@ def test_every_path_this_package_names_is_classified() -> None:
 
 
 def test_a_config_file_with_no_owner_is_refused_by_name(tmp_path: Path) -> None:
-    """The state `config/` was in before `owner:` existed: a file that
+    """The state that directory was in before `owner:` existed: a file that
     works, reads, and says nothing about who it belongs to."""
     root = _write_root(tmp_path)
-    (root / "config" / "thresholds.yml").write_text("v: 1\n", encoding="utf-8")
+    (root / "declarations" / "thresholds.yml").write_text("v: 1\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match=r"config/thresholds\.yml declares no owner"):
+    with pytest.raises(
+        ValueError, match=r"declarations/thresholds\.yml declares no owner"
+    ):
         config_owners(root)
 
 
@@ -262,7 +266,7 @@ def test_a_json_config_file_answers_the_same_question(tmp_path: Path) -> None:
 def test_a_config_file_with_an_invented_owner_is_refused(tmp_path: Path) -> None:
     """Two answers, and only two. `owner: both` is the mixing this
     declaration exists to end, spelled out."""
-    root = _write_root(tmp_path, owners={"config/thresholds.yml": "both"})
+    root = _write_root(tmp_path, owners={"declarations/thresholds.yml": "both"})
 
     with pytest.raises(ValueError, match="declares no owner"):
         config_owners(root)
@@ -270,9 +274,9 @@ def test_a_config_file_with_an_invented_owner_is_refused(tmp_path: Path) -> None
 
 def test_a_config_file_that_is_not_a_mapping_is_refused(tmp_path: Path) -> None:
     root = _write_root(tmp_path)
-    (root / "config" / "list.yml").write_text("- one\n- two\n", encoding="utf-8")
+    (root / "declarations" / "list.yml").write_text("- one\n- two\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match=r"config/list\.yml declares no owner"):
+    with pytest.raises(ValueError, match=r"declarations/list\.yml declares no owner"):
         config_owners(root)
 
 
@@ -641,7 +645,7 @@ def test_the_retirement_this_repository_did_not_notice_is_declared() -> None:
 
 
 def test_a_retired_path_may_be_a_configuration_file() -> None:
-    """Where a live one may not. A file in `config/` states its own owner
+    """Where a live one may not. A file in `declarations/` states its own owner
     in its own header, so naming a live one here would put one fact in
     two places -- and a file that is not there any more states nothing,
     which leaves this list as the only place its former ownership can be
@@ -747,7 +751,7 @@ def test_the_walk_sees_the_files_this_repository_really_holds() -> None:
     assert "docs/handbook/governance/register.md" in found
     assert "instance/data/schema.md" not in found, "a kept file is the product's"
     assert "instance/keys/signing/README.md" not in found
-    assert "config/integrations.yml" not in found
+    assert "declarations/integrations.yml" not in found
 
 
 def test_no_instance_path_holds_code() -> None:
@@ -839,9 +843,9 @@ def test_the_two_halves_are_one_list() -> None:
     computed from both halves rather than written down a third time."""
     board = Boundary(
         handed=(Handed(path="records/", reason="r", kept=(Kept("records/x", "r"),)),),
-        config_owners={"config/a.yml": INSTANCE, "config/b.yml": PRODUCT},
+        config_owners={"declarations/a.yml": INSTANCE, "declarations/b.yml": PRODUCT},
     )
-    assert board.instance_paths == ("config/a.yml", "records/")
+    assert board.instance_paths == ("declarations/a.yml", "records/")
     assert board.owner_of("records/x") == PRODUCT
     assert board.owner_of("records/y") == INSTANCE
 

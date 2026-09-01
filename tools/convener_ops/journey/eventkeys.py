@@ -75,7 +75,7 @@ same DER bytes this module's PEM wraps.
 The private half, and the one place D-13 does not apply
 ---------------------------------------------------------
 The private half lives only as `CONVENER_EVENT_KEY_<ID>`, a repository secret
-declared in `config/integrations.yml` alongside every other integration --
+declared in `declarations/integrations.yml` alongside every other integration --
 `convener-check-config` reports it absent exactly like any other missing secret.
 
 Everywhere else in this project a missing integration is D-13's normal
@@ -314,7 +314,7 @@ def _validate_event_id(event_id: str) -> None:
 def secret_name(event_id: str) -> str:
     """The `CONVENER_EVENT_KEY_<ID>` environment variable name for `event_id`.
 
-    `config/integrations.yml` declares the *pattern*
+    `declarations/integrations.yml` declares the *pattern*
     `CONVENER_EVENT_KEY_<ID>`; this is what `<ID>` concretely is for a given
     event. Uppercasing the id is not enough on its own -- an id such as the
     tests' own canonical `mrg-042` uppercases to `MRG-042`, and

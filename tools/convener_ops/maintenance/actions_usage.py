@@ -81,9 +81,9 @@ from ..declaration.paths import DATA_DIR
 #: (`app/src/data/validate.ts::readConfig` refuses any key it does not
 #: know, and `tools/tests/test_yaml_boundary.py` pins the two writers
 #: byte-for-byte), so a key the app has no use for could not be added
-#: there without a cross-language change to four files. `config/` is where
+#: there without a cross-language change to four files. `declarations/` is where
 #: this repository already keeps declarations that tooling reads and the
-#: app never does -- `config/integrations.yml` is the precedent.
+#: app never does -- `declarations/integrations.yml` is the precedent.
 BUDGET_PATH: Final = Path("instance") / "actions-budget.yml"
 
 #: Where the measurement is written: a committed file, not a log line.

@@ -48,7 +48,7 @@ Tokens shorter than three characters are dropped for the same reason: the
 edition prefix reaches an artefact as `MRG-` and `mrg-`, which a path
 segment cannot be told apart from an abbreviation.
 
-**Product-owned paths only.** `config/boundary.yml` says which paths are
+**Product-owned paths only.** `declarations/boundary.yml` says which paths are
 the instance's, and a path the instance owns is *supposed* to be able to
 carry the instance's name -- `instance/keys/events/mrg-05.pub` is that
 file's whole point. The question here is only ever about what upstream
@@ -80,7 +80,7 @@ from convener_ops.declaration.paths import repo_root
 ROOT: Final = repo_root()
 
 #: The example instance's own declaration, at the path
-#: `config/boundary.yml`'s own header describes: one file for each path
+#: `declarations/boundary.yml`'s own header describes: one file for each path
 #: an instance owns, at the same relative path under `instances/example/`.
 EXAMPLE: Final = Path("instances/example/instance/config.json")
 
@@ -113,7 +113,7 @@ NOT_A_NAME_OF_THIS_INSTANCE: Final = {
     ),
     "tally": (
         "from `identity.proposal_form`, whose address is a third party's. "
-        "Tally is the form service `config/integrations.yml` declares this "
+        "Tally is the form service `declarations/integrations.yml` declares this "
         "product integrates with, so the word belongs to the vendor and "
         "reaches the declaration only because this instance's form happens "
         "to be hosted there. `tools/scripts/create_tally_form.py` creates a "
@@ -175,7 +175,7 @@ def instance_words() -> set[str]:
 
 
 def _product_paths() -> list[str]:
-    """Every path this repository tracks that `config/boundary.yml` leaves
+    """Every path this repository tracks that `declarations/boundary.yml` leaves
     to the product.
 
     `git ls-files`, never a walk: a walk sees `node_modules/`,

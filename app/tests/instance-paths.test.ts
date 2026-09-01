@@ -1,7 +1,7 @@
 /**
  * The one place a JavaScript or TypeScript source names an instance path.
  *
- * `config/boundary.yml` declares which paths belong to the instance.
+ * `declarations/boundary.yml` declares which paths belong to the instance.
  * `app/scripts/instance-paths.mjs` turns each of them into a name for the
  * cockpit's build, `app/src/paths.ts` carries the same values into the
  * browser through `vite.config.ts`'s own `define`, and every other module
@@ -85,7 +85,7 @@ const HOMES = new Set([
 
 const EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 
-/** The paths `config/boundary.yml` hands to the instance, read now. The
+/** The paths `declarations/boundary.yml` hands to the instance, read now. The
  *  declaration's own list, parsed by the reader that owns its format.
  *  Adding an entry there adds a refusal here on the same commit. */
 export function declaredInstancePaths(): string[] {
@@ -269,7 +269,7 @@ describe('an instance path is named once', () => {
 
     expect(
       written,
-      'these write out a path config/boundary.yml hands to the instance, which ' +
+      'these write out a path declarations/boundary.yml hands to the instance, which ' +
         'app/scripts/instance-paths.mjs and app/src/paths.ts already name from ' +
         `that declaration:\n${written.join('\n')}`,
     ).toEqual([]);

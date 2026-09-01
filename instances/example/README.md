@@ -4,7 +4,7 @@ A second instance, invented, whose files sit here so that this repository
 can be built as somebody other than the series that happens to run it
 today.
 
-`config/boundary.yml` names the paths an instance owns. This directory
+`declarations/boundary.yml` names the paths an instance owns. This directory
 holds one file for each of them, at the same relative path — so
 `instances/example/instance/config.json` is what
 `instance/config.json` would be, and `instances/example/instance/data/brand.json`
@@ -15,7 +15,7 @@ been copied into the places the boundary names.
 **It belongs to the product, not to an instance.** Upstream ships it,
 upstream maintains it, and a duplicate that edits it is editing an example
 rather than its own configuration. That is why it is not in
-`config/boundary.yml`'s list: the default there is the product, and this
+`declarations/boundary.yml`'s list: the default there is the product, and this
 directory takes the default.
 
 ## What it is for

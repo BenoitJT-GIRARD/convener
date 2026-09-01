@@ -68,7 +68,7 @@ That file is a projection, exactly like `instance/public-data/survey-status.json
 beside it, read by the relay through the Contents API with the credential
 and the call shape it already uses for `instance/keys/events/<id>.pub`. It is
 regenerated whenever `instance/data/speakers.yml` moves, which is precisely when an
-event's date can have changed. A *threshold* edited in `config/` lands one
+event's date can have changed. A *threshold* edited in a declaration lands one
 run later -- see that file's own header for the one-line answer to that.
 
 Unknown is not "far"

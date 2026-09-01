@@ -84,7 +84,7 @@ regenerates it.
 **The second-instance sweep covers both, and can, because it compares two
 instances rather than looking for one.** `test_second_instance.py` builds
 this repository
-with `instances/example/` in place of everything `config/boundary.yml`
+with `instances/example/` in place of everything `declarations/boundary.yml`
 hands to the instance, so the series' title and the short name in that
 build are the *example's*; finding this instance's is then unambiguous in
 a way it can never be in a source tree the product's own names live in.
@@ -1390,7 +1390,7 @@ def test_a_deployment_of_the_example_itself_is_unconfigured_in_every_value(
 ) -> None:
     """What a duplicate deployed before it was configured actually looks
     like, and what `tools/tests/test_second_instance.py` builds on every
-    run: `instances/example/`'s own declaration, sitting in `config/`."""
+    run: `instances/example/`'s own declaration, sitting in `instance/`."""
     root = _laid_out(tmp_path, _example_declaration())
     assert published.unconfigured(root) == tuple(
         sorted(published.declared_values(_example_declaration()))

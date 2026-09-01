@@ -4,7 +4,7 @@ name: Resend a registration confirmation
 # confirmation in a spam folder does not exist. `workflow_dispatch`
 # rather than a script a volunteer runs locally: `EVENT_PRIVATE_KEY` and
 # `email_transport`'s five secrets live only in this repository's own
-# secrets (eventkeys.py's module docstring; config/integrations.yml), never
+# secrets (eventkeys.py's module docstring; declarations/integrations.yml), never
 # on a laptop, so re-sending has to happen in a job that already holds
 # them -- the same reason `convener-handle-registration` itself only ever runs
 # here.

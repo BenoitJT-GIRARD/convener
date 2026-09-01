@@ -32,7 +32,7 @@
 # What a duplicate does with it: turns it off
 # -------------------------------------------
 # Every manifest and every lockfile named below belongs to the **product**,
-# by `config/boundary.yml`'s default -- and for a duplicate an update is a
+# by `declarations/boundary.yml`'s default -- and for a duplicate an update is a
 # merge. A duplicate whose Dependabot bumps `app/package-lock.json` has
 # edited a product file, and upstream's own bump of that same generated
 # file is then a conflict with no readable resolution, arriving monthly

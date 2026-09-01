@@ -280,7 +280,7 @@ describe('what this instance owns', () => {
   /** The declaration, read from this repository the way the browser reads
    *  it from the repository -- same reader, different source of bytes. */
   function derived(): string[] {
-    const boundaryText = readFileSync(resolve(ROOT, 'config', 'boundary.yml'), 'utf-8');
+    const boundaryText = readFileSync(resolve(ROOT, 'declarations', 'boundary.yml'), 'utf-8');
     const owners: Record<string, string> = {};
     for (const directory of CONFIG_DIRS) {
       for (const name of readdirSync(resolve(ROOT, directory), { withFileTypes: true })) {
@@ -311,11 +311,11 @@ describe('what this instance owns', () => {
   });
 
   it('refuses a config file that declares no owner', () => {
-    expect(() => configOwner('config/nothing.yml', 'v: 1\n')).toThrow(/declares no owner/);
+    expect(() => configOwner('declarations/nothing.yml', 'v: 1\n')).toThrow(/declares no owner/);
   });
 
   it('reads every integration this repository declares, and what breaks without it', () => {
-    const text = readFileSync(resolve(ROOT, 'config', 'integrations.yml'), 'utf-8');
+    const text = readFileSync(resolve(ROOT, 'declarations', 'integrations.yml'), 'utf-8');
     const rows = integrationsFromData(yaml.load(text));
     expect(rows.length).toBeGreaterThan(1);
     for (const row of rows) expect(row.absentBehaviour.length).toBeGreaterThan(20);

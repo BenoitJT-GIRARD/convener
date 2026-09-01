@@ -35,7 +35,7 @@ commit or `--check` fails the build. The list is *tracked* rather than
 on-disk, deliberately: `node_modules/`, `.venv/`, `__pycache__` and every other
 build residue is on disk in a working copy and is not part of this repository.
 
-**The owner** comes from `config/boundary.yml`, through
+**The owner** comes from `declarations/boundary.yml`, through
 `convener_ops.declaration.boundary`. A directory is the instance's when every
 tracked file inside it is the instance's, once the files the declaration itself
 names as `kept:` are set aside; otherwise it is the product's. That rule is
@@ -55,7 +55,7 @@ Where the purpose line comes from, and why
 The purpose line is the part nothing can derive, and this module holds it, in
 `PURPOSE` below. Three places were available and two were worse.
 
-**A declared field** would have meant widening `config/boundary.yml`. That file
+**A declared field** would have meant widening `declarations/boundary.yml`. That file
 is the product's statement about which paths an instance owns, and it names
 four -- `instance/data/`, `instance/keys/`, `instance/public-data/` and
 `docs/handbook/governance/register.md`. Not one of them is a top-level directory, so
@@ -138,7 +138,7 @@ DOC_PATH: Final = Path("docs") / "engineering" / "architecture.md"
 #: The declaration the owner column is read from. Named here only for the
 #: failure messages and the page's own preamble; the reading itself is
 #: `convener_ops.declaration.boundary.load`.
-DECLARATION: Final = "config/boundary.yml"
+DECLARATION: Final = "declarations/boundary.yml"
 
 #: How the script is invoked, quoted in the page and in every failure
 #: message. One string, so the two cannot come to name two commands.
@@ -181,7 +181,7 @@ PURPOSE: Final[Mapping[str, str]] = {
         "the default a duplicate that has measured no palette of its own "
         "is drawn with, and the palettes it may choose instead."
     ),
-    "config": (
+    "declarations": (
         "The product's own declarations, which the cockpit never reads: the "
         "external integrations the code knows about, and `boundary.yml`, "
         "which names the paths the instance owns."
@@ -280,7 +280,7 @@ def owner_of_directory(
 ) -> str:
     """`INSTANCE` when the whole directory is the instance's, else `PRODUCT`.
 
-    "The whole directory" sets aside the files `config/boundary.yml` itself
+    "The whole directory" sets aside the files `declarations/boundary.yml` itself
     names as `kept:` -- the product's own files inside a directory handed
     over, two of which exist. Without that clause `instance/` would read as
     the product's on the strength of a three-line stub and a wire-format

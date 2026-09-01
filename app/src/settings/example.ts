@@ -3,7 +3,7 @@
  *
  * One define, one reader. `vite.config.ts` substitutes the whole of
  * `scripts/example-settings.mjs`'s result under
- * `import.meta.env.VITE_EXAMPLE_SETTINGS` -- the four `config/` files
+ * `import.meta.env.VITE_EXAMPLE_SETTINGS` -- the four configuration files
  * `instances/example/` owns plus the product's two -- and more than one
  * place in the cockpit needs something out of it: `./load.ts` parses all
  * six for the settings screen, and `state/agenda.ts` needs the one value

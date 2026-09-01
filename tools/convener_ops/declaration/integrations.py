@@ -3,7 +3,7 @@
 An integration with no secret set is *absent*. For most integrations that
 is a normal state -- never an error, and nothing in this module raises
 because a secret is missing. The exceptions are declared, not hard-coded
-here: `absent_is_normal: false` in `config/integrations.yml` (carried on
+here: `absent_is_normal: false` in `declarations/integrations.yml` (carried on
 `Integration` below) marks a row whose absence is not a harmless fallback,
 and `cli.py::render_check` is what turns the flag into the operator-facing
 text.

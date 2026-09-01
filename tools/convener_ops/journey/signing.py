@@ -331,7 +331,7 @@ The private half, and why its absence is an ordinary D-13 state here
 ------------------------------------------------------------------------
 Unlike `eventkeys.py`'s private half, there is exactly one signing private
 key in service at a time, held as the repository secret `CONVENER_SIGNING_KEY`
-(`config/integrations.yml`), read only inside the job that issues
+(`declarations/integrations.yml`), read only inside the job that issues
 certificates and never elsewhere. Rotating it means: an
 *operator* -- a person, interactively, never an automated step and never
 this module acting on anyone's behalf -- runs `generate()`, commits the new
@@ -358,7 +358,7 @@ nothing partially written, nothing sensitive exposed by the absence. That is
 exactly the shape of an ordinary, documented D-13 fallback (compare
 `video_publishing`'s "entered by hand," `board_notifications`'s "printed
 instead of sent"), not the one row (`event_keys`) that fails closed over a
-confidentiality risk. `config/integrations.yml` declares `signing_key`
+confidentiality risk. `declarations/integrations.yml` declares `signing_key`
 accordingly, with `absent_is_normal` left at its default of `true`.
 """
 
@@ -428,7 +428,7 @@ NO_MATCHING_KEY: Final = "no_matching_key"
 
 #: The repository secret holding the private half currently in service.
 #: Unlike `eventkeys.py`'s per-event `CONVENER_EVENT_KEY_<ID>`, there is exactly
-#: one of these at a time -- see `config/integrations.yml` and the module
+#: one of these at a time -- see `declarations/integrations.yml` and the module
 #: docstring's "private half" section.
 SECRET_NAME: Final = "CONVENER_SIGNING_KEY"
 

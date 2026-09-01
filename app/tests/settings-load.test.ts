@@ -74,14 +74,14 @@ describe('the boundary declaration', () => {
     expect(
       instancePaths(handed, {
         'instance/queue-drain.yml': 'instance',
-        'config/boundary.yml': 'product',
+        'declarations/boundary.yml': 'product',
       }),
     ).toEqual(['instance/keys/', 'instance/queue-drain.yml']);
   });
 
   it('reads a JSON file’s owner out of the same key a YAML one uses', () => {
-    expect(configOwner('config/thing.json', '{"owner": "instance"}')).toBe('instance');
-    expect(() => configOwner('config/thing.json', '{"owner": "somebody"}')).toThrow(
+    expect(configOwner('declarations/thing.json', '{"owner": "instance"}')).toBe('instance');
+    expect(() => configOwner('declarations/thing.json', '{"owner": "somebody"}')).toThrow(
       /declares no owner/,
     );
   });
@@ -178,7 +178,7 @@ describe('the cadence, and the bound that rests on it', () => {
 });
 
 describe('reading the repository', () => {
-  it('refuses a config/ that is not a directory rather than showing nothing', async () => {
+  it('refuses a declarations/ that is not a directory rather than showing nothing', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve({ ok: true, json: async () => ({ message: 'not a dir' }) })),

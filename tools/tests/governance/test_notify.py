@@ -1707,7 +1707,7 @@ def test_the_channel_is_declared_as_an_integration() -> None:
     normal state it is rather than as something broken."""
     from convener_ops.declaration.integrations import load_declaration
 
-    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
     channel = next(i for i in declaration if i.name == "board_notifications")
     assert set(channel.secrets) == {THREAD_ENV, MENTION_ENV}
     assert "nothing is sent" in channel.absent_behaviour.lower()

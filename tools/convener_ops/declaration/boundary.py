@@ -7,7 +7,7 @@ which point people stop updating and the whole idea of a template dies
 quietly. So "instance" cannot stay an intention -- it has to be a set of
 paths something can enumerate, and this module is what reads it.
 
-**One declaration, two halves, no copy.** `config/boundary.yml` names the
+**One declaration, two halves, no copy.** `declarations/boundary.yml` names the
 directories the instance owns whole. The configuration files `CONFIG_DIRS`
 holds directly state their own answer in their own `owner:` key, next to
 the argument for it, and this module reads that -- `declaration_from_data`
@@ -48,19 +48,20 @@ from typing import Any, Final
 
 import yaml
 
-#: The declaration itself, relative to a repository root. In `config/`
-#: rather than beside it: this is the product's own statement about what
-#: an instance owns, and it belongs with the product's own configuration.
-DECLARATION_PATH: Final = Path("config") / "boundary.yml"
+#: The declaration itself, relative to a repository root. In
+#: `declarations/` rather than beside it: this is the product's own
+#: statement about what an instance owns, which is exactly what that
+#: directory is for.
+DECLARATION_PATH: Final = Path("declarations") / "boundary.yml"
 
 #: Where a configuration file states its own owner in its own header, and
-#: the only two places one may. `config/` is the product's own directory
+#: the only two places one may. `declarations/` is the product's own
 #: and `instance/` is this instance's, so a file's location already says
 #: which side it is on; the header is what refuses, by name, the file that
 #: lands on the wrong one. Only the files these directories hold
 #: *directly* answer for themselves -- `instance/`'s subdirectories are
 #: handed over whole, by the declaration above.
-CONFIG_DIRS: Final = (Path("config"), Path("instance"))
+CONFIG_DIRS: Final = (Path("declarations"), Path("instance"))
 
 #: What a configuration file may be written in, and how to read each. YAML
 #: for anything only this repository's Python reads; JSON for anything
@@ -76,7 +77,7 @@ CONFIG_READERS: Final[dict[str, Callable[[str], Any]]] = {
     ".json": json.loads,
 }
 
-#: `config/boundary.yml`'s own format version.
+#: `declarations/boundary.yml`'s own format version.
 DECLARATION_VERSION: Final = 1
 
 #: Where git is told how to merge a path, and the attribute that has to be
@@ -247,7 +248,7 @@ class Boundary:
         """Whether the instance owns this path now **or ever did**.
 
         The history-reading half's question, and the only one it may ask.
-        `owner_of` reads `config/boundary.yml` as it stands, so the day a
+        `owner_of` reads `declarations/boundary.yml` as it stands, so the day a
         declared directory moves, every earlier version of everything
         inside it becomes the product's as far as `owner_of` is
         concerned -- and a tool walking `rev-list` would carry the lot
@@ -372,7 +373,7 @@ def _kept_from(raw: Any, inside: str) -> tuple[Kept, ...]:
 
 
 def declaration_from_data(data: Any) -> tuple[Handed, ...]:
-    """Parse an already YAML-loaded `config/boundary.yml`.
+    """Parse an already YAML-loaded `declarations/boundary.yml`.
 
     Refuses, rather than repairs, anything that is not this exact shape --
     including the two mistakes that would quietly hollow the boundary out:
@@ -456,7 +457,7 @@ def retired_from_data(data: Any) -> tuple[Handed, ...]:
     rather than a second copy:
 
     - **A retired path may be a configuration file.** `instance:` refuses
-      one, because a file in `config/` or `instance/` states its own
+      one, because a file in `declarations/` or `instance/` states its own
       owner in its own header and a second home for that fact is how the
       two start disagreeing. A file that is not there any more states
       nothing, so this list is the only place its former ownership can
@@ -517,7 +518,8 @@ def config_owners(root: Path) -> dict[str, str]:
     `owner` key a YAML one does, next to the same argument for it, in a
     `_comment` because JSON has nowhere else to put one. A file with no
     `owner` is refused by name rather than defaulted to either side:
-    `config/` was found mixing product and instance precisely because it
+    That directory, when it was `config/`, was found mixing product and
+    instance precisely because it
     filled up by accumulation, with nobody ever deciding, and a default
     here would be that same silence with a friendlier face.
     """

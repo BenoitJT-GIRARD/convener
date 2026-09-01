@@ -107,7 +107,7 @@ jobs:
           EVENT_ID: ${{ steps.resolve.outputs.event_id }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
           # Absent is D-13's ordinary state for CONVENER_SIGNING_KEY
-          # (config/integrations.yml's own signing_key row) -- and, unlike
+          # (declarations/integrations.yml's own signing_key row) -- and, unlike
           # every other secret in this file, also for CONVENER_MATCHING_SALT
           # here: certificate.py's own module docstring explains why a
           # certificate fingerprint may never be computed without it.
@@ -242,7 +242,7 @@ jobs:
           # docstring); nothing personal crosses this boundary.
           DELIVER_ONLY: ${{ steps.issue.outputs.issued_ids }}
           RESEND_ALL: ${{ inputs.resend_all }}
-          # email_transport's five secrets (config/integrations.yml) --
+          # email_transport's five secrets (declarations/integrations.yml) --
           # absent is ordinary D-13 here too: every attempt this step makes
           # is simply reported as not sent, in the printed counts, never a
           # failed step. See delivery.py's own module docstring for why an

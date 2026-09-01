@@ -186,7 +186,7 @@ export function editableFiles(): string[] {
 /**
  * Why a file the instance owns is nevertheless not offered as a form.
  *
- * Everything `config/boundary.yml` hands to the instance and that is *not*
+ * Everything `declarations/boundary.yml` hands to the instance and that is *not*
  * in `SETTINGS` gets one of these lines, and none of them is "not
  * implemented yet": each is a reason a form is the wrong instrument.
  * `null` means the path has no entry here, which is itself a finding --

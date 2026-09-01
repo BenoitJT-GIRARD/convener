@@ -14,7 +14,7 @@ D-29 is that they are three and not one:
 **Why any of this needs a test at all.** Each of the three fails silently
 when it fails. A ``LICENSE`` quietly replaced by a permissive one still
 looks like a licence file; a notice with its warranty sentence dropped
-still looks like a footer credit; a declaration moved into ``config/``
+still looks like a footer credit; a declaration moved into ``declarations/``
 still builds. None of those shows up as a broken page, and the second is
 the one that matters most: section 5 obliges a modified version's
 interfaces to display an Appropriate Legal Notice **only where the
@@ -232,7 +232,7 @@ def test_the_trade_mark_document_states_the_limit_of_its_own_claim() -> None:
 def test_the_notice_belongs_to_the_product_and_to_no_instance() -> None:
     """The boundary's own answer, asked of the declaration's real path.
 
-    Not a claim in a comment: `config/boundary.yml` hands named paths to
+    Not a claim in a comment: `declarations/boundary.yml` hands named paths to
     the instance and everything else is the product's, so this is the
     question that decides whether a duplicate would inherit this file or
     be expected to write its own. A notice an instance owns is a notice a

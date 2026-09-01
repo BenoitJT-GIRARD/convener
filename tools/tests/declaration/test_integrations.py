@@ -116,7 +116,7 @@ def test_email_transport_declares_the_smtp_port() -> None:
     the port is a secret like the rest of the transport rather than a
     constant -- and an absent one must be reported exactly like an absent
     host, user, password or from-address, not specially."""
-    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
     email = next(i for i in declaration if i.name == "email_transport")
     assert set(email.secrets) == {
         "CONVENER_SMTP_HOST",
@@ -145,7 +145,7 @@ def test_exactly_these_three_rows_declare_themselves_an_exception() -> None:
     having destroyed nothing must never look, from the Actions tab,
     identical to a run that genuinely had nothing to do. See
     `tools/convener_ops/cli.py::retention_sweep`'s own docstring."""
-    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
     exceptions = [i.name for i in declaration if not i.absent_is_normal]
     assert exceptions == ["event_keys", "retention_token", "certificate_fingerprint"]
 
@@ -187,7 +187,7 @@ def test_this_declarations_own_header_names_every_exception() -> None:
     """The half of the row above that nothing was reading.
 
     `absent_is_normal` is pinned as data. The sentence
-    at the top of `config/integrations.yml` that *describes* it was not,
+    at the top of `declarations/integrations.yml` that *describes* it was not,
     and it said "with one exception, event_keys" for two phases after the
     second and third rows were added -- through a task that corrected the
     identical sentence in `integrations.py`'s docstring and left this one,
@@ -199,7 +199,7 @@ def test_this_declarations_own_header_names_every_exception() -> None:
     exception fails this test by name rather than making the sentence
     quietly wrong again.
     """
-    path = repo_root() / "config" / "integrations.yml"
+    path = repo_root() / "declarations" / "integrations.yml"
     declaration = load_declaration(path)
     opening = _opening_paragraph(path.read_text(encoding="utf-8"))
 
@@ -232,7 +232,7 @@ def _first_paragraph(text: str) -> str:
 def test_the_handbook_page_names_every_exception_the_declaration_holds() -> None:
     """The fourth copy of the same sentence.
 
-    `config/integrations.yml`'s own header and
+    `declarations/integrations.yml`'s own header and
     `tools/convener_ops/declaration/integrations.py`'s docstring and comment were
     corrected from one exception to three when the second and third rows
     declared themselves; `docs/operating/operations.md` opens by making
@@ -248,7 +248,7 @@ def test_the_handbook_page_names_every_exception_the_declaration_holds() -> None
     retention credential -- and binding to those would have made this test
     a check on a heading rather than on the claim.
     """
-    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
     page = (repo_root() / "docs" / "operating" / "operations.md").read_text(
         encoding="utf-8"
     )
@@ -276,7 +276,7 @@ def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:
     four siblings -- nothing in `resolve_states` singles it out -- so an
     environment with everything except the port is `absent`, exactly as an
     environment missing the host would be."""
-    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
     env = {
         "CONVENER_SMTP_HOST": "smtp.example.org",
         "CONVENER_SMTP_USER": "board",

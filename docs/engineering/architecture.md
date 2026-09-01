@@ -62,7 +62,7 @@ that up.
 
 <!-- BEGIN GENERATED DIRECTORY MAP -- tools/scripts/generate_directory_map.py -->
 *The rows below are generated: every tracked top-level directory, with
-the owner `config/boundary.yml` gives it. Do not edit this block — run*
+the owner `declarations/boundary.yml` gives it. Do not edit this block — run*
 `uv run python scripts/generate_directory_map.py`
 *from `tools/` and commit what it writes. What each directory holds is
 the one line nothing derives, and it is written in
@@ -74,7 +74,7 @@ publishes it.*
 | `.github/` | product | The whole automation surface: data validation, the public-data filter, certificate issuance and revocation, the retention sweep, publishing the showcase and the cockpit, quality and security gates. Nothing in this system runs anywhere else. |
 | `app/` | product | The cockpit (React + Vite): the board's and volunteers' application, gated by GitHub sign-in. Also builds the two public *islands* — registration and certificate verification — mounted on the showcase's static pages. |
 | `brand/` | product | The product's own marks, and one directory per charter it ships: the default a duplicate that has measured no palette of its own is drawn with, and the palettes it may choose instead. |
-| `config/` | product | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
+| `declarations/` | product | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
 | `docs/` | product | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
 | `fonts/` | product | The two typefaces both interfaces are set in, self-hosted so that no page fetches a font from anybody else, each beside its licence. |
 | `instance/` | instance | Everything this series owns rather than the code: the store itself under `data/`, the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. |
@@ -84,7 +84,7 @@ publishes it.*
 | `site/` | product | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
 | `tools/` | product | Every operational tool, whatever the language: the `convener_ops` package every automated workflow runs, the generators under `scripts/`, the one-shot migrations under `migrations/`, the Node rendering harness under `visuals/`, and the tests for all of them. |
 
-`config/boundary.yml` also names paths sitting on the other side of the directory
+`declarations/boundary.yml` also names paths sitting on the other side of the directory
 that holds them:
 
 - `docs/handbook/governance/register.md` — the instance's, inside a directory the product owns.
@@ -99,13 +99,13 @@ that holds them:
 This system is meant to be run by more than one group, which makes an
 update a **merge**: it works only if the code and the running series live
 in paths that never overlap. So "what belongs to this series" is not a
-sentiment here, it is a list — `config/boundary.yml` holds it, and
+sentiment here, it is a list — `declarations/boundary.yml` holds it, and
 `tools/convener_ops/declaration/boundary.py` reads it. Everything the list does not name
 belongs to the code, and a directory is handed over whole rather than file
 by file: the records and configuration under `instance/data/`, the published
 public keys under `instance/keys/`, whatever continuous integration publishes into
 `instance/public-data/`, the showcase's own title and addresses, and the thresholds
-in `config/` that each say so in their own header.
+in `declarations/` that each say so in their own header.
 
 Two files sit inside those directories and still belong to the code —
 `instance/data/schema.md`, a pointer to the generated schema page, and

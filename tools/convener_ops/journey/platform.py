@@ -16,7 +16,7 @@ It needs no account, no secret, no network call. That is what keeps the
 whole chain executable end to end with the manual implementation and no
 external account at all, and what D-13 means when it calls a missing
 integration a normal state:
-`config/integrations.yml`'s `meeting_provider` row already says so. Without
+`declarations/integrations.yml`'s `meeting_provider` row already says so. Without
 `CONVENER_MEETING_API_TOKEN`, this is the implementation in use, which is the
 ordinary case, not a degraded one. The API implementation does not replace
 this module; it sits beside it, and the choice between the two is made by

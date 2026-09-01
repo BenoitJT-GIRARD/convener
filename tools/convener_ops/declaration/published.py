@@ -100,7 +100,7 @@ __all__ = [
 ]
 
 #: The instance's own declaration, relative to a repository root. In
-#: `config/` rather than beside it, and stating its own `owner:` the way
+#: `declarations/` rather than beside it, and stating its own `owner:` the way
 #: every other file in that directory does -- see `boundary.py`.
 INSTANCE_PATH: Final = Path("instance") / "config.json"
 

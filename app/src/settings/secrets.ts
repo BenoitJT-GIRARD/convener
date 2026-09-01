@@ -16,7 +16,7 @@
  * secrets endpoint is documented as listing secrets "without revealing
  * their encrypted values", and there is no endpoint at all that would give
  * one back. So the question this module asks is the one
- * `config/integrations.yml` was written to answer -- for each integration,
+ * `declarations/integrations.yml` was written to answer -- for each integration,
  * is the thing it needs set, and if not, what does the code do instead --
  * and it asks it with names alone.
  *

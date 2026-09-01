@@ -411,7 +411,7 @@ def render_check(integrations: list[Integration]) -> str:
 
 
 def check_config() -> int:
-    declaration = repo_root() / "config" / "integrations.yml"
+    declaration = repo_root() / "declarations" / "integrations.yml"
     integrations = resolve_states(load_declaration(declaration), env=os.environ)
     print(render_check(integrations))
     return 0
@@ -3553,7 +3553,7 @@ def issue_certificates() -> int:
     any registration is even decrypted:
 
     - `signing.SECRET_NAME` (`CONVENER_SIGNING_KEY`) absent is the ordinary
-      D-13 shape `config/integrations.yml`'s own `signing_key` row
+      D-13 shape `declarations/integrations.yml`'s own `signing_key` row
       documents -- no certificate this run, nothing else affected.
     - `CONVENER_MATCHING_SALT` absent is *not* ordinary here, unlike its own
       row's documented behaviour for `matching_code`: see
@@ -5280,7 +5280,7 @@ def _notify(message: str | None) -> int:
     The composed text is printed to the job log either way, so a repository
     with no channel yet still lets a volunteer read what *would* have been
     sent -- the same "written to an inspectable log instead of being sent"
-    behaviour `config/integrations.yml` promises for outbound email.
+    behaviour `declarations/integrations.yml` promises for outbound email.
     """
     if message is None:
         print("nothing to notify")

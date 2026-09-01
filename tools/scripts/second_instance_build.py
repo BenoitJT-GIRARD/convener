@@ -15,7 +15,7 @@ Not by overriding values, and not by patching this repository in place --
 by building a repository that *is* another instance:
 
 1. every tracked file is copied into a scratch tree;
-2. every file `config/boundary.yml` hands to the instance is **deleted**
+2. every file `declarations/boundary.yml` hands to the instance is **deleted**
    from that tree (`boundary.instance_files`, so `kept:` files stay);
 3. `instances/example/` is laid into the holes that leaves.
 

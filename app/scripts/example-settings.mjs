@@ -3,7 +3,7 @@
  * demonstration.
  *
  * The settings screen reads six files: the two in
- * `config/` the *product* owns (`boundary.yml`, which says what an instance
+ * `declarations/` the *product* owns (`boundary.yml`, which says what an instance
  * owns, and `integrations.yml`, which says what every external dependency
  * is for) and the four that instance owns. Signed in, it reads all six from
  * the repository through `github/contents.ts`. In demo mode it cannot: a
@@ -13,7 +13,7 @@
  * So the demonstration reads the example instance instead -- the same one
  * `src/data/demo.ts` already shows, the one
  * `tools/tests/test_second_instance.py` lays into this repository's own
- * holes on every run. Its four `config/` files are in
+ * holes on every run. Its four configuration files are in
  * `instances/example/instance/`; the two product files are this
  * repository's own, because they are the product's and a duplicate does not
  * have its own copy of them.
@@ -48,14 +48,14 @@ import yaml from 'js-yaml';
  *  process is not the same thing. */
 const ROOT = new URL('../../', import.meta.url);
 
-/** The two files in `config/` the product owns. Not taken from
+/** The two files in `declarations/` the product owns. Not taken from
  *  `instances/example/`, which does not hold them and must not: they are
  *  the product's, and a duplicate inherits them rather than writing its
  *  own. */
-const PRODUCT_FILES = ['config/boundary.yml', 'config/integrations.yml'];
+const PRODUCT_FILES = ['declarations/boundary.yml', 'declarations/integrations.yml'];
 
 /** The four the instance owns, read from the example's own copies. Named by
- *  their `config/` path, which is where they sit in the tree the screen
+ *  their `instance/` path, which is where they sit in the tree the screen
  *  describes -- `instances/example/` is where this build finds them, not
  *  what they are. */
 const INSTANCE_FILES = [

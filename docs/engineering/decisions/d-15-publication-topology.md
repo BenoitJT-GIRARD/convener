@@ -69,7 +69,7 @@ records, the keys and every secret. The **published output** repository is
 public and holds the compiled showcase and application. The **product**
 repository is public and holds the code, the decisions, the workflows and an
 invented example instance — and nothing else: what belongs to an instance is
-enumerated in `config/boundary.yml`, and a check runs over every blob of every
+enumerated in `declarations/boundary.yml`, and a check runs over every blob of every
 reference before anything is pushed.
 
 **Obscurity was never the protection, and publishing proves it rather than

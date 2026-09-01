@@ -15,7 +15,7 @@
  * What it edits, and what it only reports
  * ---------------------------------------
  * The set of things this instance owns is not typed into this file: it is
- * read from `config/boundary.yml` and from each `config/` file's own
+ * read from `declarations/boundary.yml` and from each configuration file's own
  * `owner:` header, exactly as `tools/convener_ops/declaration/boundary.py` reads it
  * (`../settings/declaration.ts`). Of the eight paths that come back, three
  * are files of numbers and this screen offers them as a form. The other
@@ -35,7 +35,7 @@
  * at zero cost. So there is no field for one anywhere below. What there is
  * instead is a report -- which integrations are configured, which are not,
  * and what the code does without each -- built from
- * `config/integrations.yml`, which already carries exactly that matter, and
+ * `declarations/integrations.yml`, which already carries exactly that matter, and
  * from the *names* GitHub will give for a repository's secrets and
  * variables. Never a value; see `../settings/secrets.ts`.
  *
@@ -352,7 +352,7 @@ export function Settings() {
       <div>
         <h1 className="font-display text-2xl font-bold">Settings</h1>
         <p className="mt-2 text-sm text-ink-muted max-w-prose">
-          What this instance owns, read from <code className="font-mono text-xs">config/boundary.yml</code>{' '}
+          What this instance owns, read from <code className="font-mono text-xs">declarations/boundary.yml</code>{' '}
           and from each file&rsquo;s own <code className="font-mono text-xs">owner:</code> header — the
           same declaration the tooling reads, never a list typed into this screen. The
           numbers below are checked here because a file accepts whatever is written into
@@ -370,7 +370,7 @@ export function Settings() {
               <li key={path} className="py-2 border-t border-border text-sm">
                 <span className="font-mono text-xs">{path}</span>
                 <span className="ml-2 text-[11px] uppercase tracking-wider text-ink-faint">
-                  {doc.owners[path] === INSTANCE ? 'config/' : 'declared'}
+                  {doc.owners[path] === INSTANCE ? 'own header' : 'declared'}
                 </span>
                 <p className="mt-1 text-xs text-ink-muted">
                   {here ? 'Settled below, and checked as you type.' : (why ?? 'No reason is recorded for this path — see app/src/settings/form.ts.')}

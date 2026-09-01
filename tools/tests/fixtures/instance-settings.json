@@ -85,7 +85,7 @@
   },
 
   "instance_paths": {
-    "_comment": "Every path this repository's declaration hands to the instance, from both of its halves -- config/boundary.yml's own list, plus each configuration file in config/ or instance/ whose header says `owner: instance`. Both readers derive it (boundary.Boundary.instance_paths on the Python side, declaration.instancePaths in the browser) and both are checked against this line, so a path that appeared on one side only fails here rather than becoming a settings screen offering to edit a file upstream owns. Adding a configuration file to either of those directories, or an entry to the declaration, means editing this line in the same commit -- a deliberate speed bump on a boundary change.",
+    "_comment": "Every path this repository's declaration hands to the instance, from both of its halves -- declarations/boundary.yml's own list, plus each configuration file in declarations/ or instance/ whose header says `owner: instance`. Both readers derive it (boundary.Boundary.instance_paths on the Python side, declaration.instancePaths in the browser) and both are checked against this line, so a path that appeared on one side only fails here rather than becoming a settings screen offering to edit a file upstream owns. Adding a configuration file to either of those directories, or an entry to the declaration, means editing this line in the same commit -- a deliberate speed bump on a boundary change.",
     "paths": [
       "docs/handbook/governance/register.md",
       "instance/actions-budget.yml",

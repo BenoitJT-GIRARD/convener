@@ -66,7 +66,7 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     ".github": ("workflows/quality.yml",),
     "app": ("src/main.tsx",),
     "brand": ("convener/brand.json",),
-    "config": ("boundary.yml",),
+    "declarations": ("boundary.yml",),
     "docs": ("engineering/architecture.md", "handbook/governance/register.md"),
     "fonts": ("Archivo-LICENSE.txt",),
     "instance": ("data/config.yml", "data/schema.md", "keys/signing/README.md"),
@@ -112,9 +112,9 @@ def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     `test_the_index_is_read_and_reaches_every_directory` below exercises the
     git call itself against the real tree.
     """
-    (tmp_path / "config").mkdir()
-    (tmp_path / "config" / "boundary.yml").write_text(
-        (ROOT / "config" / "boundary.yml").read_text(encoding="utf-8"),
+    (tmp_path / "declarations").mkdir()
+    (tmp_path / "declarations" / "boundary.yml").write_text(
+        (ROOT / "declarations" / "boundary.yml").read_text(encoding="utf-8"),
         encoding="utf-8",
         newline="",
     )
@@ -145,7 +145,7 @@ def test_the_index_is_read_and_reaches_every_directory() -> None:
         "this repository -- the call is reading somewhere else"
     )
     assert "README.md" in tracked
-    assert "config/boundary.yml" in tracked
+    assert "declarations/boundary.yml" in tracked
     assert "tools/scripts/generate_schema_doc.py" in tracked
 
 
@@ -230,7 +230,7 @@ def test_the_files_the_declaration_keeps_do_not_flip_the_directory() -> None:
 
     Counting them would make the directory the product's on the strength of
     a three-line stub and a wire-format note, which is the opposite of what
-    `config/boundary.yml` says about it.
+    `declarations/boundary.yml` says about it.
     """
     boundary = load(ROOT)
     kept = ("instance/data/schema.md", "instance/keys/signing/README.md")
@@ -384,7 +384,7 @@ def test_an_owner_changed_in_the_declaration_fails_the_check(
 ) -> None:
     """The other mutation: the same directories, one on the other side."""
     assert main([]) == 0
-    declaration = fake_repo / "config" / "boundary.yml"
+    declaration = fake_repo / "declarations" / "boundary.yml"
     declaration.write_text(
         declaration.read_text(encoding="utf-8").replace(
             "instance:\n  - path: instance/data/\n",
@@ -412,7 +412,7 @@ def test_a_declaration_that_cannot_be_read_stops_the_check(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A boundary nobody can read must not be guessed at."""
-    (fake_repo / "config" / "boundary.yml").write_text(
+    (fake_repo / "declarations" / "boundary.yml").write_text(
         "owner: product\nv: 1\n", encoding="utf-8", newline=""
     )
 

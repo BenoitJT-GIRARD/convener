@@ -22,7 +22,7 @@ compatibility_date = "2026-01-01"
 # leaves behind: a generated copy is still a copy *in the file*, so the
 # product would still publish somebody's real origin and a duplicate would
 # still carry a product file in its diff, which is the merge surface
-# `config/boundary.yml` exists to keep empty. A generator can keep a copy
+# `declarations/boundary.yml` exists to keep empty. A generator can keep a copy
 # honest; only removing the copy ends it.
 #
 # `src/index.js` refuses every request when `ALLOWED_ORIGIN` is unset, so a

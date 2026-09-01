@@ -116,7 +116,7 @@ const EXAMPLE_SETTINGS = exampleSettings();
 const EDITION_PREFIX = editionPrefix();
 
 /**
- * Where this instance's own files sit, read from `config/boundary.yml`
+ * Where this instance's own files sit, read from `declarations/boundary.yml`
  * and carried into the bundle the same way everything above it is.
  *
  * `src/data/DataContext.tsx` asks GitHub for the speaker and config

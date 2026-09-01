@@ -4,7 +4,7 @@
  *
  * The settings screen has to say what it is settling, and
  * the honest answer to "what is the instance's?" is already written down
- * once: `config/boundary.yml` names the directories the instance owns
+ * once: `declarations/boundary.yml` names the directories the instance owns
  * whole, and each configuration file `CONFIG_DIRS` holds directly states
  * its own answer in its own `owner:` key.
  * `tools/convener_ops/declaration/boundary.py` is the reader on the other side of the
@@ -30,13 +30,13 @@ import yaml from 'js-yaml';
 
 /** Where the declaration lives, and the two directories whose
  *  configuration files answer for themselves. Named here rather than
- *  repeated at every call site. Mirrors `boundary.CONFIG_DIRS`: `config/`
- *  is the product's own directory and `instance/` is this instance's, and
+ *  repeated at every call site. Mirrors `boundary.CONFIG_DIRS`:
+ *  `declarations/` is the product's own and `instance/` is this instance's, and
  *  only the files they hold *directly* state an owner -- `instance/`'s
  *  subdirectories are handed over whole, by the declaration. */
-export const BOUNDARY_PATH = 'config/boundary.yml';
-export const INTEGRATIONS_PATH = 'config/integrations.yml';
-export const CONFIG_DIRS = ['config', 'instance'];
+export const BOUNDARY_PATH = 'declarations/boundary.yml';
+export const INTEGRATIONS_PATH = 'declarations/integrations.yml';
+export const CONFIG_DIRS = ['declarations', 'instance'];
 
 /** What a configuration file may be written in -- `boundary.CONFIG_READERS`
  *  seen as a list of suffixes. */
@@ -102,11 +102,11 @@ function nonEmptyString(value: unknown, what: string, named: string): string {
 }
 
 /**
- * Parse an already-loaded `config/boundary.yml`.
+ * Parse an already-loaded `declarations/boundary.yml`.
  *
  * Refuses, never repairs -- including the two mistakes `boundary.py`
  * names, because a reader that accepted one and a reader that refused it
- * would disagree about the boundary itself: a `config/` path named in the
+ * would disagree about the boundary itself: a configuration path named in the
  * list (its answer belongs in its own header) and an entry with no reason.
  */
 export function handedFromData(data: unknown): Handed[] {
@@ -158,8 +158,9 @@ export function handedFromData(data: unknown): Handed[] {
  * states the same `owner` key a YAML one does, in a `_comment` because JSON
  * has nowhere else to put the argument. A file with no `owner` is refused
  * by name rather than defaulted to either side, exactly as
- * `boundary.config_owners` refuses it: `config/` filled up by accumulation
- * once, and a default here would be that same silence with a friendlier
+ * `boundary.config_owners` refuses it: the directory that is
+ * `declarations/` now filled up by accumulation once, under its old name,
+ * and a default here would be that same silence with a friendlier
  * face.
  */
 export function configOwner(name: string, text: string): string {
@@ -203,7 +204,7 @@ export interface Integration {
   absentIsNormal: boolean;
 }
 
-/** Parse an already-loaded `config/integrations.yml`. Refuses a row with no
+/** Parse an already-loaded `declarations/integrations.yml`. Refuses a row with no
  *  behaviour recorded: a row that cannot say what breaks without it is a
  *  row this screen would render as an empty promise. */
 export function integrationsFromData(data: unknown): Integration[] {

@@ -280,7 +280,7 @@ jobs:
         # diverge, and a corrected page beside a forgotten agent is that
         # defect with a longer fuse. Same assertion-only run as the two
         # around it: writes nothing, fails if the committed page is not what
-        # the declaration and `config/integrations.yml` give.
+        # the declaration and `declarations/integrations.yml` give.
         run: uv run python scripts/generate_standing_up_doc.py --check
       - name: Standing-up run sheet
         working-directory: tools
@@ -329,7 +329,7 @@ jobs:
         # tracked then: `.claude/`, `brand/`, `fonts/` and `instances/`
         # were in neither. The table is generated now -- the
         # directories from `git ls-files`, the owner from
-        # `config/boundary.yml` -- and `README.md` links to it instead of
+        # `declarations/boundary.yml` -- and `README.md` links to it instead of
         # restating it. Assertion-only, like the four above: writes
         # nothing, and fails on a directory added, removed or handed to
         # the other side without the map being regenerated.

@@ -302,7 +302,7 @@ def test_no_template_hand_writes_an_svg_path_command() -> None:
     `site/src/_data/motif.json` or `app/src/design/motif.ts`.
 
     A `d` attribute typed into markup is a drawing with an owner nothing
-    can read: `config/boundary.yml` decides ownership per file, the
+    can read: `declarations/boundary.yml` decides ownership per file, the
     identity sweeps compare declared values, and a shape is nobody's
     declared value. Four templates shipped one instance's mark that way,
     on every public page of every duplicate, for as long as they existed.

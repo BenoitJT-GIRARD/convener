@@ -252,7 +252,7 @@ describe('the grammar of decision commits', () => {
         //
         // `config:` joined `data:` when the settings
         // screen gained a domain of its own: those commits change a
-        // threshold in `config/`, name no record and no person, and are
+        // threshold in a declaration, name no record and no person, and are
         // deliberately not decisions -- but they are still permanent
         // subjects, so they are assembled in exactly one place too.
         .filter(l => /[`'"](?:data|config):/.test(l.text)),

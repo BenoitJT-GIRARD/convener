@@ -718,7 +718,7 @@ def resolve_channel(env: Mapping[str, str]) -> Channel | None:
 
     Deferred configuration (D-13): the system ships fully working with no
     account of any kind, and connecting one is adding a secret rather than
-    changing code. `config/integrations.yml` declares these two under
+    changing code. `declarations/integrations.yml` declares these two under
     `board_notifications`, so `convener-check-config` reports the channel's state
     alongside every other integration and an absent one reads as the normal
     state it is.

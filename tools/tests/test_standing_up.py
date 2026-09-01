@@ -27,7 +27,7 @@ module is what makes "only one" a fact rather than an intention.
    step comes up. A run sheet that grew a copy of a step would pass the byte
    comparison happily -- the generator would have written the copy -- and fail
    here.
-4. `config/integrations.yml` and the declaration cover each other. Every
+4. `declarations/integrations.yml` and the declaration cover each other. Every
    integration row is completed by exactly one step, and every secret those
    rows name is either set by a step or listed in `not_at_setup:` with a
    reason. An eleventh integration added upstream therefore has to be decided
@@ -360,7 +360,7 @@ def test_the_entry_point_names_every_rendering_and_restates_none() -> None:
 
 
 # --------------------------------------------------------------------------
-# The declaration against `config/integrations.yml`
+# The declaration against `declarations/integrations.yml`
 # --------------------------------------------------------------------------
 
 
@@ -382,7 +382,7 @@ def test_every_integration_row_is_completed_by_exactly_one_step() -> None:
 def test_every_integration_secret_is_set_by_a_step_or_deferred_with_a_reason() -> None:
     """The gap this closes is an integration nobody is told how to switch on.
 
-    A secret in `config/integrations.yml` that this sequence never sets, and
+    A secret in `declarations/integrations.yml` that this sequence never sets, and
     never explains away, is an integration whose row a reader will meet in the
     report with no step anywhere that turns it green.
     """
@@ -775,7 +775,7 @@ def test_a_degradation_reworded_upstream_makes_the_check_fail(
 ) -> None:
     """The other file this page derives from, held the same way.
 
-    What an absent integration costs is `config/integrations.yml`'s to say,
+    What an absent integration costs is `declarations/integrations.yml`'s to say,
     and this page quotes it. A row reworded there and a page not regenerated
     is the same drift as any other, and is caught by the same guard.
     """

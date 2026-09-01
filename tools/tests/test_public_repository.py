@@ -5,7 +5,7 @@ notice both interfaces print. This module pins the other four things a
 repository somebody else is expected to duplicate has to get right, and
 each is pinned against a declaration rather than against a transcription.
 
-1. **The edit list is derived from `config/boundary.yml`, not written
+1. **The edit list is derived from `declarations/boundary.yml`, not written
    beside it.** It lives on `docs/operating/what-a-duplicate-edits.md`,
    which is where the operator standing an instance up reads it. `README.md`
    carried it until the front page was cut back to what a first-time visitor
@@ -88,7 +88,7 @@ EDIT_LIST_HEADING: Final = "## The three the boundary declares"
 
 #: A path the declaration hands to the instance that a duplicate still does
 #: not have to edit before its first build, and why. Not an escape hatch:
-#: every key has to be a path `config/boundary.yml` actually declares --
+#: every key has to be a path `declarations/boundary.yml` actually declares --
 #: `test_no_exemption_survives_the_path_it_was_written_for` refuses a stale
 #: one -- and the reason sits beside the path rather than in a document
 #: nobody reads at the moment it matters. This is `test_second_instance.py`'s
@@ -275,7 +275,7 @@ def test_the_list_is_short_enough_to_be_read() -> None:
     assert len(listed) <= 3, (
         f"{EDIT_LIST.name} now asks a duplicate to edit {len(listed)} files "
         f"({listed}). Past three, the instance/product separation has "
-        "failed and the fix is in config/boundary.yml, not here."
+        "failed and the fix is in declarations/boundary.yml, not here."
     )
 
 

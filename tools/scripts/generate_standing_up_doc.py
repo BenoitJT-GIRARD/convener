@@ -17,7 +17,7 @@ whoever writes a new one writes it here, not in the generated page -- which
 says so at the top.
 
 One thing is derived from a *second* file, and deliberately. A step that
-completes an integration names the rows in `config/integrations.yml` rather
+completes an integration names the rows in `declarations/integrations.yml` rather
 than restating what an absent integration costs, and this script renders what
 `convener-check-config` already prints for those rows. That report is the
 authority on the question; a paragraph copied out of it into the declaration
@@ -39,7 +39,7 @@ else.
 
 Pure, so `--check` means something
 ----------------------------------
-The rendering reads the declaration and `config/integrations.yml` and nothing
+The rendering reads the declaration and `declarations/integrations.yml` and nothing
 else: no clock, no environment, no `instance/data/`. Two runs over the same two files
 produce byte-identical output, so a difference can only be an edit made
 outside them -- which is exactly what `--check` refuses, without repairing it.
@@ -72,14 +72,14 @@ from convener_ops.declaration.integrations import Integration, load_declaration
 from convener_ops.declaration.paths import repo_root
 
 #: The declaration this page is rendered from. At the repository root rather
-#: than in `config/`, and that file's own header argues why.
+#: than in `declarations/`, and that file's own header argues why.
 DECLARATION_PATH: Final = Path("STANDING-UP.yml")
 
 #: The page it renders.
 DOC_PATH: Final = Path("docs") / "operating" / "standing-up.md"
 
 #: The other file read, and the only one: what an absent integration costs.
-INTEGRATIONS_PATH: Final = Path("config") / "integrations.yml"
+INTEGRATIONS_PATH: Final = Path("declarations") / "integrations.yml"
 
 #: What to run, named in the page itself so nobody edits the page instead.
 COMMAND: Final = "uv run python scripts/generate_standing_up_doc.py"
@@ -141,7 +141,7 @@ class Step:
 
     `degraded` and `integrations` are alternatives, never both: a step that
     completes an integration says which rows, and what its absence costs is
-    read from `config/integrations.yml` at render time rather than written
+    read from `declarations/integrations.yml` at render time rather than written
     down twice.
     """
 
@@ -479,7 +479,7 @@ def load_sequence(root: Path) -> Sequence:
 
 
 def integration_rows(root: Path) -> dict[str, Integration]:
-    """`config/integrations.yml`, by row name."""
+    """`declarations/integrations.yml`, by row name."""
     return {row.name: row for row in load_declaration(root / INTEGRATIONS_PATH)}
 
 
@@ -491,7 +491,7 @@ def uncovered_integrations(
     The other direction of the binding: `sequence_from_data` refuses a step
     that sets an undeclared credential, and this refuses a credential the
     product's own integrations declaration knows about and this sequence has
-    never heard of. A row added to `config/integrations.yml` therefore has to
+    never heard of. A row added to `declarations/integrations.yml` therefore has to
     be decided about -- set at standing-up time, or named in `not_at_setup:`
     with a reason -- rather than quietly left out of the one page that says
     how to stand an instance up.
@@ -748,7 +748,7 @@ def main(argv: Seq[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Generate the standing-up guide from STANDING-UP.yml and "
-            "config/integrations.yml."
+            "declarations/integrations.yml."
         )
     )
     parser.add_argument(

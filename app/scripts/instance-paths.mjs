@@ -1,5 +1,5 @@
 /**
- * Where the instance's own paths sit, read from `config/boundary.yml` --
+ * Where the instance's own paths sit, read from `declarations/boundary.yml` --
  * this build's side of it.
  *
  * `tools/convener_ops/declaration/paths.py` is Python's reader of the same
@@ -25,12 +25,12 @@
 import { readFileSync } from 'node:fs';
 import yaml from 'js-yaml';
 
-/** `config/boundary.yml`, from this file's own location -- the app's
+/** `declarations/boundary.yml`, from this file's own location -- the app's
  *  build runs with `app/` as its working directory, so a path relative
  *  to the process is not the same thing. */
-const DECLARATION = new URL('../../config/boundary.yml', import.meta.url);
+const DECLARATION = new URL('../../declarations/boundary.yml', import.meta.url);
 
-const NAMED = 'config/boundary.yml';
+const NAMED = 'declarations/boundary.yml';
 
 /** Mirrors `boundary.DECLARATION_VERSION`. A file carrying a version this
  *  reader does not know is refused. */
@@ -41,7 +41,7 @@ const PRODUCT = 'product';
 /** The two directories whose configuration files state their own owner,
  *  and what such a file may be written in. Mirrors `boundary.CONFIG_DIRS`
  *  and `boundary.CONFIG_READERS`. */
-const CONFIG_DIRS = ['config', 'instance'];
+const CONFIG_DIRS = ['declarations', 'instance'];
 const CONFIG_SUFFIXES = ['.yml', '.json'];
 
 /** Whether `path` is a configuration file that answers for itself.

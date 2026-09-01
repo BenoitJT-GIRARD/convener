@@ -8,7 +8,7 @@
  * Text and not a parsed shape, for the reason `example-instance.d.mts`
  * gives: `src/settings/declaration.ts` parses them with the reader the
  * signed-in path uses, and a shape declared here would be a second
- * declaration of what `config/boundary.yml` already owns.
+ * declaration of what `declarations/boundary.yml` already owns.
  *
  * `drainTriggers` is `unknown` on purpose. What a schedule *means* is
  * `src/settings/bounds.ts::drainCadence`'s decision, pinned to

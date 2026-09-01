@@ -107,7 +107,7 @@ jobs:
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
           RESEND_ALL: ${{ inputs.resend_all }}
-          # email_transport's five secrets (config/integrations.yml) --
+          # email_transport's five secrets (declarations/integrations.yml) --
           # all five. A workflow here once forwarded three of them and
           # shipped with its whole suite green
           # (test_workflows.py's own derived-environment check catches

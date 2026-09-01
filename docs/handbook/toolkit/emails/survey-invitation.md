@@ -86,7 +86,7 @@ Best regards,
   this message carries no attachment and no signed document, unlike a
   certificate resend.
 - **Without `email_transport`'s five secrets configured**
-  (`config/integrations.yml`), nothing here is sent, and — unlike the
+  (`declarations/integrations.yml`), nothing here is sent, and — unlike the
   registration confirmation — nothing is written anywhere as a fallback
   either: every attempt is folded into a bare sent/not-sent count, the
   same choice `tools/convener_ops/journey/delivery.py` makes for a certificate, made

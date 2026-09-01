@@ -6,7 +6,7 @@ Do not edit it: run* `uv run python scripts/generate_standing_up_doc.py` *from* 
 and continuous integration refuses a page the declaration does not derive.
 Every step, actor, check, command and degradation below comes from that file;
 what an absent integration costs comes from*
-`config/integrations.yml`*, which* `convener-check-config` *already
+`declarations/integrations.yml`*, which* `convener-check-config` *already
 prints. The prose between the steps lives in*
 `tools/scripts/generate_standing_up_doc.py`*.*
 
@@ -613,8 +613,8 @@ cd tools && uv run convener-check-config
 ```
 
 **Without it.** *The* **Authentication relay** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > Sign-in falls back to a personal access token. The team app stays fully
 > usable; onboarding is simply slower.
@@ -646,8 +646,8 @@ cd tools && uv run convener-check-config
 ```
 
 **Without it.** *The* **Registration relay** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > One variable with two consumers in app/src, and one row rather than two
 > because -- unlike CONVENER_MATCHING_SALT below -- both consumers have the
@@ -839,8 +839,8 @@ cd tools && uv run convener-check-config
 ```
 
 **Without it.** *The* **Retention sweep credential** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > The third exception to D-13, and the strongest one in this project.
 > Destroying an event's key means deleting a repository secret, which the
@@ -898,8 +898,8 @@ cd tools && uv run convener-check-config
 ```
 
 **Without it.** *The* **Certificate signing key** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > No certificate is issued in this run. The job that would sign one
 > (tools/convener_ops/journey/certificate.py) cannot, and does not fall back
@@ -957,8 +957,8 @@ cd tools && uv run convener-check-config
 ```
 
 **Without it.** *The* **Registration matching salt** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > tools/convener_ops/journey/registration.py::matching_code returns nothing:
 > no matching code is derived, printed, or put in the confirmation email.
@@ -976,8 +976,8 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 > certificate_fingerprint row below, which declares that difference
 > structurally rather than in this row's own prose.
 **Without it.** *The* **Certificate register fingerprint** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > tools/convener_ops/journey/certificate.py::fingerprint reads the same
 > CONVENER_MATCHING_SALT as the matching_salt row above, for a second,
@@ -1035,8 +1035,8 @@ cd tools && uv run convener-notify-digest --dry-run
 ```
 
 **Without it.** *The* **Board notifications** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > Nothing is sent. The digest and the immediate events are still composed and
 > printed to the job log, where any volunteer can read them, but they are
@@ -1063,9 +1063,9 @@ from `absent` to `production`.
 cd tools && uv run convener-check-config
 ```
 
-**Without it.** *The* **Outbound email** *row of* `config/integrations.yml`*,
-which* `convener-check-config` *prints as this row's* `meanwhile:` *line. It
-is maintained there, and quoted here.*
+**Without it.** *The* **Outbound email** *row of*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > Three consumers, all reported rather than retained -- none ever prints a
 > composed message, sent or not, and none writes one to a file or a build
@@ -1126,9 +1126,9 @@ from `absent` to `production`.
 cd tools && uv run convener-check-config
 ```
 
-**Without it.** *The* **Video channel** *row of* `config/integrations.yml`*,
-which* `convener-check-config` *prints as this row's* `meanwhile:` *line. It
-is maintained there, and quoted here.*
+**Without it.** *The* **Video channel** *row of*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > Recording URLs are entered by hand after publishing. No upload is attempted.
 
@@ -1159,8 +1159,8 @@ cd tools && uv run convener-check-config
 ```
 
 **Without it.** *The* **Meeting platform** *row of*
-`config/integrations.yml`*, which* `convener-check-config` *prints as this
-row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+`declarations/integrations.yml`*, which* `convener-check-config` *prints as
+this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > The manual adapter (tools/convener_ops/journey/platform.py::ManualPlatform)
 > is used. The room and recording links are typed by hand into

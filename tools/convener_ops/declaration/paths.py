@@ -3,7 +3,7 @@
 `repo_root` walks upwards for a marker, so that no caller has to know how
 deep this file sits.
 
-The constants below are the paths `config/boundary.yml` hands to the
+The constants below are the paths `declarations/boundary.yml` hands to the
 instance, one name each. Their values are read from that declaration at
 import, and every other module in `convener_ops` builds the instance paths
 it touches out of them: `DATA_DIR / "config.yml"`, `KEYS_DIR / "events"`,
@@ -90,7 +90,7 @@ def by_last_component(entries: Iterable[Handed]) -> dict[str, Path]:
 
 @cache
 def _declaration() -> tuple[Path, dict[str, Path]]:
-    """`config/boundary.yml`'s own path, and what it hands to the
+    """`declarations/boundary.yml`'s own path, and what it hands to the
     instance."""
     # `boundary` reads `repo_root` from this file, so a module-level
     # import in both directions would be a cycle. This one happens on the

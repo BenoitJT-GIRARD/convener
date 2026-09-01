@@ -1,10 +1,10 @@
 """Where a file the instance owns has to sit.
 
-`config/boundary.yml` and each configuration file's own `owner:` header say
+`declarations/boundary.yml` and each configuration file's own `owner:` header say
 *which* paths belong to the instance. Between them they are complete, they
 are machine-read, and until the tree was sorted they were also invisible:
 `data/`, `keys/` and `public-data/` sat at the root between `app/` and
-`site/`, and four of the six files in `config/` were the instance's while
+`site/`, and four of the six files then in `config/` were the instance's while
 two were the product's. A duplicate opening the repository could not see
 the line it was about to merge across.
 
@@ -140,8 +140,8 @@ def test_every_file_the_instance_owns_sits_under_the_instance_directory() -> Non
     """The clause that bites, over the files this repository really holds.
 
     Both halves of the declaration are asked: a path handed over by
-    `config/boundary.yml`, and a configuration file whose own header says
-    `owner: instance`. A file of either kind at the root, or in `config/`,
+    `declarations/boundary.yml`, and a configuration file whose own header says
+    `owner: instance`. A file of either kind at the root, or in `declarations/`,
     or anywhere else, is a file a reader cannot see the boundary of.
     """
     offenders = misplaced(board(), _tracked())
@@ -208,7 +208,7 @@ def made_up() -> Boundary:
         ),
         config_owners={
             "instance/thresholds.yml": INSTANCE,
-            "config/integrations.yml": PRODUCT,
+            "declarations/integrations.yml": PRODUCT,
         },
     )
 
@@ -218,7 +218,7 @@ def made_up() -> Boundary:
     [
         "records/config.yml",
         "records/events/mrg-042/registrations.enc",
-        "config/thresholds.yml",
+        "declarations/thresholds.yml",
     ],
 )
 def test_a_path_put_back_outside_the_directory_is_refused(name: str) -> None:
@@ -231,7 +231,7 @@ def test_a_path_put_back_outside_the_directory_is_refused(name: str) -> None:
             Handed(path="records/", reason="the instance's own records"),
             Handed(path="elsewhere/ledger.md", reason="two pages link to it"),
         ),
-        config_owners={"config/thresholds.yml": INSTANCE},
+        config_owners={"declarations/thresholds.yml": INSTANCE},
     )
 
     assert misplaced(put_back, [name]) == (name,)
@@ -244,7 +244,7 @@ def test_a_path_put_back_outside_the_directory_is_refused(name: str) -> None:
         "instance/thresholds.yml",
         "elsewhere/ledger.md",
         "instance/records/schema.md",
-        "config/integrations.yml",
+        "declarations/integrations.yml",
         "app/src/main.tsx",
     ],
 )

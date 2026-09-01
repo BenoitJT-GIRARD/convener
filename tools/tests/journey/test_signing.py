@@ -728,5 +728,5 @@ def test_secret_name_is_a_single_fixed_name_not_a_pattern() -> None:
     """Unlike `eventkeys.secret_name(event_id)`, there is exactly one
     signing key in service at a time -- so this is a constant, not a
     function. Pinned so a reader does not have to infer it from
-    `config/integrations.yml` alone."""
+    `declarations/integrations.yml` alone."""
     assert SECRET_NAME == "CONVENER_SIGNING_KEY"

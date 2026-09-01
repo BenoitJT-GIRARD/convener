@@ -1010,7 +1010,7 @@ def test_get_recording_is_unavailable_when_no_recording_url_is_set(
 def test_get_recording_is_available_once_a_url_is_typed_in_by_hand(
     tmp_path: Path,
 ) -> None:
-    """`video_publishing`'s own row in `config/integrations.yml` already
+    """`video_publishing`'s own row in `declarations/integrations.yml` already
     says this: recording URLs are entered by hand after publishing, and no
     upload is attempted -- so `size` is not knowable here (the file is not
     hosted by us) and is always 0 for the manual implementation."""

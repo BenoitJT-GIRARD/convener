@@ -95,7 +95,7 @@ exists, but what it retains is ciphertext, decryptable only by whichever
 CI job later holds this event's own private key. Both are also restricted
 to collaborators with write access to this repository — the same boundary
 that already gates every other administrative action here — and both are
-named in `config/integrations.yml` and `docs/operating/operations.md`.
+named in `declarations/integrations.yml` and `docs/operating/operations.md`.
 
 ## Duration
 

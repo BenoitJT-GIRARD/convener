@@ -3,7 +3,7 @@
 
 **This is the product's identity.** It is what appears on Convener's README,
 its documentation and the demonstration built out of it.
-`config/boundary.yml` says why this directory sits outside the instance's
+`declarations/boundary.yml` says why this directory sits outside the instance's
 paths, and `instance/data/brand.json` is where an instance's own charter goes.
 
 ## The mark

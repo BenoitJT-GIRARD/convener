@@ -14,8 +14,8 @@ Before the first build:
 | `instance/data/speakers.yml` | Your own records. A duplicate starts it empty. |
 
 That is the whole list, and it is short because the separation is declared
-and checked rather than intended: [`config/boundary.yml`](../../config/boundary.yml)
-names every path an instance owns, each file under `config/` states its own
+and checked rather than intended: [`declarations/boundary.yml`](../../declarations/boundary.yml)
+names every path an instance owns, each configuration file states its own
 answer in its own header, and this repository builds itself as a second,
 invented instance on every test run — deleting everything the declaration
 hands to the instance, laying

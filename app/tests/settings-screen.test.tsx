@@ -9,7 +9,7 @@
  * leaving the file's own argument for itself intact.
  *
  * Everything below is served by a stand-in for the Contents API built from
- * **this repository's own `config/` files**, not from samples: the whole
+ * **this repository's own declarations**, not from samples: the whole
  * point of the coupling is that today's declarations leave exactly one
  * legal alarm, and a fixture invented to make the arithmetic pleasant would
  * be exercising a repository nobody has.
@@ -190,18 +190,18 @@ beforeEach(() => {
 describe('the settings screen', () => {
   it('lists what this instance owns, derived rather than typed', async () => {
     renderSettings(makeBackend());
-    // From `config/boundary.yml`'s own list...
+    // From `declarations/boundary.yml`'s own list...
     expect(await screen.findByText('docs/handbook/governance/register.md', undefined, FIRST_RENDER)).toBeInTheDocument();
     expect(screen.getByText('instance/keys/')).toBeInTheDocument();
     // ...and from each configuration file's own `owner:` header.
     expect(screen.getByText('instance/queue-drain.yml')).toBeInTheDocument();
     // Never the product's own files, which answer the same way and say the
-    // other thing. The prose above the list names `config/boundary.yml` as
+    // other thing. The prose above the list names `declarations/boundary.yml` as
     // the declaration it read, so the list itself is what is asked.
     const owned = screen.getByRole('heading', { name: 'What this instance owns' })
       .parentElement!;
-    expect(owned.textContent).not.toContain('config/integrations.yml');
-    expect(owned.textContent).not.toContain('config/boundary.yml');
+    expect(owned.textContent).not.toContain('declarations/integrations.yml');
+    expect(owned.textContent).not.toContain('declarations/boundary.yml');
   });
 
   it('says why a path it owns is nevertheless not a form', async () => {
@@ -404,7 +404,7 @@ describe('the same screen, demonstrated', () => {
       </MemoryRouter>,
     );
     // The example instance's own declarations, through the same reader the
-    // signed-in path uses -- the four `config/` files `instances/example/`
+    // signed-in path uses -- the four instance files `instances/example/`
     // holds, plus the product's two.
     const example = yaml.load(
       readFileSync(resolve(ROOT, 'instances/example/instance/queue-drain.yml'), 'utf-8'),

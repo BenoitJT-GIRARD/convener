@@ -89,7 +89,7 @@ elements: the showcase's colophon, and the cockpit's own footer.
 **Where its text lives.** `NOTICE.json`, at the repository root, beside
 `LICENSE` and `TRADEMARK.md`. Everything the boundary declaration does not
 hand to the instance belongs to the product by default
-(`config/boundary.yml`, `tools/convener_ops/declaration/boundary.py`), so a file there
+(`declarations/boundary.yml`, `tools/convener_ops/declaration/boundary.py`), so a file there
 needs nobody to declare its owner — and it is deliberately not in `config/`,
 which is the directory an operator opens in order to configure an instance. A
 notice filed among the settings is a notice somebody eventually edits. It

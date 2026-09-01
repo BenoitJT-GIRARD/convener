@@ -52,7 +52,7 @@ _WORKFLOWS = _ROOT / ".github" / "workflows"
 #: against these rather than against numbers invented here, so "it fires"
 #: means it fires on the file a maintainer would edit.
 #: Read on demand, never while this module loads.
-#: `instance/actions-budget.yml` is a path `config/boundary.yml` hands to the
+#: `instance/actions-budget.yml` is a path `declarations/boundary.yml` hands to the
 #: instance, and a derived repository is entitled not to have it until the
 #: derivation lays an example's own file there. At module scope the read
 #: took this whole module down at collection -- eighty tests, none of them

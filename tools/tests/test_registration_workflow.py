@@ -35,7 +35,7 @@ _RESEND = (_ROOT / ".github" / "workflows" / "resend-confirmation.yml").read_tex
 )
 
 #: The six secrets `email_transport` and `matching_salt` together declare
-#: (`config/integrations.yml`) -- whatever step actually sends or logs a
+#: (`declarations/integrations.yml`) -- whatever step actually sends or logs a
 #: confirmation must hold all six, or D-13 degrades permanently rather
 #: than only when genuinely unconfigured.
 _CONFIRMATION_SECRETS = (

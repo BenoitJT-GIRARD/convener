@@ -160,7 +160,7 @@ jobs:
           # field labels, never values, so this is not personal data
           # travelling through a build log's own output mechanism.
           CHANGED_FIELDS: ${{ steps.handle.outputs.changed }}
-          # `email_transport` (config/integrations.yml) and
+          # `email_transport` (declarations/integrations.yml) and
           # `matching_salt`: absent here is D-13's ordinary state, handled
           # by `convener-send-confirmation` itself -- see
           # `tools/convener_ops/journey/confirmation.py`'s module docstring.

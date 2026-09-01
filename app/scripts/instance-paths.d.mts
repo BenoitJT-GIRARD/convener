@@ -5,7 +5,7 @@
 /** The declared paths, keyed by their final component. */
 export declare function byLastComponent(paths: string[]): Record<string, string>;
 
-/** Every path an already-loaded `config/boundary.yml` hands to the instance. */
+/** Every path an already-loaded `declarations/boundary.yml` hands to the instance. */
 export declare function handedFrom(data: unknown): string[];
 
 /** The declared instance paths, keyed by their final component. */

@@ -1,8 +1,8 @@
 """This side of the boundary between the thresholds' arithmetic and the
 form that now offers those thresholds for editing.
 
-Three of the four files in `config/` that
-`config/boundary.yml` hands to the instance are numbers a maintainer
+Three of the four files in `instance/` that
+`declarations/boundary.yml` hands to the instance are numbers a maintainer
 edits, and until this check existed the only thing standing between a
 maintainer and an illegal one was a test -- run later, somewhere else, by
 somebody else. `instance/queue-drain.yml`'s `alarm_after_hours` is the sharp case:
@@ -261,8 +261,8 @@ def test_every_edited_key_is_one_a_parser_already_knows() -> None:
 def test_the_declared_instance_paths_are_what_the_boundary_derives() -> None:
     """The other half of the same pin. The settings screen has to say what
     this instance owns, and the honest answer is already computed --
-    `boundary.Boundary.instance_paths`, from `config/boundary.yml`'s own
-    list plus each `config/` file's own `owner:`. The browser derives it
+    `boundary.Boundary.instance_paths`, from `declarations/boundary.yml`'s own
+    list plus each configuration file's own `owner:`. The browser derives it
     too, from the same bytes; the fixture is what makes a disagreement
     between the two a failing test rather than a screen offering to edit a
     file upstream owns."""

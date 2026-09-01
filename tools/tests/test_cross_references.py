@@ -410,7 +410,7 @@ def edition_prefixes() -> frozenset[str]:
     """Every prefix an instance in this repository numbers its editions under.
 
     Read from each tracked copy of `published.INSTANCE_PATH` rather than
-    from one: the instance's own declaration is a path `config/boundary.yml`
+    from one: the instance's own declaration is a path `declarations/boundary.yml`
     hands to the instance, so a derived repository has only the example's.
     The whole path is matched rather than the file name, because
     `config.json` under `instance/` is a name a directory somewhere else

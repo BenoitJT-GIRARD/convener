@@ -2,7 +2,7 @@
  * Where the instance's own paths sit, on the application's side of the
  * language boundary.
  *
- * One declaration -- `config/boundary.yml` -- and one reader per
+ * One declaration -- `declarations/boundary.yml` -- and one reader per
  * language: `tools/convener_ops/declaration/paths.py` for Python,
  * `app/scripts/instance-paths.mjs` for this build. This module is how the
  * paths that build read reach the browser, where no file can be read at
@@ -41,7 +41,7 @@ export function instancePaths(): InstancePaths {
     throw new Error(
       'VITE_INSTANCE_PATHS is unset: this bundle was built without ' +
         "vite.config.ts's own define, so it cannot say where this instance's " +
-        'own files are (see config/boundary.yml)',
+        'own files are (see declarations/boundary.yml)',
     );
   }
   cached = JSON.parse(raw) as InstancePaths;
@@ -54,7 +54,7 @@ function handed(name: string): string {
   const path = Object.hasOwn(found, name) ? found[name] : undefined;
   if (path === undefined) {
     throw new Error(
-      `config/boundary.yml hands the instance no path ending in '${name}'. It ` +
+      `declarations/boundary.yml hands the instance no path ending in '${name}'. It ` +
         `hands over ${Object.keys(found).sort().join(', ')}.`,
     );
   }

@@ -9,7 +9,7 @@
 # file of this shape this repository ever commits.
 instance/public-data/agenda-internal.ics binary
 
-# `config/boundary.yml` declares this path `regenerated:` -- rewritten in
+# `declarations/boundary.yml` declares this path `regenerated:` -- rewritten in
 # full from the commit history by `.github/workflows/derive-decision-register.yml`, in
 # every instance including this one. Upstream's rows and a duplicate's rows
 # are both correct, entirely different, and rewritten on both sides between

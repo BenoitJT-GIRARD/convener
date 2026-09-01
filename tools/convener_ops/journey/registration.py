@@ -665,7 +665,7 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
     (`eventkeys.py`), an absent salt is an *ordinary* D-13 state here:
     nothing has to fail closed, because the matching cascade
     -- exact address, then normalised name -- still works with no code
-    at all. See the `matching_salt` row in `config/integrations.yml`. A
+    at all. See the `matching_salt` row in `declarations/integrations.yml`. A
     caller with no code to send falls back to describing that cascade
     instead, which is the confirmation's decision, not this function's.
 
@@ -685,7 +685,7 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
 
     Salted, not constant: a code anyone could derive from an address alone
     would prove nothing about who holds that address -- see `matching_salt`
-    in `config/integrations.yml` for why this secret exists at all.
+    in `declarations/integrations.yml` for why this secret exists at all.
     `normalize_email` keeps the same property `upsert` relies on: two
     submissions of the same address, differently capitalised, still derive
     one code, matching `upsert`'s own notion of "the same registration".

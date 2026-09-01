@@ -35,7 +35,7 @@ reimplemented a second time to drift from the original.
 `.github/workflows/secret-workflow-monitor.yml`'s own last step fails the
 job whenever `alert_message` returns non-`None`, whether or not a
 notification channel exists to also post to -- the same reasoning
-`config/integrations.yml`'s "read-only default" gives everywhere else in
+`declarations/integrations.yml`'s "read-only default" gives everywhere else in
 this repository: an unconfigured integration must never be able to turn a
 real finding into silence.
 """

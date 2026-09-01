@@ -112,8 +112,8 @@ def test_check_config_exits_zero_with_all_integrations_absent(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     fake_root = tmp_path
-    (fake_root / "config").mkdir()
-    (fake_root / "config" / "integrations.yml").write_text(
+    (fake_root / "declarations").mkdir()
+    (fake_root / "declarations" / "integrations.yml").write_text(
         """
 integrations:
   - name: auth_proxy

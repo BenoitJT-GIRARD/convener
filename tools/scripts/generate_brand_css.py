@@ -23,7 +23,7 @@ resurrected as an unread copy.
 What the charter is
 --------------------
 `instance/data/brand.json` is no longer *the* source of fact; it is *this
-instance's*. `config/boundary.yml` hands `instance/data/` to the instance, so a
+instance's*. `declarations/boundary.yml` hands `instance/data/` to the instance, so a
 duplicate writes its own values there and never merges a conflict with
 upstream over them. A duplicate that has not chosen colours yet has no such
 file at all, and `convener_ops.publication.brand.load` reads the product's own charter,

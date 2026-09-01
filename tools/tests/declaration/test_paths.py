@@ -1,6 +1,6 @@
 """`repo_root`, and the one place an instance path is written down.
 
-`config/boundary.yml` declares which paths belong to the instance;
+`declarations/boundary.yml` declares which paths belong to the instance;
 `convener_ops/declaration/paths.py` turns each of them into a named constant, read from
 that declaration; every other module in the package builds the paths it
 touches out of those constants. This module holds the third of those three
@@ -76,7 +76,7 @@ HOME = "tools/convener_ops/declaration/paths.py"
 
 
 def declared_instance_paths() -> tuple[str, ...]:
-    """The paths `config/boundary.yml` hands to the instance, read now.
+    """The paths `declarations/boundary.yml` hands to the instance, read now.
 
     The declaration's own list, parsed by the module that owns its format.
     Adding an entry there adds a refusal here on the same commit.
@@ -380,7 +380,7 @@ def test_no_module_writes_an_instance_path_out() -> None:
     ]
 
     assert not written, (
-        "these write out a path config/boundary.yml hands to the instance, "
+        "these write out a path declarations/boundary.yml hands to the instance, "
         "which paths.py already names from that declaration:\n" + "\n".join(written)
     )
 

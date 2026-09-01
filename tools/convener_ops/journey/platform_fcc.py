@@ -352,7 +352,7 @@ from .platform import (
     find_speaker,
 )
 
-#: The secret `config/integrations.yml` declares for `meeting_provider`.
+#: The secret `declarations/integrations.yml` declares for `meeting_provider`.
 #: `test_platform_fcc.py::test_token_env_matches_the_declared_integration_secret`
 #: pins the two together, so a rename on one side without the other fails a
 #: test instead of silently drifting.
