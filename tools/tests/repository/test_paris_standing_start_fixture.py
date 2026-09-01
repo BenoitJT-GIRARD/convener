@@ -7,7 +7,7 @@ but nothing before this file bound them together: each side's own test
 suite pinned its own hand-typed list of dates, and two of those lists had
 already drifted apart -- `tools/tests/publication/test_visual.py`'s own fixture-edition
 list pinned `2025-06-12` as its one committed summer case, while
-`app/tests/announce-drafts.test.ts`'s own list pinned `2026-06-11`, a
+`app/tests/content/announce-drafts.test.ts`'s own list pinned `2026-06-11`, a
 different date asserted for the identical "this is the CEST case" claim.
 
 `tools/tests/fixtures/paris-standing-start.json` is the one list every side

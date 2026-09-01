@@ -81,7 +81,7 @@ const MAX_TOKEN_BYTES = 8192;
  *  not be read as JSON (this system's own bug, never a forger's -- see
  *  `signing.py`'s docstring). Pinned against
  *  `certificate-verification.json`'s `reasons.malformed` in
- *  `app/tests/verify-crypto.test.ts`. */
+ *  `app/tests/verify/verify-crypto.test.ts`. */
 export const MALFORMED = 'malformed';
 
 /** `VerifyResult.reason` for a well-formed token that no offered key

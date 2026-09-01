@@ -64,7 +64,7 @@ def test_active_board_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     `decision_cases` start from flat lists of logins, so they pin `decide` but
     say nothing about how a board record becomes one of those lists -- which is
     exactly where the two Python copies of this mapping once drifted apart
-    without either suite noticing. `app/tests/board.test.ts` runs these same
+    without either suite noticing. `app/tests/state/board.test.ts` runs these same
     cases through `activeBoard`.
     """
     logins, unavailable = active_board({"board": case["board"]}, case["on"])
@@ -112,7 +112,7 @@ def test_overdue_wording_matches_the_shared_fixture(case: dict[str, Any]) -> Non
     The overdue list belongs in the digest, and that wording already
     existed in `app/src/state/sla.ts`. A digest that reworded it
     would be the fifth cross-language divergence in this repository, so both
-    halves read these cases: `app/tests/governance-fixture.test.ts` runs them
+    halves read these cases: `app/tests/state/governance-fixture.test.ts` runs them
     through `lateness`, `overdueText` and `waitingSince`.
 
     `days`, `overdue_text` and `waiting_since` are asserted only on the
@@ -153,7 +153,7 @@ def test_unsettled_nominations_match_the_shared_fixture(case: dict[str, Any]) ->
     `board.ts::isUnsettled` refuses a second nomination while this is true;
     `sweep.py::_unsettled_candidates` keeps the same candidate off the
     inactivity proposal. This module reads the cases through the Python one,
-    `app/tests/nominations.test.ts` through the browser's. The Python copy
+    `app/tests/state/nominations.test.ts` through the browser's. The Python copy
     mirrored the narrower `isPending` before these cases existed -- it read
     only the outcome -- so a member with a deferred nomination standing
     against them could be proposed inactive by the nightly sweep.
@@ -196,7 +196,7 @@ def _is_read(key: str, corpus: str) -> bool:
 def test_every_top_level_fixture_key_is_read_by_somebody() -> None:
     """A block of the shared fixture that nobody reads proves nothing.
 
-    Neither this module nor `app/tests/governance-fixture.test.ts` used to
+    Neither this module nor `app/tests/state/governance-fixture.test.ts` used to
     assert that every top-level block of `governance-cases.json` is read by
     *somebody* -- either language's suite, anywhere, not only by the two
     files most obviously named after the fixture. A block can otherwise sit

@@ -410,7 +410,7 @@ def _person(
 
 def test_the_classification_matches_the_shared_fixture() -> None:
     # The same three sets are written in `app/src/state/consent.ts`, and
-    # `app/tests/consent-fields.test.ts` asserts them against this same file.
+    # `app/tests/state/consent-fields.test.ts` asserts them against this same file.
     # A field moved on one side only fails in the language left behind.
     assert frozenset(CLASSIFICATION["publishable_always"]) == PUBLISHABLE_ALWAYS
     assert frozenset(CLASSIFICATION["publishable_on_consent"]) == PUBLISHABLE_ON_CONSENT

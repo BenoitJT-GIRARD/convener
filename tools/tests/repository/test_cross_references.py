@@ -1,6 +1,6 @@
 """A cross-reference must name something a reader of this repository can open.
 
-`app/tests/registered-links.test.ts` already refuses a registered page that
+`app/tests/content/registered-links.test.ts` already refuses a registered page that
 links to a page this repository does not publish. This module applies the
 identical test to the *other* way a comment points somewhere: not a link, an
 identifier or a coordinate. `D-19`, `phase 8, task 3, change E`, `R-27`,
@@ -928,20 +928,33 @@ def test_a_fixture_host_placeholder_is_not_read_as_prose() -> None:
 # The third kind of cross-reference: a path
 # ------------------------------------------------------------------ #
 
-#: A reference to a test module of this repository, wherever it is
-#: written: a docstring, a workflow comment, `CODEOWNERS`, a Markdown page.
-#: Read out of the raw file rather than out of `prose_of`, because two of
-#: the files that carry one -- `.github/CODEOWNERS` and `.gitignore` -- are
-#: in no language that extractor knows, and a path written in code
-#: resolves for the same reason a path written in a comment does.
+#: A reference to a test module of this repository, in either suite and
+#: wherever it is written: a docstring, a workflow comment, `CODEOWNERS`,
+#: a Markdown page. Read out of the raw file rather than out of
+#: `prose_of`, because two of the files that carry one --
+#: `.github/CODEOWNERS` and `.gitignore` -- are in no language that
+#: extractor knows, and a path written in code resolves for the same
+#: reason a path written in a comment does.
+#:
+#: `app/tests/` is here for the same reason `tools/tests/` is, and joined
+#: it when it stopped being flat: the cockpit's suite is one directory per
+#: domain of `app/src/`, so every one of the eighty-odd citations of a
+#: module in it became a path with a directory in the middle, and a
+#: citation is exactly the kind of thing that moves with nothing red. Both
+#: suites qualify for the same measured reason -- every module in either is
+#: a tracked file, so the rule needs no exemption -- and no third tree
+#: does.
 TEST_MODULE_PATH = re.compile(
-    r"(?<![\w./-])(tools/tests/[A-Za-z0-9_./-]*?\.(?:py|json|yml|md))(?![\w.-])"
+    r"(?<![\w./-])("
+    r"tools/tests/[A-Za-z0-9_./-]*?\.(?:py|json|yml|md)"
+    r"|app/tests/[A-Za-z0-9_./-]*?\.tsx?"
+    r")(?![\w.-])"
 )
 
 
 def unresolvable_test_paths(text: str) -> list[str]:
-    """Every `tools/tests/...` path in `text` that this repository does not
-    track."""
+    """Every `tools/tests/...` or `app/tests/...` path in `text` that this
+    repository does not track."""
     tracked = set(_tracked())
     return sorted({m for m in TEST_MODULE_PATH.findall(text) if m not in tracked})
 
@@ -956,8 +969,8 @@ def test_every_test_module_a_file_names_is_a_file_this_repository_tracks() -> No
     green throughout: a path inside a comment is a string to ruff, to mypy
     and to actionlint alike.
 
-    **Bounded to `tools/tests/`, and that bound is measured rather than
-    cautious.** The same sweep widened to every tracked top-level
+    **Bounded to the two test suites, and that bound is measured rather
+    than cautious.** The same sweep widened to every tracked top-level
     directory finds fifty-two paths that resolve to nothing, and almost
     all of them are correct: files continuous integration writes and git
     ignores (`instance/public-data/survey-status.json`), paths invented
@@ -966,8 +979,14 @@ def test_every_test_module_a_file_names_is_a_file_this_repository_tracks() -> No
     (`app/src/signup/SignupForm.tsx`). Refusing those would need an
     exemption list longer than the rule, which is the shape this
     repository treats as a failed control. Test modules have no such
-    members: every one of them is a tracked file, so the rule needs no
-    exemption at all.
+    members: every one of them, in `tools/tests/` and in `app/tests/`
+    alike, is a tracked file, so the rule needs no exemption at all.
+
+    `app/tests/` was flat when this was written, so a citation of a module
+    in it could not go stale by a directory appearing in the middle of it.
+    It is not flat any more, and the first sweep over it found
+    `app/scripts/handbook-files.mjs` naming `visual-kit.test.ts` for a
+    module that has been `.tsx` since the day it was written.
     """
     offending = {
         name: unresolvable
@@ -994,13 +1013,21 @@ def _text_of(name: str) -> str:
 def test_a_moved_test_module_is_caught() -> None:
     """The positive control, on a string rather than on the repository:
     "nothing is stale today" is also what a sweep that reads nothing
-    reports."""
+    reports. Once per suite, because the two are separate branches of one
+    pattern and a branch that matched nothing would be invisible here."""
     assert unresolvable_test_paths(
         "see `tools/tests/test_published.py` for the rule"
     ) == ["tools/tests/test_published.py"]
+    assert unresolvable_test_paths("see `app/tests/agenda.test.ts` for the rule") == [
+        "app/tests/agenda.test.ts"
+    ]
 
 
 def test_a_test_module_that_is_there_is_not_refused() -> None:
     """The other direction, so the check above cannot pass by refusing
     everything."""
     assert unresolvable_test_paths("see tools/tests/conftest.py for the fixtures") == []
+    assert (
+        unresolvable_test_paths("see app/tests/state/agenda.test.ts for the cases")
+        == []
+    )

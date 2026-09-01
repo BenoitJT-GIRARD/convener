@@ -171,7 +171,7 @@ export function cspMetaContent(env) {
  * document does not, directive by directive, with the thing that needs it
  * named beside each. Nothing here reaches a built artefact: `vite.config.
  * ts`'s own `cspHtmlPlugin` reads it only when `transformIndexHtml` is
- * called with a `server` in its context, and `app/tests/csp.test.ts`
+ * called with a `server` in its context, and `app/tests/scripts/csp.test.ts`
  * asserts on the real built HTML that it did not.
  *
  * - `script-src 'unsafe-inline'`: `@vitejs/plugin-react`'s React Refresh

@@ -64,7 +64,7 @@ export default defineConfig([
           // of its own -- and a cast is the one way past a brand, so the cast
           // is refused here. `decisions.ts`, where the brand is applied, is
           // the exception below. The source walk in
-          // `app/tests/decisions.test.ts` is the third net, over the text
+          // `app/tests/state/decisions.test.ts` is the third net, over the text
           // rather than the types.
           selector:
             "TSAsExpression > TSTypeReference > Identifier[name=/^(Subject|Identifier|ItemKey|FieldKey)$/]",
@@ -111,7 +111,7 @@ export default defineConfig([
           // of its own -- and a cast is the one way past a brand, so the cast
           // is refused here. `decisions.ts`, where the brand is applied, is
           // the exception below. The source walk in
-          // `app/tests/decisions.test.ts` is the third net, over the text
+          // `app/tests/state/decisions.test.ts` is the third net, over the text
           // rather than the types.
           selector: "TSAsExpression > TSTypeReference > Identifier[name='Subject']",
           message:

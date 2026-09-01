@@ -1,6 +1,6 @@
 """Schema v4: the fields the checklists ask for, on the write side.
 
-`app/tests/types-shape.test.ts` is the other half of this module. The two
+`app/tests/data/types-shape.test.ts` is the other half of this module. The two
 languages read and write the same file, so a field required by the browser
 and merely tolerated here would be a divergence of exactly the class this
 project has hit four times -- the app writing what the validator refuses, or
@@ -204,7 +204,7 @@ class TestCandidateDates:
     ) -> None:
         """The identity of a slot, as both languages must read it.
 
-        `app/tests/dates.test.ts` runs these same cases through
+        `app/tests/state/dates.test.ts` runs these same cases through
         `data/validate.ts` and `state/dates.ts`, so a reader that started
         keying on the hour again would fail on one side or the other.
         """
@@ -318,7 +318,7 @@ def test_the_shared_assignee_cases_read_the_same_way_here(
 
     This rule lived here alone: `app/src/data/validate.ts` accepted any
     string and `assignItem` any non-empty one, so the browser could write a
-    record this validator refuses. `app/tests/assignment.test.ts` runs these
+    record this validator refuses. `app/tests/state/assignment.test.ts` runs these
     same cases through both of those.
     """
     entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": case["login"]}})

@@ -7,7 +7,7 @@ not a hypothetical -- keeping the data in YAML is what makes the repository
 editable without this app at all, so the two readers have to agree about
 what a hand edit means.
 
-`app/tests/data-validate.test.ts` reads these same two files and asserts
+`app/tests/data/data-validate.test.ts` reads these same two files and asserts
 what the browser tells whoever opened it. Here: what `convener-validate` tells
 whoever runs it.
 """

@@ -34,7 +34,7 @@ repository does not carry is anybody's to place.
 
 **What this does not cover.** Whether a page is published at all is
 `app/src/content/registry.ts`'s answer and
-`app/tests/registered-links.test.ts`'s to hold, and whether a link
+`app/tests/content/registered-links.test.ts`'s to hold, and whether a link
 resolves is that suite's too. This module asks one question, about where
 a file sits.
 """

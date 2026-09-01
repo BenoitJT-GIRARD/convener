@@ -1,5 +1,5 @@
 # A speakers.yml typed by hand, not written by the app -- keys are missing
-# and the time is unquoted. Read from both languages: app/tests/data-validate.test.ts
+# and the time is unquoted. Read from both languages: app/tests/data/data-validate.test.ts
 # for what the browser tells the reader, tools/tests/governance/test_hand_edited.py for
 # what `convener-validate` tells the operator. Empty and absent are different
 # facts, and this file is the absent half (speakers-from-app.yml is the

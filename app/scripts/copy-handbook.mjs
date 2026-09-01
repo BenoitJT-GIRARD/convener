@@ -20,7 +20,7 @@
  * already existed -- `CONTENT_REGISTRY` -- it just was not the thing
  * deciding what this script *copied*. It is now: see
  * `handbook-registry.mjs::publishedPaths`, and the sweep in
- * `app/tests/copy-handbook.test.ts` that fails if a file absent from that
+ * `app/tests/scripts/copy-handbook.test.ts` that fails if a file absent from that
  * allowlist ever reaches `public/docs/` again.
  */
 import { existsSync } from 'node:fs';

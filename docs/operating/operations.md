@@ -447,7 +447,7 @@ version of the real control — it would read as protection while doing
 nothing, which is worse than the honest gap this section states instead.
 `tools/tests/repository/test_site.py::
 test_content_security_policy_never_carries_a_directive_meta_delivery_ignores`
-and `app/tests/csp.test.ts`'s own `'never carries a directive a <meta>
+and `app/tests/scripts/csp.test.ts`'s own `'never carries a directive a <meta>
 delivery ignores'` both fail the build the moment one of those four tokens
 reaches either policy, so this stays true by construction, not only by
 this paragraph.
@@ -518,7 +518,7 @@ derives a development-only policy from the shipped one instead, adding
 `'unsafe-inline'` to `script-src` and `style-src` and nothing else — an
 external script, a third-party image, a third-party font and a
 connection to an origin the policy does not name are all still refused,
-in front of the person who introduced them. `app/tests/csp.test.ts` holds both halves against the
+in front of the person who introduced them. `app/tests/scripts/csp.test.ts` holds both halves against the
 real, committed configuration: the development document's own policy
 admits the scripts that document actually contains, and the built
 document carries neither an inline script nor an `'unsafe-inline'`.

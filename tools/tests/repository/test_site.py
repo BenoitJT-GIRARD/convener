@@ -1505,7 +1505,7 @@ def published_handbook(tmp_path_factory: pytest.TempPathFactory) -> Path:
     `app/scripts/handbook-registry.mjs`) against the real `docs/` tree,
     into a scratch destination -- proof that the file `donnees.njk` links
     to is actually among what the app publishes, not merely named
-    correctly by the regex check above. `app/tests/copy-handbook.test.ts`
+    correctly by the regex check above. `app/tests/scripts/copy-handbook.test.ts`
     already proves this exhaustively from the TypeScript side; this is
     the one file the data page depends on, checked once more from
     the Python side that owns `donnees.njk`, by a real copy rather than a
@@ -2887,7 +2887,7 @@ def test_every_published_page_carries_the_whole_licence_notice(
     separately.
 
     `tools/tests/repository/test_notice.py` holds the declaration itself and the
-    cockpit's own footer is held by `app/tests/notice.test.tsx` -- two
+    cockpit's own footer is held by `app/tests/components/notice.test.tsx` -- two
     interfaces, two obligations, and neither test says anything about the
     other's.
     """

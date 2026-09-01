@@ -1341,7 +1341,7 @@ def test_every_bundle_the_application_builds_carries_the_declared_prefix() -> No
 def test_this_side_of_the_prefix_boundary_reads_the_shared_cases() -> None:
     """D-14's own discipline: one declaration, one reader per language,
     and a worked example binding them rather than a comment claiming they
-    agree. `app/tests/edition-prefix.test.ts` reads this same fixture
+    agree. `app/tests/scripts/edition-prefix.test.ts` reads this same fixture
     against `app/scripts/published.mjs::isEditionPrefix`.
 
     The showcase has no reader of this and needs none -- it prints the

@@ -1,7 +1,7 @@
 /* Reading and writing `instance/public-data/certificates-public.json`, the way
  * `copy-certificates.mjs` needs to. Kept apart from that script, the same
  * reason `handbook-files.mjs` is kept apart from `copy-handbook.mjs`: a
- * rule `app/tests/copy-certificates.test.ts` can call directly, including
+ * rule `app/tests/scripts/copy-certificates.test.ts` can call directly, including
  * the write itself (see `writeProjection`'s
  * own comment).
  */
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 /** The filename `copy-certificates.mjs` writes under `public/`, and
  *  `src/verify/register.ts::REGISTER_FILENAME` fetches. These are
  *  two literals in two files, not one constant
- *  imported by both -- `app/tests/copy-certificates.test.ts` pins them
+ *  imported by both -- `app/tests/scripts/copy-certificates.test.ts` pins them
  *  equal directly, which is a weaker, but honestly-described, guarantee
  *  than "defined once, imported by both" would be. */
 export const DEST_FILENAME = 'certificates.json';
@@ -64,7 +64,7 @@ export async function readProjection(srcPath) {
  * written and the resolved destination path.
  *
  * This is the whole write, not only the read
- * -- exported so `app/tests/copy-certificates.test.ts` can run it for
+ * -- exported so `app/tests/scripts/copy-certificates.test.ts` can run it for
  * real, against a temporary directory, and assert the path it actually
  * produces. Before this, no test ever exercised the destination path at
  * all: `copy-certificates.mjs` itself is never imported by a test (it has

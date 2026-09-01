@@ -32,7 +32,7 @@ const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
 /** `scripts/copy-signing-keys.mjs`'s own manifest filename -- pinned
  *  together with this constant in
- *  `app/tests/copy-signing-keys.test.ts`. */
+ *  `app/tests/scripts/copy-signing-keys.test.ts`. */
 export const KEYS_INDEX_FILENAME = 'index.json';
 
 function keysUrl(): string {

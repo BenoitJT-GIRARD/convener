@@ -16,7 +16,7 @@ Two copies is one more than this project usually allows, and the reason it
 is allowed here is the one D-14 gives: the decision does not move, the
 *answer* is pinned. `tools/tests/fixtures/instance-settings.json` holds the
 cases; this module answers them from `registration_routing` and
-`queue_watch`, and `app/tests/settings-bounds.test.ts` answers them from
+`queue_watch`, and `app/tests/settings/settings-bounds.test.ts` answers them from
 the browser's copy. A bound the cockpit computed differently from the one
 the scheduled job enforces would be worse than no form at all -- a
 volunteer told a value is fine, and a daily job that goes red on it -- so

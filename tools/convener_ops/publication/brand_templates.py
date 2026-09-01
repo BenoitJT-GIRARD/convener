@@ -255,7 +255,7 @@ BLOCK: Final = "block"
 #: The placeholders both files carry into the volunteer's editor, spelled
 #: exactly as `app/src/content/render.ts::substitute` resolves them -- an
 #: invented one would send somebody looking for a field that does not
-#: exist (`app/tests/visual-kit.test.tsx` holds this).
+#: exist (`app/tests/content/visual-kit.test.tsx` holds this).
 _SPEAKER: Final = {
     f"speaker_{field}": f"{{{{speaker.{field}}}}}"
     for field in ("title", "date", "time", "name", "affiliation", "edition_code")

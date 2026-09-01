@@ -160,7 +160,7 @@ def test_the_python_double_is_the_model_key_for_key() -> None:
     `test_every_stored_key_of_a_record_has_a_row` walks
     `tools/tests/conftest.py::speaker()`, and is worth exactly as much as the
     claim that that double is the record the model declares. Nothing held it
-    to the model: the app suite pins `app/tests/data-doubles.ts`, a different
+    to the model: the app suite pins `app/tests/helpers/data-doubles.ts`, a different
     double, so a field could be added to `Speaker` and left out of the Python
     double, and the row test would pass without ever asking for its row.
 

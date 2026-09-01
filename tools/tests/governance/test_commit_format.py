@@ -42,7 +42,7 @@ CASES = json.loads(
 
 @pytest.mark.parametrize("case", CASES["commit_message_cases"], ids=lambda c: c["name"])
 def test_the_message_matches_the_shared_fixture(case: dict[str, Any]) -> None:
-    """`app/tests/decisions.test.ts` writes these same lines from the browser."""
+    """`app/tests/state/decisions.test.ts` writes these same lines from the browser."""
     assert (
         format_decision(case["kind"], case["entity"], case["actor"], case["detail"])
         == case["message"]
@@ -230,7 +230,7 @@ def test_the_cli_fails_the_build_on_a_malformed_decision(
 def test_what_a_decision_may_point_at_is_the_same_rule_on_both_sides(
     case: dict[str, Any],
 ) -> None:
-    """`app/tests/decisions.test.ts` reads this same table.
+    """`app/tests/state/decisions.test.ts` reads this same table.
 
     The browser's copy is a branded type, so free text cannot reach
     `formatDecision` at all; this asserts the two agree on which strings are

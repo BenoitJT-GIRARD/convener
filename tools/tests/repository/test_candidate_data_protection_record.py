@@ -15,7 +15,7 @@ only prove they agree *today* -- exactly the gap that let the drift happen
 the first time -- so this module binds the page's own field list to
 `app/src/state/candidate-data.ts::PERSONAL_DATA_FIELDS` through
 `tools/tests/fixtures/governance-cases.json`, the same fixture
-`app/tests/personal-data-fields.test.ts` reads on the TypeScript side. A
+`app/tests/state/personal-data-fields.test.ts` reads on the TypeScript side. A
 field the model gains later and nobody classifies fails there, in the
 language the model lives in, before this page can go on describing a file
 that has moved on without it.

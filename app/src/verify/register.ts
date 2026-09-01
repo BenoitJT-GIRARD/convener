@@ -53,7 +53,7 @@
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
 /** `scripts/copy-certificates.mjs`'s own destination filename -- pinned
- *  together with this constant in `app/tests/copy-certificates.test.ts`,
+ *  together with this constant in `app/tests/scripts/copy-certificates.test.ts`,
  *  so the file that script writes and the URL this module fetches can
  *  never silently drift apart from each other. */
 export const REGISTER_FILENAME = 'certificates.json';
@@ -79,7 +79,7 @@ export const STATE_REVOKED = 'revoked';
  * characters, nothing more, nothing embedded, the exact shape
  * `certificate._new_identifier` always produces. Pinned against the
  * shared fixture's own `identifier_pattern` in
- * `app/tests/verify-register.test.ts` (D-14: a rule written on both
+ * `app/tests/verify/verify-register.test.ts` (D-14: a rule written on both
  * sides of the language boundary, bound by one fixture read from both,
  * never hand-retyped and left to drift).
  *

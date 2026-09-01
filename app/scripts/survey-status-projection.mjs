@@ -2,7 +2,7 @@
  * `copy-survey-status.mjs` needs to -- the identical split
  * `certificates-projection.mjs` uses for `copy-certificates.mjs`, kept as
  * its own module for the same reason: a rule
- * `app/tests/copy-survey-status.test.ts` can call directly, including the
+ * `app/tests/scripts/copy-survey-status.test.ts` can call directly, including the
  * write itself, without importing a script that has a side effect the
  * moment it loads.
  */

@@ -216,7 +216,7 @@ declare const subjectBrand: unique symbol;
  * 'data:'` in a helper module of its own. A source walk recognises the
  * spellings somebody thought to write down; a brand recognises the position,
  * and the position is what the rule is about. The walk in
- * `app/tests/decisions.test.ts` stays as the second net, for the one route
+ * `app/tests/state/decisions.test.ts` stays as the second net, for the one route
  * around the brand a compiler cannot close -- a cast.
  */
 export type Subject = string & { readonly [subjectBrand]: true };
@@ -309,7 +309,7 @@ function editPart(edit: Edit): string {
  * commit subject is permanent and unrewritable whether or not a grammar reads
  * it back.
  *
- * `app/tests/decisions.test.ts` checks that no other `data:` subject is
+ * `app/tests/state/decisions.test.ts` checks that no other `data:` subject is
  * assembled anywhere in `src/`, and `Subject` above is what makes that check
  * a backstop rather than the only net.
  */
@@ -407,7 +407,7 @@ const KEY_SRC = `${TOKEN_SRC}(?:/${TOKEN_SRC})*`;
  * The last net, and the only one that does not depend on how a defeat is
  * written. The brand is a compile-time fact, so a cast gets past it, and an
  * `any` from `JSON.parse` gets past it without even a cast; the source walk
- * in `app/tests/decisions.test.ts` reads text, so a prefix built out of
+ * in `app/tests/state/decisions.test.ts` reads text, so a prefix built out of
  * pieces gets past that. `mutate` asks this of every subject before the
  * write, at the one point every write goes through, so a subject built any
  * other way fails there instead of landing in a history nothing rewrites.

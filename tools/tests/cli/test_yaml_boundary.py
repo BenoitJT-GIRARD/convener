@@ -1,6 +1,6 @@
 """The JS/Python file-format boundary (decision D-14).
 
-`app/tests/yaml.test.ts` writes `fixtures/speakers-from-app.yml` and
+`app/tests/data/yaml.test.ts` writes `fixtures/speakers-from-app.yml` and
 `fixtures/config-from-app.yml` from `serializeSpeakers` / `serializeConfig`
 and asserts they are byte-for-byte the files checked in here. This module is
 the other half: it loads those same bytes with this package's loader, writes

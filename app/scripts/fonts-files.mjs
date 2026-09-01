@@ -1,6 +1,6 @@
 /* Which font files `copy-fonts.mjs` publishes, and where -- kept apart from
  * the copy script itself, the same reason `signing-keys-files.mjs` is kept
- * apart from `copy-signing-keys.mjs`: a rule `app/tests/copy-fonts.test.ts`
+ * apart from `copy-signing-keys.mjs`: a rule `app/tests/scripts/copy-fonts.test.ts`
  * can call directly, rather than one only ever exercised by running the
  * whole script against the real `assets/fonts/` tree.
  *

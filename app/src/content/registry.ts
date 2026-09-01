@@ -244,14 +244,14 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
  *  `docs/assets/flyer-example.png` shows this: a pure rename, no content
  *  change, from a filename that named the speaker directly). It is gone
  *  from here and from the page; see `handbook/toolkit/visual-kit.md`'s own note on
- *  that slot, and `app/tests/copy-handbook.test.ts`'s regression test
+ *  that slot, and `app/tests/scripts/copy-handbook.test.ts`'s regression test
  *  pinning this list to exactly the three that were actually checked.
  *
  *  This list, together with `CONTENT_REGISTRY`'s own file paths, is the
  *  *entire* allowlist `scripts/copy-handbook.mjs` publishes into the app's
  *  built bundle: nothing under `docs/` reaches a reader who is not this
  *  application unless its path is named on one of these two lists. See that
- *  script's own comment, and `app/tests/copy-handbook.test.ts`. */
+ *  script's own comment, and `app/tests/scripts/copy-handbook.test.ts`. */
 export const PUBLIC_ASSETS: readonly string[] = [
   'handbook/assets/announcement-template.svg',
   'handbook/assets/flyer-template.svg',

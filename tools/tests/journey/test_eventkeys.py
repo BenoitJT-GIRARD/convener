@@ -534,7 +534,7 @@ def test_destroy_is_idempotent_on_an_already_destroyed_event() -> None:
 # D-14: what the browser encrypts, this module must be able to decrypt.
 # `tools/tests/fixtures/governance-cases.json::event_registration_encryption`
 # is the shared contract -- see its own `_event_registration_encryption_comment`
-# for how the fixture was built. `app/tests/signup-encrypt.test.ts` reads the
+# for how the fixture was built. `app/tests/signup/signup-encrypt.test.ts` reads the
 # same cases on the other side.
 # ------------------------------------------------------------------ #
 

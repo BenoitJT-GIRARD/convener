@@ -1437,7 +1437,7 @@ def test_a_template_says_it_is_generated(rel: Path) -> None:
 
 @pytest.mark.parametrize("rel", _DOWNLOADS, ids=lambda p: p.name)
 def test_a_template_reaches_out_to_nothing(rel: Path) -> None:
-    """The property `app/tests/visual-kit.test.tsx` holds from the other
+    """The property `app/tests/content/visual-kit.test.tsx` holds from the other
     side, restated where the generator lives so that a change to the
     generator fails in the generator's own suite: an SVG that fetches a
     font or an image is the shared-account dependency again, one request

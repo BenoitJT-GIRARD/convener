@@ -3,7 +3,7 @@
  * Kept apart from the copy script itself so the rule can be asserted rather
  * than assumed: a template committed under `docs/` that this walk does not
  * return is a download link that 404s for every volunteer, and nothing in the
- * build would say so. `app/tests/visual-kit.test.ts` calls `walk()` on the
+ * build would say so. `app/tests/content/visual-kit.test.tsx` calls `walk()` on the
  * real `docs/` tree for exactly that reason.
  */
 import { readdir } from 'node:fs/promises';

@@ -184,7 +184,7 @@ const EDITION_PREFIX_RE = new RegExp(`^[A-Z][A-Z0-9]{0,${EDITION_PREFIX_MAX_LENG
 /** Whether `value` is a prefix this product will number editions under.
  *  Exported so the boundary is a worked example rather than a claim:
  *  `tools/tests/fixtures/edition-prefix.json` holds the cases and both
- *  sides answer them -- `app/tests/edition-prefix.test.ts` here,
+ *  sides answer them -- `app/tests/scripts/edition-prefix.test.ts` here,
  *  `tools/tests/declaration/test_published.py` against `EDITION_PREFIX_RE` there. A
  *  prefix the build accepts and the validator refuses is a repository
  *  that can be built and cannot be validated. */

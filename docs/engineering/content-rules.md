@@ -12,7 +12,7 @@ Each concept, term, rule, step has exactly one home file. If two places talk abo
 {{> fragments/board-rules-publication-gate }}
 ```
 
-The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: the same file as the page that owns the passage, scoped to one of its headings. The app replaces the line with the passage, under a line saying which page and section it came from and linking to it. Two rules hold this up, and both are tests: every include resolves to a registered, anchored fragment (`app/tests/transclusion.test.ts`), and no run of prose of a hundred characters or more appears in two served pages (`tools/tests/repository/test_no_literal_copies.py`).
+The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: the same file as the page that owns the passage, scoped to one of its headings. The app replaces the line with the passage, under a line saying which page and section it came from and linking to it. Two rules hold this up, and both are tests: every include resolves to a registered, anchored fragment (`app/tests/content/transclusion.test.ts`), and no run of prose of a hundred characters or more appears in two served pages (`tools/tests/repository/test_no_literal_copies.py`).
 
 | Topic | Canonical home |
 |---|---|

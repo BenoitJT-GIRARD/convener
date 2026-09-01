@@ -35,7 +35,7 @@ const roots = new WeakMap<Element, Root>();
  * discards everything. This function stays callable more than once
  * anyway -- reusing the same `Root` on the same element rather than
  * calling `createRoot` again, which React itself warns against -- purely
- * so `app/tests/signup-island-mount.test.tsx` can exercise the remount
+ * so `app/tests/islands/signup-island-mount.test.tsx` can exercise the remount
  * discipline directly, deterministically, without simulating a real
  * navigation.
  */

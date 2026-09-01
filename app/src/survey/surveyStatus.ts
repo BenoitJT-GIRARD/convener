@@ -17,7 +17,7 @@
  * imported here directly -- that module reaches into `node:fs`,
  * `node:path` and `node:url`, none of which exist in a browser bundle --
  * so the two sides are pinned equal by a dedicated test
- * (`app/tests/copy-survey-status.test.ts`) instead, the identical
+ * (`app/tests/scripts/copy-survey-status.test.ts`) instead, the identical
  * two-sided shape `certificates-projection.mjs::DEST_FILENAME` and
  * `register.ts::REGISTER_FILENAME` already use for `certificates.json`.
  */

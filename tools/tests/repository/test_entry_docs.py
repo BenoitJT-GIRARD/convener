@@ -6,10 +6,10 @@ pinned here rather than trusted by inspection:
    file in this repository -- and, if the target sits under `docs/`, to a
    page `app/src/content/registry.ts` actually publishes, or to a page
    that file's own tests already name as deliberately unregistered
-   (`app/tests/copy-handbook.test.ts`). README.md and
+   (`app/tests/scripts/copy-handbook.test.ts`). README.md and
    docs/engineering/architecture.md are not registered pages themselves, so nothing
    already checks their own outbound links the way
-   `app/tests/registered-links.test.ts` checks a registered page's.
+   `app/tests/content/registered-links.test.ts` checks a registered page's.
 2. `docs/operating/operations.md` -- documents every secret this project
    uses and is deliberately excluded from the app's public bundle -- is
    named by these two files *in prose, never as a clickable link*, this
@@ -43,7 +43,7 @@ DOCS = ROOT / "docs"
 
 #: `docs/handbook/index.md` is a real, deliberately unregistered page meant
 #: for a reader browsing the repository itself, not the app -- see
-#: `app/tests/copy-handbook.test.ts`'s own test naming it.
+#: `app/tests/scripts/copy-handbook.test.ts`'s own test naming it.
 #: `docs/engineering/architecture.md`, the second of the two files above,
 #: joins it for the identical reason (and lets README.md link to it), and
 #: so do the other two trees' indexes: each is the way into a tree for a
@@ -215,7 +215,7 @@ def test_the_entry_docs_link_to_the_decisions_index() -> None:
 def test_the_operations_reference_is_named_not_linked_and_real() -> None:
     # docs/operating/operations.md documents every secret this project
     # uses and is deliberately excluded from the app's public bundle
-    # (app/tests/copy-handbook.test.ts) -- named, never linked, the same
+    # (app/tests/scripts/copy-handbook.test.ts) -- named, never linked, the same
     # convention as the decision register above.
     combined = README.read_text(encoding="utf-8") + ARCHITECTURE.read_text(
         encoding="utf-8"
@@ -278,7 +278,7 @@ def _shipping_markdown() -> list[Path]:
 
 def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     """
-    `app/tests/decisions-records.test.ts` already holds this of
+    `app/tests/content/decisions-records.test.ts` already holds this of
     `docs/engineering/decisions/`: a published record may not send a reader into the
     working record. The same sentence is true of every other page that
     ships, and nothing held them to it -- so `README.md` pointed a public

@@ -11,7 +11,7 @@
  * writing to it.
  *
  * So every outbound request the cockpit makes goes through `request()`
- * below, and `app/tests/demo-network.test.tsx` holds that by sweeping the
+ * below, and `app/tests/net/demo-network.test.tsx` holds that by sweeping the
  * module graph reachable from `src/main.tsx` and refusing a request
  * primitive found anywhere else. The existing guards in `DataContext`,
  * `AuthContext` and `useRole` are untouched and still do the useful work

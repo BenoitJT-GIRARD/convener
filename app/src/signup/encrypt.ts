@@ -55,7 +55,7 @@
  * registration page holds only the published public half (see
  * `SignupForm.tsx`), which cannot decrypt anything by construction -- that
  * is the property this project's whole data-protection design rests on.
- * `app/tests/signup-encrypt.test.ts` asserts this
+ * `app/tests/signup/signup-encrypt.test.ts` asserts this
  * directly, not just by this file's shape.
  */
 

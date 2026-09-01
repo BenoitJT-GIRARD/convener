@@ -25,7 +25,7 @@
  * `stripComments` removes `//` and `/* *\/` comments from *that slice only*,
  * string literals left untouched -- so a comment inside the literal cannot
  * contribute a path either. Both are still text-based, not a real
- * TypeScript parse: `app/tests/copy-handbook.test.ts` pins the result
+ * TypeScript parse: `app/tests/scripts/copy-handbook.test.ts` pins the result
  * against the real `CONTENT_REGISTRY` and `PUBLIC_ASSETS`, imported
  * natively by the test runner, on every run, and separately proves a decoy
  * comment inside either literal is ignored. A drift here fails that test;
@@ -139,7 +139,7 @@ export async function walkAll(dir, base = '') {
  * Publishes exactly `publishedPaths(registrySource)` from `docsDir` into
  * `dst`, replacing whatever `dst` held. This is the one function that
  * decides what ships -- `copy-handbook.mjs` is a thin wrapper over it with
- * real paths, and `app/tests/copy-handbook.test.ts` calls this directly
+ * real paths, and `app/tests/scripts/copy-handbook.test.ts` calls this directly
  * against a temporary destination, the same reason
  * `certificates-projection.mjs::writeProjection` is kept apart from
  * `copy-certificates.mjs`.

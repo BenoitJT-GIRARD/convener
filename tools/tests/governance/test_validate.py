@@ -385,7 +385,7 @@ def test_valid_config_produces_no_error() -> None:
     "case", CASES["board_headcount_cases"], ids=lambda c: c["name"]
 )
 def test_the_headcount_bounds_count_active_members(case: dict[str, Any]) -> None:
-    """The same table `app/tests/board.test.ts` reads.
+    """The same table `app/tests/state/board.test.ts` reads.
 
     `board.resolveNominations` counts active members before it seats anyone,
     so counting entries here would let the app write a config this function

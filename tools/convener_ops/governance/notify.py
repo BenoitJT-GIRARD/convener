@@ -68,7 +68,7 @@ cross-language divergence this repository has been bitten by four times, so
 the Python half below is an explicit twin of `app/src/state/sla.ts` and the two
 are pinned together by `tools/tests/fixtures/governance-cases.json`'s
 `lateness_cases`, read by `tools/tests/governance/test_governance_fixture.py` and by
-`app/tests/governance-fixture.test.ts`. A change to either wording that is not
+`app/tests/state/governance-fixture.test.ts`. A change to either wording that is not
 mirrored fails in both languages.
 
 Like the rest of `convener_ops`, this module is tolerant of malformed input and

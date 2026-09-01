@@ -94,7 +94,7 @@ def offence(value: str, *, as_path: bool) -> str | None:
     entry looking like the path without it, and a name with no separator
     in it is only refused where the code uses it as a path. The cockpit's
     own sweep found that gap and closes it the same way
-    (`app/tests/instance-paths.test.ts`).
+    (`app/tests/settings/instance-paths.test.ts`).
     """
     normalised = value.replace("\\", "/")
     if normalised in declared_instance_paths():

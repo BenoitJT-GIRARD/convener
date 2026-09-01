@@ -4953,7 +4953,7 @@ def _published_handbook_paths() -> set[str]:
     Read from the registry's own source text with the two markers and the
     two expressions `handbook-registry.mjs::publishedPaths` uses, because
     that is what actually decides what ships.
-    `app/tests/copy-handbook.test.ts` pins the JavaScript half against the
+    `app/tests/scripts/copy-handbook.test.ts` pins the JavaScript half against the
     real imported `CONTENT_REGISTRY` on every run; this is the same
     allowlist, read the same way, on the Python side.
     """

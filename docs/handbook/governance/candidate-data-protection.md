@@ -88,7 +88,7 @@ classifies every field `Speaker` has, in code, against
 `app/src/data/types.ts::SPEAKER_FIELDS` — exhaustively, the same way the
 publication gate's own three sets are — and the classification is bound to
 this page by `tools/tests/fixtures/governance-cases.json`, checked from both
-languages (`app/tests/personal-data-fields.test.ts` and
+languages (`app/tests/state/personal-data-fields.test.ts` and
 `tools/tests/repository/test_candidate_data_protection_record.py`). A field the model
 gains later and nobody classifies fails a test before it can reach this page
 without a description.

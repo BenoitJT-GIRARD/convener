@@ -190,7 +190,7 @@ export function editableFiles(): string[] {
  * in `SETTINGS` gets one of these lines, and none of them is "not
  * implemented yet": each is a reason a form is the wrong instrument.
  * `null` means the path has no entry here, which is itself a finding --
- * `app/tests/settings-screen.test.tsx` refuses one.
+ * `app/tests/screens/settings-screen.test.tsx` refuses one.
  */
 export function whyNotAForm(path: string): string | null {
   if (path === dataDir()) {

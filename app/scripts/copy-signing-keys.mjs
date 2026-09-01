@@ -17,7 +17,7 @@
  * The actual write (`writeSigningKeys`) and the destination directory
  * (`PUBLIC_KEYS_DIR`) both live in `signing-keys-files.mjs` now, not
  * here -- this file is a thin wrapper around them so
- * `app/tests/copy-signing-keys.test.ts` can run the real write against a
+ * `app/tests/scripts/copy-signing-keys.test.ts` can run the real write against a
  * temporary directory without triggering this file's own side effect.
  *
  * Runs before `vite dev` and `vite build`, alongside the other copy

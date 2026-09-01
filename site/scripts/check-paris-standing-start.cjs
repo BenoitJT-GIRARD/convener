@@ -7,7 +7,7 @@
  * (`tools/convener_ops/publication/visual.py::paris_standing_start` and `app/src/state/
  * derived.ts::parisStandingStart` are the other two, each checked against
  * the same file from its own test suite: `tools/tests/
- * test_paris_standing_start_fixture.py`, `app/tests/announce-drafts.test.ts`).
+ * test_paris_standing_start_fixture.py`, `app/tests/content/announce-drafts.test.ts`).
  *
  * `site/` carries no JS test runner of its own (no new dependency), so this
  * is a plain, dependency-free Node script rather than a jest/vitest spec --

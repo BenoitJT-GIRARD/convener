@@ -1,7 +1,7 @@
 /* Which signing public keys `copy-signing-keys.mjs` publishes, in what
  * order, and where. Kept apart from the copy script itself, the same
  * reason `handbook-files.mjs` is kept apart from `copy-handbook.mjs`: a
- * rule `app/tests/copy-signing-keys.test.ts` can call directly, rather
+ * rule `app/tests/scripts/copy-signing-keys.test.ts` can call directly, rather
  * than one only ever exercised by running the whole script against the
  * real `instance/keys/signing/` tree.
  */
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 /** The manifest filename `copy-signing-keys.mjs` writes, and
  *  `src/verify/publicKeys.ts::KEYS_INDEX_FILENAME` fetches. These are
  *  two literals in two files, not one constant
- *  imported by both -- `app/tests/copy-signing-keys.test.ts` pins them
+ *  imported by both -- `app/tests/scripts/copy-signing-keys.test.ts` pins them
  *  equal directly, which is a weaker, but honestly-described, guarantee
  *  than "defined once, imported by both" would be. */
 export const INDEX_FILENAME = 'index.json';
@@ -90,7 +90,7 @@ export async function readPublicKeys(dir) {
  * discipline the script always had.
  *
  * Exported so
- * `app/tests/copy-signing-keys.test.ts` can run this for real, against a
+ * `app/tests/scripts/copy-signing-keys.test.ts` can run this for real, against a
  * temporary directory, and assert the path it actually produces --
  * before this, no test ever exercised the destination path at all.
  */
