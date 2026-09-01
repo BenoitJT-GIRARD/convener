@@ -535,7 +535,7 @@ def test_the_ribbon_geometry_matches_the_requested_canvas() -> None:
 # ---------------------------------------------------------------------------
 # Text stays inside a safe area that clears the ribbon on both
 # sides -- in every early render, it did not (the ribbon struck
-# through "READ TOGETHER", "Join the discussion" and the talk
+# through the hero heading, "Join the discussion" and the talk
 # title, on both left and right). See the module docstring's "Why a safe
 # area, and why derived rather than hand-typed".
 # ---------------------------------------------------------------------------
@@ -733,7 +733,8 @@ def test_the_right_motif_never_reaches_below_its_own_tail_exit() -> None:
 
 
 def test_the_series_title_is_centred_like_the_talk_title_and_date() -> None:
-    """The reference sets "READ TOGETHER" centred, like the talk
+    """The reference sets the hero heading -- the instance's own
+    strapline, in capitals -- centred, like the talk
     title (`.band--talk-title p`, already centred) and the date line
     (`.date-line`, already centred) beneath it -- one heading had been left
     flush left, and this corrects it."""

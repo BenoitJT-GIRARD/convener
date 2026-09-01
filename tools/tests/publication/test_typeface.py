@@ -129,12 +129,29 @@ def test_the_lines_these_templates_actually_set_are_over_estimated() -> None:
     always in the room: this is the arithmetic half of the same claim, and
     it fails on a table edited without re-measuring even when nobody runs
     the pinned engine.
+
+    **Every line here is the example instance's**, and that is a
+    requirement rather than a preference. Two of them were the identity of
+    whichever instance runs this repository, and a fixture of that shape
+    cannot survive the derivation: `convener-derive` rewrites a declared
+    value wherever it appears, and a substitution converts a *string* and
+    not the width somebody measured beside it -- the same argument
+    `repository.regenerate` makes for a stylesheet's contrast figures. The
+    derived repository either shipped this instance's name in a public
+    product test or failed this assertion, depending only on whether the
+    rewrite table had heard of the spelling. Neither is a state to leave a
+    fixture in. `instances/example/` is the product's, so its lines are
+    rewritten by nothing and measure the same on both sides.
+
+    The first two are the same line at the two sizes the two pages set it
+    at, which is what "the line that decides a size on each page" means
+    here: both pages head with the series' name.
     """
     for line, size, weight, spacing, measured in (
-        ("MONTHLY READING GROUP", 50.0, 900, 1.0, 815.2),
+        ("MONTHLY READING GROUP", 50.0, 900, 1.0, 768.4),
         ("MONTHLY READING GROUP", 86.0, 900, 2.0, 1327.4),
         ("Join the discussion before and after the talk at", 31.0, 400, 0.0, 623.0),
-        ("THE EXAMPLE COLLECTIVE", 105.56, 900, 0.0, 1416.3),
+        ("THE EXAMPLE COLLECTIVE", 105.56, 900, 0.0, 1584.9),
     ):
         estimated = typeface.width(
             line, size=size, weight=weight, letter_spacing=spacing

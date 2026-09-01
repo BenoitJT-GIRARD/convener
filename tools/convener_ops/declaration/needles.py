@@ -149,17 +149,17 @@ def forms(needle: str) -> tuple[str, ...]:
       case-sensitive search: the declared value is the same value, spelt
       in a case nobody wrote down.
 
-    The second was measured rather than supposed. A derived repository
-    that `convener-check-derivation` passed with `nothing refused.` still
-    carried `THE EXAMPLE COLLECTIVE`, `FORUM.EXAMPLE.TEST`,
-    `THE EXAMPLE COLLECTIVE.github.io`, `MONTHLY READING GROUP` and
-    `READ TOGETHER` -- the organisation, its forum, its
-    published host, the series' name and its strapline -- in the two
-    downloadable templates, the video-call background and an edge
-    worker's test, at the tip and throughout the history. Neither half of
-    the derivation saw them: `derivation_guard.identity_hits` searched
-    the declared spelling only, and `repository.identity_rules` built a
-    literal, case-sensitive rewrite rule from the same one.
+    The second was measured rather than supposed, and the values are
+    deliberately not quoted here -- naming them is the defect. A derived
+    repository that `convener-check-derivation` passed with `nothing
+    refused.` still carried five of them in capitals: the organisation,
+    its forum, its published host, the series' name and its strapline, in
+    the two downloadable templates, in the video-call background, in an
+    edge worker's test and in a typeface fixture, at the tip and
+    throughout the history. Neither half of the derivation saw one:
+    `derivation_guard.identity_hits` searched the declared spelling only,
+    and `repository.identity_rules` built a literal, case-sensitive
+    rewrite rule from the same one.
 
     Returning the upper-case spelling here closes both at once, because
     both read this function: the table rewrites what it now knows to look
@@ -169,10 +169,16 @@ def forms(needle: str) -> tuple[str, ...]:
     spelling and make a short needle fire on prose. It is one more
     spelling, named because a generator in this repository produces it.
 
-    Always a pair, even where the two halves are identical (`TEC`,
-    `MRG-`): `repository.identity_rules` pairs a value's forms with its
-    replacement's positionally, and a tuple whose length depended on the
-    value would pair the wrong two.
+    What this still does not reach is a value a composition *re-spells*
+    rather than re-cases: an organisation that runs its own words
+    together is set with those words separated, and that string is not
+    this one upper-cased. `repository.SERIES_RESIDUE` is where a spelling
+    nothing derives is written down, and it carries that one.
+
+    Always a pair, even where the two halves are identical -- a needle
+    already in capitals: `repository.identity_rules` pairs a value's
+    forms with its replacement's positionally, and a tuple whose length
+    depended on the value would pair the wrong two.
 
     A build sweep does not need any of this: it compares a *built*
     artefact with the values that built it, and both sides went through

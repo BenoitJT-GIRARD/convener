@@ -20,7 +20,9 @@ one unit too late". Measured against every line those files actually set,
 in the face the charter names, that claim is false in both directions:
 
 - `MONTHLY READING GROUP` runs at **0.735** of the font size per character
-  and `THE EXAMPLE COLLECTIVE` at **0.706**. Both are wider than the estimate
+  and the video-call background's own name line -- whichever organisation
+  runs the instance, set in capitals -- at **0.706** on the charter it was
+  measured against. Both are wider than the estimate
   that was meant to bound them, which is why the background's own name line
   overruns its plate's 28-unit padding on both charters this repository
   ships -- by 22 units on one and 3 on the other. Nothing had overflowed
