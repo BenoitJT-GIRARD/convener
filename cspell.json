@@ -89,6 +89,7 @@
     "traitement",
     "unconfigured",
     "undecryptable",
+    "unhashed",
     "unmodelled",
     "unretried",
     "unreviewable",
@@ -111,8 +112,7 @@
     "site/_site/**",
     "site/src/fonts/**",
     "instance/public-data/**",
-    "instance/data/speakers.yml",
-    "tools/**"
+    "instance/data/speakers.yml"
   ],
   "files": [
     "docs/**/*.md",
@@ -127,6 +127,9 @@
     "assets/screenshots/README.md",
     "site/**/*.njk",
     "site/README.md",
+    "app/README.md",
+    "tools/README.md",
+    "tools/visuals/README.md",
     ".github/workflows/**"
   ]
 }

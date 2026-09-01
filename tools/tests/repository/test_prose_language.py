@@ -3,8 +3,8 @@
 `cspell.json` already declares `en-GB` and already gates the prose a reader
 opens: the handbook under `docs/`, the two pages at the repository root,
 each service's and each instance's own README, the showcase's templates and
-the workflows. What it never looked at is the *source*, because `tools/**`
-is in `ignorePaths` outright and `app/**` was never in `files` at all. So
+the workflows. What it never looked at is the *source*: `tools/**` was in
+`ignorePaths` outright and `app/**` was never in `files` at all. So
 French prose sat in shipped comments and docstrings for as long as the
 repository has existed, in three shapes:
 
@@ -124,6 +124,16 @@ left to whoever reads the list next:
   "license", "authorize" and "defense" as errors that must not be fixed,
   and the only way to quiet them would be to teach the dictionary
   American spellings this product does not use anywhere else.
+* **`tools/**` is no longer in `ignorePaths`, and the entry it replaced
+  was doing nothing.** `files` is an allowlist -- `cspell` opens what it
+  names and nothing else -- and no entry in it ever selected a file under
+  `tools/`, so that ignore excluded a set already empty. It stopped being
+  harmless the day `tools/README.md` and `tools/visuals/README.md` were
+  written: an ignore beats a `files` entry, `cspell` supports no negation
+  to carve two pages back out of it, and the two new pages would have
+  been listed and silently unchecked. The Python source stays unchecked
+  because nothing selects it, which is a statement `files` makes on its
+  own.
 """
 
 from __future__ import annotations
@@ -415,6 +425,41 @@ def cspell_files() -> list[str]:
     listed = declared["files"]
     assert isinstance(listed, list)
     return [str(entry) for entry in listed]
+
+
+def cspell_ignored() -> list[str]:
+    """The `ignorePaths` list `cspell.json` declares, read the same way."""
+    declared = json.loads((ROOT / CSPELL).read_text(encoding="utf-8"))
+    listed = declared["ignorePaths"]
+    assert isinstance(listed, list)
+    return [str(entry) for entry in listed]
+
+
+def test_no_ignore_swallows_a_directory_the_files_list_reaches_into() -> None:
+    """An ignore beats a `files` entry, and `cspell` has no negation to
+    carve one page back out of a directory it has been told to skip.
+
+    So a page listed under a directory that is also ignored is a page
+    somebody believes is gated and nobody checks -- the same shape as a
+    root page nobody points the check at, one directory down, and quieter,
+    because the entry naming it is right there in the list. Read as a
+    prefix comparison rather than as globs: what is being refused is an
+    ignore standing above a listed page, and that is a question about
+    directories.
+    """
+    ignored_trees = [
+        entry[: -len("**")] for entry in cspell_ignored() if entry.endswith("/**")
+    ]
+    swallowed = sorted(
+        f"{listed} is listed but {tree}** is ignored"
+        for listed in cspell_files()
+        for tree in ignored_trees
+        if listed.startswith(tree)
+    )
+    assert swallowed == [], (
+        f"{CSPELL} points the check at a page it also tells it to skip: "
+        + "; ".join(swallowed)
+    )
 
 
 def test_every_page_this_project_writes_at_the_root_is_spell_checked() -> None:

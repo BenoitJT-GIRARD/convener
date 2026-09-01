@@ -172,9 +172,9 @@ PURPOSE: Final[Mapping[str, str]] = {
     ),
     "app": (
         "The cockpit (React + Vite): the board's and volunteers' "
-        "application, gated by GitHub sign-in. Also builds the two public "
-        "*islands* — registration and certificate verification — mounted "
-        "on the showcase's static pages."
+        "application, gated by GitHub sign-in. Also builds the three "
+        "public *islands* — registration, certificate verification and "
+        "the post-event survey — mounted on the showcase's static pages."
     ),
     "assets": (
         "Everything the product ships as a file rather than as code, "

@@ -72,7 +72,7 @@ publishes it.*
 | Directory | Owner | What it holds |
 |---|---|---|
 | `.github/` | product | The whole automation surface: data validation, the public-data filter, certificate issuance and revocation, the retention sweep, publishing the showcase and the cockpit, quality and security gates. Nothing in this system runs anywhere else. |
-| `app/` | product | The cockpit (React + Vite): the board's and volunteers' application, gated by GitHub sign-in. Also builds the two public *islands* — registration and certificate verification — mounted on the showcase's static pages. |
+| `app/` | product | The cockpit (React + Vite): the board's and volunteers' application, gated by GitHub sign-in. Also builds the three public *islands* — registration, certificate verification and the post-event survey — mounted on the showcase's static pages. |
 | `assets/` | product | Everything the product ships as a file rather than as code, labelled by what it is: `brand/`, the product's own marks and one directory per charter it ships; `fonts/`, the two typefaces both interfaces are set in, self-hosted so no page fetches a font from anybody else; `screenshots/`, the pictures `README.md` shows, rendered from a real build by `tools/visuals/render-readme-shots.mjs`. |
 | `declarations/` | product | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
 | `docs/` | product | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
