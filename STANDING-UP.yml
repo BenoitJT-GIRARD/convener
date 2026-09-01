@@ -112,12 +112,14 @@ stages:
       commit. A repository created public and made private afterwards has
       already published whatever it held.
   - id: identity
-    title: The three files a duplicate edits
+    title: The four files a duplicate makes its own
     purpose: >-
       What makes the instance yours rather than the worked example's. Until
-      these are done the showcase prints a band above its masthead and the
-      cockpit prints one above its sign-in screen, naming the keys still to
-      fill in.
+      the first three are done the showcase prints a band above its masthead
+      and the cockpit prints one above its sign-in screen, naming the keys
+      still to fill in. The fourth carries no band: a charter is a finished
+      design whoever measured it, so an instance publishing under somebody
+      else's colours looks right on every page it serves.
   - id: publishing
     title: Getting a public site
     purpose: >-
@@ -390,6 +392,45 @@ steps:
       yours: three events with dates, an archive page, and a feed announcing
       them. Nothing warns about it, because a file full of well-formed records
       is exactly what this file is supposed to hold.
+
+  - id: own_charter
+    stage: identity
+    title: The design the instance is drawn in
+    actor: agent
+    does: >-
+      Decide what your instance looks like. It arrives holding
+      `instance/data/brand.json`, the worked example's own charter — one
+      palette, two typefaces and one motif — and there are two ways to make
+      that yours. If your series has somebody to design for it, write your own
+      values into that file. If it has not, delete the file and add one line
+      to `instance/config.json` instead: `"charter": "steps"`, naming any of
+      the directories under `brand/`. The whole charter is then read from
+      `brand/<name>/brand.json` where upstream maintains it, so a contrast
+      measured again or a token renamed there reaches you as an ordinary
+      merge, where a copied directory would reach you as a conflict on a file
+      you now own. Naming a charter no directory under `brand/` carries stops
+      the build and lists the ones that are there, and so does keeping the
+      file while naming a charter — nothing can say which of the two is then
+      the design in force. Whichever way you go, run
+      `scripts/generate_brand_css.py` and `scripts/generate_motif.py` from
+      `tools/` afterwards and commit what they write: both interfaces'
+      stylesheets, the three templates a collaborator downloads and the motif
+      every page draws are all derived from the charter in force.
+    check: >-
+      The command below exits 0, which is what says every generated file in
+      the repository is the one the charter in force derives. After the first
+      publish, every page of the showcase and the cockpit's sign-in screen
+      carry that charter's colours and its motif.
+    command: >-
+      cd tools && uv run python scripts/generate_brand_css.py --check && uv run
+      python scripts/generate_motif.py --check
+    degraded: >-
+      Your showcase, your cockpit, the poster announcing each of your talks
+      and every certificate you issue are drawn in another series' colours and
+      carry another series' mark, under your own name. Nothing warns about it:
+      the band above the masthead compares the declaration rather than the
+      design, and a file full of measured, AA-clearing values is exactly what
+      a charter is supposed to hold.
 
   - id: vitrine_deploy_token
     stage: publishing

@@ -239,11 +239,14 @@ rendering the repository's own README instead, and a bare request answers 200
 over a site that does not exist. Read the served page's source, not its status
 code.
 
-## Stage 3 — The three files a duplicate edits
+## Stage 3 — The four files a duplicate makes its own
 
-What makes the instance yours rather than the worked example's. Until these
-are done the showcase prints a band above its masthead and the cockpit prints
-one above its sign-in screen, naming the keys still to fill in.
+What makes the instance yours rather than the worked example's. Until the
+first three are done the showcase prints a band above its masthead and the
+cockpit prints one above its sign-in screen, naming the keys still to fill in.
+The fourth carries no band: a charter is a finished design whoever measured
+it, so an instance publishing under somebody else's colours looks right on
+every page it serves.
 
 ### 7. Who is publishing, and where
 
@@ -327,13 +330,51 @@ they were yours: three events with dates, an archive page, and a feed
 announcing them. Nothing warns about it, because a file full of well-formed
 records is exactly what this file is supposed to hold.
 
+### 10. The design the instance is drawn in
+
+**Who:** an agent, or a person.
+
+Decide what your instance looks like. It arrives holding
+`instance/data/brand.json`, the worked example's own charter — one palette,
+two typefaces and one motif — and there are two ways to make that yours. If
+your series has somebody to design for it, write your own values into that
+file. If it has not, delete the file and add one line to
+`instance/config.json` instead: `"charter": "steps"`, naming any of the
+directories under `brand/`. The whole charter is then read from
+`brand/<name>/brand.json` where upstream maintains it, so a contrast measured
+again or a token renamed there reaches you as an ordinary merge, where a
+copied directory would reach you as a conflict on a file you now own. Naming a
+charter no directory under `brand/` carries stops the build and lists the ones
+that are there, and so does keeping the file while naming a charter — nothing
+can say which of the two is then the design in force. Whichever way you go,
+run `scripts/generate_brand_css.py` and `scripts/generate_motif.py` from
+`tools/` afterwards and commit what they write: both interfaces' stylesheets,
+the three templates a collaborator downloads and the motif every page draws
+are all derived from the charter in force.
+
+**Proves it is done.** The command below exits 0, which is what says every
+generated file in the repository is the one the charter in force derives.
+After the first publish, every page of the showcase and the cockpit's sign-in
+screen carry that charter's colours and its motif.
+
+```bash
+cd tools && uv run python scripts/generate_brand_css.py --check && uv run python scripts/generate_motif.py --check
+```
+
+**Without it.** Your showcase, your cockpit, the poster announcing each of
+your talks and every certificate you issue are drawn in another series'
+colours and carry another series' mark, under your own name. Nothing warns
+about it: the band above the masthead compares the declaration rather than the
+design, and a file full of measured, AA-clearing values is exactly what a
+charter is supposed to hold.
+
 ## Stage 4 — Getting a public site
 
 The first real deployment, and the first honest answer to whether any of the
 stage above is right. Nothing until now has been verified against anything a
 visitor can open.
 
-### 10. The token that lets the cockpit push into the showcase
+### 11. The token that lets the cockpit push into the showcase
 
 **Who:** a person.
 
@@ -373,7 +414,7 @@ fallback publishing route, and nothing about the green run says so.
    secret, named `VITRINE_DEPLOY_TOKEN`. Then paste it into the shared store.
    GitHub will not show it again.
 
-### 11. The first publish, and reading it in a browser
+### 12. The first publish, and reading it in a browser
 
 **Who:** an agent, or a person.
 
@@ -402,7 +443,7 @@ all three deploy to one free Cloudflare account. Two of them also need a
 storage namespace, which does not exist until it is created and cannot be
 shipped filled in.
 
-### 12. The GitHub App that signs volunteers in
+### 13. The GitHub App that signs volunteers in
 
 **Who:** a person.
 
@@ -449,7 +490,7 @@ organisation did not issue and cannot revoke centrally.
    Generate no client secret. The device flow does not need one, and the relay
    is deliberately secret-free.
 
-### 13. The Cloudflare account, and the token CI deploys with
+### 14. The Cloudflare account, and the token CI deploys with
 
 **Who:** a person.
 
@@ -483,7 +524,7 @@ dependency the rest of this project avoids.
    secret, named `CLOUDFLARE_API_TOKEN`. Then paste it into the shared store;
    Cloudflare will not show it again either.
 
-### 14. The one value in the workers a duplicate has to fill in
+### 15. The one value in the workers a duplicate has to fill in
 
 **Who:** an agent, or a person.
 
@@ -515,7 +556,7 @@ grep -RE "REPLACE_WITH_|^ALLOWED_ORIGIN" services/*/wrangler.toml ; grep -RE "gi
 makes *Deploy form relay* and *Deploy signup relay* skip the deploy and end
 green, so nothing is deployed and the Actions tab says everything is fine.
 
-### 15. The two dispatch tokens the relays hold
+### 16. The two dispatch tokens the relays hold
 
 **Who:** a person.
 
@@ -551,7 +592,7 @@ encrypted, and then goes nowhere.
 6. Set an expiry you will notice, and record both renewal dates beside the
    tokens.
 
-### 16. The sign-in relay, deployed and pointed at
+### 17. The sign-in relay, deployed and pointed at
 
 **Who:** an agent, or a person.
 
@@ -580,7 +621,7 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 **Credentials.** `VITE_AUTH_PROXY_URL`, `VITE_GITHUB_APP_CLIENT_ID`
 
-### 17. The relay a registration passes through
+### 18. The relay a registration passes through
 
 **Who:** an agent, or a person.
 
@@ -643,7 +684,7 @@ The one surface a stranger reaches without being invited. It is built from
 code rather than clicked together, so that it can be rebuilt if the account is
 ever lost.
 
-### 18. The form account, and the key that builds from code
+### 19. The form account, and the key that builds from code
 
 **Who:** a person.
 
@@ -671,7 +712,7 @@ other than code.
 3. Generate a key and paste it into the shared store. It is a credential like
    any other; it simply never leaves an operator's own machine.
 
-### 19. The relay between the public form and the repository
+### 20. The relay between the public form and the repository
 
 **Who:** an agent, or a person.
 
@@ -692,7 +733,7 @@ visitor's side and leaves nothing on yours.
 
 **Credentials.** `CONVENER_DISPATCH_TOKEN`
 
-### 20. The form, built from this repository rather than clicked together
+### 21. The form, built from this repository rather than clicked together
 
 **Who:** an agent, or a person.
 
@@ -726,7 +767,7 @@ the reader compares literally, and a respondent whose answer does not match
 one of those tokens is recorded as undisclosed, silently, with no log line and
 at a steady rate rather than as an edge case.
 
-### 21. Publishing the form, pointing its webhook, and naming it
+### 22. Publishing the form, pointing its webhook, and naming it
 
 **Who:** a person.
 
@@ -779,7 +820,7 @@ Three credentials that are not features. Two are minted once and never
 rotated; the third is what makes this project's central promise — a key
 destroyed on a deadline — happen without anybody remembering to do it.
 
-### 22. The credential that destroys a key on its deadline
+### 23. The credential that destroys a key on its deadline
 
 **Who:** a person.
 
@@ -837,7 +878,7 @@ marks it so, on the row and again in its closing line.
    retention job red every day until it is replaced, which is the right way
    round, but somebody has to be the one to notice.
 
-### 23. The key that signs a certificate, minted by a person and only once
+### 24. The key that signs a certificate, minted by a person and only once
 
 **Who:** a person.
 
@@ -896,7 +937,7 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
    one of them and tries each in turn, so deleting one is what would make an
    already-issued certificate stop verifying.
 
-### 24. The salt behind a matching code and a register's fingerprint
+### 25. The salt behind a matching code and a register's fingerprint
 
 **Who:** a person.
 
@@ -976,7 +1017,7 @@ Every remaining integration degrades visibly and none of them breaks anything.
 An instance that stops here is a working instance, and this stage is a menu
 rather than a queue.
 
-### 25. Where the Board is told what happened
+### 26. Where the Board is told what happened
 
 **Who:** an agent, or a person.
 
@@ -1006,7 +1047,7 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 **Credentials.** `CONVENER_NOTIFY_THREAD`, `CONVENER_NOTIFY_MENTION`
 
-### 26. Sending a confirmation, a certificate and a survey invitation
+### 27. Sending a confirmation, a certificate and a survey invitation
 
 **Who:** a person.
 
@@ -1069,7 +1110,7 @@ is maintained there, and quoted here.*
    partially-set transport is worse than an unset one.
 4. Put the application password in the shared store.
 
-### 27. Where a recording is published
+### 28. Where a recording is published
 
 **Who:** a person.
 
@@ -1101,7 +1142,7 @@ is maintained there, and quoted here.*
 3. Set it as a repository secret named `CONVENER_VIDEO_CHANNEL_ID` on the
    private repository, and put the channel's credentials in the shared store.
 
-### 28. The room the webinar happens in
+### 29. The room the webinar happens in
 
 **Who:** a person.
 
