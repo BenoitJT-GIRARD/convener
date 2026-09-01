@@ -88,6 +88,7 @@ unretried
 unreviewable
 urlset
 vars
+venv
 Vite
 Vitest
 WCAG
