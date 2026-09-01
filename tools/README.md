@@ -33,6 +33,15 @@ name when the function behind it moves.
 and it is the only `__init__.py` in the package that re-exports anything —
 exactly the names that table declares.
 
+## Adding one
+
+Three edits, and they are in three files on purpose. The work goes in a
+module of the sub-package it belongs to, where the rule it applies already
+lives. What an operator types goes in `pyproject.toml`. What connects the
+two — reading the arguments, printing the lines, choosing the exit code —
+goes in `convener_ops/cli/<sub-package>.py`, so that a rule stays testable
+without a process and a command stays one thing to invoke.
+
 ## The sub-packages
 
 Seven, one per subject. Each one's own `__init__.py` opens with a single

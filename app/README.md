@@ -73,3 +73,10 @@ run before every `dev` and `build`, and the modules `vite.config.ts` reads
 a declaration through. `tests/` mirrors `src/`, one directory per row of
 the table above, plus `scripts/` for those and `helpers/` for what several
 modules share.
+
+Everything else this directory grows is written rather than edited:
+`dist/`, `coverage/`, `node_modules/` and most of `public/` — the fonts,
+the handbook pages, the published keys and the certificate state, all of
+which the copy steps write before every build. `.gitignore` names every
+one of them, so a file that appears there and is not ignored is a file
+somebody added by hand.
