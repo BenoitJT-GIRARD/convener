@@ -27,7 +27,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'governance/conflict-of-interest': { file: 'handbook/governance/conflict-of-interest.md', anchor: null },
   'governance/decisions': { file: 'handbook/governance/decisions.md', anchor: null },
   // Linked from `handbook/governance/decisions.md` and
-  // `operating/the-workspace.md` with a plain relative link, but never
+  // `handbook/the-workspace.md` with a plain relative link, but never
   // itself registered -- so it shipped by accident under the old
   // wholesale copy, and would have 404ed under the registry-derived
   // allowlist once that accident stopped. Registered instead of
@@ -189,10 +189,18 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'handbook/preparation': { file: 'handbook/workflow/2-preparation.md', anchor: null },
   'handbook/hosting': { file: 'handbook/workflow/3-hosting.md', anchor: null },
   'handbook/after': { file: 'handbook/workflow/4-after.md', anchor: null },
-  'handbook/workspace': { file: 'operating/the-workspace.md', anchor: null },
-  'handbook/tools': { file: 'operating/tools.md', anchor: null },
-  'handbook/contacts': { file: 'operating/contacts.md', anchor: null },
-  'handbook/schema': { file: 'operating/schema.md', anchor: null },
+  'handbook/workspace': { file: 'handbook/the-workspace.md', anchor: null },
+  'handbook/tools': { file: 'handbook/tools.md', anchor: null },
+  'handbook/contacts': { file: 'handbook/contacts.md', anchor: null },
+
+  // engineering -- the record model, generated from `app/src/data/types.ts`
+  // and refused by continuous integration when the two drift. Served here
+  // rather than left to the repository because a board member reading a
+  // record wants the field list without opening the types; keyed after the
+  // tree it is in, the way `decisions/*` is, because a key opening
+  // `handbook/` over a file in another tree is a claim about where the page
+  // lives that the page does not honour.
+  'engineering/schema': { file: 'engineering/schema.md', anchor: null },
 
   // fragments -- one section of a page, so that a passage two pages need is
   // written on one of them and included by the other. An entry with an anchor

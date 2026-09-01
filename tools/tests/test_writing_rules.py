@@ -312,7 +312,7 @@ MUST_FIRE = (
 #: quietly become an invented example of prose nobody writes.
 MUST_NOT_FIRE = (
     (
-        "docs/operating/schema.md",
+        "docs/engineering/schema.md",
         "A link, not an upload: the repository holds records, not media.",
     ),
     (

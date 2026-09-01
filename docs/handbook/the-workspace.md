@@ -36,12 +36,12 @@ programme this size, a career stage crossed with a country is one identifiable
 person, and a percentage of eleven people reads like a finding. Below ten
 people who told us anything, it declines to break the numbers down at all and
 says so. Nothing on it blocks anything: [the selection
-criteria](../handbook/governance/selection-criteria.md) are what the Board applies, and
+criteria](governance/selection-criteria.md) are what the Board applies, and
 this screen only shows the Board what it has been doing.
 
 ### Board, and what it will not do for you
 
-Everything the [Board's rules](../handbook/governance/board-rules.md) describe is
+Everything the [Board's rules](governance/board-rules.md) describe is
 enacted here — opening a nomination, objecting to one with a reason, declaring
 an absence, recording that a nomination has carried. What it never does is
 close one by itself. It shows which nominations have come due and then waits
@@ -60,7 +60,7 @@ anything about a person, and none of them needs a volunteer's machine to be on.
   reaching its threshold, an objection — are posted when they happen instead of
   waiting for the morning.
 - **The decision register** is rewritten from the commit history on every push,
-  which is why [that page](../handbook/governance/register.md) says not to edit it.
+  which is why [that page](governance/register.md) says not to edit it.
 - **The public feed** is published for the public site from the records that
   have cleared the publication gate, and only those.
 

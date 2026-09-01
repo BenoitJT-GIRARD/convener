@@ -1,6 +1,6 @@
 """The schema appendix of the handbook, derived from the model it describes.
 
-`docs/operating/schema.md` is the page a volunteer opens to find out what a
+`docs/engineering/schema.md` is the page a volunteer opens to find out what a
 record holds. It was written by hand, next to a model that kept moving, and it
 drifted every time the model did: it once defined `proposed_by` as
 the board member handling the lead, then went on listing fields the model had
@@ -65,7 +65,7 @@ from convener_ops.declaration.paths import repo_root
 TYPES_PATH: Final = Path("app") / "src" / "data" / "types.ts"
 
 #: The page it writes, relative to the repository root.
-DOC_PATH: Final = Path("docs") / "operating" / "schema.md"
+DOC_PATH: Final = Path("docs") / "engineering" / "schema.md"
 
 #: How the script is invoked, quoted in the page and in the failure message.
 #: One string, so the page and the message cannot come to name two commands.

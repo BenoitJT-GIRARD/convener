@@ -19,14 +19,6 @@ accounts and secrets, and keeps it running once volunteers are using it.
 - `docs/operating/operations.md` — every external integration, the secret
   it needs, and what degrades without it. Named here rather than linked:
   it is the page the app never publishes.
-- **[The workspace](the-workspace.md)** — what each screen of the cockpit
-  is for, and what runs in it with nobody watching.
-- **[Tools & access](tools.md)** — every tool the series uses, and how
-  access to each is granted.
-- **[Contacts](contacts.md)** — who is written to, and why there is nobody
-  outside the team to write to.
-- **[Data schema](schema.md)** — the record model, generated from
-  `app/src/data/types.ts`.
 
 ## What is not here
 

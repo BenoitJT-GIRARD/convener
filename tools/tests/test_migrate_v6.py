@@ -64,7 +64,7 @@ V5_CONFIG = (
 )
 
 V5_SPEAKERS = (
-    f"# Speakers ({_V5_STAMP} - see docs/operating/schema.md)\n- id: spk-001\n"
+    f"# Speakers ({_V5_STAMP} - see docs/engineering/schema.md)\n- id: spk-001\n"
 )
 
 
@@ -242,10 +242,10 @@ def test_no_reader_of_the_config_still_asks_for_the_old_name() -> None:
 
 
 def test_the_generated_schema_page_names_the_new_key() -> None:
-    """`docs/operating/schema.md` is derived from the model and shipped
+    """`docs/engineering/schema.md` is derived from the model and shipped
     inside every duplicate's handbook, so it is where the old name would
     have outlived the rename in the one place a volunteer reads."""
-    page = (ROOT / "docs" / "operating" / "schema.md").read_text(encoding="utf-8")
+    page = (ROOT / "docs" / "engineering" / "schema.md").read_text(encoding="utf-8")
     assert f"| `{NEW_KEY}` |" in page
     assert OLD_KEY not in page
 
@@ -340,7 +340,7 @@ def test_a_dry_run_prints_the_diff_and_writes_nothing(
 
 
 def test_the_dry_run_prints_nothing_a_windows_console_cannot_render() -> None:
-    printed = _ascii("# Speakers (unified schema v6 — see docs/operating/schema.md)")
+    printed = _ascii("# Speakers (unified schema v6 — see docs/engineering/schema.md)")
     assert printed.isascii()
     assert "\\u2014" in printed
 

@@ -27,7 +27,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
 | T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/handbook/toolkit/` |
-| What each screen of the app is for | `docs/operating/the-workspace.md` |
+| What each screen of the app is for | `docs/handbook/the-workspace.md` |
 | Live speaker & event data | `instance/data/speakers.yml` |
 | External integrations | `declarations/integrations.yml`, documented in `docs/operating/operations.md` |
 | How somebody with no repositories and no accounts gets a running instance | `STANDING-UP.yml`, rendered by `tools/scripts/generate_standing_up_doc.py` into `docs/operating/standing-up.md` for a person and by `tools/scripts/generate_standing_up_run_sheet.py` into `docs/operating/standing-up-for-an-agent.md` for an agent — which carries the order and the actor, and reads every step's own content back out of the declaration |
@@ -77,9 +77,9 @@ A single glossary at `docs/handbook/start-here/glossary.md` defines every term. 
 
 Which directory a page sits in says who it is written for.
 
-- **`handbook/`** — the volunteer's manual: how a webinar is run, from sourcing a speaker to the certificate that follows it. The cockpit serves pages from all three trees; most of what it serves is here.
-- **`operating/`** — the operator's reference: standing an instance up, the settings each repository needs, the record schema, and the procedures a running instance is kept on. `operating/standing-up.md` is generated from `STANDING-UP.yml` and is the one page here written for somebody who does not have an instance yet.
-- **`engineering/`** — how the system is built and why: the architecture, the decision records, and this file.
+- **`handbook/`** — the volunteer's manual: how a webinar is run, from sourcing a speaker to the certificate that follows it, what each screen of the workspace is for, which tools a volunteer needs and how the Board is reached. The cockpit serves almost everything it renders from here.
+- **`operating/`** — the operator's reference: standing an instance up, the settings each repository needs, and the procedures a running instance is kept on. The cockpit serves nothing from here, because every page is addressed to somebody standing an instance up or keeping it running, and `operating/standing-up.md`, generated from `STANDING-UP.yml`, is written for a reader who has no instance to sign in to yet.
+- **`engineering/`** — how the system is built and why: the architecture, the decision records, the record schema generated from `app/src/data/types.ts`, and this file. The cockpit serves the decision records and the schema from here, in the same tab as the handbook; both are written from the code rather than from the work, which is what puts them in this tree.
 
 Nothing sits at the root of `docs/`, where an index written for a volunteer and a note written for a developer used to sit beside each other with nothing saying which was which. `tools/tests/test_docs_directory.py` refuses a tracked file under `docs/` that is in none of the three, and refuses an exception with no reason beside it. The exceptions are named in that module, and there are none today.
 

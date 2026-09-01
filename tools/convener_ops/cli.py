@@ -149,7 +149,7 @@ from convener_ops.publication.public_data import to_public, to_survey_status
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the
 #: YAML-boundary fixture is written by one side and read by the other.
-SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/operating/schema.md)\n"
+SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/engineering/schema.md)\n"
 CONFIG_HEADER = "# Repo-wide config for the convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
 #: tools/convener_ops/journey/certificate.py's module docstring for why this file
@@ -5879,7 +5879,7 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
     after the point an announcement is useful -- so a real, ordinarily
     written record never reaches this branch. But nothing stops a
     hand-edited file from setting `publication.outcome: published` on a
-    still-`scheduled` row, and `docs/operating/schema.md` calls
+    still-`scheduled` row, and `docs/engineering/schema.md` calls
     `photo_url` "a link, not an upload": turning it into something
     `render_announcement` can inline would mean this command reaching onto
     the network for a URL a data file names, which it does not do. A row

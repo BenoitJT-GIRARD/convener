@@ -93,7 +93,7 @@ OLD_KEY = "vw_counter"
 #: The key as schema v6 writes it. Named after what it holds, not after
 #: who wrote it: `app/src/data/types.ts::Config.next_edition_number` and
 #: `tools/convener_ops/governance/validate.py::CONFIG_REQUIRED` are the two readers that
-#: require it, and `docs/operating/schema.md` derives its row from the
+#: require it, and `docs/engineering/schema.md` derives its row from the
 #: first of those.
 NEW_KEY = "next_edition_number"
 

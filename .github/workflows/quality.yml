@@ -19,7 +19,7 @@ name: Quality
 # of `README.md` and `docs/engineering/architecture.md`, including into
 # `docs/engineering/decisions/**`; `test_workflows.py` parses every file under
 # `.github/workflows/`; the schema and brand-token checks derive from
-# `app/src/data/types.ts`, `docs/operating/schema.md` and
+# `app/src/data/types.ts`, `docs/engineering/schema.md` and
 # `instance/data/brand.json`. A filter list built to be honestly safe here would
 # have to include most of the tree, which is not a filter, it is a
 # larger diff with the same risk of a missed entry and none of the
@@ -260,7 +260,7 @@ jobs:
         run: uv run convener-register --check
       - name: Schema appendix
         working-directory: tools
-        # `docs/operating/schema.md` is derived from `app/src/data/types.ts`,
+        # `docs/engineering/schema.md` is derived from `app/src/data/types.ts`,
         # the model both readers share. It was written by hand next to a model
         # that kept moving and drifted every time it moved -- four times over
         # two phases, corrected by hand each time. This is the same derivation

@@ -1,4 +1,4 @@
-# Speakers (unified schema v6 — see docs/operating/schema.md)
+# Speakers (unified schema v6 — see docs/engineering/schema.md)
 - id: spk-101
   name: Bénédicte Ångström
   gender: F

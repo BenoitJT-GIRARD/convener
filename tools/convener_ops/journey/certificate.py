@@ -559,7 +559,7 @@ class CertificateEvent:
     `title` becomes the signed payload's `event` field (the event's own
     printed title -- the human-readable name of the talk, not
     `event_id`); `date` becomes the payload's own `date` field, sourced
-    from the same speaker record field `docs/operating/schema.md` documents
+    from the same speaker record field `docs/engineering/schema.md` documents
     as "YYYY-MM-DD of the talk, frozen at scheduling" -- the day the
     session happened, not the day a certificate for it was issued (that
     second date is `CertificateEntry.issued_on`, a genuinely different

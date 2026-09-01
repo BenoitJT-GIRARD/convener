@@ -93,7 +93,7 @@ What this module cannot see, stated rather than left to be found
 
   **The names of the people who run the series were a second, until this
   paragraph was read against the files.**
-  `docs/operating/contacts.md` and `docs/operating/operations.md` each
+  `docs/handbook/contacts.md` and `docs/operating/operations.md` each
   named four of them, in paragraphs the cockpit publishes to every
   instance; the reference pages name roles now, and the one page that
   described one organisation's own deferred configuration describes the

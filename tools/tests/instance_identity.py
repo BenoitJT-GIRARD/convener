@@ -157,7 +157,7 @@ DEFERRED: Final = (
             "stayed green. Dead weight that happened to be somebody's "
             "name is the worst kind to leave in a shipped file. Two "
             "outlived that pass, each held by exactly one open decision, "
-            "and both left with it: `docs/operating/contacts.md` and "
+            "and both left with it: `docs/handbook/contacts.md` and "
             "`docs/operating/operations.md` named four founders between "
             "them, both are linted, and cspell failed on seven "
             "occurrences the moment either word went. Those two pages "

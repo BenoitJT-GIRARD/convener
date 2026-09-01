@@ -25,7 +25,7 @@ const SECTIONS = [
   { key: 'handbook/workspace', label: 'The workspace' },
   { key: 'handbook/tools', label: 'Tools & access' },
   { key: 'handbook/contacts', label: 'Contacts' },
-  { key: 'handbook/schema', label: 'Data schema' },
+  { key: 'engineering/schema', label: 'Data schema' },
 ];
 
 export function Handbook() {

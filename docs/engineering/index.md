@@ -12,9 +12,13 @@ whether to build on it at all.
 - **[Decision records](decisions/index.md)** — one record per structural
   decision, with what was rejected and what it costs. The codebase cites
   them by number.
-- **[Content rules](content-rules.md)** — the six rules the documentation
-  itself is held to: one home per piece of information, doctrine in the
-  handbook and state in the app, one glossary, and these three trees.
+- **[Data schema](schema.md)** — every field of the record store, its
+  type and its enumerated values, generated from `app/src/data/types.ts`
+  and refused by continuous integration when the two drift.
+- **[Content rules](content-rules.md)** — the seven rules the
+  documentation itself is held to: one home per piece of information,
+  doctrine in the handbook and state in the app, one glossary, these three
+  trees, and how a page's sentences are written.
 
 ## What is not here
 
