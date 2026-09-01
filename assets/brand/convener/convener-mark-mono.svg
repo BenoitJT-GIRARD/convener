@@ -25,7 +25,7 @@
 
   The wordmark is Archivo at weight 400, converted to outlines — the face and
   weight `instance/data/brand.json` declares as `body`, shipped here under the SIL Open
-  Font License 1.1 (`fonts/`, `Archivo-LICENSE.txt`). It is **not** the face of
+  Font License 1.1 (`assets/fonts/`, `Archivo-LICENSE.txt`). It is **not** the face of
   the original raster, which was never identified; see README.md for why
   imitating it was the wrong trade.
 

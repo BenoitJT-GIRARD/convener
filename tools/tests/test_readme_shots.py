@@ -1,7 +1,7 @@
 """What holds the README's four pictures to a build nobody's identity
 reaches.
 
-`screenshots/` is the product's, so its four rasters travel into the
+`assets/screenshots/` is the product's, so its four rasters travel into the
 derived public repository exactly as committed. They used to be taken
 from a build of *this* instance, which put one series' name and one
 series' editions into four files no later check could read:
@@ -27,13 +27,13 @@ running it: it refuses here, and it gets past the refusal in a tree whose
 declaration is the example's -- a refusal that fired unconditionally
 would satisfy the first test and fail the second.
 
-**The set of pictures is.** Every tracked raster under `screenshots/` has
+**The set of pictures is.** Every tracked raster under `assets/screenshots/` has
 to be one `SHOTS` promises, so a fifth image cannot arrive beside the four
 without the renderer being taught to produce it.
 
 **And the day they are taken on is.** The cockpit prints a count of days
 (`app/src/state/sla.ts::lateness`), so an unfixed clock made
-`screenshots/cockpit.png` a file that changed overnight -- which meant
+`assets/screenshots/cockpit.png` a file that changed overnight -- which meant
 refreshing any one of the four produced a diff on the cockpit as well.
 The renderer hands every page a fixed `Date` now, read off the committed
 certificate fixture. What is checkable here is that the fix is wired in
@@ -66,7 +66,7 @@ ROOT = repo_root()
 RENDERER: Final = Path("tools") / "visuals" / "render-readme-shots.mjs"
 
 #: Where the pictures are.
-SHOTS_DIR: Final = "screenshots"
+SHOTS_DIR: Final = "assets/screenshots"
 
 #: What did not happen when `node` is absent, in the words
 #: `toolchain.absent` carries.
@@ -234,7 +234,7 @@ def test_the_clock_is_fixed_before_a_page_is_ever_navigated() -> None:
     text = _renderer()
     assert _FIXES_THE_CLOCK in text, (
         f"{RENDERER.as_posix()} does not install a fixed clock, so "
-        "screenshots/cockpit.png counts days from whenever it was taken"
+        "assets/screenshots/cockpit.png counts days from whenever it was taken"
     )
     assert text.index(_FIXES_THE_CLOCK) < text.index(_NAVIGATES), (
         "the fixed clock is installed after the page is navigated, which is "
@@ -264,7 +264,7 @@ def test_the_day_they_are_photographed_on_comes_off_the_committed_fixture() -> N
 
 
 def test_the_only_documented_way_to_refresh_them_is_the_driver() -> None:
-    """`screenshots/README.md` is where somebody looks before running
+    """`assets/screenshots/README.md` is where somebody looks before running
     anything, so it has to send them to the script that builds the example
     instance rather than to the renderer they would otherwise run here."""
     text = (ROOT / SHOTS_DIR / "README.md").read_text(encoding="utf-8")

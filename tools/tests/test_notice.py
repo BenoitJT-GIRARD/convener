@@ -169,7 +169,7 @@ def test_the_added_term_is_stated_as_one_section_7_permits() -> None:
         ("paragraph e", "the one kind of term this actually is"),
         ("trademark law", "the words section 7's paragraph e uses"),
         ("Convener", "the name the term is about"),
-        ("brand/convener/", "where the marks it is about actually are"),
+        ("assets/brand/convener/", "where the marks it is about actually are"),
         ("TRADEMARK.md", "where a reader is sent for what it is worth"),
         ("further restriction", "the thing it has to say it is not"),
     ):

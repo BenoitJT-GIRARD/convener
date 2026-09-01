@@ -416,7 +416,7 @@ def test_the_safe_area_is_the_fields_own_reach_and_nothing_more() -> None:
 
 
 def test_the_charter_draws_a_mark_three_times_its_own_width() -> None:
-    """`brand/lattice/brand.json::motif._width_ratio` says the weight is
+    """`assets/brand/lattice/brand.json::motif._width_ratio` says the weight is
     the one that makes a mark a mark rather than a dot: a mark is one step
     long, and the stroke is a third of that. Held to the arithmetic here,
     so the charter's own sentence and this module cannot drift apart.

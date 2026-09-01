@@ -355,13 +355,13 @@ _COLOUR_LITERAL = re.compile(
 
 #: The one directory whose `.svg` files may write a colour out: the
 #: product's own artwork. A mark's ink is not a copy of a declared value,
-#: it *is* the declaration -- `brand/convener/brand.json` reads its own
+#: it *is* the declaration -- `assets/brand/convener/brand.json` reads its own
 #: `motif.logo_dots` off `convener-mark.svg`'s coral circle, and
-#: `brand/convener/README.md` carries the contrast measurements for both.
+#: `assets/brand/convener/README.md` carries the contrast measurements for both.
 #: There is nowhere further upstream for those two values to come from,
 #: which is exactly what makes every other `.svg` in the repository a copy
 #: of something if it carries one.
-_ARTWORK_DIR = Path("brand")
+_ARTWORK_DIR = Path("assets") / "brand"
 
 #: And the three files a generator writes from the charter, whose every
 #: colour is a substituted value that `generate_brand_css.py --check` holds
@@ -395,7 +395,7 @@ def test_the_sweep_over_committed_drawings_finds_the_drawings() -> None:
     """A sweep that found nothing would pass for free."""
     found = _tracked_svgs()
     assert len(found) >= 4
-    assert Path("brand/convener/convener-mark.svg") in found
+    assert Path("assets/brand/convener/convener-mark.svg") in found
 
 
 @pytest.mark.parametrize("rel", _tracked_svgs(), ids=lambda rel: rel.as_posix())
@@ -412,14 +412,14 @@ def test_no_committed_drawing_writes_a_colour_out(rel: Path) -> None:
     same scaffold left `app/public/icons.svg` beside it, two of its six
     symbols drawn in `#aa3bff` from the same undeclared purple, referenced
     by nothing and built into every bundle. Both are gone; the cockpit's
-    tab shows the product's own mark, copied from `brand/` at build time
+    tab shows the product's own mark, copied from `assets/brand/` at build time
     (`app/scripts/copy-mark.mjs`).
 
     Reading a list of files is what let it hide, so this reads the
     repository instead. Two exemptions, and each is a statement rather
     than a hole:
 
-    * a drawing under `brand/` is the product's own artwork, and its ink
+    * a drawing under `assets/brand/` is the product's own artwork, and its ink
       is the source a charter reads rather than a copy of one;
     * a drawing a generator writes is the charter's own values, held to
       the charter character for character by `--check`.
@@ -427,14 +427,14 @@ def test_no_committed_drawing_writes_a_colour_out(rel: Path) -> None:
     Anything else that writes a colour out is writing down a value that
     lives somewhere else, and this is where that stops.
     """
-    if rel.parts[0] == _ARTWORK_DIR.name or rel in _GENERATED_SVGS:
+    if rel.is_relative_to(_ARTWORK_DIR) or rel in _GENERATED_SVGS:
         return
     text = (ROOT / rel).read_text(encoding="utf-8")
     found = _COLOUR_LITERAL.findall(text)
     assert not found, (
         f"{rel.as_posix()} writes a colour out ({len(found)} literal(s)). A "
         "drawing this product ships takes its colours from a generated "
-        "token or from the charter; only the artwork under brand/ is where "
+        "token or from the charter; only the artwork under assets/brand/ is where "
         "a colour comes from, and only a generated file may carry the "
         "charter's own values"
     )
@@ -471,7 +471,7 @@ def test_the_cockpits_tab_icon_is_the_products_own_mark() -> None:
     """Copied at build time rather than committed twice, so a tab icon
     cannot drift from the artwork it is meant to be
     (`docs/engineering/content-rules.md`: one notion, one home)."""
-    mark = ROOT / "brand" / "convener" / "convener-mark.svg"
+    mark = ROOT / "assets" / "brand" / "convener" / "convener-mark.svg"
     script = (ROOT / "app" / "scripts" / "copy-mark.mjs").read_text(encoding="utf-8")
     assert "convener-mark.svg" in script
     assert "favicon.svg" in script
@@ -807,7 +807,7 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
             f"{field} is this instance's own value wearing the product's name"
         )
 
-    mark = (ROOT / "brand" / "convener" / "convener-mark.svg").read_text(
+    mark = (ROOT / "assets" / "brand" / "convener" / "convener-mark.svg").read_text(
         encoding="utf-8"
     )
     colours = _charter_colours(brand.DEFAULT_PATH)
@@ -868,7 +868,7 @@ def test_the_charter_in_force_is_the_products_when_the_instance_has_none(
 
 
 #: A charter this repository ships that is not the product's own default,
-#: read off `brand/` rather than typed: the tests below are about choosing
+#: read off `assets/brand/` rather than typed: the tests below are about choosing
 #: one of the others, and which others exist is the directory's answer.
 _ANOTHER_CHARTER = next(
     name for name in ROOT_CHARTERS if name != brand.DEFAULT_PATH.parent.name
@@ -903,7 +903,7 @@ def test_a_duplicate_that_names_a_charter_reads_it_where_upstream_keeps_it(
 def test_a_duplicate_that_names_nothing_still_gets_the_products_own(
     default_repo: Path,
 ) -> None:
-    """`brand/convener/brand.json::_why_a_default`, unweakened by the key
+    """`assets/brand/convener/brand.json::_why_a_default`, unweakened by the key
     above: no design file and no name is a duplicate that builds and looks
     finished, which is the state this product has to survive."""
     assert published.CHARTER_KEY not in json.loads(
@@ -960,7 +960,7 @@ def test_the_conflict_is_refused_ahead_of_the_name_being_unknown(
 def test_a_charter_committed_tomorrow_is_selectable_with_no_list_to_edit(
     default_repo: Path,
 ) -> None:
-    """`shipped` reads `brand/` off the directory and everything above
+    """`shipped` reads `assets/brand/` off the directory and everything above
     reads `shipped`: a charter is offered, chosen and drawn with on the
     commit that adds the directory, with no entry to make anywhere."""
     invented = "throwaway"
@@ -978,7 +978,7 @@ def test_a_named_charter_is_matched_never_built_into_a_path(
     default_repo: Path,
 ) -> None:
     """A name is only ever answered by matching it against `shipped`, so a
-    declaration cannot address a file `brand/` does not hold however it is
+    declaration cannot address a file `assets/brand/` does not hold however it is
     spelt -- including by spelling its way back out of the directory."""
     _name_a_charter(default_repo, "../" + brand.DEFAULT_PATH.parent.as_posix())
     with pytest.raises(brand.UnknownCharterError):
@@ -1075,7 +1075,7 @@ def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> N
 _NOT_A_FAMILY = "no-such-drawing"
 
 #: An `instance/config.json::charter` naming a charter this product does not
-#: ship, held against `brand/` below for the reason above: a word that
+#: ship, held against `assets/brand/` below for the reason above: a word that
 #: quietly becomes a real charter turns a test that proves a refusal into
 #: one that proves a lookup.
 _NOT_A_CHARTER = "no-such-charter"

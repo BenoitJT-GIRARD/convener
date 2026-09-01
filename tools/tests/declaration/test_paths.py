@@ -409,7 +409,7 @@ ADMITTED = (
     'path = root / DATA_DIR / "speakers.yml"',
     'KEYS = paths.KEYS_DIR / "events"',
     'raise ValueError(f"{LEDGER_PATH.as_posix()} holds no usable handled list")',
-    'DEFAULT_PATH: Final = Path("brand") / "convener" / "brand.json"',
+    'DEFAULT_PATH: Final = Path("assets") / "brand" / "convener" / "brand.json"',
     'TOOLKIT_DIR: Final = Path("docs") / "handbook" / "toolkit"',
     'BUDGET_PATH: Final = Path("instance") / "actions-budget.yml"',
     '"""instance/data/config.yml is the instance\'s own board configuration."""',

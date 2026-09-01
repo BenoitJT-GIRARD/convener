@@ -3,8 +3,8 @@
 Two hand-written tables of top-level directories existed, nine rows in
 `README.md` and eight in `docs/engineering/architecture.md`. They disagreed with each
 other, and between them they placed eight of the twelve directories this
-repository tracked then: `.claude/`, `brand/`, `fonts/` and `examples/` were
-in neither, and `config/` was in one of the two.
+repository tracked then: `.claude/`, `brand/`, `fonts/` and `instances/`
+were in neither, and `config/` was in one of the two.
 `tools/scripts/generate_directory_map.py` derives the one that survives, and
 this module holds the halves that make that stick.
 
@@ -65,13 +65,11 @@ ANCHOR = "docs/engineering/architecture.md#every-directory-and-who-owns-it"
 FAKE_TREE: dict[str, tuple[str, ...]] = {
     ".github": ("workflows/quality.yml",),
     "app": ("src/main.tsx",),
-    "brand": ("convener/brand.json",),
+    "assets": ("brand/convener/brand.json", "fonts/Archivo-LICENSE.txt"),
     "declarations": ("boundary.yml",),
     "docs": ("engineering/architecture.md", "handbook/governance/register.md"),
-    "fonts": ("Archivo-LICENSE.txt",),
     "instance": ("data/config.yml", "data/schema.md", "keys/signing/README.md"),
     "examples": ("the-example-collective/README.md",),
-    "screenshots": ("README.md",),
     "services": ("auth-proxy/src/index.js",),
     "site": ("src/index.njk",),
     "tools": ("convener_ops/cli.py",),
@@ -296,12 +294,12 @@ def test_a_directory_with_no_purpose_line_is_refused_by_name() -> None:
 
 def test_a_purpose_line_for_a_directory_that_is_gone_is_refused_too() -> None:
     """The same drift from the other end: a row nothing backs any more."""
-    remaining = [name for name in sorted(PURPOSE) if name != "fonts"]
+    remaining = [name for name in sorted(PURPOSE) if name != "assets"]
 
     with pytest.raises(ValueError) as raised:
         purposes_for(remaining)
 
-    assert "fonts" in str(raised.value)
+    assert "assets" in str(raised.value)
 
 
 def test_every_purpose_line_is_one_line_of_prose() -> None:
@@ -388,7 +386,7 @@ def test_an_owner_changed_in_the_declaration_fails_the_check(
     declaration.write_text(
         declaration.read_text(encoding="utf-8").replace(
             "instance:\n  - path: instance/data/\n",
-            "instance:\n  - path: fonts/\n"
+            "instance:\n  - path: assets/\n"
             "    reason: >-\n      Handed over for this test.\n"
             "  - path: instance/data/\n",
         ),
@@ -405,7 +403,7 @@ def test_an_owner_changed_in_the_declaration_fails_the_check(
         .partition(_BEGIN)[2]
         .partition(_END)[0]
     )
-    assert f"| `fonts/` | {INSTANCE} |" in block
+    assert f"| `assets/` | {INSTANCE} |" in block
 
 
 def test_a_declaration_that_cannot_be_read_stops_the_check(

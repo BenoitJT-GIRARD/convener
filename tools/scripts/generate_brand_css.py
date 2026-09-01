@@ -27,7 +27,7 @@ instance's*. `declarations/boundary.yml` hands `instance/data/` to the instance,
 duplicate writes its own values there and never merges a conflict with
 upstream over them. A duplicate that has not chosen colours yet has no such
 file at all, and `convener_ops.publication.brand.load` reads the product's own charter,
-`brand/convener/brand.json`, instead -- so a fresh duplicate builds a
+`assets/brand/convener/brand.json`, instead -- so a fresh duplicate builds a
 finished-looking site rather than a grey one. Which of the two is in force
 is `brand.py`'s answer and nobody else's; this script, `brand_templates.py`
 and `visual.py` all ask it.
@@ -36,7 +36,7 @@ and `visual.py` all ask it.
 until then, so that no duplicate could wear a mark somebody else drew --
 right about the mark, wrong about the default, and what it produced was a
 clone whose very first build refused until a designer had been found. The
-product ships its own motif now (`brand/convener/brand.json`), and what
+product ships its own motif now (`assets/brand/convener/brand.json`), and what
 says an instance is not configured is `published.unconfigured` on the
 public pages rather than a build that will not run. This command still
 stops on a `motif` written and left half-finished, which is a mistake
@@ -136,7 +136,7 @@ from convener_ops.publication.brand import rgb_triplet, rgba
 #: The instance's own values, relative to the repository root. Not "the one
 #: source of fact" any more: an instance that
 #: has not chosen its colours has no such file, and `brand.load` reads the
-#: product's own charter (`brand/convener/brand.json`) instead. Kept under
+#: product's own charter (`assets/brand/convener/brand.json`) instead. Kept under
 #: this name because every failure message and both generated stylesheets'
 #: own headers point a reader at it -- it is where a duplicate writes its
 #: values, whether or not it has yet.
@@ -304,7 +304,7 @@ def render_site_css(root: Path) -> str:
 #: value read from the charter in force through it. That table is the one
 #: home for "which charter colour is behind this custom property": the
 #: same module measures every pairing the cockpit's chrome sets against
-#: every charter under `brand/`, and a sweep reading one table while the
+#: every charter under `assets/brand/`, and a sweep reading one table while the
 #: stylesheet was written from another would be measuring a cockpit
 #: nobody builds.
 #:
@@ -313,7 +313,7 @@ def render_site_css(root: Path) -> str:
 #: comment here used to call a Tailwind vocabulary as much as a CSS one
 #: and leave at that. What settled it is the measurement: a charter's
 #: field is a ground that may never carry text and may never carry white
-#: text -- every `contrast._forbidden` under `brand/` says so in those
+#: text -- every `contrast._forbidden` under `assets/brand/` says so in those
 #: words -- and `primary` is the word an author reaches for when filling
 #: a button. Twenty-five class lists in fifteen files did one of the two
 #: things it invites: eighteen filled a control or a masthead with the
@@ -435,11 +435,11 @@ def main(argv: list[str] | None = None) -> int:
     # AA, is not a file that needs regenerating: it is a palette that must
     # not build, whichever file it came from. The
     # `--check` is here precisely so that a default palette could ship at all
-    # (see brand/convener/brand.json's own `_why_a_default`), and a check
+    # (see assets/brand/convener/brand.json's own `_why_a_default`), and a check
     # that only compared files against a JSON document would have carried
     # none of that promise.
     #
-    # Every charter under `brand/` is measured here and not only the one
+    # Every charter under `assets/brand/` is measured here and not only the one
     # in force, which is what a directory of palettes a duplicate may
     # *choose* costs: a charter nobody has chosen yet derives no file, so
     # nothing else in this run would ever open it, and it would ship
@@ -476,7 +476,7 @@ def main(argv: list[str] | None = None) -> int:
         # what `app/src` does with the charter, and until it was measured
         # the sign-in screen filled its primary button with the field and
         # set white on it -- 1.61, the exact pairing every
-        # `contrast._forbidden` under `brand/` names. `check-a11y.mjs`
+        # `contrast._forbidden` under `assets/brand/` names. `check-a11y.mjs`
         # could not see it: it sweeps the showcase's pages, and it renders
         # the one charter in force rather than the four a duplicate may
         # choose.

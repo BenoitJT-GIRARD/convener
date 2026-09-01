@@ -1,4 +1,4 @@
-/* Copies `brand/convener/convener-mark.svg` -- the product's own mark --
+/* Copies `assets/brand/convener/convener-mark.svg` -- the product's own mark --
  * into `public/favicon.svg`, which is the icon `index.html` points a
  * browser tab at.
  *
@@ -24,7 +24,7 @@
  * Why the product's mark and not the charter's
  * ---------------------------------------------
  * Because a charter has no mark to give. It declares a palette and a
- * motif family (`brand/convener/brand.json`), and a motif is a drawing
+ * motif family (`assets/brand/convener/brand.json`), and a motif is a drawing
  * for the margin of a page, not a logotype -- an instance naming `ribbon`
  * has no mark of its own anywhere in its declaration, so "follow the
  * charter" would have nothing to follow.
@@ -40,7 +40,7 @@
  * Why a copy at build time rather than a second committed file
  * -------------------------------------------------------------
  * `docs/engineering/content-rules.md`: one notion, one home. The mark is
- * `brand/convener/convener-mark.svg` and nowhere else, so there is no
+ * `assets/brand/convener/convener-mark.svg` and nowhere else, so there is no
  * second copy to keep in step and no way for a tab icon to drift from the
  * artwork it is meant to be. This is the same arrangement `copy-fonts.mjs`
  * makes for the self-hosted faces, for the same reason, and it runs in the
@@ -55,7 +55,7 @@ import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(__dirname, '..', '..', 'brand', 'convener', 'convener-mark.svg');
+const SRC = resolve(__dirname, '..', '..', 'assets', 'brand', 'convener', 'convener-mark.svg');
 const DEST = resolve(__dirname, '..', 'public', 'favicon.svg');
 
 if (!existsSync(SRC)) {

@@ -13,8 +13,8 @@ import { PUBLIC_FONTS_DIR, writeFonts } from '../scripts/fonts-files.mjs';
 
 // app/tests/.. = app/
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-// app/tests/../../fonts = the one, shared source both site/ and app/ read.
-const SHARED_FONTS_DIR = resolve(APP_ROOT, '..', 'fonts');
+// app/tests/../../assets/fonts = the one shared source both site/ and app/ read.
+const SHARED_FONTS_DIR = resolve(APP_ROOT, '..', 'assets', 'fonts');
 
 describe('PUBLIC_FONTS_DIR is the exact directory tokens.css\'s @font-face rules resolve against', () => {
   it('resolves to app/public/fonts, independent of cwd', () => {
@@ -66,7 +66,7 @@ describe('writeFonts', () => {
     expect(files).toEqual([]);
   });
 
-  it('publishes every real file the shared fonts/ directory holds today', async () => {
+  it('publishes every real file the shared assets/fonts/ directory holds today', async () => {
     // Not a stand-in: the same directory site/.eleventy.js's own
     // passthrough copy and copy-fonts.mjs both read, proving this is a
     // real shared source rather than a path that merely resolves.

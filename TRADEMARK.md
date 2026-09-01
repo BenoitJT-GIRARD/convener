@@ -1,6 +1,6 @@
 # The name and the marks
 
-The name **Convener** and the mark in `brand/convener/` are **not** covered by
+The name **Convener** and the mark in `assets/brand/convener/` are **not** covered by
 the licence. Everything else in this repository is — see [`LICENSE`](LICENSE),
 whose additional term under section 7 of the GNU Affero General Public License
 states that refusal in the licence's own language.
@@ -16,7 +16,7 @@ person reading it knows whose code they are running.
 
 - The name **Convener**, however it is cased or spaced, and any name a reader
   would confuse with it.
-- The mark and the wordmark this repository distributes in `brand/convener/`
+- The mark and the wordmark this repository distributes in `assets/brand/convener/`
   — the two arcs closing on a dot, the banner lock-up, and their single-ink
   variants.
 

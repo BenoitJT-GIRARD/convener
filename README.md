@@ -6,7 +6,7 @@ certificates, and the destruction of participants' personal data on a
 deadline — for the volunteer-run societies, reading groups and departmental
 seminars that have nobody to pay and nothing to pay them with.**
 
-![Convener](screenshots/banner.png)
+![Convener](assets/screenshots/banner.png)
 
 ## What it looks like
 
@@ -14,19 +14,19 @@ seminars that have nobody to pay and nothing to pay them with.**
 demonstration mode: no account, no repository, the example instance's own
 invented records.
 
-![The cockpit inbox: one lead to vote on, six webinars needing an action, each with its person and institution](screenshots/cockpit.png)
+![The cockpit inbox: one lead to vote on, six webinars needing an action, each with its person and institution](assets/screenshots/cockpit.png)
 
 **A public event page.** One per edition, generated — nobody writes these.
 The registration form on it encrypts what a participant types before it
 leaves their browser.
 
-![A public event page: the talk title, the speaker, the abstract, and the panel above the registration form](screenshots/event-page.png)
+![A public event page: the talk title, the speaker, the abstract, and the panel above the registration form](assets/screenshots/event-page.png)
 
 **The verification page.** Anyone holding a certificate can confirm it,
 years later, without an account and without sending anybody the certificate
 itself.
 
-![The verification page, showing a Certificate Verified panel with the holder, the event, the date and the identifier](screenshots/verification.png)
+![The verification page, showing a Certificate Verified panel with the holder, the event, the date and the identifier](assets/screenshots/verification.png)
 
 [![Licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-012765)](LICENSE)
 [![Cost to run: zero](https://img.shields.io/badge/cost%20to%20run-%E2%82%AC0-012765)](docs/engineering/architecture.md)

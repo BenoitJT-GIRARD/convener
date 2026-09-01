@@ -47,7 +47,7 @@ CANVASES: Final[tuple[tuple[float, float], ...]] = (
 )
 
 #: The artwork every measurement in the family is read off.
-MARK = repo_root() / "brand" / "convener" / "convener-mark.svg"
+MARK = repo_root() / "assets" / "brand" / "convener" / "convener-mark.svg"
 
 
 def _points(text: str) -> list[Point]:

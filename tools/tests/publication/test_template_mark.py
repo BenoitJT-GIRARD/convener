@@ -10,7 +10,7 @@ became the rule under the address -- every coordinate measured pixel by
 pixel off `announcement-template_initial.png`, this instance's own
 announcement poster, which `.gitignore` keeps out of this repository
 because it carries a real person's photograph. Both templates drew that
-device **for every charter**, so a duplicate choosing `brand/lattice/`
+device **for every charter**, so a duplicate choosing `assets/brand/lattice/`
 downloaded two files carrying a mark taken from this instance's artwork.
 
 It is the same provenance that keeps `ribbon` named by no charter but this
@@ -39,7 +39,7 @@ thing it explains.
 
 The one measurement that is still a measurement is the dot the device
 closes on, and it is a measurement of the product's *own* artwork:
-`brand/convener/convener-mark.svg`, three numbers, read back out of that
+`assets/brand/convener/convener-mark.svg`, three numbers, read back out of that
 file here.
 """
 
@@ -82,7 +82,7 @@ MODULES: Final = tuple(
 
 #: The product's own mark, and the box it is drawn on. The dot's three
 #: numbers are read back out of this file rather than restated.
-MARK: Final = Path("brand") / "convener" / "convener-mark.svg"
+MARK: Final = Path("assets") / "brand" / "convener" / "convener-mark.svg"
 MARK_BOX: Final = 512.0
 
 #: What path data is, said tightly enough that prose is not mistaken for
@@ -242,7 +242,7 @@ def test_the_dot_is_the_one_the_products_own_mark_closes_on() -> None:
     The only numbers in the lock-up that were measured off any artwork,
     and the artwork is the product's own -- measured off its own original
     raster and rebuilt as two arcs and a circle
-    (`brand/convener/README.md`). `brand/convener/brand.json`'s
+    (`assets/brand/convener/README.md`). `assets/brand/convener/brand.json`'s
     `motif._logo_dots` already reads its *colour* off this same circle, so
     the dot the charter has been colouring all along is the dot that is
     drawn.

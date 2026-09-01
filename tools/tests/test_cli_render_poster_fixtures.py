@@ -63,7 +63,7 @@ def test_writes_the_whole_cross_product(
     registry draws, crossed with every canvas the composition renders.
 
     Read off `_template_charters`, `motifs.FAMILIES` and `formats.FORMATS`
-    rather than counted here: a charter committed under `brand/` and a
+    rather than counted here: a charter committed under `assets/brand/` and a
     family registered beside `ribbon.py` are both swept on the commit that
     adds them, with no entry to make anywhere.
     """

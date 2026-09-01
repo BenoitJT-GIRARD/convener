@@ -1,7 +1,7 @@
 /* The public showcase's stylesheet
  *
  * Every value below comes from the charter in force -- instance/data/brand.json if
- * this instance has chosen its colours, brand/convener/brand.json if it has
+ * this instance has chosen its colours, assets/brand/convener/brand.json if it has
  * not (tools/convener_ops/publication/brand.py::source) -- which is the one source of fact
  * for the identity and carries the reasoning for each token. Do not
  * introduce a colour here that is not in that file: the block below is
@@ -920,12 +920,12 @@ a.btn--ghost:hover { border-color: var(--dominant); }
    * check-a11y against each of the four charters a duplicate may name,
    * which is the first time any of them had been built: field-text on
    * field-tint measures 4.72 at this instance's charter and fails at two
-   * of the four -- 4.50 at brand/chevrons (axe, measuring unrounded, calls
-   * it 4.498 and refuses it) and 3.87 at brand/steps. It was never a
+   * of the four -- 4.50 at assets/brand/chevrons (axe, measuring unrounded, calls
+   * it 4.498 and refuses it) and 3.87 at assets/brand/steps. It was never a
    * pairing any charter's own contrast table held, so
    * generate_brand_css.py --check could not see it, and check-a11y only
    * ever renders one charter. Both are now recorded as
-   * dominant_on_field_tint under brand/, so the recomputation covers it.
+   * dominant_on_field_tint under assets/brand/, so the recomputation covers it.
    *
    * The dominant is 8.18 to 10.95 on the same tint at every charter this
    * repository holds, and it is what .archive__action--alt below and this

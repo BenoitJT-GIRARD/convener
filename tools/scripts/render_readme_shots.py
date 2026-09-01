@@ -47,14 +47,14 @@ import second_instance_build
 
 #: Where the pictures live, and the one directory this script writes to
 #: outside its own scratch tree.
-SHOTS = "screenshots"
+SHOTS = "assets/screenshots"
 
 #: The renderer, in the built tree's own terms.
 RENDERER: Final = Path("tools") / "visuals" / "render-readme-shots.mjs"
 
 
 def _tracked_shots() -> set[str]:
-    """The rasters `screenshots/` holds, as git sees them. The index is
+    """The rasters `assets/screenshots/` holds, as git sees them. The index is
     the authority rather than the directory listing: an untracked file
     somebody dropped there is not a picture this repository publishes."""
     listing = subprocess.run(  # nosec B603 B607

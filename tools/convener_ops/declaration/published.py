@@ -16,7 +16,7 @@ here for the reason every other key in this file is -- `_declaration` at
 the foot of this module is Python's one parse of this path, and a second
 one inside `publication/brand.py` would be the copy this whole design
 refuses wearing a smaller hat. What the name *means* is answered there:
-which charters exist is a property of the `brand/` directory, and this
+which charters exist is a property of the `assets/brand/` directory, and this
 module knows nothing about the directory beside it.
 
 Every public address this repository emits is a suffix of a single value:
@@ -200,7 +200,7 @@ IDENTITY_KEY: Final = "identity"
 EDITION_PREFIX_KEY: Final = "edition_prefix"
 
 #: The key that says which of the charters the product ships this instance
-#: is drawn with -- the name of a directory under `brand/`, and the whole
+#: is drawn with -- the name of a directory under `assets/brand/`, and the whole
 #: of what a duplicate writes to choose one.
 #:
 #: **A name rather than a copy.** Before this key the only way to build
@@ -222,7 +222,7 @@ EDITION_PREFIX_KEY: Final = "edition_prefix"
 #: editing.
 #:
 #: `charter_from_data` below reads it and `publication/brand.py` answers
-#: it: which charters exist is a property of the `brand/` directory, and
+#: it: which charters exist is a property of the `assets/brand/` directory, and
 #: this module knows nothing about the directory beside it.
 CHARTER_KEY: Final = "charter"
 
@@ -745,13 +745,13 @@ def charter_from_data(data: Any) -> str | None:
     The one optional key in this file. Every other value here is identity
     -- a name, an address, a prefix -- and identity is refused when it is
     missing, because nothing can guess it. A charter is design, and
-    `brand/convener/brand.json::_why_a_default` is the argument for never
+    `assets/brand/convener/brand.json::_why_a_default` is the argument for never
     demanding it: a duplicate that names none is drawn with the product's
     own and looks finished at its first build.
 
     A key that is present and is not a name is refused, because a
     declaration nobody can act on is worse than one nobody wrote. Whether
-    the name is one `brand/` actually holds is not asked here:
+    the name is one `assets/brand/` actually holds is not asked here:
     `publication/brand.py` reads that directory and answers it there, and
     a name that has to pass through that set can never be a path.
     """

@@ -95,12 +95,12 @@ the table beneath it.
 
 The two figures this paragraph used to carry were one charter's, recorded
 when there was one. Re-measured at all six this repository holds -- the
-four under `brand/`, this instance's and the example's -- the reference's
+four under `assets/brand/`, this instance's and the example's -- the reference's
 own pairing (`field` on `band`) measures **1.40 to 1.43**, and the
 treatment shipped instead (`field_text` on the same band) measures
 **4.58 to 5.49**. Neither end moves the decision: the raw treatment is
 about a third of what AA asks at every charter, and the readable one
-clears it at every charter -- though `brand/steps/` clears it by 0.08,
+clears it at every charter -- though `assets/brand/steps/` clears it by 0.08,
 which is the margin to watch when a charter's `field_text` is next
 re-derived.
 

@@ -5532,7 +5532,7 @@ def render_visual_fixtures() -> int:
       chose its own colours rendered them against images of somebody
       else's and went red on its first push, with nothing wrong.
 
-    The fonts still come from `root / "fonts"`: they are the product's,
+    The fonts still come from `root / "assets" / "fonts"`: they are the product's,
     self-hosted and served by it (D-17), and `examples/the-example-collective/` holds no
     copy of them precisely because a face is not an identity here.
     """
@@ -5568,7 +5568,7 @@ def render_visual_fixtures() -> int:
     fonts_dest = out / "fonts"
     if fonts_dest.exists():
         shutil.rmtree(fonts_dest)
-    shutil.copytree(root / "fonts", fonts_dest)
+    shutil.copytree(root / "assets" / "fonts", fonts_dest)
 
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
@@ -5586,7 +5586,7 @@ def render_visual_fixtures() -> int:
 #:   copies, charter and declaration both.
 #:
 #: The charters the *product* ships are not here. They are read off
-#: `brand/` by `_template_charters` below, because a palette a duplicate
+#: `assets/brand/` by `_template_charters` below, because a palette a duplicate
 #: may choose is swept the moment it is committed rather than the moment
 #: somebody remembers to name it.
 _INSTANCE_CHARTERS: Final = (
@@ -5603,8 +5603,8 @@ def _template_charters(root: Path) -> tuple[tuple[str, Path, Path], ...]:
     """Every charter this repository holds, and the declaration each is
     rendered against.
 
-    The two above, then one per directory under `brand/`, named for that
-    directory: `brand/convener/` is the charter a duplicate that has
+    The two above, then one per directory under `assets/brand/`, named for that
+    directory: `assets/brand/convener/` is the charter a duplicate that has
     written none of its own is drawn with, and every other one is a
     palette it may choose instead. None of them has a declaration of its
     own, because a charter is not an identity -- each is rendered against
@@ -5700,7 +5700,7 @@ def render_template_fixtures() -> int:
     but "does *this* drawing clear them, at every stroke weight and every
     string length this repository can produce". Neither side of the
     product is a list here: a family added to `motifs.FAMILIES` and a
-    charter committed under `brand/` are both swept the moment they
+    charter committed under `assets/brand/` are both swept the moment they
     exist, with no entry to add anywhere.
 
     Deterministic, and reads nothing an event changes: the templates carry
@@ -5741,7 +5741,7 @@ def render_template_fixtures() -> int:
     fonts_dest = out / "fonts"
     if fonts_dest.exists():
         shutil.rmtree(fonts_dest)
-    shutil.copytree(root / "fonts", fonts_dest)
+    shutil.copytree(root / "assets" / "fonts", fonts_dest)
 
     (out / "advances.json").write_text(
         json.dumps(
@@ -5850,7 +5850,7 @@ def render_poster_fixtures() -> int:
     fonts_dest = out / "fonts"
     if fonts_dest.exists():
         shutil.rmtree(fonts_dest)
-    shutil.copytree(root / "fonts", fonts_dest)
+    shutil.copytree(root / "assets" / "fonts", fonts_dest)
 
     (out / "manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
@@ -6034,7 +6034,7 @@ def render_visuals() -> int:
                 }
             )
 
-    shutil.copytree(root / "fonts", fonts_dest)
+    shutil.copytree(root / "assets" / "fonts", fonts_dest)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(
         f"wrote {len(manifest)} production visual page(s) for "

@@ -41,7 +41,7 @@ repository already measures:
 
 - **`_TIP_HALF_ANGLE_DEGREES`, the angle the two segments meet at.** The
   product's own mark opens by 80 degrees: both arcs of
-  `brand/convener/convener-mark.svg` run from 40 to 320, and
+  `assets/brand/convener/convener-mark.svg` run from 40 to 320, and
   `bracket._OPENING_HALF_ANGLE_DEGREES` carries the half of that onto the
   brackets' returns. A chevron here is that same opening laid on its side,
   so the angle in this drawing is the angle in the product's artwork

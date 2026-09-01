@@ -30,7 +30,7 @@
  * through Vite's own `define`, `site/.eleventy.js` composes the same
  * values into every showcase page -- so a picture taken here would be a
  * picture of whichever series happens to run this repository, in four
- * files `screenshots/` hands to the derived public repository verbatim.
+ * files `assets/screenshots/` hands to the derived public repository verbatim.
  * Nothing downstream could catch it:
  * `convener_ops.derivation.derivation_guard` cannot read a raster and
  * says so in every report it writes, and
@@ -148,14 +148,14 @@ const ROOT = path.resolve(HERE, '..', '..');
 
 const APP_DIST = path.join(ROOT, 'app', 'dist');
 const SITE_DIST = path.join(ROOT, 'site', '_site');
-const OUT = path.join(ROOT, 'screenshots');
+const OUT = path.join(ROOT, 'assets', 'screenshots');
 const STAGE = path.join(HERE, 'readme-shots-stage');
 const FIXTURE = path.join(ROOT, 'tools', 'tests', 'fixtures', 'certificate-verification.json');
 const DECLARATION = path.join(ROOT, 'instance', 'config.json');
 const EXAMPLE = path.join(ROOT, 'examples', 'the-example-collective', 'instance', 'config.json');
 const EVENTS = path.join(ROOT, 'site', 'src', '_data', 'events.json');
-const CHARTER = path.join(ROOT, 'brand', 'convener', 'brand.json');
-const BANNER = path.join(ROOT, 'brand', 'convener', 'convener-banner.svg');
+const CHARTER = path.join(ROOT, 'assets', 'brand', 'convener', 'brand.json');
+const BANNER = path.join(ROOT, 'assets', 'brand', 'convener', 'convener-banner.svg');
 
 /** Every value a declaration carries about *who* is publishing, under the
  *  name the declaration itself gives it -- the address, the edition
@@ -196,7 +196,7 @@ async function refuseUnlessTheExampleDeclares() {
         'instance/config.json declares its own value for:\n' +
         `${named}\n` +
         'A capture made here would carry that identity into every copy of ' +
-        'screenshots/, and nothing downstream can read a raster back out ' +
+        'assets/screenshots/, and nothing downstream can read a raster back out ' +
         'again. Run `tools/scripts/render_readme_shots.py`, which builds ' +
         'this repository as the instance examples/the-example-collective/ declares and ' +
         'runs this script inside that build.'
@@ -369,9 +369,9 @@ async function stageTheTestCertificate(served) {
  * at 14.19. Both values are read from `brand.json`, never typed here.
  *
  * The banner PNG is therefore a *rendering* of the one banner file, in
- * the way `brand/convener/README.md`'s own "How the colour works"
+ * the way `assets/brand/convener/README.md`'s own "How the colour works"
  * section describes, refreshed by the same command as everything else in
- * `screenshots/`. It is not a second banner to keep in step.
+ * `assets/screenshots/`. It is not a second banner to keep in step.
  */
 async function stageTheBanner(served) {
   const charter = JSON.parse(await readFile(CHARTER, 'utf8')).colour;
@@ -488,7 +488,7 @@ async function main() {
         const png = await page.screenshot({ type: 'png' });
         await writeFile(path.join(OUT, `${shot.name}.png`), png);
         written += 1;
-        console.log(`shots: wrote screenshots/${shot.name}.png`);
+        console.log(`shots: wrote assets/screenshots/${shot.name}.png`);
       } finally {
         await page.close();
       }
@@ -508,7 +508,7 @@ async function main() {
     return;
   }
   console.log(
-    `shots: wrote ${written} screenshot(s) into screenshots/, ` +
+    `shots: wrote ${written} screenshot(s) into assets/screenshots/, ` +
       `photographed at ${certificate.photographedAt}`
   );
 }

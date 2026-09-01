@@ -1,8 +1,8 @@
 """The `bracket` family: the product's own mark, drawn in straight segments.
 
-`brand/convener/convener-mark.svg` is the product's own artwork -- two arcs
+`assets/brand/convener/convener-mark.svg` is the product's own artwork -- two arcs
 and a circle, with the radii, the stroke widths and the opening between the
-arcs' ends read off the original and rebuilt (`brand/convener/README.md`,
+arcs' ends read off the original and rebuilt (`assets/brand/convener/README.md`,
 "How the mark and the wordmark were made"). That geometry is the product's
 own, which is what a charter this repository ships publicly may be drawn
 with. `ribbon.py` beside this module is the other case, and its own
@@ -36,7 +36,7 @@ Off `convener-mark.svg` itself, in the units of its own 512 viewBox.
   bracket against the left edge is the outer arc; the one against the
   right edge is the inner, at that fraction of it in both directions.
 - **The stroke's weight** belongs to the motif rather than to a family
-  (`motifs.stroke_width`), and `brand/convener/brand.json::motif.
+  (`motifs.stroke_width`), and `assets/brand/convener/brand.json::motif.
   _width_ratio` says where the product's own figure comes from: the mark
   draws its outer arc 68.69 wide on a radius of 205.66, 0.334 of it,
   carried onto `_OUTER_HALF_WIDTH` below. The outer arc's proportion
@@ -105,7 +105,7 @@ _MARK_INNER_RADIUS: Final = 131.72
 
 #: What the outer arc's stroke is as a fraction of the radius it is struck
 #: on, 0.334 (`convener-mark.svg`: `stroke-width="68.69"` on that arc).
-#: `brand/convener/brand.json::motif.width_ratio` is this carried onto
+#: `assets/brand/convener/brand.json::motif.width_ratio` is this carried onto
 #: `_OUTER_HALF_WIDTH`, and `tests/publication/test_brand.py` holds the
 #: charter's own figure to the arithmetic.
 _MARK_OUTER_STROKE: Final = 68.69
@@ -130,7 +130,7 @@ _RETURN_OF_HALF_WIDTH: Final = math.tan(math.radians(_OPENING_HALF_ANGLE_DEGREES
 
 #: The left bracket's half-width, in short sides. It decides how far the
 #: motif reaches into the page -- 2.3 of it, with the stand-off below --
-#: and it is what `brand/convener/brand.json::motif.width_ratio` carries
+#: and it is what `assets/brand/convener/brand.json::motif.width_ratio` carries
 #: the mark's own outer-arc proportion onto: 0.334 of 0.061 is 0.0204.
 #:
 #: The figure itself was a fit to the ground the two downloadable

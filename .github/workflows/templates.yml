@@ -72,14 +72,14 @@ name: Templates
 # - `examples/the-example-collective/instance/config.json`,
 #   `examples/the-example-collective/instance/data/brand.json` -- the example's,
 #   another.
-# - `brand/*/brand.json` -- every charter the product itself ships: its
+# - `assets/brand/*/brand.json` -- every charter the product itself ships: its
 #   own default, which a duplicate that has written none is drawn with,
 #   and each palette a duplicate may choose instead. A glob and not a
 #   list, because `convener_ops.publication.brand.shipped` reads that same
 #   directory to decide what is swept -- a charter added there is rendered
 #   against every family without an entry being made anywhere, and a
 #   filter naming them one by one is the entry somebody forgets.
-# - `fonts/**` -- the face every advance in this check is measured in.
+# - `assets/fonts/**` -- the face every advance in this check is measured in.
 #   Replacing the file replaces the measurement.
 # - `tools/uv.lock` -- pins `segno`, whose modules are drawn into the
 #   background beside the code's own label.
@@ -124,8 +124,8 @@ on:
       - 'instance/data/brand.json'
       - 'examples/the-example-collective/instance/config.json'
       - 'examples/the-example-collective/instance/data/brand.json'
-      - 'brand/*/brand.json'
-      - 'fonts/**'
+      - 'assets/brand/*/brand.json'
+      - 'assets/fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
       - '.github/workflows/templates.yml'
@@ -149,8 +149,8 @@ on:
       - 'instance/data/brand.json'
       - 'examples/the-example-collective/instance/config.json'
       - 'examples/the-example-collective/instance/data/brand.json'
-      - 'brand/*/brand.json'
-      - 'fonts/**'
+      - 'assets/brand/*/brand.json'
+      - 'assets/fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
       - '.github/workflows/templates.yml'
@@ -172,7 +172,7 @@ jobs:
     # A hundred and eighty renderings -- six charters and five families,
     # crossed with three templates and again with three canvases of the
     # generated poster -- measure in under a minute on a warm machine, and
-    # the count grows with each charter committed under `brand/` and each
+    # the count grows with each charter committed under `assets/brand/` and each
     # family registered. This allowance covers a cold cache miss that has
     # to fetch the ~430MB Chrome-for-Testing build besides.
     timeout-minutes: 15

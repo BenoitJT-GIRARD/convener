@@ -16,7 +16,7 @@ a real person's photograph. `visual.py` drew two squares on a diagonal and
 two dots joined by a short lead, and called itself "a deliberately
 simplified reading" of the same poster -- which is a reading of it.
 
-Both were drawn **at every charter**. A duplicate choosing `brand/lattice/`
+Both were drawn **at every charter**. A duplicate choosing `assets/brand/lattice/`
 downloaded two templates and generated every poster carrying a device
 taken from one instance's artwork. It is the same provenance that keeps
 `ribbon` named by no charter but this instance's own, and the same class as
@@ -26,7 +26,7 @@ What replaces it follows the charter, and does not become the product's
 own mark
 -----------------------------------------------------------------------
 Which is where this parts company with the reasoning that put
-`brand/convener/convener-mark.svg` in the cockpit's browser tab. That
+`assets/brand/convener/convener-mark.svg` in the cockpit's browser tab. That
 reasoning turned on the cockpit *being* the product: a tab icon says which
 software a volunteer is running, and the instance's identity arrives
 afterwards, at run time. These three surfaces are the opposite. They are
@@ -70,11 +70,11 @@ BOX: Final = 100.0
 
 #: The dot the device closes on, as three fractions of the box: centre x,
 #: centre y, radius. The only numbers here read off any artwork, and the
-#: artwork is the product's own -- `brand/convener/convener-mark.svg` is a
+#: artwork is the product's own -- `assets/brand/convener/convener-mark.svg` is a
 #: circle of radius 47.68 at (424.89, 255.19) on a 512 viewBox, which
-#: `brand/convener/README.md` records as measured off the original raster
+#: `assets/brand/convener/README.md` records as measured off the original raster
 #: and rebuilt rather than traced.
-#: `brand/convener/brand.json::motif._logo_dots` already reads its
+#: `assets/brand/convener/brand.json::motif._logo_dots` already reads its
 #: *colour* off that same circle -- "it is the colour of the dot in
 #: convener-mark.svg" -- so the dot the charter has been colouring all
 #: along is the dot that is now drawn.

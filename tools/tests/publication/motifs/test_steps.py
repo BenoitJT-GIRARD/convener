@@ -471,7 +471,7 @@ def test_the_safe_area_is_the_lines_own_reach_and_nothing_more() -> None:
 
 
 def test_the_charter_draws_a_ledge_five_times_its_own_width() -> None:
-    """`brand/steps/brand.json::motif._width_ratio` says the weight is the
+    """`assets/brand/steps/brand.json::motif._width_ratio` says the weight is the
     one that keeps a ledge a ledge rather than a block: a ledge is one step
     deep, and the stroke is a fifth of that. Held to the arithmetic here,
     so the charter's own sentence and this module cannot drift apart."""

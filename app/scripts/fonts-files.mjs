@@ -2,14 +2,14 @@
  * the copy script itself, the same reason `signing-keys-files.mjs` is kept
  * apart from `copy-signing-keys.mjs`: a rule `app/tests/copy-fonts.test.ts`
  * can call directly, rather than one only ever exercised by running the
- * whole script against the real `fonts/` tree.
+ * whole script against the real `assets/fonts/` tree.
  *
- * `fonts/` at the repository root is the one committed copy of these files.
+ * `assets/fonts/` is the one committed copy of these files.
  * The designer's own faces (Akzidenz-Grotesk, Neue Machina) are commercial;
  * Archivo and JetBrains Mono are the self-hosted substitutes D-17 requires
  * instead of a webfont request, which discloses every visitor's address.
  * `site/` already serves this same directory (`site/.eleventy.js`'s own
- * passthrough copy, `{'../fonts': 'fonts'}`); this is the application's
+ * passthrough copy, `{'../assets/fonts': 'fonts'}`); this is the application's
  * side of that one shared source -- the
  * application once kept no copy of its own at all and asked Google for these
  * faces instead, on the exact pages (signup, certificate verification, the

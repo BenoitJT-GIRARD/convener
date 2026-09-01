@@ -173,8 +173,8 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/journey/registration.py",
         "examples/the-example-collective/instance/data/brand.json",
         "tools/convener_ops/publication/brand.py",
-        "brand/*/brand.json",
-        "fonts/**",
+        "assets/brand/*/brand.json",
+        "assets/fonts/**",
         "tools/uv.lock",
         "tools/visuals/**",
         ".github/workflows/visuals.yml",
@@ -184,7 +184,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
 
 
 def test_the_path_filter_covers_every_charter_the_product_ships() -> None:
-    """`brand/` holds one directory per charter a duplicate may choose,
+    """`assets/brand/` holds one directory per charter a duplicate may choose,
     and the filter reaches all of them through one glob -- the shape
     `templates.yml`'s own filter already takes, for this reason.
 
@@ -202,7 +202,7 @@ def test_the_path_filter_covers_every_charter_the_product_ships() -> None:
     is what a list of one example path would have let through green."""
     paths = _TRIGGERS["push"]["paths"]
     charters = brand.shipped(_ROOT)
-    assert charters, "brand/ ships no charter, so this sweep proves nothing"
+    assert charters, "assets/brand/ ships no charter, so this sweep proves nothing"
     for charter in charters:
         posix = charter.as_posix()
         assert any(PurePosixPath(posix).match(pattern) for pattern in paths), (

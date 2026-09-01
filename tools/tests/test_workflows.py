@@ -3605,7 +3605,7 @@ _ORDINARY_YAML_PROBES: list[tuple[str, str]] = [
     ),
     ("run: |\n  cmd1 && cmd2\n", "a shell && inside a run: script"),
     (
-        "paths:\n  - 'fonts/**'\n  - 'tools/visuals/**'\n",
+        "paths:\n  - 'assets/fonts/**'\n  - 'tools/visuals/**'\n",
         "double-star glob path filters",
     ),
     ("schedule:\n  - cron: '0 6 * * *'\n", "a cron schedule"),
@@ -5116,7 +5116,7 @@ def test_the_bundle_input_sweep_finds_every_source_the_build_actually_reads() ->
     anything could not fake it."""
     inputs = _bundle_inputs()
     for expected in (
-        "fonts",
+        "assets/fonts",
         "instance/keys/events",
         "instance/keys/signing",
         "instance/public-data/certificates-public.json",

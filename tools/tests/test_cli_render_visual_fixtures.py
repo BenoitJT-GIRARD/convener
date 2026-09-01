@@ -80,8 +80,9 @@ def test_fonts_are_copied_alongside_so_a_relative_url_resolves(
 def test_a_stale_fonts_directory_from_an_earlier_run_does_not_survive(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A second run must leave `fonts/` exactly as the repository's own
-    `fonts/` stands today, never a merge of an old copy and a new one --
+    """A second run must leave the copied `fonts/` exactly as the
+    repository's own `assets/fonts/` stands today, never a merge of an old
+    copy and a new one --
     the same "regenerate the whole target, never accumulate into it"
     discipline `register()` already applies to the decision register."""
     out = tmp_path / "fixtures"
@@ -201,5 +202,5 @@ def test_the_fonts_still_come_from_the_product_and_not_the_example(
     _run(out, monkeypatch)
     assert not (EXAMPLE / "fonts").exists()
     copied = {path.name for path in (out / "fonts").glob("*.woff2")}
-    assert copied == {path.name for path in (ROOT / "fonts").glob("*.woff2")}
+    assert copied == {path.name for path in (ROOT / "assets" / "fonts").glob("*.woff2")}
     assert copied

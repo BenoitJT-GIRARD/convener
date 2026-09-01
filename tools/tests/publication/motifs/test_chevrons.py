@@ -115,7 +115,7 @@ def test_the_heaviest_stroke_is_the_one_a_charter_here_actually_draws() -> None:
 
 def test_the_tip_opens_at_the_angle_the_products_own_mark_opens_at() -> None:
     """Where the shape itself comes from. Both arcs of
-    `brand/convener/convener-mark.svg` run from 40 degrees to 320, and the
+    `assets/brand/convener/convener-mark.svg` run from 40 degrees to 320, and the
     bracket carries the half of that opening onto its returns; a chevron is
     that same opening laid on its side. Held to the bracket's own constant,
     so the two drawings cannot come to disagree about the mark."""
@@ -472,7 +472,7 @@ def test_the_safe_area_is_the_columns_own_reach_and_nothing_more() -> None:
 
 
 def test_the_charter_draws_an_arm_four_times_its_own_width() -> None:
-    """`brand/chevrons/brand.json::motif._width_ratio` says the weight is
+    """`assets/brand/chevrons/brand.json::motif._width_ratio` says the weight is
     the one that keeps a chevron an angle rather than a wedge: an arm is
     half a span across and a rise down, and the stroke is a quarter of
     that length. Held to the arithmetic here, so the charter's own sentence

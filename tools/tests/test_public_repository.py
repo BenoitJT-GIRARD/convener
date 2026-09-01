@@ -138,10 +138,10 @@ NOT_EDITED: Final[dict[str, str]] = {
 #: singled out rather than left to `NOT_EDITED`: the product ships a
 #: palette and a motif of its own, so a duplicate builds a finished-looking
 #: site without providing any design file at all. That is a property of the
-#: repository (`brand/convener/brand.json` exists and is the product's), not
+#: repository (`assets/brand/convener/brand.json` exists and is the product's), not
 #: an opinion, so the two are asserted together below.
 CHARTER = "instance/data/brand.json"
-PRODUCT_CHARTER = Path("brand") / "convener" / "brand.json"
+PRODUCT_CHARTER = Path("assets") / "brand" / "convener" / "brand.json"
 
 
 def _boundary() -> boundary.Boundary:
@@ -251,7 +251,7 @@ def test_the_charter_is_not_something_a_duplicate_has_to_write() -> None:
     """The product ships a palette *and* a motif, so a duplicate builds
     without providing a design file. Both halves are asserted: the page
     must not put the charter on the list, and the default it would fall
-    back to must exist. Deleting `brand/convener/brand.json` and leaving
+    back to must exist. Deleting `assets/brand/convener/brand.json` and leaving
     the page alone would otherwise turn a documented convenience into a
     build that fails on a fresh duplicate."""
     assert CHARTER not in _listed_paths(), (

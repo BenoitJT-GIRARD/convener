@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { PUBLIC_FONTS_DIR, writeFonts } from './fonts-files.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(__dirname, '..', '..', 'fonts');
+const SRC = resolve(__dirname, '..', '..', 'assets', 'fonts');
 
 if (!existsSync(SRC)) {
   console.error(`copy-fonts: source not found at ${SRC}`);

@@ -110,7 +110,7 @@ proportions match it is weight 800 at width 80, a condensed heavy the logo
 visibly is not.
 
 Archivo is the face and weight `instance/data/brand.json` already declares
-as `body`, and it ships here under the SIL Open Font License 1.1 (`fonts/`,
+as `body`, and it ships here under the SIL Open Font License 1.1 (`assets/fonts/`,
 `Archivo-LICENSE.txt`). The glyphs are paths, so no font is needed to render.
 
 It reads about 9 % wider than the original wordmark at the same cap height,

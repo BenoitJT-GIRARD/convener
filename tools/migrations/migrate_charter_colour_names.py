@@ -9,7 +9,7 @@ what they happened to be in the first palette anybody measured: `purple`,
 `convener_ops/publication/brand_templates.py` -- so every later palette
 inherited the names whatever colours it chose. In the product's own
 charter `colour.purple` holds `#012765`, a navy, and `colour.turquoise`
-holds `#febcb1`, a coral. `brand/convener/brand.json` said so itself, in
+holds `#febcb1`, a coral. `assets/brand/convener/brand.json` said so itself, in
 a `_names` field that existed to tell a reader the keys named positions
 and not hues.
 
@@ -46,7 +46,7 @@ Every key built on a colour name follows it, in the same rewrite:
 
 Three charters, not one
 ------------------------
-`brand/convener/brand.json` is the product's own, the palette a duplicate
+`assets/brand/convener/brand.json` is the product's own, the palette a duplicate
 builds with before it has chosen anything. `instance/data/brand.json` is
 this instance's. `examples/the-example-collective/instance/data/brand.json` is the
 worked example `tools/tests/test_second_instance.py` builds the whole
@@ -116,7 +116,7 @@ SECTIONS: Final = ("colour", "derived", "contrast")
 #: for, one entry per colour key.
 ROLES_KEY: Final = "_roles"
 
-#: The three charters this repository ships. `brand/convener/brand.json`
+#: The three charters this repository ships. `assets/brand/convener/brand.json`
 #: is the product's own and is always there; the other two are an
 #: instance's, and the first of them is optional by design.
 CHARTERS: Final = (

@@ -7,7 +7,7 @@ on:
     # direction is the whole decision.
     #
     # This build's inputs cover very nearly the whole repository:
-    # `app/package.json`'s own `prebuild` copies `fonts/`, `docs/` (the
+    # `app/package.json`'s own `prebuild` copies `assets/fonts/`, `docs/` (the
     # handbook, through `app/src/content/registry.ts`), `instance/keys/events/`,
     # `instance/keys/signing/`, `instance/public-data/certificates-public.json` and
     # `instance/public-data/survey-status.json` into the bundle, and the job's own

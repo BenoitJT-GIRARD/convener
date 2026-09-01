@@ -94,7 +94,7 @@ _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/cli.py",
     "tools/convener_ops/declaration/published.py",
     "tools/convener_ops/publication/brand.py",
-    "fonts/**",
+    "assets/fonts/**",
     "tools/uv.lock",
     "tools/visuals/**",
 }
@@ -129,7 +129,7 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     its own colours and had them diffed against a committed image of
     somebody else's poster.
 
-    `brand/convener/brand.json`, the product's default charter, stays here
+    `assets/brand/convener/brand.json`, the product's default charter, stays here
     and only here: a duplicate that has written no `instance/data/brand.json` falls
     back to it for a real render, while the example always declares one of
     its own."""
@@ -137,7 +137,7 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     production_only = (
         "instance/config.json",
         "instance/data/brand.json",
-        "brand/convener/brand.json",
+        "assets/brand/convener/brand.json",
     )
     for path in production_only:
         assert path in mine, f"{path} is missing from this job's own filter"

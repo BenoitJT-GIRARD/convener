@@ -2595,7 +2595,7 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
     )
     # `.eleventy.js` reads this project's published
     # address from `instance/config.json`, one level above `site/` -- the
-    # same way it already passthrough-copies `../fonts`. A copy of `site/`
+    # same way it already passthrough-copies `../assets/fonts`. A copy of `site/`
     # alone is no longer a buildable tree, and the build says so loudly
     # rather than guessing an address, which is the whole point of that
     # module refusing a default.

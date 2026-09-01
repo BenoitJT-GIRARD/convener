@@ -30,9 +30,9 @@ three spellings, so that a charter written before the rename is answered
 by name and pointed at the migration rather than raising a `KeyError`
 inside a template.
 
-**A default palette is the product's too**, `brand/convener/brand.json`,
+**A default palette is the product's too**, `assets/brand/convener/brand.json`,
 so that a duplicate looks finished at its first build rather than grey. It
-is the product's own colours (`brand/convener/README.md`), and it clears
+is the product's own colours (`assets/brand/convener/README.md`), and it clears
 the same AA floor under the same `--check`; a palette that does not is a
 palette that does not build.
 
@@ -41,13 +41,13 @@ palette that does not build.
 about this instance's own colours moved: the file is what it was.
 
 **A duplicate with nobody to draw for it names one instead of writing
-one.** `brand/` holds several charters now, and until `charter` there was
+one.** `assets/brand/` holds several charters now, and until `charter` there was
 no way to build with any but the first: choosing the lattice meant copying
-`brand/lattice/brand.json` into `instance/data/`, which forks a product
+`assets/brand/lattice/brand.json` into `instance/data/`, which forks a product
 file into a duplicate's tree on the commit that copies it -- every later
 correction to that charter, a contrast remeasured or a token renamed,
 arrives as a merge conflict on a file the duplicate now owns, which is the
-opposite of what `brand/` is for. So the choice is a name in
+opposite of what `assets/brand/` is for. So the choice is a name in
 `instance/config.json` (`published.CHARTER_KEY`) and the file stays where
 upstream maintains it. `source` below is where the three answers -- named,
 written, neither -- are settled, and where naming both is refused.
@@ -65,7 +65,7 @@ about *what kind of value* it is rather than about which file it is in:
 **identity has to be supplied -- an organisation's name, its published
 address, the title of its series, none of which anything can guess -- and
 design never does.** The product's own motif is in
-`brand/convener/brand.json` beside the palette it belongs with, and what
+`assets/brand/convener/brand.json` beside the palette it belongs with, and what
 tells a reader an instance is not configured is `published.unconfigured`
 on the public pages, which is the better guard of the two because it
 lets somebody watch the product work while they configure it.
@@ -155,21 +155,21 @@ __all__ = [
 INSTANCE_PATH: Final = DATA_DIR / "brand.json"
 
 #: Where the charters this product ships live, one directory each. The
-#: product's own is `brand/convener/`, beside the mark it belongs to; the
+#: product's own is `assets/brand/convener/`, beside the mark it belongs to; the
 #: rest are palettes a duplicate with nobody to draw for it may choose
 #: instead of writing its own.
-SHIPPED_DIR: Final = Path("brand")
+SHIPPED_DIR: Final = Path("assets") / "brand"
 
 #: The file each of those directories holds.
 SHIPPED_FILE: Final = "brand.json"
 
 #: The product's own, shipped with the code and never edited by an
-#: instance. Beside the mark it belongs to (`brand/convener/`) rather than
+#: instance. Beside the mark it belongs to (`assets/brand/convener/`) rather than
 #: in a directory of its own, so the product's default and the product's
 #: mark are one identity instead of two.
 DEFAULT_PATH: Final = SHIPPED_DIR / "convener" / SHIPPED_FILE
 
-#: The design section. `brand/convener/brand.json` carries one, so an
+#: The design section. `assets/brand/convener/brand.json` carries one, so an
 #: instance never has to; what it may not do is write half of one.
 MOTIF_KEY: Final = "motif"
 
@@ -306,7 +306,7 @@ class MissingMotifError(RuntimeError):
 def shipped(root: Path) -> tuple[Path, ...]:
     """Every charter this product ships, root-relative, in name order.
 
-    Read off `brand/` rather than written down, for the reason
+    Read off `assets/brand/` rather than written down, for the reason
     `motifs.FAMILIES` gives about the directory beside it: a charter that
     has to be added to a list somewhere is a charter somebody forgets to
     add, and what it is forgotten by is the sweep that would have caught
@@ -314,8 +314,8 @@ def shipped(root: Path) -> tuple[Path, ...]:
     every family, and `generate_brand_css.py` recomputes every one of
     their contrasts, both with no entry to make anywhere.
 
-    A directory under `brand/` holding no `brand.json` is artwork rather
-    than a charter and is passed over; `brand/convener/` holds both.
+    A directory under `assets/brand/` holding no `brand.json` is artwork rather
+    than a charter and is passed over; `assets/brand/convener/` holds both.
     """
     found = sorted((root / SHIPPED_DIR).glob(f"*/{SHIPPED_FILE}"))
     return tuple(path.relative_to(root) for path in found)
@@ -358,7 +358,7 @@ def chosen(root: Path) -> Path | None:
     which says why it is declared there); this is where it becomes a file.
     A name is only ever answered by matching it against `shipped` above,
     never by building a path out of it, so a declaration cannot address a
-    file `brand/` does not hold however it is spelt.
+    file `assets/brand/` does not hold however it is spelt.
     """
     name = declared(root)
     if name is None:
@@ -367,7 +367,7 @@ def chosen(root: Path) -> Path | None:
 
 
 def _shipped_as(root: Path, name: str) -> Path:
-    """`brand/<name>/brand.json`, or a refusal naming the charters there
+    """`assets/brand/<name>/brand.json`, or a refusal naming the charters there
     are -- `motifs.family`'s own shape, one layer up."""
     for rel in shipped(root):
         if rel.parent.name == name:
@@ -393,7 +393,7 @@ def source(root: Path) -> Path:
     Three answers, in the order this asks for them.
 
     1. **The declaration names one of the product's**, `charter` in
-       `instance/config.json`: `brand/<name>/brand.json`, read where
+       `instance/config.json`: `assets/brand/<name>/brand.json`, read where
        upstream maintains it. A duplicate that wanted the lattice used to
        have to copy that file into `instance/data/`, which forks it: the
        copy stops tracking upstream on the commit that makes it, and every
@@ -403,7 +403,7 @@ def source(root: Path) -> Path:
        file. A duplicate with a designer keeps the route it has always
        had, and nothing about this instance's own charter moved.
     3. **Neither**: the product's own, `DEFAULT_PATH`, which is the whole
-       of `brand/convener/brand.json::_why_a_default` and is not weakened
+       of `assets/brand/convener/brand.json::_why_a_default` and is not weakened
        by the key above. Design is never something a person has to supply
        before the thing will run.
 
@@ -626,7 +626,7 @@ def motif(root: Path) -> dict[str, Any]:
         f"complete one: missing {lacking}. A drawing with no colour of its own "
         "would be inked in whatever happened to surround it, so half a "
         f"{MOTIF_KEY!r} is refused rather than completed. Either finish it -- "
-        f"{_how_to_write_one(wanted)}, see brand/convener/README.md for what "
+        f"{_how_to_write_one(wanted)}, see assets/brand/convener/README.md for what "
         "each one is -- or delete the section outright and the product's own "
         f"({DEFAULT_PATH.as_posix()}) is drawn instead."
     )
@@ -684,7 +684,7 @@ def motif_width_ratio(root: Path) -> float:
     come from the same place: this instance's was measured off the
     designer's poster (`instance/data/brand.json::motif._width_ratio`), and
     the product's is carried over from the proportion its own mark's inner
-    arc is drawn at (`brand/convener/brand.json`).
+    arc is drawn at (`assets/brand/convener/brand.json`).
     """
     return float(motif(root)["width_ratio"])
 

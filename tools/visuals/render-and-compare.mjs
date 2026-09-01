@@ -72,7 +72,7 @@
  *
  * One series, at one charter, and the gap that leaves
  * ------------------------------------------------------
- * `brand/` holds four charters a duplicate may choose, `examples/the-example-collective/`
+ * `assets/brand/` holds four charters a duplicate may choose, `examples/the-example-collective/`
  * and `instance/` hold one each, and `motifs/` draws five families. This
  * script pins three images, at one of those six charters. What a series
  * per charter would add was measured rather than argued, over the pages
@@ -100,9 +100,9 @@
  * What is left is the colour literals of the five charters this fixture
  * does not render, and that is the gap, written down so the next reader
  * does not have to rediscover it: **a colour changed in
- * `brand/<name>/brand.json` that leaves every recorded contrast where it
+ * `assets/brand/<name>/brand.json` that leaves every recorded contrast where it
  * was passes every gate this repository has.** Measured, not supposed --
- * `brand/lattice/`'s dominant moved from #5C1E0F to #1700AE, a colour 159
+ * `assets/brand/lattice/`'s dominant moved from #5C1E0F to #1700AE, a colour 159
  * levels away on its worst channel and matched in relative luminance to
  * two parts in a million, and `generate_brand_css.py --check` (all twelve
  * contrasts and all 327 cockpit pairings, at every charter),
@@ -114,7 +114,7 @@
  * file and reads as one line in review; no command here rewrites a
  * committed charter, so a picture catches nothing the diff does not
  * already show. Against that: 1,812,238 bytes of new PNGs for the four
- * charters under `brand/` (measured by rendering them -- 442,010,
+ * charters under `assets/brand/` (measured by rendering them -- 442,010,
  * 448,561, 483,009 and 438,658), which is 5.4x what `references/` weighs
  * and 2.3x every raster byte this repository tracks; four series for a
  * person to look at and `--update` on each deliberate design change
@@ -180,9 +180,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  left to be found.
  *
  *  The example's is the only charter of the six this repository holds
- *  whose colours all clear 24. `brand/convener/`'s band against white
- *  differs by 15, `brand/chevrons/`'s ink against its muted ink by 15,
- *  `brand/lattice/`'s band against white by 16, `brand/steps/`'s by 23,
+ *  whose colours all clear 24. `assets/brand/convener/`'s band against white
+ *  differs by 15, `assets/brand/chevrons/`'s ink against its muted ink by 15,
+ *  `assets/brand/lattice/`'s band against white by 16, `assets/brand/steps/`'s by 23,
  *  and this instance's own by 20 -- each a pair a comparison at this
  *  threshold could not see change into the other at all. That is a
  *  measurement about those charters rather than about this constant, and

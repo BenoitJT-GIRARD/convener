@@ -4,7 +4,7 @@
 *field* and set white on it. White on the field is 1.61 at this instance's
 charter and 1.61 to 1.71 at the four a duplicate may choose, and every one
 of those files names that exact pairing in its own `contrast._forbidden`
--- `brand/convener/brand.json` spells out the consequence in the same
+-- `assets/brand/convener/brand.json` spells out the consequence in the same
 sentence: "which is why a primary button fills with the dominant". It
 shipped anyway, in eighteen class lists across nine files, because
 nothing measured it:
@@ -45,7 +45,7 @@ from convener_ops.publication import brand, cockpit
 ROOT = repo_root()
 
 #: Every charter a build of this product can be drawn from: the one this
-#: instance wrote, and the four `brand/` ships for a duplicate to choose.
+#: instance wrote, and the four `assets/brand/` ships for a duplicate to choose.
 #: Read off the directory rather than listed, for the reason
 #: `brand.shipped` gives -- a charter added there is measured on the
 #: commit that adds it, with no entry to make here.

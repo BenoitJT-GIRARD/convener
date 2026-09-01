@@ -85,7 +85,7 @@ def test_the_path_filter_names_every_module_the_three_templates_read() -> None:
         "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/journey/registration.py",
         "tools/convener_ops/cli.py",
-        "fonts/**",
+        "assets/fonts/**",
         "tools/uv.lock",
         "tools/visuals/**",
         ".github/workflows/templates.yml",
@@ -100,7 +100,7 @@ def test_the_path_filter_reacts_to_every_charter_swept() -> None:
     editing its own `motif` is exactly the change it exists to measure.
 
     Read off `cli._template_charters` rather than listed here, because
-    that function reads `brand/` rather than a list of its own: a charter
+    that function reads `assets/brand/` rather than a list of its own: a charter
     committed there is swept on the commit that adds it, and this is what
     says the filter noticed. `fnmatch` because the filter's own entry for
     those is a glob, for the same reason.

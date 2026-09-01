@@ -16,9 +16,9 @@ through:
   drawn by the showcase's own stylesheet rather than by these tokens. So
   no run of that checker has ever measured a cockpit token pairing.
 - **It renders one charter -- the one in force.** A duplicate that chose
-  `brand/steps/brand.json` builds a cockpit this repository's own gates
+  `assets/brand/steps/brand.json` builds a cockpit this repository's own gates
   never draw. A pairing that clears AA here and fails there is invisible
-  to any check that renders, and `brand/` holds four charters a duplicate
+  to any check that renders, and `assets/brand/` holds four charters a duplicate
   may choose beside whatever this instance wrote for itself.
 
 The two are complementary and neither replaces the other: axe measures
@@ -139,7 +139,7 @@ SOURCE_SUFFIXES: Final = (".tsx", ".ts")
 #: The cockpit called them `--primary` and `--accent`, which inverts what
 #: either word means: a charter's field is a ground that may never carry
 #: text and may never carry white text (every `contrast._forbidden` under
-#: `brand/` says so, in those words), while `primary` is the word an
+#: `assets/brand/` says so, in those words), while `primary` is the word an
 #: author reaches for when filling a button. Twenty-five class lists in
 #: fifteen files did one of the two things it invites: eighteen filled a
 #: control or a masthead with the field and set white on it, and seven set

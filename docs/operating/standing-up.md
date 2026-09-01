@@ -340,17 +340,18 @@ two typefaces and one motif — and there are two ways to make that yours. If
 your series has somebody to design for it, write your own values into that
 file. If it has not, delete the file and add one line to
 `instance/config.json` instead: `"charter": "steps"`, naming any of the
-directories under `brand/`. The whole charter is then read from
-`brand/<name>/brand.json` where upstream maintains it, so a contrast measured
-again or a token renamed there reaches you as an ordinary merge, where a
-copied directory would reach you as a conflict on a file you now own. Naming a
-charter no directory under `brand/` carries stops the build and lists the ones
-that are there, and so does keeping the file while naming a charter — nothing
-can say which of the two is then the design in force. Whichever way you go,
-run `scripts/generate_brand_css.py` and `scripts/generate_motif.py` from
-`tools/` afterwards and commit what they write: both interfaces' stylesheets,
-the three templates a collaborator downloads and the motif every page draws
-are all derived from the charter in force.
+directories under `assets/brand/`. The whole charter is then read from
+`assets/brand/<name>/brand.json` where upstream maintains it, so a contrast
+measured again or a token renamed there reaches you as an ordinary merge,
+where a copied directory would reach you as a conflict on a file you now own.
+Naming a charter no directory under `assets/brand/` carries stops the build
+and lists the ones that are there, and so does keeping the file while naming a
+charter — nothing can say which of the two is then the design in force.
+Whichever way you go, run `scripts/generate_brand_css.py` and
+`scripts/generate_motif.py` from `tools/` afterwards and commit what they
+write: both interfaces' stylesheets, the three templates a collaborator
+downloads and the motif every page draws are all derived from the charter in
+force.
 
 **Proves it is done.** The command below exits 0, which is what says every
 generated file in the repository is the one the charter in force derives.

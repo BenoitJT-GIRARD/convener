@@ -31,7 +31,7 @@ there rather than here because it has a second caller:
 `tools/scripts/render_readme_shots.py` needs the same tree, so that the
 pictures `README.md` shows are pictures of the example collective. Two
 copies of it would be two builds free to diverge, and the sweep below
-would then hold one of them while `screenshots/` showed the other.
+would then hold one of them while `assets/screenshots/` showed the other.
 
 Step 2 is why this test also tests the boundary. If a path carrying this
 instance's identity is not declared there, it survives the deletion, and

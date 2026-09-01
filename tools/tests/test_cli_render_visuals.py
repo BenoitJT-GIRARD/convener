@@ -68,7 +68,7 @@ def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
     stable and non-personal -- copied rather than re-typed, the same
     choice `test_visual.py`'s own `ROOT = repo_root()` makes by reading
     them from the real repository directly),
-    a placeholder `fonts/` (only the *presence* of a `.woff2` is ever
+    a placeholder `assets/fonts/` (only the *presence* of a `.woff2` is ever
     checked, never its bytes -- `render_visual_fixtures`'s own tests make
     the identical choice), and the `speakers` given, serialised through
     real `yaml.safe_dump` so a hand-typed `date: 2026-05-14` cannot
@@ -85,8 +85,8 @@ def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
     (tmp_path / "instance" / "config.json").write_text(
         _real_instance(), encoding="utf-8"
     )
-    fonts = tmp_path / "fonts"
-    fonts.mkdir()
+    fonts = tmp_path / "assets" / "fonts"
+    fonts.mkdir(parents=True)
     (fonts / "placeholder.woff2").write_bytes(b"not a real font, presence only")
     return tmp_path
 

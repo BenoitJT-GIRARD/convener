@@ -40,7 +40,7 @@ meandering stroke" -- which is what `family` now names, so it becomes
 
 Three charters, not one
 ------------------------
-`brand/convener/brand.json` is the product's own, the palette and mark a
+`assets/brand/convener/brand.json` is the product's own, the palette and mark a
 duplicate builds with before it has chosen anything. `instance/data/
 brand.json` is this instance's.
 `examples/the-example-collective/instance/data/brand.json` is the worked
@@ -123,7 +123,7 @@ RENAMES: Final = {
     **DESCRIPTION,
 }
 
-#: The three charters this repository ships. `brand/convener/brand.json` is
+#: The three charters this repository ships. `assets/brand/convener/brand.json` is
 #: the product's own and is always there; the other two are an instance's,
 #: and the first of them is optional by design.
 CHARTERS: Final = (

@@ -141,7 +141,7 @@ RIBBON: Final = Family(
     clearance_stroke_widths=ribbon.CLEARANCE_STROKE_WIDTHS,
 )
 
-#: The product's own mark in straight segments -- what `brand/convener/
+#: The product's own mark in straight segments -- what `assets/brand/convener/
 #: brand.json` and `examples/the-example-collective/` are drawn with, and what a
 #: duplicate that has chosen no charter of its own gets.
 BRACKET: Final = Family(

@@ -508,7 +508,7 @@ module.exports = function (cfg) {
   // `/fonts/` output path this build always served, so nothing downstream
   // (style.css's relative `url('fonts/...')`, layout.njk's `| url`-filtered
   // preload) had to change.
-  cfg.addPassthroughCopy({ '../fonts': 'fonts' });
+  cfg.addPassthroughCopy({ '../assets/fonts': 'fonts' });
   // The public showcase repository receives this
   // project's own build output at its root, alongside `app/`, which is
   // exactly what its already-active GitHub Pages setting ("branch main,

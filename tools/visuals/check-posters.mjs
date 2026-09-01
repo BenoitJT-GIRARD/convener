@@ -62,7 +62,7 @@
  * What it found on its first run: at this instance's own charter, its own
  * family and the square canvas its own forum gets, the ribbon's right
  * loop was painted **14.4 pixels across the speaker's plate**, and 29.8
- * across it on the print -- at every charter under `brand/` besides,
+ * across it on the print -- at every charter under `assets/brand/` besides,
  * because the reach belongs to the family and every charter can name it.
  * Nothing had ever rendered that combination.
  *

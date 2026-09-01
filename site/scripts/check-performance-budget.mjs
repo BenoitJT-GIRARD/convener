@@ -40,7 +40,8 @@
  * -- exactly the pressure D-17 forbids creating. So it is measured and
  * reported on its own, as a bloat guard against a font file growing or a
  * new one being added un-subsetted, never as a lever on page weight: if
- * this ever fails, the fix is to look at what changed under `fonts/`, not
+ * this ever fails, the fix is to look at what changed under `assets/fonts/`,
+ * not
  * to reconsider self-hosting.
  *
  * Proving this can fail (D-25)
@@ -337,7 +338,7 @@ async function main() {
       failed = true;
       console.log(
         `::error::${fontLine} -- OVER BUDGET (self-hosting stays, D-17 -- ` +
-          'look at what changed under fonts/, do not remove it)'
+          'look at what changed under assets/fonts/, do not remove it)'
       );
     } else {
       console.log(fontLine);

@@ -27,7 +27,7 @@
     "CONTRIBUTING.md",
     "services/*/README.md",
     "examples/*/README.md",
-    "screenshots/README.md",
+    "assets/screenshots/README.md",
     "site/**/*.njk",
     "site/README.md",
     ".github/workflows/**"

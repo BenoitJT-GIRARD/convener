@@ -70,11 +70,11 @@ name: Visuals
 #   example's, for the reason two entries up.
 # - `tools/convener_ops/publication/brand.py` -- the reader itself: which charter is in
 #   force, and which `motif` is drawn when that charter declares none.
-# - `brand/*/brand.json` -- every charter the product ships, as a glob and
+# - `assets/brand/*/brand.json` -- every charter the product ships, as a glob and
 #   not a list, for the reason `templates.yml`'s own filter is one. The
 #   fixture reads none of them today: the example writes a complete
 #   charter of its own, so `brand.py` answers with that and never reaches
-#   `brand/`. It reads one the moment the example's charter file goes away
+#   `assets/brand/`. It reads one the moment the example's charter file goes away
 #   or the example's declaration names a charter instead of writing one
 #   (`published.CHARTER_KEY`, which exists since 2026-08-31). Both of
 #   those files are already in this filter, so the commit that moves the
@@ -82,7 +82,7 @@ name: Visuals
 #   it had begun rendering would not have, which is a real regression
 #   shipping green off a filter that reads correct. A glob costs an
 #   occasional run against a warm cache instead, and covers a charter
-#   added under `brand/` on the commit that adds it, with no entry to make
+#   added under `assets/brand/` on the commit that adds it, with no entry to make
 #   here.
 #
 # Deliberately absent, and a decision rather than an omission:
@@ -97,7 +97,7 @@ name: Visuals
 # for a duplicate that had done nothing but choose its own colours.
 # `visuals-production.yml` carries both, and must: that job renders *real*
 # editions, as this instance.
-# - `fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
+# - `assets/fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
 # - `tools/uv.lock` -- pins `segno` (the QR renderer) among everything
 #   else Python depends on; a version bump there can change rendered
 #   pixels without any file above changing. Accepted knowingly that this
@@ -165,8 +165,8 @@ on:
       - 'tools/convener_ops/journey/registration.py'
       - 'examples/the-example-collective/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
-      - 'brand/*/brand.json'
-      - 'fonts/**'
+      - 'assets/brand/*/brand.json'
+      - 'assets/fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
       - '.github/workflows/visuals.yml'
@@ -188,8 +188,8 @@ on:
       - 'tools/convener_ops/journey/registration.py'
       - 'examples/the-example-collective/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
-      - 'brand/*/brand.json'
-      - 'fonts/**'
+      - 'assets/brand/*/brand.json'
+      - 'assets/fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
       - '.github/workflows/visuals.yml'

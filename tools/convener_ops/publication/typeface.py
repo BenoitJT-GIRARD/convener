@@ -36,7 +36,8 @@ that actually differ: which character it is, and how heavy it is set.
 
 Where the numbers come from
 -----------------------------
-Measured off `fonts/archivo-latin-standard-normal.woff2`, this repository's
+Measured off `assets/fonts/archivo-latin-standard-normal.woff2`, this
+repository's
 own copy of the face `instance/data/brand.json` names, in the pinned engine
 (`tools/visuals/`, D-27): every printable ASCII character at each of the
 five weights these files set. Two of those weights are kept -- the lightest

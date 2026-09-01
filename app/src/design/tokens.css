@@ -1,7 +1,7 @@
 /* The cockpit's design tokens.
  *
  * The block below is generated from the charter in force -- instance/data/brand.json
- * if this instance has chosen its colours, brand/convener/brand.json if it
+ * if this instance has chosen its colours, assets/brand/convener/brand.json if it
  * has not (tools/convener_ops/publication/brand.py::source) -- by
  * tools/scripts/generate_brand_css.py, whose --check fails on a stylesheet that
  * has drifted from it. The token *names* are the product's and describe a
@@ -10,7 +10,7 @@
  * wordmark are drawn in, and `--field-text` the readable variant of the
  * field, for a link or a text accent. They are the showcase's own names
  * (site/src/style.css). This file said `--primary` and `--accent` until the
- * cockpit's every pairing was measured against every charter under brand/:
+ * cockpit's every pairing was measured against every charter under assets/brand/:
  * a field may never carry text and may never carry white text, which is
  * what `primary` invites, and twenty-five class lists had done one or the
  * other. Which colours these are is the instance's answer, not this file's.
