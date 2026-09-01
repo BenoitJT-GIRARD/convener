@@ -3,11 +3,11 @@
 Two hand-written tables of top-level directories existed: nine rows in
 `README.md` under *What is here*, eight in `docs/engineering/architecture.md`. They
 disagreed with each other, and between them they placed eight of the twelve
-directories this repository tracks -- `README.md` spent three of its rows on
-`services/`'s own subdirectories, and `docs/engineering/architecture.md`
-named `.github/` one level down, as `.github/workflows/`. `.claude/`,
-`brand/`, `fonts/` and `instances/` were in neither table, and `config/` was
-in one of the two. A
+directories this repository tracked then -- `README.md` spent three of its
+rows on `services/`'s own subdirectories, and
+`docs/engineering/architecture.md` named `.github/` one level down, as
+`.github/workflows/`. `.claude/`, `brand/`, `fonts/` and `instances/` were in
+neither table, and `config/` was in one of the two. A
 reader who cannot place a third of the root concludes the root is disorganised
 even when it is not.
 
@@ -164,10 +164,6 @@ _END: Final = (
 #: A key here that names no tracked directory, and a tracked directory with
 #: no key here, are both refused by `purposes_for` below.
 PURPOSE: Final[Mapping[str, str]] = {
-    ".claude": (
-        "The run sheet an agent follows to stand an instance up, generated "
-        "from `STANDING-UP.yml` by `tools/scripts/generate_standing_up_skill.py`."
-    ),
     ".github": (
         "The whole automation surface: data validation, the public-data "
         "filter, certificate issuance and revocation, the retention sweep, "

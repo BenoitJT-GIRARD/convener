@@ -53,6 +53,15 @@ notify-body.md
 # is named.
 .superpowers/
 
+# Claude Code's own per-project state -- `settings.local.json` above all,
+# which records the permission decisions somebody saved on their own
+# machine. Personal, not the product, and one `git add -A` from being
+# published. The whole directory rather than that one file: this
+# repository ships nothing under any agent vendor's path, and the run
+# sheet that used to sit here is `docs/operating/standing-up-for-an-agent.md`
+# now, where `AGENTS.md` sends every agent alike.
+.claude/
+
 # The Actions budget alarm's own body, written by convener-record-actions-usage
 # only when a channel is configured *and* something actually fired -- the
 # same "the file's existence is the whole signal" shape notify-body.md has,

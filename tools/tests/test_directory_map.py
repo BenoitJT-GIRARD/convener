@@ -3,8 +3,8 @@
 Two hand-written tables of top-level directories existed, nine rows in
 `README.md` and eight in `docs/engineering/architecture.md`. They disagreed with each
 other, and between them they placed eight of the twelve directories this
-repository tracks: `.claude/`, `brand/`, `fonts/` and `instances/` were in
-neither, and `config/` was in one of the two.
+repository tracked then: `.claude/`, `brand/`, `fonts/` and `instances/` were
+in neither, and `config/` was in one of the two.
 `tools/scripts/generate_directory_map.py` derives the one that survives, and
 this module holds the halves that make that stick.
 
@@ -63,7 +63,6 @@ ANCHOR = "docs/engineering/architecture.md#every-directory-and-who-owns-it"
 #: real tree, so the tests below keep meaning what they say when this
 #: repository grows a directory.
 FAKE_TREE: dict[str, tuple[str, ...]] = {
-    ".claude": ("skills/standing-up/SKILL.md",),
     ".github": ("workflows/quality.yml",),
     "app": ("src/main.tsx",),
     "brand": ("convener/brand.json",),

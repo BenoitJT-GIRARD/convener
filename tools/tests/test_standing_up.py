@@ -2,15 +2,15 @@
 
 `STANDING-UP.yml` declares what somebody with no repositories and no accounts
 does to have a running instance. `docs/operating/standing-up.md` is that
-sequence as a person reads it; `.claude/skills/standing-up/SKILL.md` is the
-run sheet an agent carries it out from. Two documents describing one procedure
+sequence as a person reads it; `docs/operating/standing-up-for-an-agent.md` is
+the run sheet an agent carries it out from. Two documents describing one procedure
 diverge; the whole point of the declaration is that there is only one, so this
 module is what makes "only one" a fact rather than an intention.
 
 **Four bindings, in order of how much each one proves.**
 
 1. The committed page is byte-for-byte what the declaration derives, and so is
-   the committed skill. That is the strongest of the four and it subsumes the
+   the committed run sheet. That is the strongest of the four and it subsumes the
    others: a step present in one artefact and not another, an actor changed on
    one side, a check command corrected in the page instead of in the
    declaration -- all of them fail here, without anybody having named them.
@@ -20,9 +20,9 @@ module is what makes "only one" a fact rather than an intention.
    that the file differs, and these say which step and which field, which is
    the difference between a failure somebody fixes and one they regenerate
    past.
-3. The skill is read back the same way, and held to one thing more: it
+3. The run sheet is read back the same way, and held to one thing more: it
    restates nothing. Every step's `does`, `check`, `degraded` and every line
-   of its `walkthrough` is asserted *absent* from it, because the skill's
+   of its `walkthrough` is asserted *absent* from it, because the run sheet's
    claim is that an agent reads those out of the declaration itself when the
    step comes up. A run sheet that grew a copy of a step would pass the byte
    comparison happily -- the generator would have written the copy -- and fail
@@ -72,14 +72,14 @@ from generate_standing_up_doc import (
     uncovered_integrations,
     unnamed_integrations,
 )
-from generate_standing_up_skill import (
+from generate_standing_up_run_sheet import (
     ACTION,
     ENTRY_POINT,
-    SKILL_PATH,
-    standing_up_skill,
+    RUN_SHEET_PATH,
+    standing_up_run_sheet,
 )
-from generate_standing_up_skill import COMMAND as SKILL_COMMAND
-from generate_standing_up_skill import main as skill_main
+from generate_standing_up_run_sheet import COMMAND as RUN_SHEET_COMMAND
+from generate_standing_up_run_sheet import main as run_sheet_main
 
 from convener_ops.declaration.paths import repo_root
 
@@ -94,8 +94,8 @@ def page() -> str:
     return (ROOT / DOC_PATH).read_text(encoding="utf-8")
 
 
-def skill() -> str:
-    return (ROOT / SKILL_PATH).read_text(encoding="utf-8")
+def run_sheet() -> str:
+    return (ROOT / RUN_SHEET_PATH).read_text(encoding="utf-8")
 
 
 def entry_point() -> str:
@@ -176,7 +176,7 @@ def test_the_page_holds_no_step_the_declaration_does_not() -> None:
 
 
 def test_every_step_states_the_actor_the_declaration_gives_it() -> None:
-    """The field the later agent skill acts on.
+    """The field the later agent run sheet acts on.
 
     A step whose actor drifts is a step handed to the wrong reader: an agent
     attempting a browser-only flow, or a person doing by hand what a command
@@ -248,24 +248,24 @@ def test_the_two_repositories_and_their_visibilities_are_stated() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_the_committed_skill_is_what_the_declaration_derives() -> None:
+def test_the_committed_run_sheet_is_what_the_declaration_derives() -> None:
     """The same binding the page has, on the artefact an agent acts on.
 
     A step added to `STANDING-UP.yml` without regenerating fails here, and so
     does a run sheet corrected by hand.
     """
-    assert skill() == standing_up_skill(ROOT), (
-        f"{SKILL_PATH.as_posix()} is not what {DECLARATION_PATH.as_posix()} "
-        f"derives; run `{SKILL_COMMAND}` from `tools/`."
+    assert run_sheet() == standing_up_run_sheet(ROOT), (
+        f"{RUN_SHEET_PATH.as_posix()} is not what {DECLARATION_PATH.as_posix()} "
+        f"derives; run `{RUN_SHEET_COMMAND}` from `tools/`."
     )
 
 
-def test_the_skill_says_it_is_generated_and_names_what_derives_it() -> None:
+def test_the_run_sheet_says_it_is_generated_and_names_what_derives_it() -> None:
     """A derived file that does not say so is one somebody will edit --
     and an agent is the reader most likely to edit a file it is following."""
-    head = " ".join(skill()[:1200].split())
+    head = " ".join(run_sheet()[:1200].split())
     assert "generated" in head
-    assert SKILL_COMMAND in head
+    assert RUN_SHEET_COMMAND in head
     assert DECLARATION_PATH.as_posix() in head
     assert DOC_PATH.as_posix() in head
 
@@ -280,7 +280,7 @@ def test_every_declared_step_is_on_the_run_sheet_under_its_own_actor() -> None:
     would have done in a second.
     """
     sequence = declaration()
-    text = skill()
+    text = run_sheet()
     for step in sequence.steps:
         assert run_sheet_row(step, sequence) in text, step.id
 
@@ -294,7 +294,7 @@ def test_no_run_sheet_row_states_the_actor_the_declaration_did_not_give() -> Non
     sequence = declaration()
     rows = {
         line.split("`")[1]: line
-        for line in skill().splitlines()
+        for line in run_sheet().splitlines()
         if line.startswith("| ") and "`" in line
     }
     for step in sequence.steps:
@@ -309,14 +309,14 @@ def test_the_run_sheet_holds_no_step_the_declaration_does_not() -> None:
     header names five places where the order is load-bearing, and a run sheet
     that reordered them would be followed in that order.
     """
-    listed = re.findall(r"^\| (\d+) \| `([a-z_]+)` \|", skill(), re.MULTILINE)
+    listed = re.findall(r"^\| (\d+) \| `([a-z_]+)` \|", run_sheet(), re.MULTILINE)
     sequence = declaration()
     assert [(int(number), name) for number, name in listed] == [
         (sequence.number_of(step), step.id) for step in sequence.steps
     ]
 
 
-def test_the_skill_restates_no_step_and_reads_the_declaration_instead() -> None:
+def test_the_run_sheet_restates_no_step_and_reads_the_declaration_instead() -> None:
     """The claim that makes this a third reader rather than a third copy.
 
     What a step does, what proves it, what it costs to skip and the lines a
@@ -325,7 +325,7 @@ def test_the_skill_restates_no_step_and_reads_the_declaration_instead() -> None:
     byte comparison above -- the generator would have written the copy -- and
     fail here, which is the whole reason this test exists beside that one.
     """
-    flat = " ".join(skill().split())
+    flat = " ".join(run_sheet().split())
     for step in declaration().steps:
         assert step.does not in flat, step.id
         assert step.check not in flat, step.id
@@ -335,10 +335,10 @@ def test_the_skill_restates_no_step_and_reads_the_declaration_instead() -> None:
             assert item not in flat, (step.id, item[:40])
 
 
-def test_the_skill_restates_no_stage_purpose_either() -> None:
+def test_the_run_sheet_restates_no_stage_purpose_either() -> None:
     """The run sheet takes a stage's title, which is an index label, and
     leaves its purpose where the page renders it from."""
-    flat = " ".join(skill().split())
+    flat = " ".join(run_sheet().split())
     for stage in declaration().stages:
         assert stage.purpose not in flat, stage.id
 
@@ -346,14 +346,14 @@ def test_the_skill_restates_no_stage_purpose_either() -> None:
 def test_the_entry_point_names_every_rendering_and_restates_none() -> None:
     """`AGENTS.md` is a pointer, and has to stay one.
 
-    An agent whose tooling does not discover `.claude/skills/` reads that
-    file first, so it has to name the skill, the guide and the declaration
+    Nothing discovers the run sheet on its own now, so that file is the
+    only route in: it has to name the run sheet, the guide and the declaration
     they both derive from. It must also name no step: a third rendering of
     one sequence would be the defect the declaration exists to remove,
     arriving by a different door.
     """
     text = entry_point()
-    for named in (DECLARATION_PATH, DOC_PATH, SKILL_PATH):
+    for named in (DECLARATION_PATH, DOC_PATH, RUN_SHEET_PATH):
         assert named.as_posix() in text, named.as_posix()
     for step in declaration().steps:
         assert step.id not in text, step.id
@@ -806,17 +806,17 @@ def test_the_terminal_output_is_ascii(
 
 
 # --------------------------------------------------------------------------
-# The skill's own command, and the drifts it has to catch
+# The run sheet's own command, and the drifts it has to catch
 # --------------------------------------------------------------------------
 
 
 def _run_sheet_lines(fake_repo: Path) -> list[str]:
-    written = fake_repo / SKILL_PATH
+    written = fake_repo / RUN_SHEET_PATH
     return written.read_text(encoding="utf-8").splitlines(keepends=True)
 
 
 def _put_back(fake_repo: Path, lines: list[str]) -> None:
-    (fake_repo / SKILL_PATH).write_text("".join(lines), encoding="utf-8")
+    (fake_repo / RUN_SHEET_PATH).write_text("".join(lines), encoding="utf-8")
 
 
 def _first_row(lines: list[str], holding: str = "`") -> int:
@@ -826,48 +826,48 @@ def _first_row(lines: list[str], holding: str = "`") -> int:
     raise AssertionError(f"no run-sheet row holds {holding!r}")  # pragma: no cover
 
 
-def test_the_skill_check_fails_when_it_has_never_been_written(
+def test_the_run_sheet_check_fails_when_it_has_never_been_written(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A guard around something that does not exist has to fail loudly."""
-    assert skill_main(["--check"]) == 1
-    assert not (fake_repo / SKILL_PATH).exists()
+    assert run_sheet_main(["--check"]) == 1
+    assert not (fake_repo / RUN_SHEET_PATH).exists()
     err = capsys.readouterr().err
-    assert SKILL_PATH.as_posix() in err
-    assert SKILL_COMMAND in err
+    assert RUN_SHEET_PATH.as_posix() in err
+    assert RUN_SHEET_COMMAND in err
 
 
-def test_the_skill_check_leaves_a_stale_run_sheet_as_it_found_it(
+def test_the_run_sheet_check_leaves_a_stale_run_sheet_as_it_found_it(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A check that repairs is not a check."""
-    written = fake_repo / SKILL_PATH
+    written = fake_repo / RUN_SHEET_PATH
     written.parent.mkdir(parents=True)
     written.write_text("stale\n", encoding="utf-8")
 
-    assert skill_main(["--check"]) == 1
+    assert run_sheet_main(["--check"]) == 1
     assert written.read_text(encoding="utf-8") == "stale\n"
-    assert SKILL_COMMAND in capsys.readouterr().err
+    assert RUN_SHEET_COMMAND in capsys.readouterr().err
 
 
-def test_writing_then_checking_the_skill_passes(
+def test_writing_then_checking_the_run_sheet_passes(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert skill_main([]) == 0
-    assert skill_main(["--check"]) == 0
+    assert run_sheet_main([]) == 0
+    assert run_sheet_main(["--check"]) == 0
     assert "matches the declaration" in capsys.readouterr().out
 
 
-def test_a_second_skill_write_changes_nothing_and_says_so(
+def test_a_second_run_sheet_write_changes_nothing_and_says_so(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert skill_main([]) == 0
+    assert run_sheet_main([]) == 0
     capsys.readouterr()
-    assert skill_main([]) == 0
+    assert run_sheet_main([]) == 0
     assert "unchanged" in capsys.readouterr().out
 
 
-def test_a_step_added_and_not_regenerated_makes_the_skill_check_fail(
+def test_a_step_added_and_not_regenerated_makes_the_run_sheet_check_fail(
     fake_repo: Path,
 ) -> None:
     """A step the run sheet does not carry, as a test.
@@ -875,7 +875,7 @@ def test_a_step_added_and_not_regenerated_makes_the_skill_check_fail(
     The one drift that matters most here: an agent follows the run sheet, so
     a step missing from it is a step nothing does and nothing reports.
     """
-    assert skill_main([]) == 0
+    assert run_sheet_main([]) == 0
     path = fake_repo / DECLARATION_PATH
     text = path.read_text(encoding="utf-8")
     marker = "\nsecrets:\n"
@@ -890,22 +890,22 @@ def test_a_step_added_and_not_regenerated_makes_the_skill_check_fail(
         "    degraded: Nothing at all.\n"
     )
     path.write_text(text.replace(marker, invented + marker, 1), encoding="utf-8")
-    assert skill_main(["--check"]) == 1
+    assert run_sheet_main(["--check"]) == 1
 
 
-def test_a_step_dropped_from_the_run_sheet_makes_the_skill_check_fail(
+def test_a_step_dropped_from_the_run_sheet_makes_the_run_sheet_check_fail(
     fake_repo: Path,
 ) -> None:
     """The same drift from the other side: the declaration is intact and the
     run sheet has lost a row, which is what a hand edit looks like."""
-    assert skill_main([]) == 0
+    assert run_sheet_main([]) == 0
     lines = _run_sheet_lines(fake_repo)
     del lines[_first_row(lines)]
     _put_back(fake_repo, lines)
-    assert skill_main(["--check"]) == 1
+    assert run_sheet_main(["--check"]) == 1
 
 
-def test_an_actor_flipped_on_the_run_sheet_makes_the_skill_check_fail(
+def test_an_actor_flipped_on_the_run_sheet_makes_the_run_sheet_check_fail(
     fake_repo: Path,
 ) -> None:
     """Flipped on the row rather than in the declaration, because that is the
@@ -916,35 +916,35 @@ def test_an_actor_flipped_on_the_run_sheet_makes_the_skill_check_fail(
     well formed, readable, and wrong: it ends with an agent inventing what a
     form it cannot open said back to it.
     """
-    assert skill_main([]) == 0
+    assert run_sheet_main([]) == 0
     lines = _run_sheet_lines(fake_repo)
     index = _first_row(lines, ACTION["human"])
     lines[index] = lines[index].replace(ACTION["human"], ACTION["agent"], 1)
     _put_back(fake_repo, lines)
-    assert skill_main(["--check"]) == 1
+    assert run_sheet_main(["--check"]) == 1
 
 
-def test_a_title_reworded_on_the_run_sheet_makes_the_skill_check_fail(
+def test_a_title_reworded_on_the_run_sheet_makes_the_run_sheet_check_fail(
     fake_repo: Path,
 ) -> None:
     """The commonest hand edit of all: correcting the wrong file."""
-    assert skill_main([]) == 0
-    written = fake_repo / SKILL_PATH
+    assert run_sheet_main([]) == 0
+    written = fake_repo / RUN_SHEET_PATH
     text = written.read_text(encoding="utf-8")
     assert "| # | Step | Action | Title |" in text
     written.write_text(
         text.replace("| # | Step | Action | Title |", "| # | Step | Who | Title |", 1),
         encoding="utf-8",
     )
-    assert skill_main(["--check"]) == 1
+    assert run_sheet_main(["--check"]) == 1
 
 
-def test_the_skill_terminal_output_is_ascii(
+def test_the_run_sheet_terminal_output_is_ascii(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The run sheet is written in the handbook's English; the console is
     not, and this generator has no mode that prints the page either."""
-    skill_main([])
-    skill_main(["--check"])
+    run_sheet_main([])
+    run_sheet_main(["--check"])
     captured = capsys.readouterr()
     (captured.out + captured.err).encode("ascii")

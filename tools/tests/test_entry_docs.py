@@ -64,12 +64,20 @@ DOCS = ROOT / "docs"
 #: has to be able to link them. `operating/publishing-the-product.md` is
 #: unregistered for the same reason and is absent here only because
 #: `README.md` does not link it.
+#:
+#: `operating/standing-up-for-an-agent.md` is the fourth, and it is the same
+#: argument once more rather than a new one: it is the generated second
+#: rendering of `operating/standing-up.md` above, addressed to the same reader
+#: who has no instance yet, and nothing discovers it -- `AGENTS.md` and
+#: `README.md` are the only two routes to it, so `README.md` has to be able to
+#: link it.
 UNREGISTERED_BUT_SAFE = {
     "handbook/index.md",
     "operating/index.md",
     "engineering/index.md",
     "engineering/architecture.md",
     "operating/standing-up.md",
+    "operating/standing-up-for-an-agent.md",
     "operating/what-a-duplicate-edits.md",
     "operating/what-you-take-on.md",
 }

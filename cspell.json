@@ -19,8 +19,8 @@
   ],
   "files": [
     "docs/**/*.md",
-    ".claude/skills/**/*.md",
     "AGENTS.md",
+    "CLAUDE.md",
     "README.md",
     "TRADEMARK.md",
     "SECURITY.md",

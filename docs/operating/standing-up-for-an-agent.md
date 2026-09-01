@@ -1,19 +1,21 @@
----
-name: standing-up
-description: Carry out STANDING-UP.yml, the declared sequence that turns no repositories and no accounts into a running instance of this product: run the steps it marks for an agent, hand the browser-only steps to the person word for word, and prove each one with its own declared check. Use when standing an instance up, resuming a half-standing one, or working out which steps are still outstanding.
----
-
 # Carrying out the standing-up sequence
 
 This page is generated from `STANDING-UP.yml`, the one declaration of this
 sequence. Do not edit it: run `uv run python
-scripts/generate_standing_up_skill.py` from `tools/` and commit what it
+scripts/generate_standing_up_run_sheet.py` from `tools/` and commit what it
 writes, and continuous integration refuses a page the declaration does not
 derive. `docs/operating/standing-up.md` is the same declaration rendered for a
-person, and `AGENTS.md` points here for an agent that does not find this file
-on its own. The prose below lives in
-`tools/scripts/generate_standing_up_skill.py`; the run sheet at the end comes
-from the declaration.
+person, and `AGENTS.md` is where an agent is sent here from -- nothing
+discovers this page on its own, so that pointer is the only route in. The
+prose below lives in `tools/scripts/generate_standing_up_run_sheet.py`; the
+run sheet at the end comes from the declaration.
+
+*Carry out STANDING-UP.yml, the declared sequence that turns no repositories
+and no accounts into a running instance of this product: run the steps it
+marks for an agent, hand the browser-only steps to the person word for word,
+and prove each one with its own declared check. Use when standing an instance
+up, resuming a half-standing one, or working out which steps are still
+outstanding.*
 
 ## What this page is, and what it is not
 
@@ -25,9 +27,9 @@ page because more than one thing reads it, and this is one of them.
 proves it is done, what an instance loses by skipping it, and the lines a
 person is handed word for word are all fields of that file, read out of it
 when the step comes up. The run sheet at the end of this page carries the
-order, the identifier and who acts — nothing else. A skill that restated the
-steps would be a second copy of one procedure, and the copy is the one that
-goes stale.
+order, the identifier and who acts — nothing else. A run sheet that restated
+the steps would be a second copy of one procedure, and the copy is the one
+that goes stale.
 
 **The guide is the product; this page is an accelerator.** One person with a
 web browser and a text editor finishes the whole sequence without an agent,
@@ -134,8 +136,8 @@ those rows. Do not write that sentence yourself.
 None of these is a preference, and none has an exception that is not written
 here.
 
-- **Never read, print, echo, log or write a secret value.** Not into a
-  transcript, not into a file, not into a command line, not into an example
+- **Never read, print, echo, log or write a secret value.** Not into your own
+  session log, not into a file, not into a command line, not into an example
   that looks real. If a value reaches you anyway, say so and ask for it to be
   replaced rather than carrying on with it.
 - **A repository secret is set by the person, under their own credentials.**

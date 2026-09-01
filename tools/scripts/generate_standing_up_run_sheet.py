@@ -4,19 +4,19 @@
 does, in order, to have a running instance.
 `tools/scripts/generate_standing_up_doc.py` renders it as the page a person follows.
 This script renders the same declaration as
-`.claude/skills/standing-up/SKILL.md`: the procedure whatever carries the
-sequence out follows instead.
+`docs/operating/standing-up-for-an-agent.md`: the procedure whatever carries
+the sequence out follows instead.
 
 What is derived, and how little of it there is
 ----------------------------------------------
-Four things about a step reach the skill: its **position**, its
+Four things about a step reach the run sheet: its **position**, its
 **identifier**, its **title**, and one word -- `carry out` or `hand over` --
 which is `actor` translated one for one and nothing else. Everything a step
 says stays where it is declared: `does`, `check`, `command`, `sets`,
 `degraded` and `walkthrough` are read out of `STANDING-UP.yml` at the moment
 the step comes up, by the agent following this page.
 
-That line is the whole design. A skill that copied the steps into itself
+That line is the whole design. A run sheet that copied the steps into it
 would be a third statement of one procedure, and the copy is always the one
 that goes stale -- this repository has paid for that with three palettes,
 five addresses and two path lists. What is left here is a **run sheet**: the
@@ -28,10 +28,14 @@ may never be printed -- is written in this file, for the reason the page
 generator gives for its own narrative: it is prose about the product rather
 than a fact about the sequence, and nothing derives it.
 
-One skill, not one per agent
-----------------------------
-`AGENTS.md` points at the generated skill rather than restating it, so an
-agent whose tooling does not discover `.claude/skills/` reads the same page.
+One run sheet, not one per agent
+--------------------------------
+The run sheet sits under `docs/`, beside the guide that is the same
+declaration's other rendering, and `AGENTS.md` points at it rather than
+restating it. It is deliberately not under any agent vendor's own
+conventional directory: such a path is found by one tool's discovery and by
+no other, so it ships a preference between vendors, and the answer to a
+second vendor is another line in `AGENTS.md` rather than a second copy.
 Three renderings of one sequence would be the defect the declaration exists
 to remove, arriving by a different door.
 
@@ -44,8 +48,8 @@ which is what `--check` refuses, without repairing it.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_standing_up_skill.py            # write
-    uv run python scripts/generate_standing_up_skill.py --check    # assert
+    uv run python scripts/generate_standing_up_run_sheet.py            # write
+    uv run python scripts/generate_standing_up_run_sheet.py --check    # assert
 
 There is no mode that prints the page, for the reason the page generator
 gives: nothing this repository's Python writes to a terminal is allowed to be
@@ -73,18 +77,20 @@ from generate_standing_up_doc import (
 
 from convener_ops.declaration.paths import repo_root
 
-#: Where the skill lives. Inside the repository, so that a duplicate has it
-#: from its first clone rather than from whatever the operator happens to
-#: have installed on their own machine.
-SKILL_PATH: Final = Path(".claude") / "skills" / "standing-up" / "SKILL.md"
+#: Where the run sheet lives. Inside the repository, so that a duplicate has
+#: it from its first clone; under `docs/` beside the guide rather than under
+#: an agent vendor's own directory, so that no tool reaches it by a route the
+#: others do not have.
+RUN_SHEET_PATH: Final = Path("docs") / "operating" / "standing-up-for-an-agent.md"
 
 #: This file, named on the page so that nobody edits the page instead.
-GENERATOR: Final = "tools/scripts/generate_standing_up_skill.py"
+GENERATOR: Final = "tools/scripts/generate_standing_up_run_sheet.py"
 
 #: What to run to rewrite it.
-COMMAND: Final = "uv run python scripts/generate_standing_up_skill.py"
+COMMAND: Final = "uv run python scripts/generate_standing_up_run_sheet.py"
 
-#: The pointer an agent that does not discover `.claude/skills/` reads.
+#: The page every agent reaches this one through, and now the only route in:
+#: nothing discovers a page under `docs/` on its own.
 ENTRY_POINT: Final = "AGENTS.md"
 
 #: The report most of the later checks are read out of.
@@ -100,8 +106,11 @@ ACTION: Final[dict[str, str]] = {
     AGENT: "carry out",
 }
 
-#: What the skill announces itself as. One line, because the frontmatter is
-#: read before the page is.
+#: What the page announces itself as, in one line under its own title. It
+#: was a skill manifest's `description:` while the page sat where an agent's
+#: tooling matched it against a situation; nothing matches it now, and a
+#: reader sent here by `AGENTS.md` still needs a sentence saying what they
+#: have been sent to.
 DESCRIPTION: Final = (
     "Carry out STANDING-UP.yml, the declared sequence that turns no "
     "repositories and no accounts into a running instance of this product: "
@@ -137,16 +146,9 @@ def _numbered(items: Seq[str]) -> str:
     )
 
 
-def _frontmatter() -> str:
-    """What the agent's own tooling reads before it reads the page."""
-    return "\n".join(
-        [
-            "---",
-            f"name: {SKILL_PATH.parent.name}",
-            f"description: {DESCRIPTION}",
-            "---",
-        ]
-    )
+def _summary() -> str:
+    """The one line a reader who has been sent here meets first."""
+    return _wrap(f"*{DESCRIPTION}*")
 
 
 _NOTICE: Final = "\n\n".join(
@@ -158,8 +160,9 @@ _NOTICE: Final = "\n\n".join(
             "from `tools/` and commit what it writes, and continuous "
             "integration refuses a page the declaration does not derive. "
             f"`{DOC_PATH.as_posix()}` is the same declaration rendered for a "
-            f"person, and `{ENTRY_POINT}` points here for an agent that does "
-            f"not find this file on its own. The prose below lives in "
+            f"person, and `{ENTRY_POINT}` is where an agent is sent here "
+            f"from -- nothing discovers this page on its own, so that pointer "
+            f"is the only route in. The prose below lives in "
             f"`{GENERATOR}`; the run sheet at the end comes from the "
             "declaration."
         ),
@@ -184,8 +187,8 @@ def _introduction(sequence: Sequence) -> str:
                 "skipping it, and the lines a person is handed word for word "
                 "are all fields of that file, read out of it when the step "
                 "comes up. The run sheet at the end of this page carries the "
-                "order, the identifier and who acts — nothing else. A skill "
-                "that restated the steps would be a second copy of one "
+                "order, the identifier and who acts — nothing else. A run "
+                "sheet that restated the steps would be a second copy of one "
                 "procedure, and the copy is the one that goes stale."
             ),
             _wrap(
@@ -357,7 +360,7 @@ _SECRETS: Final = "\n\n".join(
         _bullets(
             [
                 "**Never read, print, echo, log or write a secret value.** Not "
-                "into a transcript, not into a file, not into a command line, "
+                "into your own session log, not into a file, not into a command line, "
                 "not into an example that looks real. If a value reaches you "
                 "anyway, say so and ask for it to be replaced rather than "
                 "carrying on with it.",
@@ -449,11 +452,11 @@ def _run_sheet(sequence: Sequence) -> list[str]:
     return blocks
 
 
-def render_skill(sequence: Sequence) -> str:
-    """The skill the declaration derives."""
+def render_run_sheet(sequence: Sequence) -> str:
+    """The run sheet the declaration derives."""
     blocks: list[str] = [
-        _frontmatter(),
         _NOTICE,
+        _summary(),
         _introduction(sequence),
         _BEFORE,
         _LOOP,
@@ -467,30 +470,30 @@ def render_skill(sequence: Sequence) -> str:
     return "\n".join(block.rstrip("\n") + "\n" for block in blocks)
 
 
-def standing_up_skill(root: Path) -> str:
-    """The skill this repository's declaration derives, today."""
-    return render_skill(load_sequence(root))
+def standing_up_run_sheet(root: Path) -> str:
+    """The run sheet this repository's declaration derives, today."""
+    return render_run_sheet(load_sequence(root))
 
 
 def main(argv: Seq[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate the standing-up skill from STANDING-UP.yml."
+        description="Generate the standing-up run sheet from STANDING-UP.yml."
     )
     parser.add_argument(
         "--check",
         action="store_true",
-        help="write nothing; exit 1 if the committed skill is not what it derives",
+        help="write nothing; exit 1 if the committed page is not what it derives",
     )
     args = parser.parse_args(argv)
 
     root = repo_root()
-    rendered = standing_up_skill(root)
-    path = root / SKILL_PATH
+    rendered = standing_up_run_sheet(root)
+    path = root / RUN_SHEET_PATH
     current = path.read_text(encoding="utf-8") if path.exists() else ""
     if args.check:
         if current != rendered:
             print(
-                f"{SKILL_PATH.as_posix()} is not what "
+                f"{RUN_SHEET_PATH.as_posix()} is not what "
                 f"{DECLARATION_PATH.as_posix()} derives.",
                 file=sys.stderr,
             )
@@ -500,15 +503,15 @@ def main(argv: Seq[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        print(f"{SKILL_PATH.as_posix()} matches the declaration")
+        print(f"{RUN_SHEET_PATH.as_posix()} matches the declaration")
         return 0
 
     if current == rendered:
-        print(f"{SKILL_PATH.as_posix()} unchanged")
+        print(f"{RUN_SHEET_PATH.as_posix()} unchanged")
         return 0
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(rendered, encoding="utf-8", newline="")
-    print(f"wrote {SKILL_PATH.as_posix()}")
+    print(f"wrote {RUN_SHEET_PATH.as_posix()}")
     return 0
 
 

@@ -31,4 +31,4 @@ repos:
         # authority is cspell.json's own `files` list, which CI reads
         # and test_prose_language.py holds against what is tracked at
         # the root; this hook is the local convenience beside it.
-        files: '^(docs|instances|\.claude/skills|AGENTS|README|TRADEMARK|SECURITY|CONTRIBUTING).*\.md$'
+        files: '^(docs|instances|AGENTS|CLAUDE|README|TRADEMARK|SECURITY|CONTRIBUTING).*\.md$'

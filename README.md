@@ -77,7 +77,7 @@ handful of accounts that all have a free tier this project fits inside.
 - **[What a duplicate edits](docs/operating/what-a-duplicate-edits.md)** —
   six files, and what everything else is that nobody has to touch.
 - **[The same sequence, written for an
-  agent](.claude/skills/standing-up/SKILL.md)** — if you work with one. Both
+  agent](docs/operating/standing-up-for-an-agent.md)** — if you work with one. Both
   it and the guide are generated from `STANDING-UP.yml`, so an agent cannot
   shorten the work by getting ahead of the browser route.
 

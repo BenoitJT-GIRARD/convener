@@ -52,7 +52,7 @@
 #   Decision register -> generated
 #   Schema appendix -> generated
 #   Standing-up guide -> generated
-#   Standing-up skill -> generated
+#   Standing-up run sheet -> generated
 #   Brand tokens and templates -> generated
 #   Chrome motif -> generated
 #   Directory map -> generated
@@ -150,7 +150,7 @@ case "${1:-all}" in
   generated) cd tools && uv run --frozen convener-register --check \
                && uv run --frozen python scripts/generate_schema_doc.py --check \
                && uv run --frozen python scripts/generate_standing_up_doc.py --check \
-               && uv run --frozen python scripts/generate_standing_up_skill.py --check \
+               && uv run --frozen python scripts/generate_standing_up_run_sheet.py --check \
                && uv run --frozen python scripts/generate_brand_css.py --check \
                && uv run --frozen python scripts/generate_motif.py --check \
                && uv run --frozen python scripts/generate_directory_map.py --check ;;

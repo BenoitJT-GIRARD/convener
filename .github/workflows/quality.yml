@@ -282,16 +282,16 @@ jobs:
         # around it: writes nothing, fails if the committed page is not what
         # the declaration and `config/integrations.yml` give.
         run: uv run python scripts/generate_standing_up_doc.py --check
-      - name: Standing-up skill
+      - name: Standing-up run sheet
         working-directory: tools
         # The second rendering of that same declaration:
-        # `.claude/skills/standing-up/SKILL.md` is the run sheet an agent
-        # follows, and it carries each step's order, identifier, title and
-        # actor and nothing else -- everything a step says is read out of
+        # `docs/operating/standing-up-for-an-agent.md` is the run sheet an
+        # agent follows, and it carries each step's order, identifier, title
+        # and actor and nothing else -- everything a step says is read out of
         # `STANDING-UP.yml` when the step comes up. A guide corrected without
         # the run sheet beside it is the drift the step above exists to
         # refuse, one artefact further along. Assertion-only, like the rest.
-        run: uv run python scripts/generate_standing_up_skill.py --check
+        run: uv run python scripts/generate_standing_up_run_sheet.py --check
       - name: Brand tokens and templates
         working-directory: tools
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
@@ -326,8 +326,8 @@ jobs:
         # `docs/engineering/architecture.md` and `README.md` each carried a
         # hand-written table of top-level directories. They disagreed, and
         # between them they placed eight of the twelve the repository
-        # tracks: `.claude/`, `brand/`, `fonts/` and `instances/` were in
-        # neither. The table is generated now -- the
+        # tracked then: `.claude/`, `brand/`, `fonts/` and `instances/`
+        # were in neither. The table is generated now -- the
         # directories from `git ls-files`, the owner from
         # `config/boundary.yml` -- and `README.md` links to it instead of
         # restating it. Assertion-only, like the four above: writes
