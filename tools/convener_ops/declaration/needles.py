@@ -135,19 +135,50 @@ def contains(text: str, needle: str) -> bool:
 def forms(needle: str) -> tuple[str, ...]:
     """The spellings one needle actually reaches raw text as.
 
-    Colour needles are the one family whose *case* is a rendering choice
-    rather than a value: `#FECAC1` in the charter, `#fecac1` in the
-    stylesheet generated from it. The two are the same leak and a
-    case-sensitive search sees only one of them, so anything sweeping raw
-    text asks for both forms through here rather than lower-casing the
-    haystack -- which would also fold a declared abbreviation into its
-    lower-case spelling and make a short needle fire on prose.
+    Two of them, always, and both because *case* is a rendering choice
+    this product's own generators make rather than a value anybody
+    declared.
 
-    A build sweep does not need this: it compares a *built* artefact with
-    the values that built it, and both sides went through the same
-    renderer. A history sweep does, because it reads whatever anybody
-    ever typed.
+    - A colour is `#FECAC1` in the charter and `#fecac1` in the
+      stylesheet generated from it.
+    - A name is set in capitals wherever a composition sets it in
+      capitals. `brand_templates` writes `organisation_caps`,
+      `strapline_caps`, `address_caps` and `series_caps` -- and its own
+      comment beside them calls that "a display treatment and not a
+      re-spelling", which is exactly why it is invisible to a
+      case-sensitive search: the declared value is the same value, spelt
+      in a case nobody wrote down.
+
+    The second was measured rather than supposed. A derived repository
+    that `convener-check-derivation` passed with `nothing refused.` still
+    carried `THE EXAMPLE COLLECTIVE`, `FORUM.EXAMPLE.TEST`,
+    `THE EXAMPLE COLLECTIVE.github.io`, `MONTHLY READING GROUP` and
+    `READ TOGETHER` -- the organisation, its forum, its
+    published host, the series' name and its strapline -- in the two
+    downloadable templates, the video-call background and an edge
+    worker's test, at the tip and throughout the history. Neither half of
+    the derivation saw them: `derivation_guard.identity_hits` searched
+    the declared spelling only, and `repository.identity_rules` built a
+    literal, case-sensitive rewrite rule from the same one.
+
+    Returning the upper-case spelling here closes both at once, because
+    both read this function: the table rewrites what it now knows to look
+    for, and the guard refuses whatever the table missed. It is not case
+    *folding*, which this deliberately still does not do -- lower-casing
+    the haystack would fold a declared abbreviation into its lower-case
+    spelling and make a short needle fire on prose. It is one more
+    spelling, named because a generator in this repository produces it.
+
+    Always a pair, even where the two halves are identical (`TEC`,
+    `MRG-`): `repository.identity_rules` pairs a value's forms with its
+    replacement's positionally, and a tuple whose length depended on the
+    value would pair the wrong two.
+
+    A build sweep does not need any of this: it compares a *built*
+    artefact with the values that built it, and both sides went through
+    the same renderer. A history sweep does, because it reads whatever
+    anybody ever typed.
     """
     if needle.startswith("#") and needle[1:].isalnum():
         return (needle.lower(), needle.upper())
-    return (needle,)
+    return (needle, needle.upper())
