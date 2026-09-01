@@ -95,7 +95,7 @@ AGENT: Final = "agent"
 ACTORS: Final = (HUMAN, AGENT)
 
 #: How each actor is written on the page. Fixed strings rather than something
-#: composed per step: `tools/tests/test_standing_up.py` reads them back out of
+#: composed per step: `tools/tests/scripts/test_standing_up.py` reads them back out of
 #: the committed page, so a step whose actor changed in the declaration and
 #: not on the page is a failing test rather than a guide that lies about who
 #: has to be at the keyboard.

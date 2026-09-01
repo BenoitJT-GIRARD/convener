@@ -6,7 +6,7 @@
  * beside the one that runs this repository and the one
  * `examples/the-example-collective/` already is. Two of its strings named *this*
  * organisation's forum and its LinkedIn page, compiled into the cockpit's
- * own bundle, which is why `tools/tests/instance_identity.py`'s deferred
+ * own bundle, which is why `tools/tests/helpers/instance_identity.py`'s deferred
  * register once carried an entry for the file.
  *
  * The assertions below read `examples/the-example-collective/instance/data/` off the disk and

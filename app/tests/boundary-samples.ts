@@ -3,7 +3,7 @@
  *
  * `tools/tests/fixtures/speakers-from-app.yml` and `config-from-app.yml` are
  * exactly what `serializeSpeakers` / `serializeConfig` write for the values
- * below, and `tools/tests/test_yaml_boundary.py` loads those same two files,
+ * below, and `tools/tests/cli/test_yaml_boundary.py` loads those same two files,
  * writes them back out with the Python writer, and compares the bytes. So
  * these values are the boundary contract: every shape either side writes
  * appears here once, and a change on one side the other does not follow

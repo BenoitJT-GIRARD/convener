@@ -356,7 +356,7 @@ published at.
 Every path either build emits carries that prefix baked in at build time
 — `site/.eleventy.js` reads it through `site/scripts/published.cjs` for
 the showcase, `app/vite.config.ts`'s own
-`base` for the application — bound by `tools/tests/test_site.py` to the
+`base` for the application — bound by `tools/tests/repository/test_site.py` to the
 same two addresses `tools/convener_ops/journey/registration.py::SIGNUP_BASE` and
 `tools/convener_ops/journey/certificate.py::VERIFICATION_BASE` already pin, so the
 four cannot silently drift apart (D-14, applied to this one more
@@ -445,7 +445,7 @@ ways:
 Naming any of the four above in the `<meta>` tag would not be a smaller
 version of the real control — it would read as protection while doing
 nothing, which is worse than the honest gap this section states instead.
-`tools/tests/test_site.py::
+`tools/tests/repository/test_site.py::
 test_content_security_policy_never_carries_a_directive_meta_delivery_ignores`
 and `app/tests/csp.test.ts`'s own `'never carries a directive a <meta>
 delivery ignores'` both fail the build the moment one of those four tokens
@@ -884,7 +884,7 @@ two steps, always together, in that order: remove the secret, then run
 The retention sweep's own job, and this project's central promise — a key
 destroyed 90 days after its event, making that event's registrations
 permanently unreadable — carried out automatically, on a schedule, and
-proved by a test (`tools/tests/test_retention.py`,
+proved by a test (`tools/tests/journey/test_retention.py`,
 `test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever`).
 
 **This same destruction also covers
@@ -1145,7 +1145,7 @@ file (`instance/data/events/<event id>/registrations.enc`) holds one independent
 hybrid envelope per registration rather than one for the whole event, and
 what that costs and buys. The plaintext never touches disk, a log, or
 standard output at any point; a test
-(`tools/tests/journey/test_registration.py`, `tools/tests/test_cli.py`) pins that
+(`tools/tests/journey/test_registration.py`, `tools/tests/cli/test_cli.py`) pins that
 directly by asserting no submitted name or address appears anywhere the
 job prints, on both the success and the failure paths.
 
@@ -1239,7 +1239,7 @@ file on `main` would bill at least five runs per submission — the exact
 inverse of the point. The relay writes with its own token rather than a
 job's `GITHUB_TOKEN`, so GitHub's recursion guard does not save it; what
 does is that nothing triggers on a push to a branch other than `main`,
-which `tools/tests/test_workflows.py` holds over the whole workflow
+which `tools/tests/repository/test_workflows.py` holds over the whole workflow
 directory.
 
 > **Never open a pull request from `submission-queue`.** Six workflows
@@ -1531,7 +1531,7 @@ the raw export under the event's own published public key with
 registration keys* above for why the public half is not one) and commits
 the result; a CI job holding this event's `EVENT_PRIVATE_KEY` -- the same
 key it already reads to decrypt `registrations.enc` -- decrypts it the
-moment it is checked out. `tools/tests/test_event_chain.py` drives the
+moment it is checked out. `tools/tests/cli/test_event_chain.py` drives the
 real commands against exactly this shape and asserts the chain completes,
 for the manual implementation. With a token configured, this
 command populates `conference_ids` too, the same
@@ -1564,7 +1564,7 @@ writing the register read as three steps in that order; in the code it is two
 steps, because idempotence requires it. `convener-deliver-certificates` (below)
 re-signs the identical token on every run without ever writing to the
 register again, which is what lets a failed delivery be retried without
-regenerating anything -- see `tools/tests/test_event_chain.py`'s own module
+regenerating anything -- see `tools/tests/cli/test_event_chain.py`'s own module
 docstring for the fuller reasoning.
 
 **No workflow input is ever an address.** A `workflow_dispatch` input is
@@ -2185,8 +2185,8 @@ Kept, because each is the record of what was done to the data on a day
 nobody will remember. Both are pure functions with a `main()` that reads,
 transforms and writes, both are idempotent, and each has a test file that
 pins, field by field, what it touched and — more usefully — what it left
-alone: `tools/tests/test_migrate_v3.py` and
-`tools/tests/test_open_vote_window.py`. Deleting the scripts would leave the
+alone: `tools/tests/migrations/test_migrate_v3.py` and
+`tools/tests/scripts/test_open_vote_window.py`. Deleting the scripts would leave the
 two commits that changed every record in `instance/data/speakers.yml` with no
 statement of what they changed.
 

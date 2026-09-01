@@ -830,7 +830,7 @@ def unconfigured(root: Path | None = None) -> tuple[str, ...]:
     unconfigured exactly while its declaration still carries a value the
     product ships in `examples/the-example-collective/instance/config.json` -- the
     invented instance this repository already builds itself as on every
-    run of `tools/tests/test_second_instance.py`. Every value in that file
+    run of `tools/tests/repository/test_second_instance.py`. Every value in that file
     is unmistakably synthetic and reserved: `.test` is RFC 2606's, no
     registry will ever delegate it, `example-instance.github.io` is a name
     nobody is asked to register, and "The Example Collective" is nobody.

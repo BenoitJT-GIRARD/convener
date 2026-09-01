@@ -43,7 +43,7 @@ What it does, and the whole of what it does
 
 **Two trees, not one.** `instance/data/` is this instance's, and
 `examples/the-example-collective/instance/data/` is the product's own worked
-example -- the one `tools/tests/test_second_instance.py` builds this whole
+example -- the one `tools/tests/repository/test_second_instance.py` builds this whole
 repository as.
 Migrating one and not the other would ship a product whose own example
 fails its own validator at the next `convener-validate`.
@@ -110,7 +110,7 @@ _KEY_LINE = re.compile(rf"^{re.escape(OLD_KEY)}(?=:)", re.MULTILINE)
 #: first sweep after it would produce a second diff; the two constants
 #: that do the writing are `convener_ops.cli.SPEAKERS_HEADER` and
 #: `app/src/data/yaml.ts::SPEAKERS_HEADER`, and
-#: `tools/tests/test_migrate_v6.py` holds all three together rather than
+#: `tools/tests/migrations/test_migrate_v6.py` holds all three together rather than
 #: this module importing one of them and leaving the other free to drift.
 _V5_STAMP = "unified schema v5"
 _V6_STAMP = "unified schema v6"

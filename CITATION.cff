@@ -13,7 +13,7 @@
 # exactly four keys -- `cff-version`, `message`, `title`, `authors` -- and
 # refuses any key it does not know, so everything below is either required
 # or a documented optional key.
-# `tools/tests/test_public_repository.py` holds this file against that
+# `tools/tests/repository/test_public_repository.py` holds this file against that
 # required set and against the licence the repository actually ships.
 #
 # No `repository-code` and no `url`, deliberately. A duplicate inherits

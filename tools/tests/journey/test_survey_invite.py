@@ -182,7 +182,7 @@ def test_registry_from_data_rejects_malformed_input(data: Any) -> None:
 # `SURVEY_BASE` is now the survey page's own address, one page per event
 # (D-19) exactly like `registration.SIGNUP_BASE` -- the shape check below
 # mirrors `test_registration.py::test_signup_base_is_the_event_pages_own_
-# address`, and `tools/tests/test_workflows.py::
+# address`, and `tools/tests/repository/test_workflows.py::
 # test_survey_base_matches_the_survey_page_permalink` binds the value
 # itself against `site/src/survey.njk`'s own permalink, the D-14
 # "read from both sides" discipline moved to that module instead, the

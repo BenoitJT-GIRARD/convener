@@ -1,6 +1,6 @@
 """One way in per tree, and `README.md` is where a reader is handed it.
 
-`tools/tests/test_docs_directory.py` holds every page under `docs/` to one
+`tools/tests/repository/test_docs_directory.py` holds every page under `docs/` to one
 of three trees. That rule says where a page sits and nothing about how
 anybody arrives: three trees existed with nothing at the front door saying
 which was whose, so a reader who opened the repository chose by directory
@@ -39,9 +39,9 @@ from pathlib import Path
 from typing import Final
 
 import pytest
-from test_cross_references import _tracked
 
 from convener_ops.declaration.paths import repo_root
+from repository.test_cross_references import _tracked
 
 ROOT: Final = repo_root()
 

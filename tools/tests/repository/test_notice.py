@@ -24,7 +24,7 @@ and nothing anywhere goes red.
 **What is checked here, and what is checked elsewhere.** This module holds
 the three declarations and the two templates that read them. That the
 notice actually reaches a *rendered* page is a different claim, made
-against real output on both sides: ``tools/tests/test_site.py`` builds the
+against real output on both sides: ``tools/tests/repository/test_site.py`` builds the
 showcase and reads its footer, and ``app/tests/notice.test.tsx`` renders
 the cockpit's own. A template referencing a field and a page displaying it
 are not the same statement, and neither test is a substitute for the

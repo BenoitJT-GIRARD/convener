@@ -202,7 +202,7 @@ eleventyComputed:
     see `app/src/islands/signup/SignupForm.tsx`'s own module comment.
     `tools/tests/journey/test_confirmation.py` still pins the retention figure
     ("90 days") across this page, `confirmation.py` and the docs copy, and
-    `tools/tests/test_site.py` pins the contact address below against
+    `tools/tests/repository/test_site.py` pins the contact address below against
     `confirmation.CONTACT_EMAIL` -- so neither the wording nor the address
     can quietly drift from those.
   #}
@@ -234,7 +234,7 @@ eleventyComputed:
          all -- `absoluteUrl` (site/.eleventy.js) builds it from
          `instance/config.json`, so a duplicate publishing under its own
          address gets its own link with nothing to edit here.
-         `tools/tests/test_site.py::
+         `tools/tests/repository/test_site.py::
          test_the_governance_record_link_agrees_on_every_page_that_makes_
          it` reads both templates and pins them equal. #}
       <a href="{{ '/app/docs/handbook/governance/traitement-donnees.md' | absoluteUrl }}">data-protection record</a>
@@ -253,7 +253,7 @@ eleventyComputed:
 
     `#registration-form` is `app/src/islands/signup/main.tsx`'s own mount
     point -- kept as the exact id this page reserved for it, which
-    `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
+    `tools/tests/repository/test_site.py::test_the_notice_precedes_the_reserved_
     place_for_the_registration_form` already pins, so that test needed no
     change here. `data-event-id` is how the island learns which event
     it is on: one static page per event (D-19), not a route param this

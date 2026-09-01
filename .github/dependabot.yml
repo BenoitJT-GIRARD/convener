@@ -15,7 +15,7 @@
 # package while nothing opens the pull request replacing it is half a
 # control: the finding arrives, and then it stays, because bumping a
 # lockfile by hand is the work nobody does. So the list below is the same
-# seven, and `tools/tests/test_public_repository.py` derives it from `git
+# seven, and `tools/tests/repository/test_public_repository.py` derives it from `git
 # ls-files` rather than reading it -- a manifest committed without an entry
 # here fails that test instead of going unwatched until somebody notices.
 #

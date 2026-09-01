@@ -501,7 +501,11 @@ def _coordinate_resolves(word: str, number: str, titles: frozenset[str]) -> bool
 #: solved the identical problem the other way, by never writing a
 #: credential pattern as its own literal; a docstring has no such trick
 #: available, because the examples *are* the explanation.
-SELF = "tools/tests/test_cross_references.py"
+#:
+#: Read off `__file__` rather than typed out: a hand-typed path is an
+#: exemption that survives the module moving, and this module moving is
+#: exactly when the exemption stops naming it.
+SELF = Path(__file__).resolve().relative_to(ROOT).as_posix()
 
 
 @cache
@@ -917,3 +921,85 @@ def test_a_fixture_host_placeholder_is_not_read_as_prose() -> None:
     the sweep being wrong about domain data."""
     source = "const row = { host_1: 'H1', host_2: 'H2' };\n"
     assert "H1" not in prose_of("probe.ts", source)
+
+
+# ------------------------------------------------------------------ #
+# The third kind of cross-reference: a path
+# ------------------------------------------------------------------ #
+
+#: A reference to a test module of this repository, wherever it is
+#: written: a docstring, a workflow comment, `CODEOWNERS`, a Markdown page.
+#: Read out of the raw file rather than out of `prose_of`, because two of
+#: the files that carry one -- `.github/CODEOWNERS` and `.gitignore` -- are
+#: in no language that extractor knows, and a path written in code
+#: resolves for the same reason a path written in a comment does.
+TEST_MODULE_PATH = re.compile(
+    r"(?<![\w./-])(tools/tests/[A-Za-z0-9_./-]*?\.(?:py|json|yml|md))(?![\w.-])"
+)
+
+
+def unresolvable_test_paths(text: str) -> list[str]:
+    """Every `tools/tests/...` path in `text` that this repository does not
+    track."""
+    tracked = set(_tracked())
+    return sorted({m for m in TEST_MODULE_PATH.findall(text) if m not in tracked})
+
+
+def test_every_test_module_a_file_names_is_a_file_this_repository_tracks() -> None:
+    """A citation of a test module is a coordinate like `D-19`, and it goes
+    stale the same way -- by the thing moving, with nothing red.
+
+    `.github/CODEOWNERS` named `tools/tests/test_published.py` for two
+    reorganisations after that module became
+    `tools/tests/declaration/test_published.py`, and every gate stayed
+    green throughout: a path inside a comment is a string to ruff, to mypy
+    and to actionlint alike.
+
+    **Bounded to `tools/tests/`, and that bound is measured rather than
+    cautious.** The same sweep widened to every tracked top-level
+    directory finds fifty-two paths that resolve to nothing, and almost
+    all of them are correct: files continuous integration writes and git
+    ignores (`instance/public-data/survey-status.json`), paths invented
+    inside a test's own fixture (`declarations/a.yml`), and a former
+    location cited on purpose to say where something used to be
+    (`app/src/signup/SignupForm.tsx`). Refusing those would need an
+    exemption list longer than the rule, which is the shape this
+    repository treats as a failed control. Test modules have no such
+    members: every one of them is a tracked file, so the rule needs no
+    exemption at all.
+    """
+    offending = {
+        name: unresolvable
+        for name in _tracked()
+        if name != SELF
+        for unresolvable in [unresolvable_test_paths(_text_of(name))]
+        if unresolvable
+    }
+
+    assert offending == {}, (
+        f"{offending} name a test module this repository does not track. "
+        "A module moved takes its citations with it: fix the path, or "
+        "cite what the test proves rather than where it lives."
+    )
+
+
+def _text_of(name: str) -> str:
+    try:
+        return (ROOT / name).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def test_a_moved_test_module_is_caught() -> None:
+    """The positive control, on a string rather than on the repository:
+    "nothing is stale today" is also what a sweep that reads nothing
+    reports."""
+    assert unresolvable_test_paths(
+        "see `tools/tests/test_published.py` for the rule"
+    ) == ["tools/tests/test_published.py"]
+
+
+def test_a_test_module_that_is_there_is_not_refused() -> None:
+    """The other direction, so the check above cannot pass by refusing
+    everything."""
+    assert unresolvable_test_paths("see tools/tests/conftest.py for the fixtures") == []

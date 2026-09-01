@@ -247,7 +247,7 @@ function localResourceHrefs(html) {
  *  the merged tree `assembleTree` produced. D-26, applied to this
  *  resolution step specifically: every href this project's templates emit
  *  must already carry `prefix` (a separate, repository-wide guard,
- *  `tools/tests/test_site.py::
+ *  `tools/tests/repository/test_site.py::
  *  test_no_built_page_emits_a_root_relative_link_without_the_prefix`,
  *  already enforces this on every build) -- an href reaching here without
  *  it is exactly the class of defect D-26 exists to catch, so this throws

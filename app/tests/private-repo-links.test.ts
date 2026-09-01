@@ -18,7 +18,7 @@
  * line) -- rather than a second, hand-typed copy of the same private
  * address living in this test. That is the exact shape
  * `site/src/_includes/layout.njk` was fixed to stop doing (see
- * `tools/tests/test_site.py::test_the_organiser_link_points_at_the_apps_real_published_base`):
+ * `tools/tests/repository/test_site.py::test_the_organiser_link_points_at_the_apps_real_published_base`):
  * a hand-typed address naming a repository the public reader can never
  * reach became one derived from something that actually resolves.
  *

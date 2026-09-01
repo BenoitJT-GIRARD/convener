@@ -47,7 +47,7 @@ duplicated logic this project avoids elsewhere for the same reason
 (`registration.normalize_email`'s own docstring: "a second, hand-written
 definition ... here would risk disagreeing with this one"). What *is*
 written from scratch here is the *decoder* that proves the encoder's output
-is correct -- `tools/tests/qr_decode.py` -- because nothing in this
+is correct -- `tools/tests/helpers/qr_decode.py` -- because nothing in this
 project's dependency tree, and no service this project is willing to call
 over the network, reads a QR code back. See that module's own docstring.
 

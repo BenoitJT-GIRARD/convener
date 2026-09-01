@@ -51,10 +51,9 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Final
 
-import instance_identity
 import pytest
 import render_readme_shots
-import toolchain
+from helpers import instance_identity, toolchain
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root

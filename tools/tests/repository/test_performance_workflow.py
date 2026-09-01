@@ -5,7 +5,7 @@ means something if the check that enforces it can actually turn red.
 
 Three things a passing job could still be wrong about, each with its own
 test below (the identical three-part shape
-`tests/test_a11y_workflow.py`'s own module docstring names for the
+`tests/repository/test_a11y_workflow.py`'s own module docstring names for the
 accessibility checker):
 
 * it could be weighing a stale, partial, or empty build rather than the

@@ -34,7 +34,7 @@ PAGE = ROOT / "docs" / "handbook" / "governance" / "candidate-data-protection.md
 OLD_PAGE = ROOT / "docs" / "handbook" / "governance" / "traitement-donnees.md"
 
 CASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )

@@ -9,7 +9,7 @@ import { SignupForm } from './SignupForm';
  * param: this island has no router of its own, one static page per event
  * (D-19), not a fragment a script re-parses.
  *
- * `MOUNT_ID` is deliberately the same id `tools/tests/test_site.py::
+ * `MOUNT_ID` is deliberately the same id `tools/tests/repository/test_site.py::
  * test_the_notice_precedes_the_reserved_place_for_the_registration_form`
  * already pins against the built page -- this is that reserved place.
  */

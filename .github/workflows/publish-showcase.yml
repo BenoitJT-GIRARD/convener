@@ -134,7 +134,7 @@ jobs:
       # link on any public page, ever; it is delivered only by the
       # confirmation e-mail, and the event page is what
       # replaces it in every announcement instead.
-      # `tools/tests/test_site.py` already proves the templates keep a
+      # `tools/tests/repository/test_site.py` already proves the templates keep a
       # room link off a build made from a committed fixture, on every
       # push; this is the same check, run once more here against the
       # *real* room links this job is seconds away from publishing

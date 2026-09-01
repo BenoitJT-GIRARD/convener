@@ -132,7 +132,7 @@ import json
 import re
 from pathlib import Path
 
-from test_cross_references import _tracked, prose_of
+from repository.test_cross_references import _tracked, prose_of
 
 from convener_ops.declaration.paths import repo_root
 
@@ -224,7 +224,9 @@ WINDOW_LINES = 2
 #: itself: everything above states the rule by quoting the French it
 #: refuses, so a module that swept itself would refuse its own source the
 #: day it was written. The examples *are* the explanation.
-SELF = "tools/tests/test_prose_language.py"
+#: Read off `__file__` rather than typed out, for the reason that module
+#: gives beside its own.
+SELF = Path(__file__).resolve().relative_to(ROOT).as_posix()
 
 
 def french_windows(body: str) -> list[str]:

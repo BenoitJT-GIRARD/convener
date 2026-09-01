@@ -147,11 +147,11 @@ on:
     # have failed to *trigger* the very first time this workflow ran for
     # real -- no workflow in this repository has ever executed. The two
     # copies below are bound instead by
-    # tools/tests/test_visuals_workflow.py::
+    # tools/tests/repository/test_visuals_workflow.py::
     # test_the_two_path_filters_are_identical_lists, which fails the
     # moment they drift apart -- if you are tempted to "simplify" this
     # back into an anchor, read that test first, and see
-    # tools/tests/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias
+    # tools/tests/repository/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias
     # for the sweep that refuses one anywhere else in this repository too.
     paths:
       - 'tools/convener_ops/publication/visual.py'
@@ -175,7 +175,7 @@ on:
     # parser cannot resolve the anchor/alias that used to bind these (see
     # that list's own comment for the full reasoning). A mismatch here
     # fails test_the_two_path_filters_are_identical_lists in
-    # tools/tests/test_visuals_workflow.py.
+    # tools/tests/repository/test_visuals_workflow.py.
     paths:
       - 'tools/convener_ops/publication/visual.py'
       - 'tools/convener_ops/publication/motifs/**'
@@ -247,7 +247,7 @@ jobs:
           # puppeteer 25.8.0's own declared floor (`engines.node`), and
           # the version every other job in this repository installs too --
           # this job was the first on 22 while the rest were still on 20,
-          # and that split is gone (tools/tests/test_workflows.py::
+          # and that split is gone (tools/tests/repository/test_workflows.py::
           # test_every_workflow_installs_the_same_node_version). What this
           # package's isolation buys is unchanged and unrelated: only this
           # workflow and visuals-production.yml pay for the bundled

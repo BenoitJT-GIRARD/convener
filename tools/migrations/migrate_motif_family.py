@@ -44,7 +44,7 @@ Three charters, not one
 duplicate builds with before it has chosen anything. `instance/data/
 brand.json` is this instance's.
 `examples/the-example-collective/instance/data/brand.json` is the worked
-example `tools/tests/test_second_instance.py` builds the whole
+example `tools/tests/repository/test_second_instance.py` builds the whole
 repository as. All three answer the same names, because the *system* is the
 product's and every template reads a motif field by name.
 

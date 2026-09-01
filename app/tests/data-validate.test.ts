@@ -213,7 +213,7 @@ describe('what a volunteer is told when instance/data/speakers.yml is malformed'
 });
 
 describe('the hand-edited fixture, read from both languages', () => {
-  // tools/tests/test_hand_edited.py reads these same two files and asserts
+  // tools/tests/governance/test_hand_edited.py reads these same two files and asserts
   // what `convener-validate` reports. Absent keys, unquoted scalars: what a file
   // typed into GitHub's web editor actually looks like.
   it('refuses the hand-typed speaker, naming it and the first field it lacks', () => {

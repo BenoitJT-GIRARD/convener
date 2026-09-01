@@ -14,7 +14,7 @@
  * so.
  *
  * Two copies, one answer. `tools/tests/fixtures/instance-settings.json`
- * holds the cases, `tools/tests/test_instance_settings.py` answers them
+ * holds the cases, `tools/tests/repository/test_instance_settings.py` answers them
  * from Python, and this file answers them from `src/settings/bounds.ts`. A
  * bound the cockpit computed differently from the one the daily job
  * enforces would be worse than no form at all.

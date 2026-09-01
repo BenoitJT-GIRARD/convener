@@ -21,8 +21,8 @@
  * trimmed for width keeping the name and dropping the warranty, so each
  * clause is looked for on its own.
  *
- * `tools/tests/test_notice.py` holds the declaration, the licence and the
- * added term under section 7; `tools/tests/test_site.py` holds the
+ * `tools/tests/repository/test_notice.py` holds the declaration, the licence and the
+ * added term under section 7; `tools/tests/repository/test_site.py` holds the
  * showcase's own rendered colophon. Neither says anything about this one.
  */
 import { readFileSync } from 'node:fs';

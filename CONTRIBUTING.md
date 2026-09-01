@@ -61,7 +61,7 @@ stand between a volunteer and recording a vote in their own series.
 
 So the sign-off is checked where it can be judged: by the person merging the
 pull request, on the commits the pull request brings. What is automated is
-the other half — `tools/tests/test_public_repository.py` refuses a
+the other half — `tools/tests/repository/test_public_repository.py` refuses a
 commit-message check that starts rejecting a contributor's sign-off as an
 attribution trailer, which is the way this could quietly stop working.
 

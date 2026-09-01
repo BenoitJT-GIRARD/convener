@@ -18,7 +18,7 @@ indent_size = 2
 indent_size = 4
 
 # A licence and a notice are reproduced texts. `NOTICE.json` is pinned by
-# `tools/tests/test_notice.py` and `LICENSE` byte for byte against the Free
+# `tools/tests/repository/test_notice.py` and `LICENSE` byte for byte against the Free
 # Software Foundation's own file, so an editor must leave both exactly as
 # they are.
 [{LICENSE,NOTICE.json}]

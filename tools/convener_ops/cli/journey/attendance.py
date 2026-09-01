@@ -436,7 +436,7 @@ def release_recording() -> int:
     delete -- one of exactly two places in this whole package allowed to
     call `Platform.delete_recording`, the other being `discard_recording`
     below (pinned by
-    `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
+    `tools/tests/cli/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
     `delete_recording` exists because of the chosen platform's
     storage quota: a 90-minute recording costs roughly
     1.6x the free tier's entire 1 GB allowance, so freeing it after every
@@ -658,7 +658,7 @@ def discard_recording() -> int:
     be retrieved -- one of exactly two places in this whole package
     allowed to call `Platform.delete_recording`, the other being
     `release_recording` above (pinned by
-    `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
+    `tools/tests/cli/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
 
     **This is not `release_recording` with a shortcut.** The two
     operations have opposite preconditions on purpose, and neither can

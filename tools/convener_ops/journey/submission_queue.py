@@ -34,7 +34,7 @@ default branch would start at least five runs per submission -- the exact
 inverse of this module's purpose. The relay writes with its own token, not
 with a job's `GITHUB_TOKEN`, so GitHub's recursion guard does not apply to
 anything it pushes; the only thing that makes a branch free is that no
-trigger reaches it, and that is held by `tools/tests/test_workflows.py`'s
+trigger reaches it, and that is held by `tools/tests/repository/test_workflows.py`'s
 own directory-wide sweep rather than by anybody's care.
 
 **The precondition that sweep cannot enforce, restated here because this is

@@ -18,7 +18,7 @@ import cases from '../../tools/tests/fixtures/governance-cases.json';
 // The data-protection notice suite (`SurveyForm -- the notice`, in the
 // old file) is gone too, not merely moved: that text no longer renders
 // from this component at all (see `SurveyForm.tsx`'s own module comment)
-// -- `tools/tests/test_site.py` already covers the static copy
+// -- `tools/tests/repository/test_site.py` already covers the static copy
 // `site/src/survey.njk` carries instead.
 
 // Reuses the registration fixture's own key pair -- see

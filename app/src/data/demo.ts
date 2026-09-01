@@ -8,7 +8,7 @@
  *
  * What it shows is `examples/the-example-collective/` -- a whole second instance,
  * invented, that the product already ships and that
- * `tools/tests/test_second_instance.py` already lays into this
+ * `tools/tests/repository/test_second_instance.py` already lays into this
  * repository's own holes on every run to prove the instance is separable
  * from the code.
  * This module used to hold five speaker records and a governance

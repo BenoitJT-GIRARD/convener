@@ -89,7 +89,7 @@ classifies every field `Speaker` has, in code, against
 publication gate's own three sets are — and the classification is bound to
 this page by `tools/tests/fixtures/governance-cases.json`, checked from both
 languages (`app/tests/personal-data-fields.test.ts` and
-`tools/tests/test_candidate_data_protection_record.py`). A field the model
+`tools/tests/repository/test_candidate_data_protection_record.py`). A field the model
 gains later and nobody classifies fails a test before it can reach this page
 without a description.
 

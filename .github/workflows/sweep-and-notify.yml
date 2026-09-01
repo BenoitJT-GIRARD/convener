@@ -267,7 +267,7 @@ jobs:
       # `repository_dispatch` and start its own run of `survey.yml` (now
       # deleted). The relay writes the encrypted envelope to the
       # `submission-queue` branch instead -- a branch no workflow watches,
-      # held by `tools/tests/test_workflows.py`'s directory-wide sweep
+      # held by `tools/tests/repository/test_workflows.py`'s directory-wide sweep
       # -- and these steps handle everything waiting in
       # one commit, once a day.
       #

@@ -31,7 +31,7 @@ trust without checking:
    the one thing here needing a toolchain, so the four tests that ask for
    it skip on a machine with no `app/node_modules` and fail on a runner,
    where `quality.yml` installs it before `pytest` runs
-   (`_bundle_configurations`, `tools/tests/toolchain.py`).
+   (`_bundle_configurations`, `tools/tests/helpers/toolchain.py`).
 
 Then the sweep: no file outside the declaration writes the address again.
 
@@ -101,10 +101,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-import instance_identity
 import pytest
-import toolchain
 import yaml
+from helpers import instance_identity, toolchain
 
 from convener_ops.declaration import boundary, published
 from convener_ops.declaration.paths import repo_root
@@ -855,7 +854,7 @@ def test_the_push_target_refuses_an_address_it_cannot_derive_one_from(
 def _push_step_scripts() -> dict[Path, str]:
     """The `run:` block of each workflow's own push step, found by the
     secret it reads rather than by its `name:` -- the same rule
-    `tools/tests/test_workflows.py` already applies, so a rename of a step
+    `tools/tests/repository/test_workflows.py` already applies, so a rename of a step
     does not silently stop either module checking it."""
     found: dict[Path, str] = {}
     for name, job in (
@@ -1429,7 +1428,7 @@ def test_a_deployment_of_the_example_itself_is_unconfigured_in_every_value(
     tmp_path: Path,
 ) -> None:
     """What a duplicate deployed before it was configured actually looks
-    like, and what `tools/tests/test_second_instance.py` builds on every
+    like, and what `tools/tests/repository/test_second_instance.py` builds on every
     run: `examples/the-example-collective/`'s own declaration, sitting in
     `instance/`."""
     root = _laid_out(tmp_path, _example_declaration())

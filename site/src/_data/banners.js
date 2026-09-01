@@ -19,7 +19,7 @@
  * `addPassthroughCopy('src/banners')`), a `require`d `_data/*.js` file
  * runs from wherever it was loaded, the same reason `archive.js` above can
  * read a scratch copy's own `events.json` rather than the real
- * repository's. `tools/tests/test_site.py`'s own comment on its
+ * repository's. `tools/tests/repository/test_site.py`'s own comment on its
  * `built_site_with_share_banner` fixture explains why that split matters
  * for testing this feature end to end.
  *

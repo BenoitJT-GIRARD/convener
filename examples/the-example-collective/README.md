@@ -21,7 +21,7 @@ directory takes the default.
 ## What it is for
 
 **Proving the separation.** Instance from code is not a claim
-anybody can read their way to. `tools/tests/test_second_instance.py`
+anybody can read their way to. `tools/tests/repository/test_second_instance.py`
 copies this repository into a scratch tree, deletes every file the
 boundary hands to the instance, lays these files into the holes, runs the
 whole build — the four bundles, the showcase, the handbook copy, the

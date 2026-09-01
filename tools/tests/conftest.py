@@ -171,7 +171,7 @@ def nomination(**overrides: Any) -> dict[str, Any]:
 #: difference matters: this suite tests the *validator*, so what it needs
 #: is a prefix, any prefix, held still. Reading the declaration would make
 #: every assertion below move the day the declaration moved, which is the
-#: property `tools/tests/test_second_instance.py` exists to check and the
+#: property `tools/tests/repository/test_second_instance.py` exists to check and the
 #: last thing a unit test should be quietly repeating. `MRG` is the one
 #: this repository happens to declare, so a fixture reading `MRG-07` still
 #: reads like the file it stands for.

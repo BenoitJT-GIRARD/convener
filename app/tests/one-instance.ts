@@ -18,7 +18,7 @@
  * it cannot fix. It comes back the moment a duplicate declares its own
  * identity -- the same moment `unconfigured()` stops naming anything and
  * the same moment the cockpit's own banner goes quiet. One condition,
- * three readers: this file, `tools/tests/instance_identity.py`, and the
+ * three readers: this file, `tools/tests/helpers/instance_identity.py`, and the
  * banner itself.
  *
  * Asked of `scripts/published.mjs::unconfiguredFrom`, which is the

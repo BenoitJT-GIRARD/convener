@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 from conftest import config, speaker
-from ics_reader import parse_calendar, unescape_text
+from helpers.ics_reader import parse_calendar, unescape_text
 
 from convener_ops.declaration.paths import repo_root
 from convener_ops.governance.notify import due_date

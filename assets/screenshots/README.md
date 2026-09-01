@@ -10,7 +10,7 @@ cd tools && uv run --frozen python scripts/render_readme_shots.py
 ```
 
 That builds this repository as the instance `examples/the-example-collective/` declares —
-the same manoeuvre `tools/tests/test_second_instance.py` performs — and runs
+the same manoeuvre `tools/tests/repository/test_second_instance.py` performs — and runs
 `tools/visuals/render-readme-shots.mjs` inside the result, which assembles the
 two builds into the tree the publishing workflows actually push, serves it on a
 port the operating system hands out, and captures the four pages on the same
@@ -25,7 +25,7 @@ carry this series' name into four files the derived public repository publishes
 verbatim and no guard can read: `convener-check-derivation` reports the
 non-text blobs it did not read on every run, and the second instance's sweep
 skips a `.png` for the same reason. Both scripts' own comments carry the rest of
-that reasoning, and `tools/tests/test_readme_shots.py` runs the refusal rather
+that reasoning, and `tools/tests/scripts/test_readme_shots.py` runs the refusal rather
 than reading it.
 
 **Refresh them whenever either interface changes.** A screenshot in a README is

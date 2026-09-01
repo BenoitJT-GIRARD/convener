@@ -215,7 +215,7 @@ __all__ = [
 #: all), so the fragment was only ever a consistency choice with
 #: the certificate's own address, never a second privacy property this
 #: module relied on. Losing it loses nothing.
-#: `tools/tests/test_workflows.py::test_survey_base_matches_the_survey_
+#: `tools/tests/repository/test_workflows.py::test_survey_base_matches_the_survey_
 #: page_permalink` pins this against `survey.njk`'s own permalink,
 #: read from both sides, the same discipline that test module already
 #: holds `registration.SIGNUP_BASE` to.

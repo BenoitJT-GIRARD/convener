@@ -7,7 +7,7 @@ import { walkAll } from '../scripts/handbook-registry.mjs';
 /**
  * The application's own hold on D-17 -- no request to a third party from a
  * published page. `site/`'s showcase already has one
- * (`tools/tests/test_site.py::test_no_page_requests_a_third_party_font_host`),
+ * (`tools/tests/repository/test_site.py::test_no_page_requests_a_third_party_font_host`),
  * scoped to `site/src/`; this is the application's, scoped to `app/`,
  * because the two are built and served separately and neither test can see
  * the other's tree. `app/src/design/tokens.css` once

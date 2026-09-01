@@ -27,7 +27,7 @@ ROOT = repo_root()
 
 # The literal value `site/src/_data/events.json`'s own MRG-05 fixture
 # carries, kept there as "a synthetic room-link-shaped column ... a
-# template-regression canary" (`tools/tests/test_site.py`'s own words) --
+# template-regression canary" (`tools/tests/repository/test_site.py`'s own words) --
 # reused here rather than a second invented string, so a leak of *this*
 # value is provably the same leak that test already guards the site against.
 POISONED_ROOM_LINK = (

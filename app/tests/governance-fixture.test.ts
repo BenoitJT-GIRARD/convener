@@ -111,7 +111,7 @@ describe('the overdue wording, shared with the daily digest', () => {
   /* These sentences are rendered on the screens by `sla.ts` and posted in the
    * notification digest by `tools/convener_ops/governance/notify.py`. One sentence, two
    * readers: a reword that reaches only one side fails here and in
-   * `tools/tests/test_governance_fixture.py` at the same time. */
+   * `tools/tests/governance/test_governance_fixture.py` at the same time. */
   it.each(latenessCases)('$name', c => {
     const l = lateness(speakerFor(c), configFor(c), c.today);
     expect(l.state).toBe(c.state);
@@ -130,7 +130,7 @@ describe('the overdue wording, shared with the daily digest', () => {
 
 /** Every underscore-prefixed key of the fixture is a prose comment
  *  documenting a neighbouring block, not data either language reads -- see
- *  the sibling comment in `tools/tests/test_governance_fixture.py`. */
+ *  the sibling comment in `tools/tests/governance/test_governance_fixture.py`. */
 const topLevelCaseKeys = Object.keys(cases).filter(key => !key.startsWith('_'));
 
 function escapeForRegExp(text: string): string {
@@ -178,7 +178,7 @@ describe('every top-level fixture key is read by somebody, in either language', 
   });
 
   it('every block is read by at least one test, in either language', () => {
-    // Neither this module nor `tools/tests/test_governance_fixture.py` used
+    // Neither this module nor `tools/tests/governance/test_governance_fixture.py` used
     // to assert full coverage of `governance-cases.json` -- only the named
     // blocks each happened to already read. A block could be added and go
     // unread on both sides indefinitely, which is exactly the drift D-14's

@@ -8,7 +8,7 @@ threshold's own floor is the margin again. Both headers say so at length,
 and both say it in worked figures -- *48 hours today*, *96 - 48 = 48 hours
 today*, *a range of 48 to 120*. Each of those is a number one file states
 about another file's value, which is the arrangement
-`tools/tests/test_handbook_claims.py` exists for, one level below the
+`tools/tests/repository/test_handbook_claims.py` exists for, one level below the
 handbook: same drift, same remedy, a different set of readers.
 
 **Why the figures stay written out.** Rendering such a header from the

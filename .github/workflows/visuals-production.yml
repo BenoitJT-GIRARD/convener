@@ -104,7 +104,7 @@ name: Visuals production
 # A single `paths:` list, not two: unlike visuals.yml, this workflow has no
 # `pull_request` trigger to keep a second copy in step with, so the
 # anchor/alias trap that caught visuals.yml's own first version (see
-# tools/tests/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias)
+# tools/tests/repository/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias)
 # has nothing to bite here.
 #
 # No `pull_request` trigger: unlike visuals.yml's cheap, read-only

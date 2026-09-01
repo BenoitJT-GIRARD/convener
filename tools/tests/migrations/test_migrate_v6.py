@@ -29,10 +29,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-import instance_identity
 import pytest
 import yaml
 from conftest import config as minimal_config
+from helpers import instance_identity
 from migrate_v6 import (
     _V5_STAMP,
     _V6_STAMP,

@@ -169,10 +169,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, NoReturn
 
-import instance_identity
 import pytest
 import second_instance_build
-import toolchain
+from helpers import instance_identity, toolchain
 
 from convener_ops.declaration import boundary, published
 from convener_ops.declaration.paths import repo_root
@@ -224,7 +223,7 @@ _ARTEFACT_FILES: Final = (
 
 
 #: What did not happen when the toolchain is absent here, in the words the
-#: failure below carries. `tools/tests/toolchain.py` takes it as an
+#: failure below carries. `tools/tests/helpers/toolchain.py` takes it as an
 #: argument rather than knowing it: the same rule serves
 #: `test_published.py`, whose loss is a different one.
 _NEVER_BUILT: Final = "the second instance was never built"
@@ -344,7 +343,7 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
 ) -> None:
     """The clause that makes everything below a control rather than a
     formality, proved rather than trusted -- and the only proof
-    `tools/tests/toolchain.py` has, here rather than in a module of its
+    `tools/tests/helpers/toolchain.py` has, here rather than in a module of its
     own because this is where the rule bites hardest.
 
     Every test in this module needs a build, a build needs `node_modules`,

@@ -10,8 +10,8 @@ import json
 import sys
 from pathlib import Path
 
-import instance_identity
 import pytest
+from helpers import instance_identity
 
 from convener_ops.cli.publication import render_visual_fixtures
 from convener_ops.declaration import published

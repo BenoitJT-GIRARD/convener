@@ -44,7 +44,7 @@ name: Quality
 #                     one runner, one `setup-node`. It carried two while
 #                     the three relays disagreed about their runtime.
 #   `workflow-schema` unchanged, and deliberately *not* merged: two tests
-#                     in tools/tests/test_workflows.py pin a job *named*
+#                     in tools/tests/repository/test_workflows.py pin a job *named*
 #                     `workflow-schema` whose only `uses:` is
 #                     `actions/checkout`. Merging it would mean rewriting
 #                     the two guards that are the point of it, to win one
@@ -97,7 +97,7 @@ on:
 # the commit in between would go to production unverified -- D-25, and
 # the reason this is pinned by a test that evaluates this exact
 # expression against both contexts rather than eyeballing its shape
-# (tools/tests/test_workflows.py::
+# (tools/tests/repository/test_workflows.py::
 # test_a_push_outside_a_pull_request_can_never_be_cancelled).
 #
 # `github.workflow` scopes the group to this workflow's own name --
@@ -142,7 +142,7 @@ jobs:
       - name: Install
         working-directory: tools
         run: uv sync --all-extras
-      # `tests/test_site.py` builds the real `site/`
+      # `tests/repository/test_site.py` builds the real `site/`
       # project itself (a genuine Eleventy build, into a scratch directory)
       # to sweep the *rendered* event pages for a leaked room link. Nothing
       # cheaper can check that, because a
@@ -159,7 +159,7 @@ jobs:
       # introduced here.
       #
       # The second install below is there for the same
-      # reason. `tests/test_second_instance.py` builds this repository as
+      # reason. `tests/repository/test_second_instance.py` builds this repository as
       # a *different* instance -- all four bundles, the showcase, the
       # handbook copy, the generated templates, the published feeds and
       # the posters -- and sweeps what comes out for anything of this
@@ -173,7 +173,7 @@ jobs:
       # which it cannot do without the package.
       #
       # These two steps are load-bearing rather than
-      # convenient. `tests/toolchain.py::absent` skips a missing toolchain
+      # convenient. `tests/helpers/toolchain.py::absent` skips a missing toolchain
       # on a developer's machine and *fails* it here, because `CI` is set
       # -- so deleting, renaming or reordering either install below turns
       # this job red by name instead of turning those checks into a row of
@@ -186,10 +186,10 @@ jobs:
           cache-dependency-path: |
             site/package-lock.json
             app/package-lock.json
-      - name: Install site (for tests/test_site.py's own build)
+      - name: Install site (for tests/repository/test_site.py's own build)
         working-directory: site
         run: npm ci
-      - name: Install app (for tests/test_second_instance.py and tests/declaration/test_published.py)
+      - name: Install app (for tests/repository/test_second_instance.py and tests/declaration/test_published.py)
         working-directory: app
         run: npm ci
       - name: Lint
@@ -198,7 +198,7 @@ jobs:
         # generators, the migrations and the tests all sit under `tools/`,
         # and `tools/pyproject.toml` is the only ruff config there is. The
         # ruff hooks in `.pre-commit-config.yaml` cover the same set, and
-        # `tools/tests/test_lint_scope.py` reads both files and compares
+        # `tools/tests/repository/test_lint_scope.py` reads both files and compares
         # what each one reaches file by file.
         run: uv run ruff check .
       - name: Format check
@@ -518,7 +518,7 @@ jobs:
   # `wrangler` 4, whose own `engines.node` reads `>=22.0.0`, so the two on
   # 20 were the ones testing something other than what they ship. One
   # version is now the repository-wide rule
-  # (tools/tests/test_workflows.py::test_every_workflow_installs_the_same_
+  # (tools/tests/repository/test_workflows.py::test_every_workflow_installs_the_same_
   # node_version), which is what makes a single step here correct rather
   # than merely tidier.
   relays:
@@ -638,7 +638,7 @@ jobs:
     # there is nothing here for the SHA-pin sweep to check, and it reaches
     # the network the same way `npm audit`/`pip-audit`/`cspell` already do
     # elsewhere in this same chain, which is why this is a CI step and
-    # never a test (tools/tests/test_workflows.py::
+    # never a test (tools/tests/repository/test_workflows.py::
     # test_quality_workflow_validates_workflows_against_github_actions_schema pins
     # the version string below without ever running the tool itself).
     #

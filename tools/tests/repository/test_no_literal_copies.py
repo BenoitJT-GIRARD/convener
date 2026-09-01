@@ -49,7 +49,7 @@ from pathlib import Path
 #: Where a duplicate becomes a copy. See the module docstring for the argument.
 MIN_DUPLICATE_CHARS = 100
 
-_REPO = Path(__file__).resolve().parents[2]
+_REPO = Path(__file__).resolve().parents[3]
 _DOCS = _REPO / "docs"
 
 #: The rule `app/scripts/handbook-files.mjs` applies, read out of that file by

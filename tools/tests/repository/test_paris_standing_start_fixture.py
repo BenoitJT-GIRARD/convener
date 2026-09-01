@@ -36,7 +36,7 @@ from convener_ops.declaration.paths import repo_root
 from convener_ops.publication.visual import date_line, paris_standing_start
 
 _ROOT = repo_root()
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "paris-standing-start.json"
+_FIXTURE_PATH = Path(__file__).parents[1] / "fixtures" / "paris-standing-start.json"
 _FIXTURE: list[dict[str, Any]] = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))
 
 
@@ -63,7 +63,7 @@ def test_the_fixture_covers_both_sides_of_both_dst_boundaries() -> None:
 def test_eleventy_js_matches_the_shared_fixture() -> None:
     """`site/.eleventy.js::parisStandingStart` is the third implementation
     -- checked here, not in a JS test runner, because `site/` carries none
-    (`tools/tests/test_site.py`'s own module docstring: this suite is this
+    (`tools/tests/repository/test_site.py`'s own module docstring: this suite is this
     project's only quality gate on `.eleventy.js`). `check-paris-standing-
     start.cjs` is a plain, dependency-free Node script that reads the
     identical fixture file and requires the real, committed `.eleventy.js`

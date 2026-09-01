@@ -12,7 +12,7 @@
  *
  * So the demonstration reads the example instance instead -- the same one
  * `src/data/demo.ts` already shows, the one
- * `tools/tests/test_second_instance.py` lays into this repository's own
+ * `tools/tests/repository/test_second_instance.py` lays into this repository's own
  * holes on every run. Its four configuration files are in
  * `examples/the-example-collective/instance/`; the two product files are this
  * repository's own, because they are the product's and a duplicate does not

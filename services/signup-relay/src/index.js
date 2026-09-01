@@ -142,7 +142,7 @@ function contentsUrl(repository, path) {
 // not apply to what it pushes. A queue file on the default branch would
 // bill at least five runs per submission -- the exact inverse of why this
 // exists. Nothing is triggered by a push to any other branch, and that is
-// held by `tools/tests/test_workflows.py`'s directory-wide sweep rather
+// held by `tools/tests/repository/test_workflows.py`'s directory-wide sweep rather
 // than by anybody remembering.
 const QUEUE_BRANCH = 'submission-queue';
 const QUEUE_DIR = 'queue';

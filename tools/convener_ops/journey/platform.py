@@ -99,7 +99,7 @@ this event's chain reads to decrypt `registrations.enc`), so it can
 decrypt this file the moment it is checked out -- no plaintext ever has to
 reach a CI runner, and no key ever has to leave one. This is what makes
 the whole chain genuinely true for the manual implementation:
-`tools/tests/test_event_chain.py` drives the real
+`tools/tests/cli/test_event_chain.py` drives the real
 `convener-encrypt-attendance-export` and `convener-match-attendance` /
 `convener-issue-certificates` commands against nothing but committed,
 encrypted fixtures and asserts the chain completes -- not "by hand against

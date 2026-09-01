@@ -18,7 +18,7 @@ is no free verb slot, so no message can pass judgement on a volunteer: the
 strongest thing the grammar can say about a person is that a record about them
 changed, and who changed it. `qualifier` is closed too, per act (`QUALIFIERS`),
 so the whole message is drawn from a fixed vocabulary plus two identifiers.
-That is the general form of the rule that `tools/tests/test_inactivity.py`
+That is the general form of the rule that `tools/tests/maintenance/test_inactivity.py`
 states for six words: it is not those six words that are banned, it is the
 whole grammatical position they would have had to occupy, and that position
 does not exist. `judgemental_terms` keeps the vocabulary honest.
@@ -402,7 +402,7 @@ def log_range(base: str, before: str, head: str) -> list[str]:
     Erring towards too few commits is deliberate -- a check that demanded phase
     1 be rewritten would be turned off rather than obeyed -- but "too few" must
     never quietly become "none", which is a green result that verified nothing.
-    That is what `tests/test_commit_range.py` exercises against a real
+    That is what `tests/governance/test_commit_range.py` exercises against a real
     repository: the arguments are handed to `git log` and the commits that come
     back are counted, so a range that resolves to nothing fails there rather
     than passing in CI.

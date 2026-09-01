@@ -29,7 +29,7 @@
 # believed `sh gates.sh` had run. A gate you think you ran and did not is
 # worse than one you know is missing.
 #
-# The claim is now bounded to one workflow and `tools/tests/test_gates.py`
+# The claim is now bounded to one workflow and `tools/tests/repository/test_gates.py`
 # holds it: it reads every named step out of `quality.yml`, reads the
 # table below, and fails when either one carries a step the other does
 # not. Adding a step there without a line here is a red suite, and so is

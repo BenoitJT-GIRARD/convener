@@ -1,7 +1,7 @@
 """This repository, built as the instance `examples/the-example-collective/` declares.
 
 The manoeuvre is one thing and it has two consumers, so it lives here
-rather than inside either of them. `tools/tests/test_second_instance.py`
+rather than inside either of them. `tools/tests/repository/test_second_instance.py`
 drives it to sweep what comes out for anything of the instance that
 happens to run this repository; `tools/scripts/render_readme_shots.py`
 drives it so that the pictures `README.md` shows are pictures of the

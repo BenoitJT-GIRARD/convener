@@ -15,7 +15,7 @@ That is also the one place this repository broke its own first rule.
 `docs/engineering/content-rules.md` asks for one home per notion, and for a passage
 needed twice to be *included* rather than copied. Two directory tables were
 exactly that copy, and nothing in this repository could have said so.
-`tools/tests/test_no_literal_copies.py` compares served handbook pages, and
+`tools/tests/repository/test_no_literal_copies.py` compares served handbook pages, and
 the root `README.md` is not one -- but that is only the first of two reasons
 it never fired. The sweep's unit is a whole normalised sentence of at least a
 hundred characters, and its splitter cuts on a colon: every row of both tables

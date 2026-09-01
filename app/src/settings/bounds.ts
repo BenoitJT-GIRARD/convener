@@ -38,7 +38,7 @@
  * job runs. D-14's answer to a decision that genuinely lives on both sides
  * of a language boundary is not to move the decision, it is to pin the
  * *answer*: `tools/tests/fixtures/instance-settings.json` holds the cases,
- * `tools/tests/test_instance_settings.py` answers them from Python and
+ * `tools/tests/repository/test_instance_settings.py` answers them from Python and
  * `app/tests/settings-bounds.test.ts` answers them from here. A bound this
  * module computed differently from the one the daily job enforces would be
  * worse than no form at all -- a volunteer told a value is fine, and a job

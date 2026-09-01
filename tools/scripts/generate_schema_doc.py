@@ -160,7 +160,7 @@ def parse_types(text: str) -> Model:
     happens at it, because the obvious answer is wrong: a field declared in a
     fifth form is not seen, and `--check` cannot notice. Both sides of that
     comparison come from this parser, so a short page matches itself. What
-    catches it is `tools/tests/test_schema_doc.py`, in two steps that do not
+    catches it is `tools/tests/scripts/test_schema_doc.py`, in two steps that do not
     go through here at all: `SPEAKER_FIELD_SET` is read out of `types.ts` as
     text and held against `tools/tests/conftest.py::speaker()`, and every key
     of that double is then required to have a row on the page. A field this

@@ -38,7 +38,7 @@
  *   them. That is precisely the failure this policy was making.
  * - `script-src 'self'`: every script this build ever emits is same-origin.
  *   No page under `site/` carries an inline `<script>` at all --
- *   `tools/tests/test_site.py::test_archive_pages_carry_no_script_tag_at_all`
+ *   `tools/tests/repository/test_site.py::test_archive_pages_carry_no_script_tag_at_all`
  *   already held the archive pages to that, and a sweep of the rest
  *   found the same true of every other page; `event.njk`'s JSON-LD block is
  *   `application/ld+json`, which `script-src` does not govern at all. The

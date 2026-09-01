@@ -37,7 +37,7 @@ BOARD = frozenset({"carol"})
 #: The two languages' shared statement of what a slot is. See
 #: `_candidate_date_comment` in the file itself.
 CASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )

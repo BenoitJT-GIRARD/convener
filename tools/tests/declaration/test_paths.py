@@ -53,7 +53,7 @@ import ast
 from pathlib import Path
 
 import pytest
-from test_cross_references import _tracked
+from repository.test_cross_references import _tracked
 
 from convener_ops.declaration import boundary, paths
 from convener_ops.declaration.paths import (

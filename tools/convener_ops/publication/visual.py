@@ -308,7 +308,7 @@ STANDING_START_LOCAL: Final = time(12, 30)
 #: Fixed English names, not `date.strftime('%A'/'%B')`: `strftime`'s day
 #: and month names are locale-dependent, and this project has already found
 #: one Python/JavaScript date-formatting mismatch it did not expect (D-20).
-#: `tools/tests/test_site.py::_ENGLISH_WEEKDAYS`/`_ENGLISH_MONTHS` make the
+#: `tools/tests/repository/test_site.py::_ENGLISH_WEEKDAYS`/`_ENGLISH_MONTHS` make the
 #: identical choice for the identical reason -- a rendered page's own
 #: wording must not depend on the locale of whatever machine renders it.
 _WEEKDAYS: Final = (
@@ -341,7 +341,7 @@ def paris_standing_start(talk_date: date) -> tuple[str, str]:
     project's standing 12:30 local start time, on `talk_date`.
 
     Mirrors `site/.eleventy.js::parisStandingStart` and
-    `tools/tests/test_site.py::_expected_paris_start` -- three independent
+    `tools/tests/repository/test_site.py::_expected_paris_start` -- three independent
     readings of the one fact the reference poster got wrong by hard-typing
     "(CET)": Europe/Paris observes `+01:00`/CET from late October to late
     March and `+02:00`/CEST the rest of the year, and three of this

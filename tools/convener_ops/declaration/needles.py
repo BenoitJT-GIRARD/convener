@@ -1,6 +1,6 @@
 """Every writable form of what one instance declares about itself.
 
-This began as `tools/tests/instance_identity.py`, for one reader:
+This began as `tools/tests/helpers/instance_identity.py`, for one reader:
 the sweep that builds a second instance and refuses anything of the first
 in what it produced. It has a second now, `derivation_guard.py`,
 which asks the same question of every blob of every ref before a public

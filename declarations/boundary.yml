@@ -68,7 +68,7 @@
 # down to an invented instance's `config.json`, `brand.json`, `config.yml`,
 # `speakers.yml`. It is still the product's, by the default
 # above: upstream ships it and upstream maintains it, and nothing reads it
-# at run time. `tools/tests/test_second_instance.py` copies this
+# at run time. `tools/tests/repository/test_second_instance.py` copies this
 # repository, deletes everything the list below hands to the instance,
 # lays those files into the holes, builds the result and refuses anything
 # of this instance in the output. So the list below is not only a

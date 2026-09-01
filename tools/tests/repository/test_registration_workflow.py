@@ -3,7 +3,7 @@ against the one property a Python test could not see on its own: what
 secrets a workflow step actually passes.
 
 The whole confirmation-sending path -- `matching_code`,
-`smtp_config_from_env` -- was fully covered by `tools/tests/test_cli.py`
+`smtp_config_from_env` -- was fully covered by `tools/tests/cli/test_cli.py`
 and `test_confirmation.py`, and every one of those tests passed, because
 every one of them sets its own environment. The gap a review found
 was invisible to all of them for exactly that reason: the real

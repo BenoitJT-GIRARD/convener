@@ -17,7 +17,7 @@ import cases from '../../tools/tests/fixtures/governance-cases.json';
 // The data-protection notice suite (`SignupForm -- the notice`, in the
 // old file) is gone too, not merely moved: that text no longer renders
 // from this component at all (see `SignupForm.tsx`'s own module comment)
-// -- `tools/tests/test_site.py` already covers the static copy
+// -- `tools/tests/repository/test_site.py` already covers the static copy
 // `site/src/event.njk` carries instead.
 
 const FIXTURE = cases.event_registration_encryption;

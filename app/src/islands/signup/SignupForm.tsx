@@ -33,7 +33,7 @@ import type { Registration } from '../../signup/encrypt';
  *   static, so it reads even with JavaScript disabled and never depends
  *   on this bundle loading at all. Rendering it a second time from here
  *   would put two copies of the same legal notice on one page. See
- *   `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
+ *   `tools/tests/repository/test_site.py::test_the_notice_precedes_the_reserved_
  *   place_for_the_registration_form`, already checking the static copy.
  * - `AttendanceBoundaries()` (the two matching boundaries) stays:
  *   `event.njk` never carries that text, so nothing is duplicated by

@@ -67,7 +67,7 @@ have that wording. Two implementations of one sentence is the
 cross-language divergence this repository has been bitten by four times, so
 the Python half below is an explicit twin of `app/src/state/sla.ts` and the two
 are pinned together by `tools/tests/fixtures/governance-cases.json`'s
-`lateness_cases`, read by `tools/tests/test_governance_fixture.py` and by
+`lateness_cases`, read by `tools/tests/governance/test_governance_fixture.py` and by
 `app/tests/governance-fixture.test.ts`. A change to either wording that is not
 mirrored fails in both languages.
 

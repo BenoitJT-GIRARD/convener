@@ -102,7 +102,7 @@ dev = [
   # than on the assumption that a port covers its original: ruff's own `S`
   # rules see neither `B404` nor a `subprocess.run` whose argv is entirely
   # literal. The comparison, finding by finding, is in `[tool.ruff.lint]`'s
-  # comment below, and `tools/tests/test_workflows.py::test_the_security_
+  # comment below, and `tools/tests/repository/test_workflows.py::test_the_security_
   # scanner_is_declared_run_and_reads_its_own_suppressions` is what stops
   # this line and `quality.yml`'s own step from being removed one without
   # the other.

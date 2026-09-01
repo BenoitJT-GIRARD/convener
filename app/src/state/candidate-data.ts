@@ -20,7 +20,7 @@ import type { Speaker } from '../data/types';
  * hand-written sentence would -- so its own field list is bound to
  * `PERSONAL_DATA_FIELDS` by `tools/tests/fixtures/governance-cases.json`,
  * read by both `personal-data-fields.test.ts` and
- * `tools/tests/test_candidate_data_protection_record.py`. A field added to
+ * `tools/tests/repository/test_candidate_data_protection_record.py`. A field added to
  * `Speaker` and left unclassified here fails the exhaustiveness test below,
  * never the record.
  *

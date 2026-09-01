@@ -24,7 +24,7 @@
  * The same construction is what keeps a message from judging a volunteer. The
  * verb is never the caller's: it comes from `ACTS`, every entry of which names
  * a record -- a ballot, a nomination, a vote, an invitation, a recording. The
- * six words `tools/tests/test_inactivity.py` bans in the sweep's wording are
+ * six words `tools/tests/maintenance/test_inactivity.py` bans in the sweep's wording are
  * not banned here one by one; the grammatical position they would occupy does
  * not exist.
  */

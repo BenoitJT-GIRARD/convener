@@ -48,7 +48,7 @@ DOCS = ROOT / "docs"
 #: joins it for the identical reason (and lets README.md link to it), and
 #: so do the other two trees' indexes: each is the way into a tree for a
 #: reader of the repository, and the cockpit renders none of the three.
-#: `tools/tests/test_docs_entry_points.py` is what holds one to every
+#: `tools/tests/repository/test_docs_entry_points.py` is what holds one to every
 #: tree. Anything else under `docs/` must be in the registry to be a safe
 #: link target.
 #:

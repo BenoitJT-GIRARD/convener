@@ -68,7 +68,7 @@ function fixture(name: string): string {
 }
 
 describe('the JS/Python YAML boundary (D-14)', () => {
-  // `tools/tests/test_yaml_boundary.py` loads these same two files, writes
+  // `tools/tests/cli/test_yaml_boundary.py` loads these same two files, writes
   // them back out through the Python writer, and asserts the bytes are
   // unchanged. Here is the other end of that round-trip: the fixtures are
   // what this app emits, byte for byte, and parsing them gives back the

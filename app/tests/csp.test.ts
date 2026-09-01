@@ -10,7 +10,7 @@
  * The last public route this document carried (the
  * post-event survey) moved onto its own island on `site/src/survey.njk` --
  * `connect-src` here no longer admits the signup relay's origin at all;
- * see `tools/tests/test_site.py`'s own
+ * see `tools/tests/repository/test_site.py`'s own
  * `test_content_security_policys_connect_src_admits_the_configured_signup_relay`
  * for the policy that page ships under now (built from
  * `site/src/_data/csp.js`, unaffected by this file), and `csp.mjs`'s own
@@ -266,7 +266,7 @@ describe('the real built app/dist/index.html', () => {
   // `cspHtmlPlugin` is what does that -- this runs the real production
   // build (the same one `npm run build` runs, to a throwaway directory
   // rather than app/dist itself) and reads the artefact it writes,
-  // exactly the way tools/tests/test_site.py proves the site's own CSP
+  // exactly the way tools/tests/repository/test_site.py proves the site's own CSP
   // against the real built HTML rather than only against a template
   // string. No network: `vite build` here reads only this checkout's own
   // already-installed dependencies.

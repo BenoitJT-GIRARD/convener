@@ -30,7 +30,7 @@ path, a `dir/**` subtree or one `*` inside a single segment.
 repository never holds matches nothing here and is still a correct filter.
 `EMPTY_IN_THIS_REPOSITORY` is the one place such an entry may be admitted, and
 both halves are refused: an entry nobody exempted, and an exemption naming no
-filter. That is the shape `tools/tests/test_docs_directory.py::EXCEPTIONS`
+filter. That is the shape `tools/tests/repository/test_docs_directory.py::EXCEPTIONS`
 already uses, and for its reason -- a list that may only grow stops describing
 anything.
 

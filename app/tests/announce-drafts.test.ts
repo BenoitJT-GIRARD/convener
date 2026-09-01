@@ -38,7 +38,7 @@ function page(relative: string): string {
 
 // The literal value `site/src/_data/events.json`'s own MRG-05 fixture
 // carries, kept there specifically as "a synthetic room-link-shaped column
-// ... a template-regression canary" (`tools/tests/test_site.py`'s own
+// ... a template-regression canary" (`tools/tests/repository/test_site.py`'s own
 // words) for exactly this kind of check. Reused rather than invented afresh,
 // so a leak of *this* value is provably a leak and not a coincidence with
 // some other string this suite made up.

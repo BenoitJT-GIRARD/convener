@@ -79,7 +79,7 @@ from ..declaration.paths import DATA_DIR
 #: `instance/data/config.yml`: that file is the app's own governance config, read
 #: and rewritten by the browser through a closed shape
 #: (`app/src/data/validate.ts::readConfig` refuses any key it does not
-#: know, and `tools/tests/test_yaml_boundary.py` pins the two writers
+#: know, and `tools/tests/cli/test_yaml_boundary.py` pins the two writers
 #: byte-for-byte), so a key the app has no use for could not be added
 #: there without a cross-language change to four files. `declarations/` is where
 #: this repository already keeps declarations that tooling reads and the

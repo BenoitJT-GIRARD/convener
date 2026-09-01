@@ -580,7 +580,7 @@ def test_the_plan_names_the_secret_a_queued_registration_needs(
 # 5 - the workflow, read as text
 # ------------------------------------------------------------------ #
 
-_WORKFLOWS = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+_WORKFLOWS = Path(__file__).resolve().parents[3] / ".github" / "workflows"
 _SWEEP_PATH = _WORKFLOWS / "sweep-and-notify.yml"
 _SWEEP = _SWEEP_PATH.read_text(encoding="utf-8")
 

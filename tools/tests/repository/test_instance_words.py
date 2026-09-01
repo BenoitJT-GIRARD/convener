@@ -71,8 +71,8 @@ import subprocess
 from pathlib import Path
 from typing import Final
 
-import instance_identity
 import pytest
+from helpers import instance_identity
 
 from convener_ops.declaration import boundary, published
 from convener_ops.declaration.paths import repo_root

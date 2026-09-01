@@ -18,9 +18,9 @@ second copy of the run sheet, which is exactly the defect the move was made to
 remove, and the edit would look like a kindness.
 
 **What is not held here.** Whether the run sheet is what the declaration
-derives is `tools/tests/test_standing_up.py`'s question, and whether every
+derives is `tools/tests/scripts/test_standing_up.py`'s question, and whether every
 tracked top-level directory is on the map is
-`tools/tests/test_directory_map.py`'s. This module asks who may hold a page
+`tools/tests/repository/test_directory_map.py`'s. This module asks who may hold a page
 for an agent, and what the bridge to it may say.
 """
 

@@ -19,7 +19,7 @@
 # duplicate edits by hand, and README.md's "What a duplicate edits"
 # enumerates all six rather than leaving the count to be trusted: three
 # the boundary declares, two relay configurations, and this file. It
-# cannot drift: `tools/tests/test_published.py::
+# cannot drift: `tools/tests/declaration/test_published.py::
 # test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
 # refuses it naming any organisation other than the declared one.
 #

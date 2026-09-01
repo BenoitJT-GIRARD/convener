@@ -129,7 +129,7 @@ describe('activeBoard', () => {
   }
 
   // The BoardMember -> (logins, unavailable) step, pinned across both
-  // languages: `tools/tests/test_governance_fixture.py` runs these same cases
+  // languages: `tools/tests/governance/test_governance_fixture.py` runs these same cases
   // through `convener_ops.governance.rule.active_board`. `decision_cases` start from
   // flat login lists, so they never covered this mapping -- which is where the
   // Python copies of it once drifted apart with both suites still green.

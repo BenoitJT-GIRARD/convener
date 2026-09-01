@@ -93,7 +93,7 @@ describe('which speaker field is personal data', () => {
 });
 
 describe('the shared classification fixture', () => {
-  // Bound, not duplicated: `tools/tests/test_candidate_data_protection_record.py`
+  // Bound, not duplicated: `tools/tests/repository/test_candidate_data_protection_record.py`
   // asserts the record's own field list against the same file. A field
   // moved on one side and not the other fails in the language left behind.
   it('matches PERSONAL_DATA_FIELDS', () => {

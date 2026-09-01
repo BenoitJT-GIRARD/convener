@@ -246,7 +246,7 @@ one, each with its own, opposite guard:
 
 Both call sites end in the same `delete_recording`, the same irreversible
 primitive, and both are pinned by
-`tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`
+`tools/tests/cli/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`
 -- `Platform`'s shape is fixed, so neither guard can live in
 `delete_recording`'s own signature. Neither function can reach the
 other's call: `discard_recording` never reads `runbook_progress`,
@@ -306,7 +306,7 @@ event that does not exist, or that has no recording, is still refused --
 `find_speaker` and `recording.available` are unconditional, checked
 regardless of what the confirmation said, and cost nothing extra since
 both are already required for the operation to do anything at all --
-pinned in `tools/tests/test_cli.py` by
+pinned in `tools/tests/cli/test_cli.py` by
 `test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_event`.
 What is **not** caught: a self-consistent typo into a *different, real,
 already-recorded* event. `release_recording`
@@ -742,7 +742,7 @@ class PlatformFCC:
         for a recording that must never be retrieved -- see this module's
         own "Which recordings take which route" section above). Both, and
         only those two, are pinned by
-        `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`."""
+        `tools/tests/cli/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`."""
         conference_id = self._conference_id(event_id)
         self.transport.delete(f"/conferences/{conference_id}", self.access_token)
 

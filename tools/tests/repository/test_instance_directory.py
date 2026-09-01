@@ -44,7 +44,7 @@ from collections.abc import Iterable
 from typing import Final
 
 import pytest
-from test_cross_references import _tracked
+from repository.test_cross_references import _tracked
 
 from convener_ops.declaration import boundary
 from convener_ops.declaration.boundary import INSTANCE, PRODUCT, Boundary, Handed, Kept

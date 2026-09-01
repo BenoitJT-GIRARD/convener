@@ -267,7 +267,7 @@ def test_all_islands_share_the_apps_published_base_not_a_divergent_one() -> None
     assumed the site's own root-relative links already landed at wherever
     GitHub Pages resolves this project's published root to -- they did not
     (no CNAME, no custom domain), which is the identical gap
-    `tools/tests/test_site.py::
+    `tools/tests/repository/test_site.py::
     test_no_built_page_emits_a_root_relative_link_without_the_prefix` now
     closes on the site's own side. Every island publishes into, and is
     addressed from, the exact same `example-showcase` `app/` subtree the main
@@ -3592,7 +3592,7 @@ def test_delete_step_still_records_an_earlier_event_when_a_later_listing_fails(
 # failed to *trigger* the very first time this workflow ran for real -- no
 # workflow in this repository has ever executed, which is confirmed rather
 # than assumed. visuals.yml's own fix is two hand-written copies, bound by
-# tools/tests/test_visuals_workflow.py::
+# tools/tests/repository/test_visuals_workflow.py::
 # test_the_two_path_filters_are_identical_lists. The sweep below closes
 # the class, not just that one instance: an anchor anywhere in
 # `.github/workflows/` has the identical consequence, and this file
@@ -3716,7 +3716,7 @@ def test_no_workflow_uses_a_yaml_anchor_or_alias(workflow: Path) -> None:
     *trigger* on the first real push (no workflow in this repository has
     ever executed). See `.github/workflows/visuals.yml`'s own
     `push.paths`/`pull_request.paths` comments for what replaced it, and
-    `tools/tests/test_visuals_workflow.py::
+    `tools/tests/repository/test_visuals_workflow.py::
     test_the_two_path_filters_are_identical_lists` for what keeps those
     two hand-written copies from drifting apart."""
     text = workflow.read_text(encoding="utf-8")

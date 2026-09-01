@@ -32,7 +32,7 @@
  * `actions_usage.budget_from_data` each refuse, by name, any key they do
  * not know. A key this form invented would be a value written into a file
  * the next scheduled run stops on. `tools/tests/fixtures/instance-settings.
- * json` holds the set and `tools/tests/test_instance_settings.py` drives
+ * json` holds the set and `tools/tests/repository/test_instance_settings.py` drives
  * each parser against it, so the two sides cannot drift.
  */
 import { ACTIONS_BUDGET_FILE, QUEUE_DRAIN_FILE, REGISTRATION_LANES_FILE } from './bounds';

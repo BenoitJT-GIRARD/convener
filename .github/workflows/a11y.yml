@@ -65,7 +65,7 @@ on:
     # documented limitation, not a version question) -- see
     # visuals.yml's own header comment for how this was discovered
     # the hard way, and test_the_two_path_filters_are_identical_lists
-    # in tools/tests/test_path_filters.py for what actually holds these
+    # in tools/tests/repository/test_path_filters.py for what actually holds these
     # two copies together.
     paths:
       - 'site/**'

@@ -56,9 +56,10 @@ RFC 5545 TEXT escaping and 75-octet line folding are, by contrast,
 deliberately *not* bound to a shared fixture the way the timezone rule is:
 they are mechanical, RFC-mandated transformations with no project decision
 in them for the two languages to disagree about, unlike "12:30 Europe/Paris,
-CET or CEST". `tools/tests/publication/test_agenda.py` and `tools/tests/test_site.py`
-each check their own side directly against the RFC -- parsing the rendered
-file back with an independent reader, never re-running this module's own
+CET or CEST". `tools/tests/publication/test_agenda.py` and
+`tools/tests/repository/test_site.py` each check their own side directly
+against the RFC -- parsing the rendered file back with an independent
+reader, never re-running this module's own
 escape/fold functions -- rather than cross-checking the two implementations
 against each other, which could let a shared misreading of the RFC through
 unnoticed.

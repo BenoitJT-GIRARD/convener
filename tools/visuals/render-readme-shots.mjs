@@ -34,7 +34,7 @@
  * Nothing downstream could catch it:
  * `convener_ops.derivation.derivation_guard` cannot read a raster and
  * says so in every report it writes, and
- * `tools/tests/test_second_instance.py`'s sweep skips a `.png` for the
+ * `tools/tests/repository/test_second_instance.py`'s sweep skips a `.png` for the
  * same reason. `docs/assets/zoom-background.png` was deleted for exactly
  * that once.
  *

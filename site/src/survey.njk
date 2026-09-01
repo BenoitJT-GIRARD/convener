@@ -13,7 +13,7 @@ pagination:
 # D-19: `event_id` IS `edition_code`, lower-cased -- nothing else names an
 # event, the identical rule `event.njk`'s own permalink already applies,
 # and the one `tools/convener_ops/survey_invite.SURVEY_BASE`/`survey_url` must
-# agree with (pinned by `tools/tests/test_workflows.py::
+# agree with (pinned by `tools/tests/repository/test_workflows.py::
 # test_survey_base_matches_the_survey_page_permalink`).
 permalink: "/survey/{{ event.id | lower }}/"
 # Excluded from the sitemap (site/sitemap.njk) -- see that template's own
@@ -72,7 +72,7 @@ eleventyComputed:
     used to carry (quoted here unchanged, not redrafted)
     -- moved to plain static HTML ahead of this island's own mount point,
     the identical D-18 move `event.njk` made for registration's own
-    notice. `tools/tests/test_site.py` pins the ordering, the
+    notice. `tools/tests/repository/test_site.py` pins the ordering, the
     retention figure and the anonymity claim against this copy now,
     the same way it already pins `event.njk`'s.
   #}

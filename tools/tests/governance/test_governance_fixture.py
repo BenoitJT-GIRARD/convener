@@ -31,7 +31,7 @@ from convener_ops.governance.rule import (
 from convener_ops.maintenance.sweep import _unsettled_candidates
 
 CASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )
@@ -213,7 +213,7 @@ def test_every_top_level_fixture_key_is_read_by_somebody() -> None:
     """
     corpus = "\n".join(
         [
-            _corpus(Path(__file__).parent, "**/test_*.py"),
+            _corpus(Path(__file__).parents[1], "**/test_*.py"),
             _corpus(repo_root() / "app" / "tests", "*.test.ts"),
             _corpus(repo_root() / "app" / "tests", "*.test.tsx"),
         ]

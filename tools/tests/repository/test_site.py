@@ -31,9 +31,9 @@ from typing import Any
 from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
-import instance_identity
 import pytest
-from ics_reader import parse_calendar
+from helpers import instance_identity
+from helpers.ics_reader import parse_calendar
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
@@ -2761,7 +2761,7 @@ def test_the_organiser_link_points_at_the_apps_real_published_base(
     `test_the_path_prefix_agrees_with_the_addresses_python_already_pins`
     already binds. This pins the other half: that it resolves to the base
     the application is *actually* built with, which
-    `tools/tests/test_workflows.py::EXPECTED_BASE_PATH` pins on the Vite
+    `tools/tests/repository/test_workflows.py::EXPECTED_BASE_PATH` pins on the Vite
     side. Change the app's base without changing this link and one of the
     two tests fails rather than the site quietly offering a 404.
     """
@@ -2838,7 +2838,7 @@ def test_no_page_of_a_configured_instance_carries_the_unconfigured_banner(
     Asserted on the built pages rather than on the template, because what
     a visitor gets is the build.
 
-    `tools/tests/test_second_instance.py::test_the_second_instances_
+    `tools/tests/repository/test_second_instance.py::test_the_second_instances_
     showcase_says_it_has_not_been_configured` is the same claim made the
     other way round, on a build that *is* unconfigured. Neither half means
     anything without the other.
@@ -2886,7 +2886,7 @@ def test_every_published_page_carries_the_whole_licence_notice(
     against is a clause at a time, so each field is looked for
     separately.
 
-    `tools/tests/test_notice.py` holds the declaration itself and the
+    `tools/tests/repository/test_notice.py` holds the declaration itself and the
     cockpit's own footer is held by `app/tests/notice.test.tsx` -- two
     interfaces, two obligations, and neither test says anything about the
     other's.

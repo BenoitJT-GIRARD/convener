@@ -36,7 +36,7 @@ from convener_ops.cli.store import (
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.governance.validate import validate_config, validate_speakers
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parents[1] / "fixtures"
 SPEAKERS_FIXTURE = FIXTURES / "speakers-from-app.yml"
 CONFIG_FIXTURE = FIXTURES / "config-from-app.yml"
 

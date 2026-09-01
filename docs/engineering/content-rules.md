@@ -12,7 +12,7 @@ Each concept, term, rule, step has exactly one home file. If two places talk abo
 {{> fragments/board-rules-publication-gate }}
 ```
 
-The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: the same file as the page that owns the passage, scoped to one of its headings. The app replaces the line with the passage, under a line saying which page and section it came from and linking to it. Two rules hold this up, and both are tests: every include resolves to a registered, anchored fragment (`app/tests/transclusion.test.ts`), and no run of prose of a hundred characters or more appears in two served pages (`tools/tests/test_no_literal_copies.py`).
+The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: the same file as the page that owns the passage, scoped to one of its headings. The app replaces the line with the passage, under a line saying which page and section it came from and linking to it. Two rules hold this up, and both are tests: every include resolves to a registered, anchored fragment (`app/tests/transclusion.test.ts`), and no run of prose of a hundred characters or more appears in two served pages (`tools/tests/repository/test_no_literal_copies.py`).
 
 | Topic | Canonical home |
 |---|---|
@@ -81,7 +81,7 @@ Which directory a page sits in says who it is written for.
 - **`operating/`** — the operator's reference: standing an instance up, the settings each repository needs, and the procedures a running instance is kept on. The cockpit serves nothing from here, because every page is addressed to somebody standing an instance up or keeping it running, and `operating/standing-up.md`, generated from `STANDING-UP.yml`, is written for a reader who has no instance to sign in to yet.
 - **`engineering/`** — how the system is built and why: the architecture, the decision records, the record schema generated from `app/src/data/types.ts`, and this file. The cockpit serves the decision records and the schema from here, in the same tab as the handbook; both are written from the code rather than from the work, which is what puts them in this tree.
 
-One file sits at the root of `docs/` and it is `README.md`, which GitHub renders when a person opens the directory in a browser: three rows saying who each tree is written for, and a link to each index. Every page is in a tree. `tools/tests/test_docs_directory.py` refuses a tracked file under `docs/` that is in none of the three, and refuses an exception with no reason beside it; the exceptions are named in that module, and that README is the only one. The root of `docs/` once held an index written for a volunteer and a note written for a developer, side by side with nothing saying which was which, and the three trees are what ended that.
+One file sits at the root of `docs/` and it is `README.md`, which GitHub renders when a person opens the directory in a browser: three rows saying who each tree is written for, and a link to each index. Every page is in a tree. `tools/tests/repository/test_docs_directory.py` refuses a tracked file under `docs/` that is in none of the three, and refuses an exception with no reason beside it; the exceptions are named in that module, and that README is the only one. The root of `docs/` once held an index written for a volunteer and a note written for a developer, side by side with nothing saying which was which, and the three trees are what ended that.
 
 ## 7 · How a page is written
 
@@ -92,7 +92,7 @@ The six rules above place a page's content. This one shapes its sentences. It ap
 3. **No meta-commentary.** A page does not narrate its own act of stating — *worth saying out loud*, *stated rather than left to be discovered*. Write the sentence and let it stand.
 4. **The first paragraph says what the thing is.** Not what it replaces, and not what it is mistaken for.
 
-`tools/tests/test_writing_rules.py` holds 2 and 3. Both are literal shapes with a closed list behind them, checked on every page this section applies to, and it names this page as the one exception: the rules above are stated by quoting the shapes they refuse, so a sweep including it would refuse the sentences that define it.
+`tools/tests/repository/test_writing_rules.py` holds 2 and 3. Both are literal shapes with a closed list behind them, checked on every page this section applies to, and it names this page as the one exception: the rules above are stated by quoting the shapes they refuse, so a sweep including it would refuse the sentences that define it.
 
 That module holds neither 1 nor 4, and says so in its own docstring. Whether an alternative was one the reader had in mind, and whether an opening paragraph defines rather than positions, are judgements — a test claiming to make them would pass on every page ever written, which is the shape this repository treats as a failed control. Those two are a reviewer's, and a reviewer's alone.
 
