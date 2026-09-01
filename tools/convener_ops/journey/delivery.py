@@ -53,7 +53,7 @@ in `cli/`'s own callers, ever writes that string to a file anywhere
 under the repository, at any point, on any path. The rule that no
 personal data reaches the repository is not one this module bends
 for a *rendered* document just because the document itself is derived
-rather than typed by a person. `test_cli.py`'s own
+rather than typed by a person. `test_certificate_delivery.py`'s own
 `test_deliver_certificates_never_writes_anything_to_disk` is the test that
 would fail the moment a future edit adds exactly that write.
 
@@ -137,7 +137,7 @@ so the certificate keeps verifying, forever, exactly as promised
 the same 90-day window as the registration it reads; "replayable" in this
 module's own docstrings and tests means "replayable while the
 registration this certificate was issued from still exists", not
-"replayable forever". `test_cli.py`'s own
+"replayable forever". `test_certificate_delivery.py`'s own
 `test_deliver_certificate_after_the_registration_is_gone_refuses_cleanly`
 is the test for this boundary.
 
@@ -425,7 +425,8 @@ def compose(
 class DeliveryTransport(Protocol):
     """What `deliver` needs from something that can actually send mail with
     an attachment. Mirrors `confirmation.EmailTransport`'s own shape;
-    every test in `test_delivery.py` and `test_cli.py` substitutes a fake,
+    every test in `test_delivery.py` and `test_certificate_delivery.py`
+    substitutes a fake,
     which is what keeps this whole suite off the network."""
 
     def send(self, config: SmtpConfig, delivery: Delivery) -> None: ...

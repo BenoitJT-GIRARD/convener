@@ -13,7 +13,8 @@ while they were being written; the comments say which.
 
 Nothing here touches the network, and nothing here decrypts into anything
 this file then prints: `_LEAK_STRINGS` is checked against every job's own
-output, the same discipline `test_cli.py` holds every decrypting command
+output, the same discipline `tools/tests/cli/journey/` holds every
+decrypting command
 to.
 """
 

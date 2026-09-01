@@ -12,7 +12,7 @@ Four groups of properties, in this order:
 3. **The two console scripts** -- `convener-plan-queue-drain` and
    `convener-drain-queue` -- against a real repository root on disk, including
    the "no free text a participant wrote may ever reach the job log"
-   discipline `test_cli.py` holds every decrypting job to.
+   discipline `tools/tests/cli/journey/` holds every decrypting job to.
 4. **The workflow**, read as text: that the queue steps live in the daily
    job that already runs (never a workflow or a job of their own, which
    would cost a billed run a day), that the number of secret slots equals
@@ -65,7 +65,8 @@ _OTHER_EVENT = "mrg-043"
 
 #: The one string every `_answers()` default carries. A survey response
 #: holds no name and no address, but it does hold free text a participant
-#: wrote, and `test_cli.py`'s own `_SURVEY_LEAK_STRINGS` made exactly this
+#: wrote, and `tools/tests/cli/journey/test_survey.py`'s own
+#: `_assert_survey_leak_sweep` makes exactly this
 #: point about the job it replaced: a mutant printing `response.feedback`
 #: would otherwise pass every test in this file.
 _LEAK_STRINGS = ("Loved the live Q&A.",)
@@ -716,7 +717,8 @@ def test_the_drain_writes_the_response_the_ledger_and_the_clear_list(
 def test_the_drain_never_writes_plaintext_to_disk(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The same property `test_cli.py` held the job this replaced to: what
+    """The same property `tools/tests/cli/journey/` holds the job this
+    replaced to: what
     a participant wrote must exist nowhere on the runner's disk once the
     drain has finished."""
     private_pem, public_pem = eventkeys.generate()

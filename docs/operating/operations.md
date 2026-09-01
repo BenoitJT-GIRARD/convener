@@ -1145,7 +1145,8 @@ file (`instance/data/events/<event id>/registrations.enc`) holds one independent
 hybrid envelope per registration rather than one for the whole event, and
 what that costs and buys. The plaintext never touches disk, a log, or
 standard output at any point; a test
-(`tools/tests/journey/test_registration.py`, `tools/tests/cli/test_cli.py`) pins that
+(`tools/tests/journey/test_registration.py`,
+`tools/tests/cli/journey/test_registration.py`) pins that
 directly by asserting no submitted name or address appears anywhere the
 job prints, on both the success and the failure paths.
 

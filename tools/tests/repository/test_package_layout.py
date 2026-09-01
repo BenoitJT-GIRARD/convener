@@ -44,6 +44,27 @@ The ceiling is not a style preference and it is not sharp. It sits above the
 largest module the package has, with room, so reaching it means a module has
 roughly doubled the one below it rather than drifted a few lines over. A
 module that reaches it is being asked to split, and this is what asks.
+
+**`tools/tests/cli/` mirrors `cli/`, and the ceiling above does not reach
+it.** The test tree carried the same defect one directory over --
+`test_cli.py`, 7 795 lines, the tests of six sub-packages' commands in one
+alphabet and larger than the module it was about. What found it was not its
+size: it was that its name said `cli`, which is a package, where every
+other module in that directory is named after something in it. So the rule
+below is the mirror rather than a number, and it is the same rule
+`test_every_module_of_the_command_line_is_named_after_a_sub_package` holds
+one tree over, read from the test side.
+
+A number was measured and not taken. `CEILING` applied to `tools/tests/`
+is born refusing three modules this has nothing to do with --
+`repository/test_workflows.py` at 6 001, `repository/test_site.py` at
+2 915, `publication/test_brand.py` at 2 053 -- and a control that is red
+on the day it is written is one somebody turns off. Any number those three
+pass is 6 002 or more, and `test_cli.py` is the only file in this
+repository's history that has ever been above it: a ceiling picked to name
+one file is a list of one wearing a number's clothes. The two largest
+modules the split produced are 1 738 and 1 653 lines, under the package's
+own ceiling, and they got there by mirroring rather than by being counted.
 """
 
 from __future__ import annotations
@@ -69,6 +90,19 @@ DECLARATION: Final = repo_root() / "tools" / "pyproject.toml"
 #: module owns: the dialect the store's own YAML files are written in, and
 #: the file a workflow step reads its predecessor's answer out of.
 SHARED: Final = frozenset({"store", "step_output"})
+
+#: Where the tests of `convener_ops/cli/` live, mirroring it directory for
+#: directory.
+COMMAND_LINE_TESTS: Final = repo_root() / "tools" / "tests" / "cli"
+
+#: The one module under `tools/tests/cli/` named after nothing in
+#: `convener_ops/cli/`, and the reason it is not a hole in the rule: D-14's
+#: file-format boundary is a property of the whole store as both languages
+#: read it, so it is about `cli/store.py` and about `site/`'s and
+#: `services/`' own parsers at once, and naming it after either half would
+#: say the boundary has one side. A second entry here wants an argument of
+#: the same kind, in writing, next to this one.
+CROSSES_THE_MIRROR: Final = frozenset({"yaml_boundary"})
 
 #: The most lines a module of this package may hold. See this module's own
 #: docstring for what the number is and is not.
@@ -195,6 +229,74 @@ def test_every_module_of_the_command_line_is_named_after_a_sub_package() -> None
         "account for. A command whose subject is none of them is a "
         "sub-package this package is missing"
     )
+
+
+def command_line_modules() -> frozenset[str]:
+    """Every name a module of `convener_ops/cli/` carries, its
+    sub-packages included, read off the package rather than listed."""
+    return frozenset(
+        path.stem if path.suffix == ".py" else path.name
+        for path in COMMAND_LINE.rglob("*")
+        if (path.suffix == ".py" and path.stem != "__init__")
+        or (path.is_dir() and (path / "__init__.py").is_file())
+    )
+
+
+def test_the_mirror_reads_both_trees() -> None:
+    """Non-vacuity, on both sides at once: an empty package or an empty
+    test directory makes the rule below a comparison between two empty
+    sets, which passes."""
+    assert len(command_line_modules()) >= 10, (
+        f"`convener_ops/cli/` reads as {sorted(command_line_modules())}, "
+        "which is not the package this mirrors"
+    )
+    found = sorted(
+        path.name for path in COMMAND_LINE_TESTS.rglob("test_*.py") if path.is_file()
+    )
+    assert len(found) >= 10, (
+        f"`tools/tests/cli/` holds {found}, which is not a mirrored test "
+        "tree -- the rule below would pass over an empty directory"
+    )
+
+
+def test_every_test_module_of_the_command_line_is_named_after_one() -> None:
+    """The rule `test_cli.py` broke, from the side that broke it.
+
+    A test module in `tools/tests/cli/` is named after the module of
+    `convener_ops/cli/` it exercises, optionally with a suffix saying
+    which half of it -- `test_certificate_delivery.py` beside
+    `test_certificate.py`, because one command module dispatches into two
+    of the package's own. A module named after the *package* is the tests
+    of everything behind it in one file, which is what 7 795 lines in one
+    alphabet was.
+    """
+    known = command_line_modules()
+    unplaced = sorted(
+        path.relative_to(COMMAND_LINE_TESTS).as_posix()
+        for path in COMMAND_LINE_TESTS.rglob("test_*.py")
+        if (stem := path.stem[len("test_") :]) not in CROSSES_THE_MIRROR
+        and not any(stem == name or stem.startswith(f"{name}_") for name in known)
+    )
+
+    assert unplaced == [], (
+        f"{unplaced} sit in `tools/tests/cli/` under a name no module of "
+        "`convener_ops/cli/` carries. A test module is named after what it "
+        "is about, and the way in is not a subject: a module named after "
+        f"the package holds the tests of all {len(known)} of them, which "
+        "is the file this rule exists downstream of"
+    )
+
+
+def test_the_mirror_can_tell_a_package_name_from_a_module_name() -> None:
+    """The positive control, on the name that was there: `cli` is a
+    directory of `convener_ops/`, not a module of `convener_ops/cli/`, and
+    a rule that admitted it would admit the file it was written for."""
+    known = command_line_modules()
+    assert not any(name == "cli" or "cli".startswith(f"{name}_") for name in known), (
+        "`cli` reads as a module of `convener_ops/cli/`, so the rule above "
+        "would admit `test_cli.py` back"
+    )
+    assert "certificate" in known and "journey" in known
 
 
 def test_the_command_line_re_exports_exactly_what_is_declared() -> None:

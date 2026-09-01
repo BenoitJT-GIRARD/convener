@@ -137,7 +137,7 @@ What this module cannot see, stated rather than left to be found
   PNG, and nothing here could have told you what those three held -- what
   changed is that there is no longer anything in them to read. Proven
   where it can be, on the pages they are rendered from, by
-  `test_cli_render_visual_fixtures.py::
+  `test_publication_visual_fixtures.py::
   test_no_value_of_the_instance_running_this_repository_reaches_the_page`.
 - **The edition prefix was a fourth.**
   `validate.py` fixed an edition code as `MRG-` and one to four digits --

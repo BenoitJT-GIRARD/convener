@@ -225,7 +225,8 @@ SECURITY_AUDIT = re.compile(r"(?i)\bsecurity audit\b")
 #: A review finding written as a bare severity: `C4`, `H4`, `M5`, `L3`,
 #: `AC8`, `S4`, `P2-9`. This one is **brittle in one direction only, and
 #: deliberately left that way** -- the same trade
-#: `test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`
+#: `test_attendance_recording.py::
+#: test_delete_recording_has_exactly_two_call_sites_both_in_cli`
 #: already takes. A comment that genuinely means an HTML heading level will
 #: fail here and has to say "heading level 1" instead. That is a cheap,
 #: loud, one-line fix; the alternative is leaving the commonest citation
