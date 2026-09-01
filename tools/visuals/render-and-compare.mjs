@@ -69,6 +69,71 @@
  * passes it) overwrites `references/<name>.png` with the current render
  * instead of comparing against it, for a deliberate, reviewed design
  * change. Every other invocation only ever reads the references directory.
+ *
+ * One series, at one charter, and the gap that leaves
+ * ------------------------------------------------------
+ * `brand/` holds four charters a duplicate may choose, `instances/example/`
+ * and `instance/` hold one each, and `motifs/` draws five families. This
+ * script pins three images, at one of those six charters. What a series
+ * per charter would add was measured rather than argued, over the pages
+ * `convener-render-poster-fixtures` writes for every charter crossed with
+ * every family crossed with every canvas:
+ *
+ * - across all 45 charter-against-charter pairs at a fixed family and a
+ *   fixed canvas, the entire difference between one charter's page and
+ *   another's is the colour literals plus exactly five numbers -- the two
+ *   safe margins, the content right margin, and the lockup's and the
+ *   overlay's stroke widths -- every one of the five derived from that
+ *   charter's `motif.width_ratio`. Normalise the colours and the numbers
+ *   and the two pages are byte-identical, 45 times out of 45.
+ * - across every family pair at a fixed charter, the entire difference is
+ *   the motif's `<path d>` and the numbers around it, 12 times out of 12.
+ *
+ * A charter reaches the rendered pixels as values substituted into one
+ * shared composition: `_motif_overlay_svg` and `lockup.py` each ink their
+ * drawing at one call site that no family and no charter branches on, and
+ * `motifs/` is pure geometry that decides no colour. So there is no
+ * per-charter drawing code for a second series to pin, and the five
+ * numbers are measured already, at all ninety combinations, by
+ * `check-posters.mjs` and `check-templates.mjs` beside this file.
+ *
+ * What is left is the colour literals of the five charters this fixture
+ * does not render, and that is the gap, written down so the next reader
+ * does not have to rediscover it: **a colour changed in
+ * `brand/<name>/brand.json` that leaves every recorded contrast where it
+ * was passes every gate this repository has.** Measured, not supposed --
+ * `brand/lattice/`'s dominant moved from #5C1E0F to #1700AE, a colour 159
+ * levels away on its worst channel and matched in relative luminance to
+ * two parts in a million, and `generate_brand_css.py --check` (all twelve
+ * contrasts and all 327 cockpit pairings, at every charter),
+ * `generate_motif.py --check`, 4528 tests, this comparison and both
+ * sweeps all stayed green.
+ *
+ * A reference series per charter would catch that, and it is still the
+ * wrong instrument for it. The change is one line of a committed JSON
+ * file and reads as one line in review; no command here rewrites a
+ * committed charter, so a picture catches nothing the diff does not
+ * already show. Against that: 1,812,238 bytes of new PNGs for the four
+ * charters under `brand/` (measured by rendering them -- 442,010,
+ * 448,561, 483,009 and 438,658), which is 5.4x what `references/` weighs
+ * and 2.3x every raster byte this repository tracks; four series for a
+ * person to look at and `--update` on each deliberate design change
+ * instead of one; and three of those four carrying a colour pair this
+ * comparison cannot resolve at all (see PER_CHANNEL_THRESHOLD). The
+ * cheaper instrument for the gap, if it ever needs closing, is a recorded
+ * contrast for the charter colours that have none -- `motif.logo_dots`
+ * and `colour.rule` are in no pairing `generate_brand_css.py --check`
+ * recomputes -- rather than a photograph of a poster.
+ *
+ * Nor would a series per charter have caught what `check-posters.mjs` was
+ * written for. That collision is at the example's own charter drawn with
+ * the `ribbon` family, and a reference series renders each charter at the
+ * one family its own `motif` names. Covering the cross product in
+ * pictures is ninety references, not six -- which is what the geometric
+ * sweeps do instead, at no raster weight at all.
+ *
+ * The engine is pinned once, by this package's lockfile, and rendering a
+ * second charter through it pins it no further (D-27).
  */
 
 import { createServer } from 'node:http';
@@ -92,16 +157,39 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  covered edge pixel against its background. 24 is comfortably above
  *  that kind of single-digit blending noise (confirmed empirically: two
  *  renders of this exact fixture on this machine, nothing changed between
- *  them, differ by exactly 0 pixels at any threshold) and comfortably
- *  below the smallest gap
- *  between any two colours this composition actually paints next to each
- *  other -- `instance/data/brand.json`'s own palette (purple #012765, cream
- *  #F4F0F1, turquoise #FECAC1, white, black) differs by dozens to
- *  hundreds of levels per channel between any pair, so a real colour
+ *  them, differ by exactly 0 pixels at any threshold, and the three PNGs
+ *  come back with the same `git hash-object` as the committed
+ *  references), and below the smallest gap between any two colours this
+ *  composition actually paints next to each other.
+ *
+ *  **That palette is `instances/example/instance/data/brand.json`'s.**
+ *  `render_visual_fixtures` renders as the example instance, so the
+ *  charter this number has to clear is the example's -- dark green
+ *  #0A4A2A, gold #E8CA6F, cream #F7F2E4, ink #2F3A34, muted ink #4A5A52,
+ *  rule #CBC3AC, white and black -- and not this repository's own, which
+ *  this comment named while the fixture was still rendered from it.
+ *
+ *  The margin is three levels, measured over all 28 distinct pairs of
+ *  that palette: the closest is the cream band against white at 27 on the
+ *  worst channel, the next is ink against muted ink at 32, and the rest
+ *  run to 255. No pair of the example's falls below 24, so a real colour
  *  swap, a moved element revealing a different background underneath it,
  *  or a moved element's own edge crossing into new territory clears this
- *  threshold by a wide margin -- proven against a real five-pixel
- *  translation, not assumed.
+ *  threshold -- proven against a real five-pixel translation, not
+ *  assumed. The one pairing it clears narrowly is named here rather than
+ *  left to be found.
+ *
+ *  The example's is the only charter of the six this repository holds
+ *  whose colours all clear 24. `brand/convener/`'s band against white
+ *  differs by 15, `brand/chevrons/`'s ink against its muted ink by 15,
+ *  `brand/lattice/`'s band against white by 16, `brand/steps/`'s by 23,
+ *  and this instance's own by 20 -- each a pair a comparison at this
+ *  threshold could not see change into the other at all. That is a
+ *  measurement about those charters rather than about this constant, and
+ *  it belongs here because it is the first thing a reader proposing a
+ *  reference series per charter needs: three of the four new series would
+ *  carry a colour change this threshold is blind to. The module comment
+ *  above has the rest of that argument.
  */
 const PER_CHANNEL_THRESHOLD = 24;
 

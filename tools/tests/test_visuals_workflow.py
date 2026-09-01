@@ -18,11 +18,13 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import PurePosixPath
 
 import yaml
 from conftest import workflow_triggers
 
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand
 
 _ROOT = repo_root()
 _WORKFLOW = (_ROOT / ".github" / "workflows" / "visuals.yml").read_text(
@@ -171,6 +173,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/journey/registration.py",
         "instances/example/instance/data/brand.json",
         "tools/convener_ops/publication/brand.py",
+        "brand/*/brand.json",
         "fonts/**",
         "tools/uv.lock",
         "tools/visuals/**",
@@ -178,6 +181,34 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
     }
     for path in expected_paths:
         assert f"'{path}'" in _WORKFLOW, f"{path} is missing from the path filter"
+
+
+def test_the_path_filter_covers_every_charter_the_product_ships() -> None:
+    """`brand/` holds one directory per charter a duplicate may choose,
+    and the filter reaches all of them through one glob -- the shape
+    `templates.yml`'s own filter already takes, for this reason.
+
+    Swept off the directory and never listed here: a test naming the
+    charters that exist today is a second list to keep, and an incomplete
+    list is the defect it would be guarding against.
+
+    The fixture reads none of these files while the example writes a
+    complete charter of its own, so this looks like a filter reacting to
+    what it cannot render. It reads one the moment that file goes away, or
+    the moment the example's declaration names a charter instead of
+    writing one (`published.CHARTER_KEY`). Both of those files are in the
+    filter, so the job does run on the commit that moves the answer -- and
+    every commit after it, to the charter the fixture had begun rendering,
+    is what a list of one example path would have let through green."""
+    paths = _TRIGGERS["push"]["paths"]
+    charters = brand.shipped(_ROOT)
+    assert charters, "brand/ ships no charter, so this sweep proves nothing"
+    for charter in charters:
+        posix = charter.as_posix()
+        assert any(PurePosixPath(posix).match(pattern) for pattern in paths), (
+            f"{posix} is covered by no entry in the path filter: a change to "
+            "that charter would not run this job"
+        )
 
 
 def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:
@@ -310,12 +341,44 @@ def test_per_pixel_threshold_is_a_named_justified_constant() -> None:
     exists, is a single number (not a magic literal repeated inline), and
     carries a comment naming what it tolerates (anti-aliasing) and why
     that is safe (measured against a real re-render, and against the real
-    gap between any two colours this composition paints)."""
+    gap between any two colours this composition paints).
+
+    The comment read is the constant's own doc block, taken from the
+    `/**` that opens it, rather than a fixed count of characters before
+    it: a window measured in characters passes or fails on how long the
+    justification happens to be, which is the one property this test has
+    no opinion about."""
     assert "const PER_CHANNEL_THRESHOLD = 24;" in _SCRIPT
     assert "const MAX_DIFF_PIXEL_FRACTION = 0.001;" in _SCRIPT
-    comment = _SCRIPT.split("const PER_CHANNEL_THRESHOLD")[0][-2000:]
+    comment = _SCRIPT.split("const PER_CHANNEL_THRESHOLD")[0].rsplit("/**", 1)[1]
     assert "anti-aliasing" in comment.lower()
     assert "empirically" in comment.lower() or "confirmed" in comment.lower()
+
+
+def test_the_threshold_is_justified_against_the_palette_actually_rendered() -> None:
+    """The fixture is rendered as the example instance, so the colours
+    this threshold has to sit below are the example's charter's. This
+    comment justified the number against `instance/data/brand.json` --
+    named, with its hexes -- for as long as it took to notice that the
+    fixture had stopped being rendered from it, and a threshold argued
+    from the wrong palette is a threshold with no argument.
+
+    Pinned both ways: the example's charter is named, and this
+    repository's own is not. Read from the constant's doc block alone, so
+    the module comment above it (which names `instance/` for other
+    reasons) cannot satisfy this by accident."""
+    comment = _SCRIPT.split("const PER_CHANNEL_THRESHOLD")[0].rsplit("/**", 1)[1]
+    assert "instances/example/instance/data/brand.json" in comment
+    assert "instance/data/brand.json" not in comment.replace(
+        "instances/example/instance/data/brand.json", ""
+    )
+    example = _ROOT / "instances" / "example" / "instance" / "data" / "brand.json"
+    charter = json.loads(example.read_text(encoding="utf-8"))
+    for name in ("dominant", "field", "band"):
+        assert charter["colour"][name].upper() in comment, (
+            f"the example charter's {name} is not the colour this threshold "
+            "is argued against"
+        )
 
 
 def test_the_comparison_decodes_pngs_through_the_pinned_browser_itself() -> None:

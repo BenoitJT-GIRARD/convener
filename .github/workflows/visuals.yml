@@ -70,17 +70,33 @@ name: Visuals
 #   example's, for the reason two entries up.
 # - `tools/convener_ops/publication/brand.py` -- the reader itself: which charter is in
 #   force, and which `motif` is drawn when that charter declares none.
+# - `brand/*/brand.json` -- every charter the product ships, as a glob and
+#   not a list, for the reason `templates.yml`'s own filter is one. The
+#   fixture reads none of them today: the example writes a complete
+#   charter of its own, so `brand.py` answers with that and never reaches
+#   `brand/`. It reads one the moment the example's charter file goes away
+#   or the example's declaration names a charter instead of writing one
+#   (`published.CHARTER_KEY`, which exists since 2026-08-31). Both of
+#   those files are already in this filter, so the commit that moves the
+#   answer does run this job -- and then every later commit to the charter
+#   it had begun rendering would not have, which is a real regression
+#   shipping green off a filter that reads correct. A glob costs an
+#   occasional run against a warm cache instead, and covers a charter
+#   added under `brand/` on the commit that adds it, with no entry to make
+#   here.
 #
-# Deliberately absent, and each is a decision rather than an omission:
+# Deliberately absent, and a decision rather than an omission:
 # `instance/config.json` and `instance/data/brand.json`, this instance's own
-# declaration and charter, which this job does not render any more
-# -- reacting to them would be running a comparison whose result
-# cannot change. `visuals-production.yml` carries both, and must: that job
-# renders *real* editions, as this instance. And `brand/convener/
-# brand.json`, the product's default charter -- palette and `motif` both,
-# since 2026-08-26 -- which the example never falls back to because it
-# declares a complete charter of its own, so a change there cannot move a
-# pixel of this job's fixture.
+# declaration and charter, which this job does not render -- reacting to
+# them would be running a comparison whose result cannot change. The
+# glob two entries up does not weaken that: what it adds is every charter
+# the *product* ships, each of which this fixture can come to render;
+# what stays out is the one charter belonging to whoever runs this
+# repository, which it cannot. That is the byte-level half of a charter
+# staying with its instance, and it is what stopped this job going red
+# for a duplicate that had done nothing but choose its own colours.
+# `visuals-production.yml` carries both, and must: that job renders *real*
+# editions, as this instance.
 # - `fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
 # - `tools/uv.lock` -- pins `segno` (the QR renderer) among everything
 #   else Python depends on; a version bump there can change rendered
@@ -149,6 +165,7 @@ on:
       - 'tools/convener_ops/journey/registration.py'
       - 'instances/example/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
+      - 'brand/*/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
@@ -171,6 +188,7 @@ on:
       - 'tools/convener_ops/journey/registration.py'
       - 'instances/example/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
+      - 'brand/*/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
