@@ -87,14 +87,35 @@ rather than a loss: at 66 it measured 1064 units wide on a 1200 canvas,
 where the reference's own headline measures 868.
 
 The wordmark's second word takes `field_text` and not the field itself,
-which is what the reference sets it in. `colour._roles` in the charter
-forbids the field as text on white or on a band by name, and on the band
-the reference's pairing measures 1.42 -- against the 4.5 WCAG AA asks.
-`field_text` is the charter's own readable variant of it, 5.41 on the same
-band, and it carries the two-tone split the reference draws without
-creating the one pairing the charter refuses. Restoring the field there
-would be a change to the charter's own rules, and that is not a decision a
-generator gets to take on its own.
+which is what the reference sets it in. `colour._roles` in every charter
+forbids the field as text on white or on a band by name -- `contrast.
+_forbidden` does not: it names the field on *white* and stops there, so
+the pairing the reference actually sets is refused by the role and not by
+the table beneath it.
+
+The two figures this paragraph used to carry were one charter's, recorded
+when there was one. Re-measured at all six this repository holds -- the
+four under `brand/`, this instance's and the example's -- the reference's
+own pairing (`field` on `band`) measures **1.40 to 1.43**, and the
+treatment shipped instead (`field_text` on the same band) measures
+**4.58 to 5.49**. Neither end moves the decision: the raw treatment is
+about a third of what AA asks at every charter, and the readable one
+clears it at every charter -- though `brand/steps/` clears it by 0.08,
+which is the margin to watch when a charter's `field_text` is next
+re-derived.
+
+**The question is settled by a control, not only by a rule.** The entry
+in `_LEGIBILITY` below naming this pairing is measured at build time, so
+declaring the raw treatment there fails `_values` at every one of the six
+charters and writes no template at all. What that control cannot see is
+the markup: `_LEGIBILITY` is a claim kept true by hand, and a change that
+set the accent to `field` without moving the entry beside it would pass
+every gate in this repository -- nothing reads a rendered `fill` back and
+measures it. So restoring the reference's treatment honestly costs a
+change to what the charter says about its own colours, at six files, and
+a build that refuses until they all say it; doing it dishonestly costs
+nothing and is invisible. That is the whole of what a maintainer has to
+weigh, and it is not a decision a generator gets to take on its own.
 
 The third file, and why it is vector where it used to be a bitmap
 -------------------------------------------------------------------
