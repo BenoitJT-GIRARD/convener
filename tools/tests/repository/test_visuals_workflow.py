@@ -266,16 +266,17 @@ def test_job_permissions_are_read_only() -> None:
     assert "permissions:\n      contents: read" in _WORKFLOW
 
 
-def test_node_version_meets_puppeteers_own_floor() -> None:
+def test_the_node_version_is_read_from_the_one_file() -> None:
     """puppeteer 25.8.0 declares `engines.node: >=22.12.0`. This workflow
     was the first here to clear that floor while every other one still
-    installed Node 20; they all install 22 now, and
-    `test_workflows.py::test_every_workflow_installs_the_same_node_version`
-    is what keeps this one from drifting away from them again. Kept beside
-    that sweep rather than folded into it: the sweep says the workflows
-    agree with each other, and this says what they agree on has to clear
-    the floor this package's own dependency declares."""
-    assert "node-version: '22'" in _WORKFLOW
+    installed Node 20, and it names no version at all now: `.nvmrc` at the
+    repository root is where the answer is written, and
+    `test_workflows.py` holds both that every workflow reads it and that
+    what it says clears the floor every lock file declares. Kept beside
+    those rather than folded into them, because this is the job whose own
+    dependency set that floor."""
+    assert "node-version-file: .nvmrc" in _WORKFLOW
+    assert "node-version:" not in _WORKFLOW
 
 
 def test_npm_ci_installs_from_the_visuals_lockfile() -> None:

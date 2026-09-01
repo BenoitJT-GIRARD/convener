@@ -181,7 +181,7 @@ jobs:
       # sat inside a green suite here once).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: |
             site/package-lock.json
@@ -365,7 +365,7 @@ jobs:
       - id: node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: 'npm'
           # Both lock files, the same multi-path cache `a11y.yml` already
           # uses: this one job installs `app/` (for its own checks, and for
@@ -534,7 +534,7 @@ jobs:
       - id: node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: |
             services/auth-proxy/package-lock.json

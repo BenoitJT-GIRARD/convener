@@ -390,8 +390,9 @@ def test_the_chrome_cache_key_is_shared_with_visuals_yml() -> None:
     assert key_line in _VISUALS_WORKFLOW
 
 
-def test_node_version_meets_puppeteers_own_floor() -> None:
-    assert "node-version: '22'" in _WORKFLOW
+def test_the_node_version_is_read_from_the_one_file() -> None:
+    assert "node-version-file: .nvmrc" in _WORKFLOW
+    assert "node-version:" not in _WORKFLOW
 
 
 def test_npm_ci_and_audit_run_from_the_visuals_working_directory() -> None:

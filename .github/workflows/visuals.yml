@@ -244,16 +244,17 @@ jobs:
           key: puppeteer-${{ runner.os }}-${{ hashFiles('tools/visuals/package-lock.json') }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          # puppeteer 25.8.0's own declared floor (`engines.node`), and
-          # the version every other job in this repository installs too --
-          # this job was the first on 22 while the rest were still on 20,
-          # and that split is gone (tools/tests/repository/test_workflows.py::
-          # test_every_workflow_installs_the_same_node_version). What this
-          # package's isolation buys is unchanged and unrelated: only this
-          # workflow and visuals-production.yml pay for the bundled
-          # Chrome-for-Testing download, because only they install
+          # `.nvmrc` at the repository root, which every job here reads
+          # the same way -- this one was the first on 22 while the rest
+          # were still on 20, and a version named in a workflow is a
+          # version a workflow can be left behind on
+          # (tools/tests/repository/test_workflows.py::
+          # test_every_workflow_reads_the_node_version_from_the_one_file).
+          # What this package's isolation buys is unchanged and unrelated:
+          # only this workflow and visuals-production.yml pay for the
+          # bundled Chrome-for-Testing download, because only they install
           # `tools/visuals/`.
-          node-version: '22'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: tools/visuals/package-lock.json
       - name: Install the pinned renderer

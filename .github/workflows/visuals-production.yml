@@ -252,9 +252,9 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         if: steps.pages.outputs.count != '0'
         with:
-          # Matches visuals.yml's own floor -- puppeteer 25.8.0's declared
-          # engines.node.
-          node-version: '22'
+          # `.nvmrc` at the repository root, the same file visuals.yml
+          # reads.
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: tools/visuals/package-lock.json
       - name: Install the pinned renderer

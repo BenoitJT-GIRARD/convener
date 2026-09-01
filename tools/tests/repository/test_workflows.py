@@ -5659,7 +5659,8 @@ def test_the_branch_reader_refuses_the_filter_shapes_it_cannot_evaluate(
 
 
 # ------------------------------------------------------------------ #
-# One Node version, and it clears what the toolchain declares.
+# One Node version, written once, and it clears what the toolchain
+# declares.
 #
 # Seven workflows installed Node 20, four installed 22, and `quality.yml`
 # installed both -- a split nothing here could see, because every one of
@@ -5671,13 +5672,30 @@ def test_the_branch_reader_refuses_the_filter_shapes_it_cannot_evaluate(
 # installs it for its own accessibility and performance checks. Both were
 # being installed on 20.
 #
-# Two properties, deliberately separate. The first is that the workflows
-# agree with each other, swept over the directory rather than over a list
-# of file names, so a workflow added later is held the same way without
-# being added anywhere. The second is that what they agree on clears the
-# floor the six npm trees themselves declare -- without it, the first
-# property is satisfied just as well by every workflow drifting back onto
-# an unsupported runtime together.
+# The agreement that ended that split was a property of sixteen matching
+# literals in eleven files, held by a sweep that read them and compared
+# them to each other. It is now a property of one file: `.nvmrc` at the
+# repository root, which every `actions/setup-node` step reaches through
+# `node-version-file:` and every `package.json` states a floor against in
+# `engines.node`. That is the shape this repository already gives the
+# directory map, the charter tokens, the motif and the two renderings of
+# the standing-up sequence -- the value is written once and everything
+# that needs it reads it -- and a version somebody has to retype in
+# sixteen places is the defect that shape exists to remove.
+#
+# Three properties, deliberately separate:
+#
+#   1. every Node installation reads that one file and names no version
+#      of its own, swept over the directory rather than over a list of
+#      file names, so a workflow added later is held the same way without
+#      being added anywhere;
+#   2. every npm tree declares its floor as the same major, so `npm
+#      install` in a duplicate's own checkout refuses a runtime this
+#      pipeline would never have run on;
+#   3. what all of them agree on clears the floor the lock files
+#      themselves declare -- without it, the first two are satisfied just
+#      as well by the whole repository drifting back onto an unsupported
+#      runtime together.
 # ------------------------------------------------------------------ #
 
 #: How `actions/setup-node` is named in a `uses:` line. What follows the
@@ -5685,22 +5703,26 @@ def test_the_branch_reader_refuses_the_filter_shapes_it_cannot_evaluate(
 #: module, so the prefix is what identifies the action here.
 _SETUP_NODE: Final = "actions/setup-node@"
 
+#: The one file the version is written in, root-relative and spelled
+#: exactly as a `node-version-file:` has to name it.
+NODE_VERSION_FILE: Final = ".nvmrc"
 
-def _setup_node_steps(workflow: Path) -> list[tuple[str, str, str | None]]:
-    """`(job id, step name, node-version)` for every `actions/setup-node`
-    step in `workflow`.
 
-    The version is `None` for a step that installs Node without naming
-    one, which is not the same thing as a step this reader missed: such a
-    step takes whatever the runner image happens to ship, which is the
-    drift this section exists to refuse, so it is carried back as a
-    finding rather than dropped. A step with no `name:` is reported by its
-    `id:`, and one with neither by its position, because the message has
-    to name something a reader can find in the file.
+def _setup_node_steps(workflow: Path) -> list[tuple[str, str, str | None, str | None]]:
+    """`(job id, step name, node-version-file, node-version)` for every
+    `actions/setup-node` step in `workflow`.
+
+    Both keys are carried back, and both are `None` for a step naming
+    neither, which is not the same thing as a step this reader missed:
+    such a step takes whatever the runner image happens to ship, which is
+    the drift this section exists to refuse, so it is a finding rather
+    than a dropped row. A step with no `name:` is reported by its `id:`,
+    and one with neither by its position, because the message has to name
+    something a reader can find in the file.
     """
     loaded = safe_load(workflow.read_text(encoding="utf-8"))
     jobs = loaded.get("jobs") if isinstance(loaded, dict) else None
-    found: list[tuple[str, str, str | None]] = []
+    found: list[tuple[str, str, str | None, str | None]] = []
     if not isinstance(jobs, dict):
         return found
     for job_id, job in jobs.items():
@@ -5713,34 +5735,49 @@ def _setup_node_steps(workflow: Path) -> list[tuple[str, str, str | None]]:
             uses = step.get("uses")
             if not (isinstance(uses, str) and uses.startswith(_SETUP_NODE)):
                 continue
-            options = step.get("with")
-            version = options.get("node-version") if isinstance(options, dict) else None
+            given = step.get("with")
+            options = given if isinstance(given, dict) else {}
             named = step.get("name") or step.get("id") or f"step {position}"
+            read = options.get("node-version-file")
+            version = options.get("node-version")
             found.append(
-                (str(job_id), str(named), None if version is None else str(version))
+                (
+                    str(job_id),
+                    str(named),
+                    None if read is None else str(read),
+                    None if version is None else str(version),
+                )
             )
     return found
 
 
-def _node_installations() -> list[tuple[str, str, str, str | None]]:
+def _node_installations() -> list[tuple[str, str, str, str | None, str | None]]:
     """Every Node installation this repository performs in CI, as
-    `(workflow, job, step, version)`."""
+    `(workflow, job, step, node-version-file, node-version)`."""
     return [
-        (workflow.name, job, step, version)
+        (workflow.name, job, step, read, version)
         for workflow in _workflow_files()
-        for job, step, version in _setup_node_steps(workflow)
+        for job, step, read, version in _setup_node_steps(workflow)
     ]
 
 
+def _node_version() -> str:
+    """What `.nvmrc` says, which is what every reference to it resolves
+    to."""
+    declared = (ROOT / NODE_VERSION_FILE).read_text(encoding="utf-8").strip()
+    assert declared, f"{NODE_VERSION_FILE} is empty, so it names no runtime"
+    return declared
+
+
 def test_the_setup_node_reader_finds_the_installations_this_repository_has() -> None:
-    """Reader control before the two properties that rest on it: a reader
-    matching nothing would make both of them pass by finding no
+    """Reader control before the three properties that rest on it: a
+    reader matching nothing would make all of them pass by finding no
     disagreement and no shortfall, which is the one way a sweep fails
     silently."""
     found = _node_installations()
     assert found, (
         f"no step in any workflow uses {_SETUP_NODE} -- the reader itself is "
-        "wrong, and both checks below would pass over an empty sweep"
+        "wrong, and every check below would pass over an empty sweep"
     )
     assert len({workflow for workflow, *_ in found}) > 1, (
         "every Node installation found sits in one workflow, which has not "
@@ -5748,32 +5785,40 @@ def test_the_setup_node_reader_finds_the_installations_this_repository_has() -> 
     )
 
 
-def test_every_workflow_installs_the_same_node_version() -> None:
-    """One version across `.github/workflows/`, whichever it is.
+def test_every_workflow_reads_the_node_version_from_the_one_file() -> None:
+    """No workflow states a Node version; every one of them reads
+    `.nvmrc`.
 
-    Nothing here names 22. The version is not this test's to state: the
-    check below it is what holds the agreed version above the floor the
-    packages declare, and between them a deliberate move to a newer Node
-    needs no edit here at all, while one workflow left behind on the old
-    one fails by name.
+    Nothing here names 24. The version is not this test's to state --
+    changing it is an edit to one file and to nothing else, and this is
+    what makes that true: a step that spelled the version out would go on
+    installing the old one after that edit, silently and correctly by its
+    own lights, which is how seven workflows came to be a major version
+    behind four others.
     """
     found = _node_installations()
     assert found, "the reader found no Node installation at all"
-    for workflow, job, step, version in found:
-        assert version is not None, (
-            f"{workflow}::{job}/{step} installs Node with no node-version: "
-            "-- it would take whatever the runner image happens to ship, "
-            "which is not a version this repository has chosen"
-        )
-    by_version: dict[str, list[str]] = {}
-    for workflow, job, step, version in found:
-        by_version.setdefault(str(version), []).append(f"{workflow}::{job}/{step}")
-    assert len(by_version) == 1, (
-        "this repository installs more than one Node version: "
-        + "; ".join(
-            f"{version} in {', '.join(where)}"
-            for version, where in sorted(by_version.items())
-        )
+    assert (ROOT / NODE_VERSION_FILE).is_file(), (
+        f"{NODE_VERSION_FILE} does not exist, so every `node-version-file:` "
+        "in these workflows points at nothing"
+    )
+    stated = [
+        f"{workflow}::{job}/{step} states node-version: {version!r}"
+        for workflow, job, step, _, version in found
+        if version is not None
+    ]
+    assert stated == [], (
+        "a Node version is written into a workflow rather than read from "
+        f"{NODE_VERSION_FILE}: " + "; ".join(stated)
+    )
+    elsewhere = [
+        f"{workflow}::{job}/{step} reads {read!r}"
+        for workflow, job, step, read, _ in found
+        if read != NODE_VERSION_FILE
+    ]
+    assert elsewhere == [], (
+        f"a Node installation that does not read {NODE_VERSION_FILE}: "
+        + "; ".join(elsewhere)
     )
 
 
@@ -5878,27 +5923,59 @@ def _declared_node_floor() -> tuple[int, list[str]]:
     return floor, requiring
 
 
-def test_the_installed_node_version_clears_what_the_lock_files_declare() -> None:
-    """The half the sweep above cannot state.
+def test_every_npm_tree_declares_the_floor_the_one_file_names() -> None:
+    """`engines.node` in every tracked `package.json`, against `.nvmrc`.
 
-    Every workflow agreeing on Node 20 satisfies that one perfectly while
+    The workflows read that file, so continuous integration cannot drift
+    on its own; nothing made a duplicate's laptop read it too.
+    `engines.node` is what `npm install` itself enforces, and it is a
+    literal -- npm reads no `.nvmrc` -- so it is the one restatement of
+    the version that has to exist, and this is the control that makes it
+    follow. A duplicate that raises `.nvmrc` and stops there is told which
+    trees did not move.
+    """
+    declared = _node_version()
+    wanted = _branch_floor_major(declared)
+    assert wanted is not None, (
+        f"{NODE_VERSION_FILE} says {declared!r}, which names no major at all"
+    )
+    manifests = _git_ls_files("*package.json")
+    assert manifests, "this repository tracks no package.json at all"
+    problems: list[str] = []
+    for relative in manifests:
+        manifest = json.loads((ROOT / relative).read_text(encoding="utf-8"))
+        engines = manifest.get("engines")
+        spec = engines.get("node") if isinstance(engines, dict) else None
+        if not isinstance(spec, str):
+            problems.append(f"{relative} declares no engines.node")
+            continue
+        floor = _range_floor_major(spec)
+        if floor != wanted:
+            problems.append(f"{relative} declares {spec!r}, a floor of {floor}")
+    assert problems == [], (
+        f"{NODE_VERSION_FILE} names Node {declared}, and these trees do not: "
+        + "; ".join(problems)
+    )
+
+
+def test_the_installed_node_version_clears_what_the_lock_files_declare() -> None:
+    """The half the two sweeps above cannot state.
+
+    Every workflow agreeing on Node 20 satisfies them perfectly while
     `wrangler` and `puppeteer-core` both declare they need 22 -- which is
     the state this repository was actually in. The floor comes out of the
     lock files `npm ci` installs from, so a dependency bump that raises it
     fails here rather than on a runner.
     """
-    versions = {version for *_, version in _node_installations()}
-    assert len(versions) == 1, "the workflows disagree; the sweep above says which"
-    declared = versions.pop()
-    assert declared is not None
+    declared = _node_version()
     installed = _branch_floor_major(declared)
     assert installed is not None, (
-        f"node-version: {declared!r} names no version at all, so no floor "
-        "can be checked against it"
+        f"{NODE_VERSION_FILE} says {declared!r}, which names no version at "
+        "all, so no floor can be checked against it"
     )
     floor, requiring = _declared_node_floor()
     assert installed >= floor, (
-        f"every workflow installs Node {declared}, below the {floor} this "
+        f"{NODE_VERSION_FILE} names Node {declared}, below the {floor} this "
         f"repository's own lock files require: {'; '.join(sorted(requiring))}"
     )
 
