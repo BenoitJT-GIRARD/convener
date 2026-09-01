@@ -24,10 +24,13 @@ its own table, and for the same reason: a list that may only grow is a
 list that stops describing anything. A path that stops being an exception
 comes off this one on the commit that moves it.
 
-**Tracked files, and only those.** `docs/handbook/assets/` holds working
-material a designer keeps beside the templates, `.gitignore` names it,
-and no clone has it. Nothing this repository does not carry is anybody's
-to place.
+**Tracked files, and only those.** `docs/handbook/assets/` held a
+designer's own working material beside the three templates a volunteer
+downloads: `.gitignore` named it, no clone ever had it, and a sweep of
+the disk would have placed ten files nobody here can place. It sits
+under `instance/data/`, beside the charter it is the source of, since
+2026-09-01; the reading is the index either way, because nothing this
+repository does not carry is anybody's to place.
 
 **What this does not cover.** Whether a page is published at all is
 `app/src/content/registry.ts`'s answer and

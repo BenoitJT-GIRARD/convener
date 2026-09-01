@@ -1,6 +1,6 @@
 """The announcement composition: a page, not a hand-drawn SVG.
 
-`docs/handbook/assets/example_and_template_initial_assets/announcement-template_initial.png`
+`instance/data/brand-sources/announcement-template_initial.png`
 (gitignored -- it carries a real person's photograph) is the designer's
 own template. Reading it pixel by pixel, top to bottom: a band carrying the
 wordmark; the series title in heavy dominant caps on the field; a two-line

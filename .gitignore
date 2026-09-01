@@ -159,4 +159,15 @@ instance/data/events/*/attendance-import.csv
 # photograph, which is exactly the defect docs/assets/flyer-example.png
 # already put in this history. Kept out of git so a stray `git add` cannot
 # repeat it. Read them from the Drive working copy.
-docs/handbook/assets/example_and_template_initial_assets/
+#
+# Beside the file they are the source of. instance/data/brand.json is this
+# series' charter, its own `_source` key names two of these files as the
+# authority for the colours, the typefaces and the composition, and
+# declarations/boundary.yml hands instance/data/ to the instance -- so the
+# derivation drops this path from the public repository whether or not this
+# rule holds, which is a second answer to the same question rather than the
+# same answer twice. They sat under docs/handbook/assets/ until 2026-09-01,
+# beside the three templates a volunteer downloads and two reconstructions
+# the charter itself calls not authoritative, in a directory the
+# derivation keeps.
+instance/data/brand-sources/
