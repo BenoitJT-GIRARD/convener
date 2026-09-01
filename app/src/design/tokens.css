@@ -86,8 +86,14 @@
   --select:         rgba(130, 219, 215, 0.25);
 /* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
 
-  --radius-sm:     2px;
-  --radius-md:     3px;
+  /* The radius a form control is drawn with, and the only one this
+   * stylesheet sets: the design is sharp rectangles, so nothing else is
+   * rounded by hand. Named `--control-radius` rather than after Tailwind's
+   * own radius scale, because v4 reads that scale's prefix as a theme
+   * namespace: a name from it declared here would silently redefine what
+   * the `rounded-md` utility paints, since this file sits in the `base`
+   * layer, above the `theme` layer the scale is declared in. */
+  --control-radius: 3px;
   --shadow-card:   0 1px 0 var(--border);
 }
 
@@ -135,7 +141,7 @@ input[type="text"], input[type="email"], input[type="password"],
 input[type="date"], input[type="search"], select, textarea {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--control-radius);
   color: var(--ink);
   font-family: inherit;
 }

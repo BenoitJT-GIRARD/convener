@@ -396,9 +396,9 @@ jobs:
         if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm audit --omit=dev
-      # The other 19 findings `npm audit` (no flag) reports today are all
-      # in `devDependencies` -- eslint, typescript-eslint, @babel/core,
-      # autoprefixer's own postcss/tailwindcss chain -- tooling that runs
+      # Whatever `npm audit` (no flag) reports beyond that gate is in
+      # `devDependencies` -- eslint, typescript-eslint, @babel/core, the
+      # compiler and the bundler -- tooling that runs
       # only on a CI runner or a maintainer's machine, over this
       # repository's own first-party source, and ships in no built output
       # at all. Blocking on those would fail this job on a class of finding

@@ -4668,11 +4668,12 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 #     *fourth* directory a command started reading from a helper would
 #     not be seen.
 #   * An input reached by an npm dependency's own configuration rather
-#     than by this repository's source -- a bundler alias, a PostCSS or
-#     Tailwind `content:` glob pointing outside `app/`.
-#     `tailwind.config.ts` and the config files beside it *are* scanned,
-#     so a literal there is seen; a path assembled inside a dependency is
-#     not.
+#     than by this repository's source -- a bundler alias, or a Tailwind
+#     `@source` glob pointing outside `app/`. The config files beside
+#     `vite.config.ts` *are* scanned, so a literal there is seen; a path
+#     assembled inside a dependency is not. Tailwind's own configuration
+#     is `src/index.css` since v4, which sits inside `src/` and is
+#     scanned with the rest of it.
 #   * `app/tests/**` and `app/public/**` are not scanned: neither is
 #     compiled into the bundle (`public/` is written by the copy scripts,
 #     not read by them). A build that started reading a repository path
@@ -4746,8 +4747,6 @@ _APP_BUILD_FILES = (
     "package.json",
     "index.html",
     "vite.config.ts",
-    "tailwind.config.ts",
-    "postcss.config.js",
     "tsconfig.json",
     "tsconfig.app.json",
     "tsconfig.node.json",

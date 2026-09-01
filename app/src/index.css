@@ -1,4 +1,72 @@
-@import './design/tokens.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* The cockpit's stylesheet, and the one place its build's cascade order is
+ * decided.
+ *
+ * Tailwind v4 puts everything it emits in a cascade layer, and an unlayered
+ * rule beats a layered one whatever its specificity. `design/tokens.css` is
+ * this project's own hand-written CSS -- `body`, `a`, `h1`, `.prose` -- so
+ * importing it unlayered beside `@import 'tailwindcss'` would put `a { color:
+ * var(--field-text) }` above every `text-*` utility in the bundle and no
+ * link in the cockpit could be recoloured. It is imported into `base`
+ * instead, and *before* preflight inside that layer, which is the order v3's
+ * flat output already had: preflight's own `h1,h2,h3,h4,h5,h6 { font-size:
+ * inherit; font-weight: inherit }` lands after `tokens.css`'s heading block
+ * and wins, exactly as it did before this file named a layer at all.
+ *
+ * The four imports are Tailwind's own `index.css` written out. That file is
+ * `@layer theme { ... } @layer base { ... } @layer utilities { ... }` in one
+ * piece, with nowhere to put a fifth stylesheet between two of its layers,
+ * and the layer order above is declared here rather than inherited from it
+ * so that a custom property `tokens.css` declares sits above the one the
+ * default theme carries under the same name rather than below it.
+ *
+ * `source(none)` and the two `@source` lines are the two `content:` globs
+ * `tailwind.config.ts` carried, moved here with the rest of the
+ * configuration. Automatic detection would take the whole
+ * Vite root, which is `app/`, and start emitting utilities for the class
+ * names `tests/` writes into assertions about markup.
+ */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import './design/tokens.css' layer(base);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+@source '../index.html';
+@source './**/*.{ts,tsx}';
+
+/* Every colour the cockpit's utilities name, against the custom property
+ * `design/tokens.css` carries it in. `tools/scripts/generate_brand_css.py`
+ * writes that block from the charter in force and its `--check` refuses a
+ * stylesheet that has drifted, which is why not one hex digit appears here:
+ * a palette written into this file would be a palette a duplicate could not
+ * change. `tools/convener_ops/publication/cockpit.py` reads the keys below
+ * back and measures every pairing they make at every charter under
+ * `assets/brand/`.
+ */
+@theme {
+  --color-paper: var(--paper);
+  --color-paper-soft: var(--paper-soft);
+  --color-surface: var(--surface);
+  --color-surface-mute: var(--surface-mute);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-field: var(--field);
+  --color-field-text: var(--field-text);
+  --color-field-tint: var(--field-tint);
+  --color-dominant: var(--dominant);
+  --color-dominant-hover: var(--dominant-hover);
+  --color-dominant-tint: var(--dominant-tint);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --font-serif: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --container-content: 1180px;
+}

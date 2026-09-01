@@ -124,43 +124,41 @@ def test_every_token_names_a_colour_every_charter_carries() -> None:
 
 
 def test_the_table_is_exactly_what_tailwind_declares() -> None:
-    """`app/tailwind.config.ts` turns each colour key into the utilities a
-    component writes. A key there with no entry in `TOKEN_COLOURS` is a
-    utility this sweep would refuse as an unknown word; an entry here with
-    no key there is a custom property nothing can reach. Both are caught
-    by reading the config rather than trusting the two to agree."""
-    config = (ROOT / "app" / "tailwind.config.ts").read_text(encoding="utf-8")
-    block = config.split("colors: {", 1)[1]
-    declared: dict[str, str] = {}
-    group: str | None = None
-    for match in re.finditer(
-        r"['\"]?(?P<key>[A-Za-z][\w-]*)['\"]?\s*:\s*"
-        r"(?:(?P<opens>\{)|'var\(--(?P<prop>[\w-]+)\)')|(?P<closes>\})",
-        block,
-    ):
-        if match["closes"]:
-            if group is None:
-                break
-            group = None
-            continue
-        if match["opens"]:
-            group = match["key"]
-            continue
-        name = match["key"]
-        utility = (
-            group
-            if group and name == "DEFAULT"
-            else f"{group}-{name}"
-            if group
-            else name
+    """`app/src/index.css`'s `@theme` block turns each colour key into the
+    utilities a component writes. A key there with no entry in
+    `TOKEN_COLOURS` is a utility this sweep would refuse as an unknown
+    word; an entry here with no key there is a custom property nothing can
+    reach. Both are caught by reading the stylesheet rather than trusting
+    the two to agree.
+
+    The stylesheet is where this lives because Tailwind v4 has no
+    JavaScript configuration to read: `--color-dominant: var(--dominant)`
+    under `@theme` is what `bg-dominant` is now declared by, and
+    `postcss.config.js`/`tailwind.config.ts` are gone with the plugin that
+    needed them.
+    """
+    stylesheet = (ROOT / "app" / "src" / "index.css").read_text(encoding="utf-8")
+    block = stylesheet.split("@theme {", 1)[1].split("}", 1)[0]
+    declared = {
+        match["key"]: match["prop"]
+        for match in re.finditer(
+            r"^\s*--color-(?P<key>[\w-]+):\s*var\(--(?P<prop>[\w-]+)\);",
+            block,
+            re.MULTILINE,
         )
-        declared[utility] = match["prop"]
+    }
     # Every utility a component can write, and the custom property behind
     # it: `bg-field-text` has to reach `--field-text`, not `--field-hover`
     # under another name, or the sweep would resolve a colour the browser
     # never paints.
-    assert set(declared) == set(cockpit.TOKEN_COLOURS) | set(cockpit.LITERAL_TOKENS)
-    assert all(utility == prop for utility, prop in declared.items())
+    expected = set(cockpit.TOKEN_COLOURS) | set(cockpit.LITERAL_TOKENS)
+    assert set(declared) == expected, (
+        f"`@theme` declares {sorted(set(declared) - expected)} that this "
+        f"module measures nothing for, and measures "
+        f"{sorted(expected - set(declared))} that no utility can reach"
+    )
+    crossed = {u: p for u, p in declared.items() if u != p}
+    assert crossed == {}, f"a utility reaching another token's property: {crossed}"
 
 
 def test_no_cockpit_source_names_the_superseded_token_vocabulary() -> None:

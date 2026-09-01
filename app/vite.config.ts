@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
 import { exampleSettings } from './scripts/example-settings.mjs';
@@ -432,7 +433,18 @@ export default defineConfig(({ mode }) => {
   if (mode === 'island-survey') return islandSurveyConfig();
 
   return {
-    plugins: [react(), cspHtmlPlugin()],
+    /**
+     * `tailwindcss()` is on this configuration and on none of the three
+     * islands above, for the reason each of their own comments already
+     * gives: an island imports no stylesheet at all -- its class names are
+     * plain, semantic strings drawn by `site/src/style.css` -- so a plugin
+     * that compiles `src/index.css` has nothing to compile there. It
+     * replaces `postcss.config.js`, which is gone along with
+     * `autoprefixer`: v4 emits its own prefixes and reads its theme from
+     * `src/index.css` rather than from a `tailwind.config.ts` beside this
+     * file.
+     */
+    plugins: [react(), tailwindcss(), cspHtmlPlugin()],
     base: PUBLISHED.appBase,
     define: DEFINE,
     build: { outDir: 'dist' },

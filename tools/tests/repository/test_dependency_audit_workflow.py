@@ -118,9 +118,9 @@ def test_the_app_lane_audits_production_dependencies() -> None:
 
 
 def test_the_app_lane_surfaces_development_findings_without_blocking() -> None:
-    """The 19 findings that are `devDependencies`-only (eslint,
-    typescript-eslint, `@babel/core`, the autoprefixer/postcss/tailwindcss
-    chain) never reach any built output, but a finding
+    """A finding that is `devDependencies`-only (eslint,
+    typescript-eslint, `@babel/core`, the compiler and the bundler)
+    never reaches any built output, but a finding
     nothing ever surfaces is just as much the D-25 shape as a check that
     cannot fail: this step is not the gate, but it must exist, run the
     *full* audit (no `--omit=dev`, or it would just repeat the production

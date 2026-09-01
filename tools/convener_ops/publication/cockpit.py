@@ -29,8 +29,9 @@ What it reads
 --------------
 The class lists in `app/src`, as string literals. A cockpit component
 names its colours in Tailwind utilities (`bg-dominant text-white`), and
-`app/tailwind.config.ts` turns each colour key into a custom property this
-module knows the charter colour of (`TOKEN_COLOURS`). So the pairings are
+`app/src/index.css`'s own `@theme` block turns each colour key into a custom
+property this module knows the charter colour of (`TOKEN_COLOURS`). So the
+pairings are
 *derived from the source* rather than declared in a table beside it: a
 button added tomorrow is measured on the commit that adds it, with no
 entry to make anywhere -- the same property `brand.shipped` gives the
@@ -128,8 +129,8 @@ APP_SRC: Final = Path("app") / "src"
 #: `text-paper` on a filled button.
 SOURCE_SUFFIXES: Final = (".tsx", ".ts")
 
-#: Every colour key `app/tailwind.config.ts` declares, and the charter
-#: colour behind it. One home for the answer: `generate_brand_css.py`
+#: Every colour key `app/src/index.css`'s `@theme` block declares, and the
+#: charter colour behind it. One home for the answer: `generate_brand_css.py`
 #: renders `app/src/design/tokens.css`'s generated block from this same
 #: table, so the custom property a component reads and the colour this
 #: sweep measures it at cannot come to disagree.
@@ -169,8 +170,9 @@ TOKEN_COLOURS: Final[dict[str, str]] = {
 #: that already has a home.
 LITERAL_TOKENS: Final = ("danger", "info")
 
-#: Tailwind's own palette, which `app/tailwind.config.ts` extends rather
-#: than replaces. `text-white` is this white and not `--paper`; the two
+#: Tailwind's own palette, which `app/src/index.css`'s `@theme` block
+#: extends rather than replaces. `text-white` is this white and not
+#: `--paper`; the two
 #: hold the same value in every charter this product ships, and a sweep
 #: measuring the token would be measuring something the browser is not
 #: painting.
