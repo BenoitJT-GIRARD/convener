@@ -66,7 +66,7 @@ export function Layout() {
               {/* Which invented records these are, not just that they are
                   invented: the masthead above names whoever runs this
                   cockpit, while every record on screen belongs to the
-                  example instance this product ships (`instances/example/`,
+                  example instance this product ships (`examples/the-example-collective/`,
                   read by `data/demo.ts`). Saying "data is mocked" left a
                   visitor to guess why the two disagree. */}
               These are the example instance&rsquo;s records, not this series&rsquo;.
@@ -113,7 +113,7 @@ export function Layout() {
                 that has never held them. */}
             <em>Operational workspace</em> &middot; data lives in{' '}
             <code className="text-ink">
-              {demo ? `instances/example/${dataDir()}` : speakersFile()}
+              {demo ? `examples/the-example-collective/${dataDir()}` : speakersFile()}
             </code>
           </p>
           <a

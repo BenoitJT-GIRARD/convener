@@ -33,7 +33,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | How somebody with no repositories and no accounts gets a running instance | `STANDING-UP.yml`, rendered by `tools/scripts/generate_standing_up_doc.py` into `docs/operating/standing-up.md` for a person and by `tools/scripts/generate_standing_up_run_sheet.py` into `docs/operating/standing-up-for-an-agent.md` for an agent — which carries the order and the actor, and reads every step's own content back out of the declaration |
 | Which paths belong to this series rather than to the code | `declarations/boundary.yml`, and each configuration file's own `owner:` key |
 | The address this project is published at | `instance/config.json`, read by `tools/convener_ops/declaration/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
-| A second, invented instance to build as | `instances/example/`, one file per path `declarations/boundary.yml` hands to the instance |
+| A second, invented instance to build as | `examples/the-example-collective/`, one file per path `declarations/boundary.yml` hands to the instance |
 | The terms this software is under, and what the name is not under | `LICENSE`, whose head carries the term declining the name, and `TRADEMARK.md` |
 | How to report a vulnerability, and what a report can expect | `SECURITY.md` |
 | What a contributor certifies, and what an issue can expect | `CONTRIBUTING.md` |

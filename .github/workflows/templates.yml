@@ -69,8 +69,8 @@ name: Templates
 #   path filter has no finer grain than a file.
 # - `instance/config.json`, `instance/data/brand.json` -- this instance's
 #   declaration and charter, one of those swept.
-# - `instances/example/instance/config.json`,
-#   `instances/example/instance/data/brand.json` -- the example's,
+# - `examples/the-example-collective/instance/config.json`,
+#   `examples/the-example-collective/instance/data/brand.json` -- the example's,
 #   another.
 # - `brand/*/brand.json` -- every charter the product itself ships: its
 #   own default, which a duplicate that has written none is drawn with,
@@ -122,8 +122,8 @@ on:
       - 'tools/convener_ops/cli.py'
       - 'instance/config.json'
       - 'instance/data/brand.json'
-      - 'instances/example/instance/config.json'
-      - 'instances/example/instance/data/brand.json'
+      - 'examples/the-example-collective/instance/config.json'
+      - 'examples/the-example-collective/instance/data/brand.json'
       - 'brand/*/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'
@@ -147,8 +147,8 @@ on:
       - 'tools/convener_ops/cli.py'
       - 'instance/config.json'
       - 'instance/data/brand.json'
-      - 'instances/example/instance/config.json'
-      - 'instances/example/instance/data/brand.json'
+      - 'examples/the-example-collective/instance/config.json'
+      - 'examples/the-example-collective/instance/data/brand.json'
       - 'brand/*/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'

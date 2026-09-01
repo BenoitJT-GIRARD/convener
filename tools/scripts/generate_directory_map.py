@@ -6,7 +6,7 @@ disagreed with each other, and between them they placed eight of the twelve
 directories this repository tracked then -- `README.md` spent three of its
 rows on `services/`'s own subdirectories, and
 `docs/engineering/architecture.md` named `.github/` one level down, as
-`.github/workflows/`. `.claude/`, `brand/`, `fonts/` and `instances/` were in
+`.github/workflows/`. `.claude/`, `brand/`, `fonts/` and `examples/` were in
 neither table, and `config/` was in one of the two. A
 reader who cannot place a third of the root concludes the root is disorganised
 even when it is not.
@@ -201,10 +201,11 @@ PURPOSE: Final[Mapping[str, str]] = {
         "instance publishes about itself under `public-data/`, and the four "
         "declarations a maintainer edits."
     ),
-    "instances": (
-        "The invented second instance this repository builds itself as on "
-        "every test run: one file for each path the declaration hands over, "
-        "at the same relative path."
+    "examples": (
+        "The invented instance this repository builds itself as on every "
+        "test run: one file for each path the declaration hands over, at "
+        "the same relative path, in a directory named after the "
+        "organisation that instance declares."
     ),
     "screenshots": (
         "The pictures `README.md` shows, rendered from a real build of the "

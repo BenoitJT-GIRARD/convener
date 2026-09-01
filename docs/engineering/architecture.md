@@ -76,9 +76,9 @@ publishes it.*
 | `brand/` | product | The product's own marks, and one directory per charter it ships: the default a duplicate that has measured no palette of its own is drawn with, and the palettes it may choose instead. |
 | `declarations/` | product | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
 | `docs/` | product | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
+| `examples/` | product | The invented instance this repository builds itself as on every test run: one file for each path the declaration hands over, at the same relative path, in a directory named after the organisation that instance declares. |
 | `fonts/` | product | The two typefaces both interfaces are set in, self-hosted so that no page fetches a font from anybody else, each beside its licence. |
 | `instance/` | instance | Everything this series owns rather than the code: the store itself under `data/`, the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. |
-| `instances/` | product | The invented second instance this repository builds itself as on every test run: one file for each path the declaration hands over, at the same relative path. |
 | `screenshots/` | product | The pictures `README.md` shows, rendered from a real build of the cockpit and the showcase by `tools/visuals/render-readme-shots.mjs`. Nothing here is drawn by hand, and nothing else reads them. |
 | `services/` | product | Three small Cloudflare Workers with no server of their own to maintain: `auth-proxy` relays a volunteer's GitHub sign-in; `form-relay` turns a speaker-proposal submission into a commit; `signup-relay` does the same for a registration or a survey response. |
 | `site/` | product | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
@@ -289,5 +289,5 @@ request. Once it is merged, the cockpit shows the new wording live, cached
 for about five minutes.
 
 The pictures on `README.md` are rendered rather than taken by hand, from a
-build of the instance `instances/example/` declares rather than of this one:
+build of the instance `examples/the-example-collective/` declares rather than of this one:
 `screenshots/README.md` gives the command and says what the renderer refuses.

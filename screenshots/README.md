@@ -9,7 +9,7 @@ here is drawn by hand.
 cd tools && uv run --frozen python scripts/render_readme_shots.py
 ```
 
-That builds this repository as the instance `instances/example/` declares —
+That builds this repository as the instance `examples/the-example-collective/` declares —
 the same manoeuvre `tools/tests/test_second_instance.py` performs — and runs
 `tools/visuals/render-readme-shots.mjs` inside the result, which assembles the
 two builds into the tree the publishing workflows actually push, serves it on a
@@ -18,7 +18,7 @@ pinned browser the rest of this repository renders with. The four PNGs are
 copied back over the tracked ones.
 
 **The renderer refuses to run anywhere else.** Its first act is to compare the
-declaration it can see against `instances/example/instance/config.json`, value
+declaration it can see against `examples/the-example-collective/instance/config.json`, value
 by value, and stop while any of them is this repository's own. A masthead is
 compiled into a build rather than fetched by it, so a picture taken here would
 carry this series' name into four files the derived public repository publishes

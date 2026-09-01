@@ -58,7 +58,7 @@ const IDENTITY = identity();
 
 /**
  * The instance the *demonstration* shows, read from
- * `instances/example/` and carried into the bundle the same way again.
+ * `examples/the-example-collective/` and carried into the bundle the same way again.
  *
  * `src/data/demo.ts` used to be an instance written in code -- five
  * invented speaker records, an invented board, and two promotion channels
@@ -134,7 +134,7 @@ const INSTANCE_PATHS = instancePaths();
 
 /**
  * Which of this instance's declared values are still
- * the ones the product ships in `instances/example/instance/config.json`,
+ * the ones the product ships in `examples/the-example-collective/instance/config.json`,
  * carried into the bundle the same way as everything above it.
  *
  * Empty for an instance somebody has configured, and the names of the

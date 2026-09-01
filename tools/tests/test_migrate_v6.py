@@ -172,8 +172,9 @@ def test_the_speakers_header_is_restamped_and_nothing_else_moves() -> None:
 
 
 def test_a_bespoke_first_line_keeps_its_own_wording() -> None:
-    """`instances/example/instance/data/speakers.yml` opens with a sentence of its
-    own rather than the standard header, and that sentence is prose."""
+    """`examples/the-example-collective/instance/data/speakers.yml` opens with
+    a sentence of its own rather than the standard header, and that sentence
+    is prose."""
     text = f"# The example instance's own speakers ({_V5_STAMP} --\n- id: x\n"
     assert migrate_speakers_text(text) == text.replace(_V5_STAMP, _V6_STAMP)
 
@@ -348,13 +349,16 @@ def test_the_two_trees_it_names_are_the_two_this_repository_ships() -> None:
     """A directory named here that does not exist would be a migration
     that quietly skipped a file; one that exists and is not named would be
     a tree left at v5."""
-    assert DATA_DIRS == ("instance/data", "instances/example/instance/data")
+    assert DATA_DIRS == (
+        "instance/data",
+        "examples/the-example-collective/instance/data",
+    )
     for directory in DATA_DIRS:
         assert (ROOT / directory / "config.yml").is_file(), directory
         assert (ROOT / directory / "speakers.yml").is_file(), directory
     declared = {
         path.parent.as_posix()
-        for path in ROOT.glob("instances/*/instance/data/config.yml")
+        for path in ROOT.glob("examples/*/instance/data/config.yml")
         if path.is_file()
     }
     assert {(ROOT / directory).as_posix() for directory in DATA_DIRS[1:]} == declared, (
@@ -374,9 +378,14 @@ def test_the_example_instance_declares_a_number_of_its_own() -> None:
         (ROOT / "instance" / "data" / "config.yml").read_text(encoding="utf-8")
     )
     there = yaml.safe_load(
-        (ROOT / "instances" / "example" / "instance" / "data" / "config.yml").read_text(
-            encoding="utf-8"
-        )
+        (
+            ROOT
+            / "examples"
+            / "the-example-collective"
+            / "instance"
+            / "data"
+            / "config.yml"
+        ).read_text(encoding="utf-8")
     )
     assert here[NEW_KEY] != there[NEW_KEY]
 

@@ -2,7 +2,7 @@
 
 `tools/visuals/render-readme-shots.mjs` takes the pictures. It refuses to
 take them anywhere but in a repository whose declaration is the one
-`instances/example/instance/config.json` carries, and this script is what
+`examples/the-example-collective/instance/config.json` carries, and this script is what
 gives it such a repository: `second_instance_build.lay_out` builds one in a
 scratch directory -- this repository's product, the example collective's
 instance -- and the renderer is then run *inside that tree*, on its own

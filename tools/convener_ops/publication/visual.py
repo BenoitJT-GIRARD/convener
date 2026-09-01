@@ -1018,7 +1018,7 @@ class Announcement:
 #: The edition code is numbered under the **example instance's** own
 #: prefix, and that is the same rule as the name above rather than a
 #: detail. `cli.render_visual_fixtures` renders this page as
-#: `instances/example/`, so the registration code it draws is a URL under
+#: `examples/the-example-collective/`, so the registration code it draws is a URL under
 #: the example's published address -- and it carried this instance's
 #: edition prefix inside that URL until it was measured. What that cost
 #: was the check itself: `convener-derive` rewrites a declared value

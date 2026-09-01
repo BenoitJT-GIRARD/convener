@@ -22,7 +22,7 @@ file says, not what a file is called.
 
 **How a word is decided to be the instance's, without anybody typing a
 list.** Two declarations are read, not one: this instance's, and the
-example instance's (`instances/example/instance/config.json`), which the
+example instance's (`examples/the-example-collective/instance/config.json`), which the
 product ships filled in and `test_second_instance.py` already builds this
 whole repository as. A word both declarations contribute is the
 *product's* -- it is a word this project uses about itself, which is why
@@ -81,8 +81,8 @@ ROOT: Final = repo_root()
 
 #: The example instance's own declaration, at the path
 #: `declarations/boundary.yml`'s own header describes: one file for each path
-#: an instance owns, at the same relative path under `instances/example/`.
-EXAMPLE: Final = Path("instances/example/instance/config.json")
+#: an instance owns, at the same relative path under `examples/the-example-collective/`.
+EXAMPLE: Final = Path("examples/the-example-collective/instance/config.json")
 
 #: A token this short is not a name in a path, it is an extension or an
 #: abbreviation, and both declarations are full of them (`io`, `so`, `vw`,

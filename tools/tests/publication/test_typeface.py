@@ -140,7 +140,7 @@ def test_the_lines_these_templates_actually_set_are_over_estimated() -> None:
     derived repository either shipped this instance's name in a public
     product test or failed this assertion, depending only on whether the
     rewrite table had heard of the spelling. Neither is a state to leave a
-    fixture in. `instances/example/` is the product's, so its lines are
+    fixture in. `examples/the-example-collective/` is the product's, so its lines are
     rewritten by nothing and measure the same on both sides.
 
     The first two are the same line at the two sizes the two pages set it

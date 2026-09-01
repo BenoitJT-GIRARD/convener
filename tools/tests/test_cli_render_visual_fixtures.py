@@ -194,7 +194,7 @@ def test_the_fonts_still_come_from_the_product_and_not_the_example(
 ) -> None:
     """The one thing that is deliberately *not* taken from the example:
     the self-hosted faces are the product's, served by it (D-17), and
-    `instances/example/` holds no copy of them precisely because a face is
+    `examples/the-example-collective/` holds no copy of them precisely because a face is
     not an identity here. A render that started reading them from the
     example's tree would find nothing and fall back silently."""
     out = tmp_path / "fixtures"

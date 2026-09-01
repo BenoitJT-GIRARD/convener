@@ -875,7 +875,7 @@ def _module_level_reads(source: str) -> list[tuple[int, str]]:
 
     The run has to start at the statement's first literal, which is what
     `_ROOT / "instance" / "config.json"` looks like and what
-    `ROOT / "instances" / "example" / "instance" / "config.json"` does
+    `ROOT / "examples" / "the-example-collective" / "instance" / "config.json"` does
     not: the second names the example's own file, which is the product's,
     and reading it at import is exactly right.
     """

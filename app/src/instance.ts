@@ -142,7 +142,7 @@ let cachedUnconfigured: string[] | null = null;
 
 /**
  * Which of this instance's declared values are still the ones the product
- * ships in `instances/example/instance/config.json` -- empty for an
+ * ships in `examples/the-example-collective/instance/config.json` -- empty for an
  * instance somebody has configured, and the names of the offending keys
  * for one nobody has.
  *

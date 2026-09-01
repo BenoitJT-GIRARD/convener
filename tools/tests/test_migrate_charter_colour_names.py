@@ -319,12 +319,12 @@ def test_the_charters_it_names_are_the_ones_this_repository_ships() -> None:
         assert (ROOT / rel).is_file(), rel.as_posix()
     declared = {
         path.parent.as_posix()
-        for path in ROOT.glob(f"instances/*/{brand.INSTANCE_PATH.as_posix()}")
+        for path in ROOT.glob(f"examples/*/{brand.INSTANCE_PATH.as_posix()}")
     }
     assert {
         (ROOT / rel).parent.as_posix()
         for rel in CHARTERS
-        if rel.as_posix().startswith("instances/")
+        if rel.as_posix().startswith("examples/")
     } == declared, "an instance charter exists that this migration does not name"
 
 

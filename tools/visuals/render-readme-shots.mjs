@@ -41,7 +41,7 @@
  * So `refuseUnlessTheExampleDeclares` is a refusal rather than a
  * convention: this script stops unless every value the declaration it can
  * see carries about *who is publishing* is still the one
- * `instances/example/instance/config.json` ships -- the same value-by-value
+ * `examples/the-example-collective/instance/config.json` ships -- the same value-by-value
  * comparison `published.unconfigured` makes on the Python side, and for
  * the reason its docstring gives (a half-configured duplicate is the
  * dangerous state, so file-against-file would be the wrong test). If the
@@ -49,7 +49,7 @@
  * images can only ever show the example.
  *
  * `tools/scripts/render_readme_shots.py` is what provides such a
- * repository: it lays `instances/example/` into a scratch copy of this
+ * repository: it lays `examples/the-example-collective/` into a scratch copy of this
  * one, builds it, runs *that tree's own copy of this file*, and brings the
  * four pictures back. Run this script here instead and it refuses, naming
  * every value it finds configured. That is the same answer
@@ -69,7 +69,7 @@
  *   whole of why it is a raster at all.
  * - **The cockpit**, at `?demo=1`. That is the product's own
  *   demonstration mode -- no account, no repository, the example instance
- *   under `instances/example/` compiled into the bundle. Nothing here
+ *   under `examples/the-example-collective/` compiled into the bundle. Nothing here
  *   invents data for it.
  * - **A public event page**, from `site/src/_data/events.json`, which the
  *   build this runs against has already refreshed from the example
@@ -152,7 +152,7 @@ const OUT = path.join(ROOT, 'screenshots');
 const STAGE = path.join(HERE, 'readme-shots-stage');
 const FIXTURE = path.join(ROOT, 'tools', 'tests', 'fixtures', 'certificate-verification.json');
 const DECLARATION = path.join(ROOT, 'instance', 'config.json');
-const EXAMPLE = path.join(ROOT, 'instances', 'example', 'instance', 'config.json');
+const EXAMPLE = path.join(ROOT, 'examples', 'the-example-collective', 'instance', 'config.json');
 const EVENTS = path.join(ROOT, 'site', 'src', '_data', 'events.json');
 const CHARTER = path.join(ROOT, 'brand', 'convener', 'brand.json');
 const BANNER = path.join(ROOT, 'brand', 'convener', 'convener-banner.svg');
@@ -198,7 +198,7 @@ async function refuseUnlessTheExampleDeclares() {
         'A capture made here would carry that identity into every copy of ' +
         'screenshots/, and nothing downstream can read a raster back out ' +
         'again. Run `tools/scripts/render_readme_shots.py`, which builds ' +
-        'this repository as the instance instances/example/ declares and ' +
+        'this repository as the instance examples/the-example-collective/ declares and ' +
         'runs this script inside that build.'
     );
   }

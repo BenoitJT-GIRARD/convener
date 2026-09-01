@@ -24,7 +24,7 @@ by building a repository that *is* another instance:
 1. every tracked file is copied into a scratch tree;
 2. every file `declarations/boundary.yml` hands to the instance is **deleted**
    from that tree (`boundary.instance_files`, so `kept:` files stay);
-3. `instances/example/` is laid into the holes that leaves.
+3. `examples/the-example-collective/` is laid into the holes that leaves.
 
 `tools/scripts/second_instance_build.py` is where that happens, and it is
 there rather than here because it has a second caller:
@@ -130,7 +130,7 @@ What this module cannot see, stated rather than left to be found
 
   `tools/visuals/references/*.png` used to be a second, and are not any more.
   They pin what `visual.py` renders, and that render points at
-  `instances/example/`: the palette, the motif, the strapline,
+  `examples/the-example-collective/`: the palette, the motif, the strapline,
   the wordmark and the address inside the registration QR are the
   example's now, so those three images carry nothing a duplicate would
   have to replace. The blind spot has not moved -- nothing here can read a
@@ -186,7 +186,7 @@ EXAMPLE = second_instance_build.EXAMPLE
 POSTERS = second_instance_build.POSTERS
 
 #: The instance paths that deliberately have no counterpart under
-#: `instances/example/`, each with the reason. Checked in both directions,
+#: `examples/the-example-collective/`, each with the reason. Checked in both directions,
 #: so a path that gains a counterpart cannot stay listed here and a path
 #: that loses one cannot go unnoticed.
 DELIBERATELY_ABSENT: Final = {
@@ -278,7 +278,7 @@ def second_instance_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
     Split out of `second_instance` below because none of it needs a
     toolchain: copying the tracked tree, deleting what the boundary hands
-    the instance and laying `instances/example/` into the holes is
+    the instance and laying `examples/the-example-collective/` into the holes is
     filesystem work and nothing else. What can be proved without a build
     is therefore proved without one, on every machine, whether or not
     `npm ci` has ever been run here -- and the thing that can be is not a
@@ -737,7 +737,7 @@ def test_this_tree_is_what_an_unconfigured_duplicate_looks_like(
     so it is proved on every machine whether or not anything can be built
     here.
 
-    `second_instance_build.lay_out` copies `instances/example/`'s files
+    `second_instance_build.lay_out` copies `examples/the-example-collective/`'s files
     into the holes the
     boundary leaves, so the declaration this build is made from *is* the
     example's, value for value -- which is precisely the state a duplicate

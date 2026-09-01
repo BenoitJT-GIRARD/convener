@@ -3,7 +3,7 @@
  * from.
  *
  * A defect found late and left standing for a while.
- * Demo mode shows `instances/example/`: its five
+ * Demo mode shows `examples/the-example-collective/`: its five
  * records, its board, its counter. Three values *around* those records
  * were still taken from the instance that built the bundle, and each one
  * came out belonging to neither instance:
@@ -52,7 +52,7 @@ function declaration(relative: string): Record<string, string> {
  *  this file: the point of the whole suite is that nothing composes one of
  *  these values from a literal. */
 const THIS_INSTANCE = declaration('instance/config.json');
-const EXAMPLE = declaration('instances/example/instance/config.json');
+const EXAMPLE = declaration('examples/the-example-collective/instance/config.json');
 
 /** The example's own counter, out of its own governance file -- the same
  *  number `demoConfig()` carries, read from the other end so the assertion
@@ -60,7 +60,7 @@ const EXAMPLE = declaration('instances/example/instance/config.json');
 const EXAMPLE_COUNTER = (
   yaml.load(
     readFileSync(
-      resolve(ROOT, 'instances', 'example', 'instance', 'data', 'config.yml'),
+      resolve(ROOT, 'examples', 'the-example-collective', 'instance', 'data', 'config.yml'),
       'utf8',
     ),
   ) as { next_edition_number: number }

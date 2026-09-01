@@ -10,7 +10,7 @@
  * What "not configured" means, mechanically, is decided on the other side
  * of the language boundary and stated once in
  * `tools/convener_ops/declaration/published.py::unconfigured`: a declared value still
- * equal to the one the product ships in `instances/example/instance/
+ * equal to the one the product ships in `examples/the-example-collective/instance/
  * instance.json`. `app/scripts/published.mjs::unconfigured` is this
  * build's reader of it and `vite.config.ts` carries the answer into the
  * bundle; what is tested here is the browser end of that -- the reader of

@@ -1581,7 +1581,7 @@ def test_the_background_carries_no_word_of_this_instance_for_another(
     are used, because a duplicate that happened to write one of them
     would leave the three assertions below passing for a reason that is
     not separation. `Read together` stood in the strapline here and is
-    the strapline `instances/example/` declares, so in a repository whose
+    the strapline `examples/the-example-collective/` declares, so in a repository whose
     instance is the example -- a derived one, and every duplicate before
     it declares its own -- the check demanded the absence of a string the
     duplicate was told to write.

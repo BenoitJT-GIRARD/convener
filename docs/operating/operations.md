@@ -2088,7 +2088,7 @@ build. The edition prefix is frozen besides: it is in published addresses, on
 issued certificates and in key filenames.
 
 **A duplicate that has not edited it says so, on its own pages.** Every value
-in `instances/example/instance/config.json` is invented and reserved — `.test`
+in `examples/the-example-collective/instance/config.json` is invented and reserved — `.test`
 addresses no registry will ever delegate (RFC 2606), a GitHub Pages host nobody
 is asked to register, an organisation that does not exist — so a declaration
 still

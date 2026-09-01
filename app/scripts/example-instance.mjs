@@ -1,7 +1,7 @@
 /**
  * The example instance's own data, on its way into the demonstration.
  *
- * `instances/example/` is a whole second instance, invented -- the one
+ * `examples/the-example-collective/` is a whole second instance, invented -- the one
  * `tools/tests/test_second_instance.py` lays into this repository's own
  * holes to prove that a build made as somebody else carries nothing of the
  * series that happens to run it. It belongs to the product rather than to
@@ -40,12 +40,12 @@
 
 import { readFileSync } from 'node:fs';
 
-/** `instances/example/instance/data/`, from this file's own location -- the app's
+/** `examples/the-example-collective/instance/data/`, from this file's own location -- the app's
  *  build runs with `app/` as its working directory, so a path relative to
  *  the process is not the same thing. */
-const DATA = new URL('../../instances/example/instance/data/', import.meta.url);
+const DATA = new URL('../../examples/the-example-collective/instance/data/', import.meta.url);
 
-const NAMED = 'instances/example/instance/data';
+const NAMED = 'examples/the-example-collective/instance/data';
 
 function read(name) {
   const text = readFileSync(new URL(name, DATA), 'utf8');

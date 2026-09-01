@@ -6,8 +6,8 @@ today.
 
 `declarations/boundary.yml` names the paths an instance owns. This directory
 holds one file for each of them, at the same relative path — so
-`instances/example/instance/config.json` is what
-`instance/config.json` would be, and `instances/example/instance/data/brand.json`
+`examples/the-example-collective/instance/config.json` is what
+`instance/config.json` would be, and `examples/the-example-collective/instance/data/brand.json`
 is what `instance/data/brand.json` would be. Nothing here is read at run time by
 anything: a build that uses these files is a build in which they have
 been copied into the places the boundary names.

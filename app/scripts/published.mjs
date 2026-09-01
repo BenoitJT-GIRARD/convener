@@ -235,10 +235,10 @@ export function editionPrefix() {
  * the sign-in screen a visitor lands on and above the cockpit itself.
  */
 const EXAMPLE_DECLARATION = new URL(
-  '../../instances/example/instance/config.json',
+  '../../examples/the-example-collective/instance/config.json',
   import.meta.url
 );
-const EXAMPLE_NAMED = 'instances/example/instance/config.json';
+const EXAMPLE_NAMED = 'examples/the-example-collective/instance/config.json';
 
 /** The eleven values a declaration carries about *who* is publishing,
  *  under the declaration's own names. Raw, deliberately: the question is

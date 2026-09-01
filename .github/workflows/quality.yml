@@ -326,7 +326,7 @@ jobs:
         # `docs/engineering/architecture.md` and `README.md` each carried a
         # hand-written table of top-level directories. They disagreed, and
         # between them they placed eight of the twelve the repository
-        # tracked then: `.claude/`, `brand/`, `fonts/` and `instances/`
+        # tracked then: `.claude/`, `brand/`, `fonts/` and `examples/`
         # were in neither. The table is generated now -- the
         # directories from `git ls-files`, the owner from
         # `declarations/boundary.yml` -- and `README.md` links to it instead of

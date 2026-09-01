@@ -26,7 +26,7 @@
     "SECURITY.md",
     "CONTRIBUTING.md",
     "services/*/README.md",
-    "instances/*/README.md",
+    "examples/*/README.md",
     "screenshots/README.md",
     "site/**/*.njk",
     "site/README.md",

@@ -404,10 +404,10 @@ describe('the same screen, demonstrated', () => {
       </MemoryRouter>,
     );
     // The example instance's own declarations, through the same reader the
-    // signed-in path uses -- the four instance files `instances/example/`
+    // signed-in path uses -- the four instance files `examples/the-example-collective/`
     // holds, plus the product's two.
     const example = yaml.load(
-      readFileSync(resolve(ROOT, 'instances/example/instance/queue-drain.yml'), 'utf-8'),
+      readFileSync(resolve(ROOT, 'examples/the-example-collective/instance/queue-drain.yml'), 'utf-8'),
     ) as Record<string, number>;
     expect(await alarmField()).toHaveValue(example.alarm_after_hours);
     expect(screen.getByText(/The drain runs every/)).toBeInTheDocument();

@@ -5518,7 +5518,7 @@ def render_visual_fixtures() -> int:
     the three committed reference images were a frozen photograph of
     whichever instance ran the repository -- its palette, its ribbon, its
     strapline, its wordmark -- sitting in `tools/visuals/`, which is the
-    product's. Two things follow from handing it `instances/example/`
+    product's. Two things follow from handing it `examples/the-example-collective/`
     instead, and both are the point rather than a side effect:
 
     - **the images carry no real instance's identity.** They pin what
@@ -5533,7 +5533,7 @@ def render_visual_fixtures() -> int:
       else's and went red on its first push, with nothing wrong.
 
     The fonts still come from `root / "fonts"`: they are the product's,
-    self-hosted and served by it (D-17), and `instances/example/` holds no
+    self-hosted and served by it (D-17), and `examples/the-example-collective/` holds no
     copy of them precisely because a face is not an identity here.
     """
     if len(sys.argv) != 2:
@@ -5582,7 +5582,7 @@ def render_visual_fixtures() -> int:
 #: are rendered from beside each:
 #:
 #: - `instance` -- this instance's own charter and its own declaration.
-#: - `example` -- `instances/example/`, the worked example a duplicate
+#: - `example` -- `examples/the-example-collective/`, the worked example a duplicate
 #:   copies, charter and declaration both.
 #:
 #: The charters the *product* ships are not here. They are read off

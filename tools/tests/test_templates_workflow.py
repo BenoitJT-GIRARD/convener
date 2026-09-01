@@ -107,7 +107,7 @@ def test_the_path_filter_reacts_to_every_charter_swept() -> None:
     """
     paths = set(_TRIGGERS["push"]["paths"])
     assert "instance/config.json" in paths
-    assert "instances/example/instance/config.json" in paths
+    assert "examples/the-example-collective/instance/config.json" in paths
 
     swept = {
         charter.as_posix() for _label, charter, _declared in _template_charters(_ROOT)

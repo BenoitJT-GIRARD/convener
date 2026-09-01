@@ -46,7 +46,7 @@ Nothing here is a shape somebody liked. Four figures decide the field, and
 each is fixed by a measurement this repository already holds:
 
 - **`_STEP`, the field's own unit.** Bounded from below by the heaviest
-  stroke any charter here draws -- `instances/example/` sets
+  stroke any charter here draws -- `examples/the-example-collective/` sets
   `motif.width_ratio` to 0.03 of the shorter side -- because a mark one
   step long, painted at that weight with a round cap at each end, would
   close the gap to the next mark down its column and the field would

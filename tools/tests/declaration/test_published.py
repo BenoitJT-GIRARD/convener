@@ -84,10 +84,11 @@ regenerates it.
 **The second-instance sweep covers both, and can, because it compares two
 instances rather than looking for one.** `test_second_instance.py` builds
 this repository
-with `instances/example/` in place of everything `declarations/boundary.yml`
-hands to the instance, so the series' title and the short name in that
-build are the *example's*; finding this instance's is then unambiguous in
-a way it can never be in a source tree the product's own names live in.
+with `examples/the-example-collective/` in place of everything
+`declarations/boundary.yml` hands to the instance, so the series' title and
+the short name in that build are the *example's*; finding this instance's is
+then unambiguous in a way it can never be in a source tree the product's own
+names live in.
 """
 
 from __future__ import annotations
@@ -119,7 +120,7 @@ _MINIMAL: dict[str, Any] = {
 }
 
 #: A second instance's identity, manifestly synthetic: no real name, no
-#: real address. Read from `instances/example/`, the fictional instance
+#: real address. Read from `examples/the-example-collective/`, the fictional instance
 #: the second-instance build uses, rather than typed
 #: here: a second synthetic identity would be a second answer to "what
 #: does another instance look like", free to drift from the one an actual
@@ -127,9 +128,9 @@ _MINIMAL: dict[str, Any] = {
 #: there, so a field added to the declaration and not to the example
 #: fails loudly rather than being skipped.
 _OTHER_IDENTITY: dict[str, Any] = json.loads(
-    (ROOT / "instances" / "example" / "instance" / "config.json").read_text(
-        encoding="utf-8"
-    )
+    (
+        ROOT / "examples" / "the-example-collective" / "instance" / "config.json"
+    ).read_text(encoding="utf-8")
 )[published.IDENTITY_KEY]
 
 _MINIMAL_IDENTITY: dict[str, Any] = {
@@ -150,6 +151,45 @@ def test_this_repository_declares_one_published_address() -> None:
     assert address.origin + address.path_prefix == address.url
     assert address.app_base == f"{address.path_prefix}app/"
     assert address.host in address.origin
+
+
+def test_the_example_sits_in_a_directory_named_after_what_it_declares() -> None:
+    """The directory and the identity agree, or the example is filed under
+    a word that says nothing about which instance it is.
+
+    It was `instances/example/` -- one letter from `instance/`, saying the
+    word twice on the way to `instances/example/instance/data/`, and giving
+    a second worked example nothing to be called but `example-2/`. Both
+    halves are read: the name off the tree, the organisation out of the
+    file that sits in it.
+    """
+    root = ROOT / published.EXAMPLE_INSTANCE_ROOT
+    declared = published.load_identity(root).organisation
+    expected = published.example_directory_name(declared)
+    assert root.name == expected, (
+        f"the example declares {declared!r} and sits in {root.name!r}. An "
+        f"example directory is named after the organisation its own "
+        f"declaration carries, so that the tree says which instance it is"
+    )
+    assert root.parent.name == "examples", (
+        f"{root.parent.name!r} holds the worked examples; `examples/` is "
+        "what the directory map names and what every reader is sent to"
+    )
+
+
+def test_an_example_directory_name_is_the_organisation_and_nothing_else() -> None:
+    """The reader itself, on the shapes an organisation's name can take.
+
+    Held here rather than trusted, because the check above compares its
+    output with a directory and would agree with a reader that returned the
+    directory's own name for anything.
+    """
+    assert published.example_directory_name("The Example Collective") == (
+        "the-example-collective"
+    )
+    assert published.example_directory_name("  A.B  C ") == "a-b-c"
+    assert published.example_directory_name("Foo & Bar 2") == "foo-bar-2"
+    assert published.example_directory_name("---") == ""
 
 
 def test_the_declaration_is_the_instances_own_file() -> None:
@@ -1390,7 +1430,8 @@ def test_a_deployment_of_the_example_itself_is_unconfigured_in_every_value(
 ) -> None:
     """What a duplicate deployed before it was configured actually looks
     like, and what `tools/tests/test_second_instance.py` builds on every
-    run: `instances/example/`'s own declaration, sitting in `instance/`."""
+    run: `examples/the-example-collective/`'s own declaration, sitting in
+    `instance/`."""
     root = _laid_out(tmp_path, _example_declaration())
     assert published.unconfigured(root) == tuple(
         sorted(published.declared_values(_example_declaration()))

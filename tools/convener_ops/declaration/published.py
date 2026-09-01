@@ -88,6 +88,7 @@ __all__ = [
     "charter_from_data",
     "declared_values",
     "edition_prefix_from_data",
+    "example_directory_name",
     "from_data",
     "identity_from_data",
     "is_placeholder",
@@ -105,19 +106,29 @@ __all__ = [
 INSTANCE_PATH: Final = Path("instance") / "config.json"
 
 #: The declaration the *product* ships, as its own worked example --
-#: `instances/example/`'s copy of the file above, at the same relative
-#: path the boundary gives it. Product-owned: upstream ships it, upstream
-#: maintains it, and `test_second_instance.py` already lays it into this
-#: repository's own hole on every run.
+#: `examples/the-example-collective/`'s copy of the file above, at the same
+#: relative path the boundary gives it. Product-owned: upstream ships it,
+#: upstream maintains it, and `test_second_instance.py` already lays it into
+#: this repository's own hole on every run.
+#:
+#: The directory is named after the organisation the file below declares, and
+#: `example_directory_name` below is what holds the two together. The example was
+#: `instances/example/` once, which said the word twice on its way to
+#: `instances/example/instance/data/`, and said nothing at all about which
+#: instance it was: a second worked example would have had to be
+#: `example-2/`.
 #:
 #: Read here for one purpose: telling an instance that has been configured
 #: from one that is still publishing the template's identity. See
 #: `unconfigured` below for what that comparison is and is not.
-EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
+EXAMPLE_INSTANCE_PATH: Final = (
+    Path("examples") / "the-example-collective" / INSTANCE_PATH
+)
 
 #: The example instance's own root -- the tree the declaration above and
-#: `instances/example/instance/data/brand.json` both sit under, at the same
-#: relative paths a real instance uses. Derived from the path above
+#: `examples/the-example-collective/instance/data/brand.json` both sit
+#: under, at the same relative paths a real instance uses. Derived from the
+#: path above
 #: rather than spelled a second time: one of them moving has to move
 #: the other.
 #:
@@ -128,6 +139,31 @@ EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
 #: repository's own root made those images a frozen photograph of one
 #: real instance's charter, in a product-side directory.
 EXAMPLE_INSTANCE_ROOT: Final = EXAMPLE_INSTANCE_PATH.parent.parent
+
+
+def example_directory_name(organisation: str) -> str:
+    """The directory `organisation`'s worked example belongs in.
+
+    ASCII letters and digits survive, lower-cased; every run of anything
+    else becomes one hyphen, and the ends are trimmed. `The Example
+    Collective` gives `the-example-collective`, which is the one this
+    repository ships.
+
+    Not a general slug function, deliberately. It is the rule
+    `tools/tests/declaration/test_published.py` holds the tree to, and a
+    transliteration nobody can reverse would turn a failing check into a
+    puzzle: an organisation whose name is all non-ASCII gives the empty
+    string here, and the empty string is a directory name nobody can have,
+    which is the loud way for that case to arrive.
+    """
+    out: list[str] = []
+    for character in organisation.lower():
+        if character.isascii() and character.isalnum():
+            out.append(character)
+        elif out and out[-1] != "-":
+            out.append("-")
+    return "".join(out).strip("-")
+
 
 #: `instance/config.json`'s own format version.
 DECLARATION_VERSION: Final = 1
@@ -459,7 +495,7 @@ class Identity:
     there wraps to three lines at 4vw and pushes the composition into the
     ribbon, which is the failure D-08 already names; setting a strapline
     in the feed's `<description>` says nothing a reader can act on. The
-    example instance's two -- `instances/example/instance/config.json` --
+    example instance's two -- `examples/the-example-collective/instance/config.json` --
     are a two-word display line and a full sentence, and neither
     substitutes for the other. The strapline used to be typed
     into `visual.py` with no key at all, which is why a second
@@ -792,7 +828,7 @@ def unconfigured(root: Path | None = None) -> tuple[str, ...]:
 
     **What "not configured" means here, mechanically.** A duplicate is
     unconfigured exactly while its declaration still carries a value the
-    product ships in `instances/example/instance/config.json` -- the
+    product ships in `examples/the-example-collective/instance/config.json` -- the
     invented instance this repository already builds itself as on every
     run of `tools/tests/test_second_instance.py`. Every value in that file
     is unmistakably synthetic and reserved: `.test` is RFC 2606's, no

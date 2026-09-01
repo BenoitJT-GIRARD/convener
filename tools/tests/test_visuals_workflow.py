@@ -168,10 +168,10 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/publication/formats.py",
         "tools/convener_ops/governance/rule.py",
         "tools/convener_ops/cli.py",
-        "instances/example/instance/config.json",
+        "examples/the-example-collective/instance/config.json",
         "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/journey/registration.py",
-        "instances/example/instance/data/brand.json",
+        "examples/the-example-collective/instance/data/brand.json",
         "tools/convener_ops/publication/brand.py",
         "brand/*/brand.json",
         "fonts/**",
@@ -225,7 +225,7 @@ def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:
 
 
 def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
-    """The fixture is rendered from `instances/example/`,
+    """The fixture is rendered from `examples/the-example-collective/`,
     so this instance's own declaration and charter change nothing this job
     could compare -- and naming them would do worse than waste a run. It
     is what made this check go red for a duplicate that had done nothing
@@ -234,15 +234,15 @@ def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
 
     Checked against the *parsed* path list rather than a substring, for
     the reason the test above gives: the two entries that are here name
-    the same two files under `instances/example/`, and a bare `in` check
+    the same two files under `examples/the-example-collective/`, and a bare `in` check
     would match those and pass for the wrong reason. `visuals-production.
     yml` carries the real pair and must -- that job renders real editions,
     as this instance (`test_visuals_production_workflow.py`)."""
     paths = _TRIGGERS["push"]["paths"]
     assert "instance/config.json" not in paths
     assert "instance/data/brand.json" not in paths
-    assert "instances/example/instance/config.json" in paths
-    assert "instances/example/instance/data/brand.json" in paths
+    assert "examples/the-example-collective/instance/config.json" in paths
+    assert "examples/the-example-collective/instance/data/brand.json" in paths
 
 
 def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
@@ -368,11 +368,18 @@ def test_the_threshold_is_justified_against_the_palette_actually_rendered() -> N
     the module comment above it (which names `instance/` for other
     reasons) cannot satisfy this by accident."""
     comment = _SCRIPT.split("const PER_CHANNEL_THRESHOLD")[0].rsplit("/**", 1)[1]
-    assert "instances/example/instance/data/brand.json" in comment
+    assert "examples/the-example-collective/instance/data/brand.json" in comment
     assert "instance/data/brand.json" not in comment.replace(
-        "instances/example/instance/data/brand.json", ""
+        "examples/the-example-collective/instance/data/brand.json", ""
     )
-    example = _ROOT / "instances" / "example" / "instance" / "data" / "brand.json"
+    example = (
+        _ROOT
+        / "examples"
+        / "the-example-collective"
+        / "instance"
+        / "data"
+        / "brand.json"
+    )
     charter = json.loads(example.read_text(encoding="utf-8"))
     for name in ("dominant", "field", "band"):
         assert charter["colour"][name].upper() in comment, (

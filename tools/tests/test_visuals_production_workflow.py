@@ -80,7 +80,7 @@ def test_data_speakers_yml_is_the_one_new_path_this_job_adds() -> None:
 #:
 #: The declaration and the charter are deliberately not here. They used to
 #: be: both jobs rendered this instance's, so both had to
-#: watch the same two files. visuals.yml renders `instances/example/`'s
+#: watch the same two files. visuals.yml renders `examples/the-example-collective/`'s
 #: now, so the two jobs watch *different* declarations and *different*
 #: charters, and `test_the_two_jobs_watch_their_own_instances_files` below
 #: pins that difference rather than letting it read as a drop.
@@ -124,7 +124,7 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     This job renders *real* editions, as the instance that runs this
     repository, so it watches `instance/config.json` and
     `instance/data/brand.json`. visuals.yml renders a fixed fictional fixture as
-    `instances/example/`, so it watches that instance's two files instead
+    `examples/the-example-collective/`, so it watches that instance's two files instead
     -- which is what stopped it going red for every duplicate that chose
     its own colours and had them diffed against a committed image of
     somebody else's poster.
@@ -146,8 +146,8 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
             "instance and cannot be affected by it"
         )
     for path in (
-        "instances/example/instance/config.json",
-        "instances/example/instance/data/brand.json",
+        "examples/the-example-collective/instance/config.json",
+        "examples/the-example-collective/instance/data/brand.json",
     ):
         assert f"'{path}'" in _VISUALS_WORKFLOW, (
             f"{path} is missing from visuals.yml, which renders from it"

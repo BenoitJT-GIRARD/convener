@@ -299,7 +299,7 @@ const ADMITTED = [
   "const DST = resolve(__dirname, '..', 'public', 'keys', 'events');",
   'const url = `${BASE}/keys/events/${eventId}.pub`;',
   "import { useData } from '../data/DataContext';",
-  "const DEMO = `instances/example/${dataDir()}`;",
+  "const DEMO = `examples/the-example-collective/${dataDir()}`;",
   "const permalink = '/data/';",
   "const BUDGET = 'instance/actions-budget.yml';",
   "const DECLARATION = path.join(__dirname, '..', '..', 'instance', 'config.json');",

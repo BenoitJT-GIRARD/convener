@@ -48,7 +48,7 @@ repository already measures:
   rather than one chosen beside it.
 - **`_EDGE_GUTTER`, how far a chevron's arm-ends stand off the edge.** The
   heaviest stroke any charter this repository holds draws a motif at is
-  0.03 of the shorter side (`instances/example/`). At a gutter of exactly
+  0.03 of the shorter side (`examples/the-example-collective/`). At a gutter of exactly
   that, the paint at an arm's end stops half a stroke short of the edge at
   the heaviest charter and further at every other, so no column bleeds off
   the page it is drawn on.

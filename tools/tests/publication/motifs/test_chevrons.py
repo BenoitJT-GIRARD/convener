@@ -86,7 +86,7 @@ def _charters() -> tuple[Path, ...]:
     renders, read the same way rather than listed here."""
     return (
         brand.INSTANCE_PATH,
-        Path("instances") / "example" / brand.INSTANCE_PATH,
+        Path("examples") / "the-example-collective" / brand.INSTANCE_PATH,
         *brand.shipped(ROOT),
     )
 

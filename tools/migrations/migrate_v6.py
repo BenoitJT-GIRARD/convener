@@ -42,8 +42,9 @@ What it does, and the whole of what it does
    announced v5 would be the only statement of that version, and wrong.
 
 **Two trees, not one.** `instance/data/` is this instance's, and
-`instances/example/instance/data/` is the product's own worked example -- the one
-`tools/tests/test_second_instance.py` builds this whole repository as.
+`examples/the-example-collective/instance/data/` is the product's own worked
+example -- the one `tools/tests/test_second_instance.py` builds this whole
+repository as.
 Migrating one and not the other would ship a product whose own example
 fails its own validator at the next `convener-validate`.
 
@@ -117,7 +118,7 @@ _V6_STAMP = "unified schema v6"
 #: The two data directories this repository ships, each holding the same
 #: two files. Relative to the repository root; see the module docstring
 #: for why the example instance is migrated too.
-DATA_DIRS = ("instance/data", "instances/example/instance/data")
+DATA_DIRS = ("instance/data", "examples/the-example-collective/instance/data")
 
 
 class MigrationRefusedError(RuntimeError):
@@ -158,10 +159,10 @@ def migrate_config_text(text: str) -> str:
     """Rename the counter in one `config.yml`, and change nothing else.
 
     Text in, text out: the comments a reader of these files depends on --
-    the paragraph `instances/example/instance/data/config.yml` opens with, most of
-    all -- do not survive a load-and-dump round trip, and a migration that
-    reformatted a file to rename one key would bury the rename it exists
-    to make reviewable.
+    the paragraph `examples/the-example-collective/instance/data/config.yml`
+    opens with, most of all -- do not survive a load-and-dump round trip,
+    and a migration that reformatted a file to rename one key would bury the
+    rename it exists to make reviewable.
 
     A file that already carries only the new name is returned unchanged,
     which is what makes a second run a no-op.

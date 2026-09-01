@@ -204,12 +204,12 @@ const EXAMPLE_DECLARATION = path.join(
   __dirname,
   '..',
   '..',
-  'instances',
-  'example',
+  'examples',
+  'the-example-collective',
   'instance',
   'config.json'
 );
-const EXAMPLE_NAMED = 'instances/example/instance/config.json';
+const EXAMPLE_NAMED = 'examples/the-example-collective/instance/config.json';
 
 /** The eleven values a declaration carries about *who* is publishing,
  *  under the declaration's own names. Raw, deliberately: the question is

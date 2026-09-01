@@ -139,7 +139,7 @@ def motif(root: Path) -> Motif:
 
 
 #: The header a JSON file carries instead of a comment, in the shape
-#: `instance/data/brand.json` and `instances/example/` already use for the
+#: `instance/data/brand.json` and `examples/the-example-collective/` already use for the
 #: same purpose: an underscore-prefixed key no reader looks up.
 _SITE_NOTE: Final = (
     "Generated, not authored: tools/scripts/generate_motif.py writes this "

@@ -64,7 +64,7 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * The example instance's own address in demo mode, for
  * the reason `state/agenda.ts::editionCodePrefix` carries in full. A
  * `speaker.` token is a field of the record on screen, and every record
- * on screen in a demonstration belongs to `instances/example/` -- so this
+ * on screen in a demonstration belongs to `examples/the-example-collective/` -- so this
  * instance's published root, composed with that instance's own edition
  * code, printed an address neither instance serves (`events/mrg-1/` under
  * a root that has never held it) as *the* registration link of a draft

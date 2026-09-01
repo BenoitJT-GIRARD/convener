@@ -4,12 +4,12 @@
  * `src/data/demo.ts` used to hold five speaker records, a board and a
  * governance configuration written by hand -- a third fictional instance,
  * beside the one that runs this repository and the one
- * `instances/example/` already is. Two of its strings named *this*
+ * `examples/the-example-collective/` already is. Two of its strings named *this*
  * organisation's forum and its LinkedIn page, compiled into the cockpit's
  * own bundle, which is why `tools/tests/instance_identity.py`'s deferred
  * register once carried an entry for the file.
  *
- * The assertions below read `instances/example/instance/data/` off the disk and
+ * The assertions below read `examples/the-example-collective/instance/data/` off the disk and
  * compare it with what the bundle actually holds. That is deliberately not
  * a comparison of one constant with itself: what reaches this bundle came
  * through `scripts/example-instance.mjs` and `vite.config.ts`'s own
@@ -24,7 +24,7 @@ import { DEMO_USER, demoConfig, demoSpeakers } from '../src/data/demo';
 import { parseConfig, parseSpeakers } from '../src/data/yaml';
 
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const EXAMPLE = resolve(REPOSITORY, 'instances', 'example', 'instance', 'data');
+const EXAMPLE = resolve(REPOSITORY, 'examples', 'the-example-collective', 'instance', 'data');
 
 function example(name: string): string {
   return readFileSync(resolve(EXAMPLE, name), 'utf8');

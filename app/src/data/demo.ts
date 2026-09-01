@@ -6,7 +6,7 @@
  * anywhere (`net/request.ts` is where that is held, and
  * `tests/demo-network.test.tsx` is what holds it).
  *
- * What it shows is `instances/example/` -- a whole second instance,
+ * What it shows is `examples/the-example-collective/` -- a whole second instance,
  * invented, that the product already ships and that
  * `tools/tests/test_second_instance.py` already lays into this
  * repository's own holes on every run to prove the instance is separable
@@ -106,7 +106,7 @@ function exampleInstance(): ExampleInstance {
     throw new Error(
       'VITE_EXAMPLE_INSTANCE is unset: this bundle was built without ' +
         "vite.config.ts's own define, so demo mode has no instance to show " +
-        '(see instances/example/)',
+        '(see examples/the-example-collective/)',
     );
   }
   return JSON.parse(raw) as ExampleInstance;

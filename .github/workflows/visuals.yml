@@ -36,7 +36,7 @@ name: Visuals
 #   to do with rendering, because a path filter has no finer grain than a
 #   file, and the alternative is silently not re-checking the one function
 #   in it this job depends on.
-# - `instances/example/instance/config.json` -- the declaration the
+# - `examples/the-example-collective/instance/config.json` -- the declaration the
 #   fixture is rendered from. The composition reads
 #   one: the wordmark band is `identity.forum_host`, the hero band is
 #   `identity.strapline`, and two of the three "what to expect" rows name
@@ -64,7 +64,7 @@ name: Visuals
 #   registration QR encodes. Its modules are pixels this job compares like
 #   any others, and they are the one part of the composition no text sweep
 #   anywhere in this repository can read.
-# - `instances/example/instance/data/brand.json` -- the charter the fixture is
+# - `examples/the-example-collective/instance/data/brand.json` -- the charter the fixture is
 #   rendered from, reached through `tools/convener_ops/publication/brand.py` by
 #   `visual.py`'s `_load_colours` and `brand.py`'s `motif`. The
 #   example's, for the reason two entries up.
@@ -160,10 +160,10 @@ on:
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'
       - 'tools/convener_ops/cli.py'
-      - 'instances/example/instance/config.json'
+      - 'examples/the-example-collective/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'instances/example/instance/data/brand.json'
+      - 'examples/the-example-collective/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
       - 'brand/*/brand.json'
       - 'fonts/**'
@@ -183,10 +183,10 @@ on:
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'
       - 'tools/convener_ops/cli.py'
-      - 'instances/example/instance/config.json'
+      - 'examples/the-example-collective/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'instances/example/instance/data/brand.json'
+      - 'examples/the-example-collective/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
       - 'brand/*/brand.json'
       - 'fonts/**'

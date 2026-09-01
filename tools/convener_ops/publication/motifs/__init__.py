@@ -142,7 +142,7 @@ RIBBON: Final = Family(
 )
 
 #: The product's own mark in straight segments -- what `brand/convener/
-#: brand.json` and `instances/example/` are drawn with, and what a
+#: brand.json` and `examples/the-example-collective/` are drawn with, and what a
 #: duplicate that has chosen no charter of its own gets.
 BRACKET: Final = Family(
     name="bracket",

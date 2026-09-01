@@ -51,7 +51,7 @@ imprimees dans les instituts` and `speakers-from-app.yml`'s
 `seed_questions` are invisible here -- and they must be, because they
 exist to prove accented text survives a round trip through this
 repository's own readers and writers. The same is true of every value
-under `instance/data/`, `instances/` and `instance/public-data/`. The rule is about the
+under `instance/data/`, `examples/` and `instance/public-data/`. The rule is about the
 language a *maintainer* writes in, never the language an event runs in.
 
 **Function words, not accents.**

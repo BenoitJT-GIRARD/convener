@@ -27,7 +27,7 @@ export declare function editionPrefix(): string;
 export declare function isEditionPrefix(value: unknown): boolean;
 
 /** Which of this instance's declared values are still the ones the product
- *  ships in `instances/example/instance/config.json` -- empty for an
+ *  ships in `examples/the-example-collective/instance/config.json` -- empty for an
  *  instance somebody has configured, and the names of the offending keys
  *  for one nobody has. Sorted, so a bundle's own define is stable between
  *  builds. */

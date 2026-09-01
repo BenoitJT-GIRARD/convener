@@ -1,4 +1,4 @@
-"""This repository, built as the instance `instances/example/` declares.
+"""This repository, built as the instance `examples/the-example-collective/` declares.
 
 The manoeuvre is one thing and it has two consumers, so it lives here
 rather than inside either of them. `tools/tests/test_second_instance.py`
@@ -17,7 +17,7 @@ by building a repository that *is* another instance:
 1. every tracked file is copied into a scratch tree;
 2. every file `declarations/boundary.yml` hands to the instance is **deleted**
    from that tree (`boundary.instance_files`, so `kept:` files stay);
-3. `instances/example/` is laid into the holes that leaves.
+3. `examples/the-example-collective/` is laid into the holes that leaves.
 
 The one exception is a `regenerated:` path, which the tree keeps: it is
 rewritten in full by a scheduled job on both sides of any merge, so a
@@ -52,7 +52,7 @@ ROOT = repo_root()
 #: Where the fictional instance lives. Product-owned: upstream ships it,
 #: upstream maintains it, and a duplicate that edits it is editing an
 #: example rather than its own configuration.
-EXAMPLE = Path("instances") / "example"
+EXAMPLE = Path("examples") / "the-example-collective"
 
 #: Where this build puts the posters. Not `tools/visuals/`, which the tracked
 #: tree already uses for the reference renders and which

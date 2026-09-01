@@ -14,7 +14,7 @@
  * `src/data/demo.ts` already shows, the one
  * `tools/tests/test_second_instance.py` lays into this repository's own
  * holes on every run. Its four configuration files are in
- * `instances/example/instance/`; the two product files are this
+ * `examples/the-example-collective/instance/`; the two product files are this
  * repository's own, because they are the product's and a duplicate does not
  * have its own copy of them.
  *
@@ -49,14 +49,14 @@ import yaml from 'js-yaml';
 const ROOT = new URL('../../', import.meta.url);
 
 /** The two files in `declarations/` the product owns. Not taken from
- *  `instances/example/`, which does not hold them and must not: they are
+ *  `examples/the-example-collective/`, which does not hold them and must not: they are
  *  the product's, and a duplicate inherits them rather than writing its
  *  own. */
 const PRODUCT_FILES = ['declarations/boundary.yml', 'declarations/integrations.yml'];
 
 /** The four the instance owns, read from the example's own copies. Named by
  *  their `instance/` path, which is where they sit in the tree the screen
- *  describes -- `instances/example/` is where this build finds them, not
+ *  describes -- `examples/the-example-collective/` is where this build finds them, not
  *  what they are. */
 const INSTANCE_FILES = [
   'instance/actions-budget.yml',
@@ -86,7 +86,7 @@ export function exampleSettings() {
   const files = {};
   for (const name of PRODUCT_FILES) files[name] = read(name, name);
   for (const name of INSTANCE_FILES) {
-    files[name] = read(`instances/example/${name}`, `instances/example/${name}`);
+    files[name] = read(`examples/the-example-collective/${name}`, `examples/the-example-collective/${name}`);
   }
 
   const workflow = yaml.load(read(DRAIN_WORKFLOW, DRAIN_WORKFLOW));

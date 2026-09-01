@@ -19,7 +19,7 @@ names every path an instance owns, each configuration file states its own
 answer in its own header, and this repository builds itself as a second,
 invented instance on every test run — deleting everything the declaration
 hands to the instance, laying
-[`instances/example/`](../../instances/example/README.md)'s files into the holes,
+[`examples/the-example-collective/`](../../examples/the-example-collective/README.md)'s files into the holes,
 and refusing any trace of the first instance in the output.
 
 ## What the declaration hands over and nobody has to touch

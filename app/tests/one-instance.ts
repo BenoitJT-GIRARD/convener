@@ -2,7 +2,7 @@
  * example -- the condition under which a test about the *difference*
  * between two instances has no subject.
  *
- * `convener_ops.derivation.repository` lays `instances/example/` into every path
+ * `convener_ops.derivation.repository` lays `examples/the-example-collective/` into every path
  * `declarations/boundary.yml` hands to the instance, because a product
  * repository with those paths merely deleted neither starts its own
  * suite nor builds: several modules read an instance path while they
@@ -42,7 +42,7 @@ function declaration(relative: string): unknown {
 export const ONE_INSTANCE: boolean =
   unconfiguredFrom(
     declaration('instance/config.json'),
-    declaration('instances/example/instance/config.json'),
+    declaration('examples/the-example-collective/instance/config.json'),
   ).length > 0;
 
 /** Why a skipped test is skipped, in the words a reader needs. */

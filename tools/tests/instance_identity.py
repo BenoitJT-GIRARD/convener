@@ -36,7 +36,7 @@ phrase.
 
 **No entry claims a built artefact today, and that is a result rather
 than a simplification.** The last two that did are closed: the
-demonstration points at `instances/example/`, and the
+demonstration points at `examples/the-example-collective/`, and the
 poster's wordmark and strapline are derived from the declaration. The machinery below
 (`carried_into`, `allowance`, `literal_runs`, `allowed_for`,
 `claimed_by_any`) stays exactly as it was -- it is what an entry has to
@@ -245,8 +245,8 @@ def claimed_by_any(relative: str) -> bool:
 #: Why a test about the separation of two instances cannot run in a
 #: repository that ships only one.
 #:
-#: `convener_ops.derivation.repository` lays `instances/example/` into every path
-#: the boundary hands to the instance, because a product repository with
+#: `convener_ops.derivation.repository` lays `examples/the-example-collective/`
+#: into every path the boundary hands to the instance, because a product repository with
 #: those paths merely deleted neither starts its own suite nor builds --
 #: `paths.repo_root` finds a repository by `instance/data/config.yml` and the
 #: product's default charter has no `motif`. The consequence is exact and

@@ -22,7 +22,7 @@ page is the product's, shipped filled in, and every duplicate serves it to
 its own volunteers: the page states the window and the test says which
 window. These two files are the *instance's* -- `owner: instance` in their
 own headers -- and the copies a fresh duplicate starts from are
-`instances/example/instance/`'s, whose headers are five lines and work
+`examples/the-example-collective/instance/`'s, whose headers are five lines and work
 nothing out. Requiring the sentences would therefore fail on a duplicate
 that had done nothing wrong. So a header that states a figure is held to
 it, and a header that states none is held to nothing; what stops that
@@ -352,7 +352,7 @@ def test_a_header_stating_a_stale_figure_is_reported() -> None:
 def test_a_header_that_works_nothing_out_is_held_to_nothing() -> None:
     """The example instance's own headers, which is what a fresh duplicate
     starts from: five lines, no arithmetic, nothing to be stale."""
-    example = ROOT / "instances" / "example" / "instance"
+    example = ROOT / "examples" / "the-example-collective" / "instance"
     prose = {
         QUEUE_DRAIN: header_prose(
             (example / QUEUE_DRAIN.name).read_text(encoding="utf-8")

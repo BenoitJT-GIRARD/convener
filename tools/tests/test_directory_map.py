@@ -3,7 +3,7 @@
 Two hand-written tables of top-level directories existed, nine rows in
 `README.md` and eight in `docs/engineering/architecture.md`. They disagreed with each
 other, and between them they placed eight of the twelve directories this
-repository tracked then: `.claude/`, `brand/`, `fonts/` and `instances/` were
+repository tracked then: `.claude/`, `brand/`, `fonts/` and `examples/` were
 in neither, and `config/` was in one of the two.
 `tools/scripts/generate_directory_map.py` derives the one that survives, and
 this module holds the halves that make that stick.
@@ -70,7 +70,7 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "docs": ("engineering/architecture.md", "handbook/governance/register.md"),
     "fonts": ("Archivo-LICENSE.txt",),
     "instance": ("data/config.yml", "data/schema.md", "keys/signing/README.md"),
-    "instances": ("example/README.md",),
+    "examples": ("the-example-collective/README.md",),
     "screenshots": ("README.md",),
     "services": ("auth-proxy/src/index.js",),
     "site": ("src/index.njk",),

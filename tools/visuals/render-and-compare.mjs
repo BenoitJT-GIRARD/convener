@@ -72,7 +72,7 @@
  *
  * One series, at one charter, and the gap that leaves
  * ------------------------------------------------------
- * `brand/` holds four charters a duplicate may choose, `instances/example/`
+ * `brand/` holds four charters a duplicate may choose, `examples/the-example-collective/`
  * and `instance/` hold one each, and `motifs/` draws five families. This
  * script pins three images, at one of those six charters. What a series
  * per charter would add was measured rather than argued, over the pages
@@ -162,7 +162,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  references), and below the smallest gap between any two colours this
  *  composition actually paints next to each other.
  *
- *  **That palette is `instances/example/instance/data/brand.json`'s.**
+ *  **That palette is `examples/the-example-collective/instance/data/brand.json`'s.**
  *  `render_visual_fixtures` renders as the example instance, so the
  *  charter this number has to clear is the example's -- dark green
  *  #0A4A2A, gold #E8CA6F, cream #F7F2E4, ink #2F3A34, muted ink #4A5A52,
