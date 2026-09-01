@@ -916,12 +916,29 @@ a.btn--ghost:hover { border-color: var(--dominant); }
   white-space: nowrap;
 }
 .archive__action {
+  /* The dominant on the tint, not field-text on it. Found by running
+   * check-a11y against each of the four charters a duplicate may name,
+   * which is the first time any of them had been built: field-text on
+   * field-tint measures 4.72 at this instance's charter and fails at two
+   * of the four -- 4.50 at brand/chevrons (axe, measuring unrounded, calls
+   * it 4.498 and refuses it) and 3.87 at brand/steps. It was never a
+   * pairing any charter's own contrast table held, so
+   * generate_brand_css.py --check could not see it, and check-a11y only
+   * ever renders one charter. Both are now recorded as
+   * dominant_on_field_tint under brand/, so the recomputation covers it.
+   *
+   * The dominant is 8.18 to 10.95 on the same tint at every charter this
+   * repository holds, and it is what .archive__action--alt below and this
+   * rule's own :hover already reach for, on the identical argument
+   * .btn--primary makes: the dominant is the ink this palette can put
+   * anywhere. field-text keeps every ground it was derived against --
+   * white and the band -- and loses the one it was not. */
   font-family: var(--ff-display);
   font-size: .74rem;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--field-text);
+  color: var(--dominant);
   border-bottom: 0;
   padding: .35rem .6rem;
   background: var(--field-tint);

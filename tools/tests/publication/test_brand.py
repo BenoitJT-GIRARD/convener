@@ -217,8 +217,12 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
     # Nine at first, plus two the verify page's own
     # panel needed (field_text_on_band, ink_muted_on_band), plus one
     # (field_on_dominant) the accessibility sweep found had gone
-    # unnamed.
-    assert checked == 12
+    # unnamed, plus the two the archive's own pills set on a tint
+    # (dominant_on_field_tint, dominant_on_dominant_tint) -- found by
+    # building the showcase at each of the four charters a duplicate may
+    # name, where the ink that pill used to take failed AA at two of them
+    # against a ground no table here had ever measured it on.
+    assert checked == 14
 
 
 def test_the_dominant_on_the_field_is_the_measurement_d16_turned_on() -> None:

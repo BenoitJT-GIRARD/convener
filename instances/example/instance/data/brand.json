@@ -49,6 +49,8 @@
     "field_text_on_band": 5.49,
     "ink_muted_on_band": 6.53,
     "field_on_dominant": 6.47,
+    "dominant_on_field_tint": 8.18,
+    "dominant_on_dominant_tint": 7.63,
     "_forbidden": "the field as text on white (1.60); rule as text on any ground (1.76 on white); white as text on the field (1.60) -- which is why a primary button fills with the dominant."
   },
 

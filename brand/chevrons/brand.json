@@ -40,7 +40,7 @@
   },
 
   "contrast": {
-    "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not, for every charter this repository ships and not only the one in force: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The twelve pairings are the same twelve the system holds every palette to -- the composition creates them, not this palette.",
+    "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not, for every charter this repository ships and not only the one in force: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The fourteen pairings are the same fourteen the system holds every palette to -- the composition creates them, not this palette. It was twelve until the showcase's own archive pill was built at each of these charters for the first time and two of them failed AA on a pairing no table here named; site/src/style.css::.archive__action carries that measurement.",
     "dominant_on_field": 7.0,
     "black_on_field": 12.26,
     "ink_on_field": 6.01,
@@ -53,6 +53,8 @@
     "field_text_on_band": 4.97,
     "ink_muted_on_band": 6.82,
     "field_on_dominant": 7.0,
+    "dominant_on_field_tint": 9.0,
+    "dominant_on_dominant_tint": 9.0,
     "_forbidden": "the field as text on white (1.71); rule as text on any ground (1.71 on white); white as text on the field (1.71) -- which is why a primary button fills with the dominant."
   },
 
