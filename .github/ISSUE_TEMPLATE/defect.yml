@@ -1,0 +1,54 @@
+# A defect in the product, and the one distinction that decides whether an
+# issue here can be acted on at all.
+#
+# This product is duplicated rather than installed, so most of what looks
+# like a defect from inside a running series is that series' own records,
+# settings or secrets -- which live in a private repository this one cannot
+# see and which only that operator can change. `SECURITY.md` already draws
+# the same line for a vulnerability report, under *What is out of scope*.
+# The two required checkboxes below are that line, asked before the writing
+# rather than answered after it.
+name: A defect in the product
+description: Something the product's own code does wrong, in any instance.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CONTRIBUTING.md says what an issue can expect back, and it is
+        short. A pull request that leaves the gates green is a great deal
+        more likely to be merged than an issue is to be answered.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Which of the two this is
+      options:
+        - label: >-
+            This is about the product's own code, rather than about the
+            records, settings or secrets of a running series. Those belong
+            to that series' operator, who is the only person able to act on
+            them.
+          required: true
+        - label: >-
+            This is not a security problem. SECURITY.md has a private
+            channel for one, and an issue is public from the moment it is
+            opened.
+          required: true
+  - type: input
+    id: surface
+    attributes:
+      label: Where
+      description: >-
+        The cockpit, the public showcase, a workflow, one of the three
+        relays, or a command under tools/.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What you did, and what happened instead
+      description: >-
+        Enough for somebody else to reach the same result. A version of
+        this product is a state of its default branch: CHANGELOG.md names
+        them, and the commit you are on says it exactly.
+    validations:
+      required: true

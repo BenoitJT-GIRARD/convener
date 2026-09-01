@@ -1,0 +1,24 @@
+# What the *New issue* button offers, before an issue exists.
+#
+# The link below is the whole reason this file is here, and its value is
+# entirely in *when* it is shown. An issue is public from the moment it is
+# opened and there is no way to make it private afterwards, so a
+# vulnerability described in one is published by the act of reporting it --
+# and `SECURITY.md` says so to whoever has already found the security page,
+# which is the reader who was never going to open an issue anyway. This is
+# what says it to the reader who has.
+#
+# `blank_issues_enabled: true`, deliberately. `README.md` promises that
+# issues are read and promises nothing else, and a chooser with no way past
+# it turns a report somebody was willing to write into one they abandon. The
+# form beside this file is offered rather than required, for the same
+# reason.
+blank_issues_enabled: true
+contact_links:
+  - name: A security problem — please do not open an issue
+    url: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability
+    about: >-
+      Report it privately instead: the Security tab of this repository, then
+      Report a vulnerability. That opens a draft advisory only the
+      maintainers can read. SECURITY.md says what is in scope, what is not,
+      and what a report can expect back.
