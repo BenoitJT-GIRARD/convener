@@ -1098,8 +1098,8 @@ def test_a_charter_still_writing_the_ribbons_own_field_names_is_refused(
     names the ink after one drawing, and a charter whose motif is a
     lattice would be writing it too.
 
-    Answered by name at the load, not by a `KeyError` from inside a
-    template, and pointed at the migration that renames it.
+    Answered by name at the load, and told which two keys to rename,
+    rather than meeting a `KeyError` from inside a template.
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
     section = data[brand.MOTIF_KEY]
@@ -1113,18 +1113,18 @@ def test_a_charter_still_writing_the_ribbons_own_field_names_is_refused(
 
     message = str(raised.value)
     assert brand.INSTANCE_PATH.as_posix() in message
-    assert brand.MOTIF_MIGRATION in message
+    assert "Rename the two keys in the file" in message
     for old, new in brand.SUPERSEDED_MOTIF_FIELDS.items():
         assert old in message
         assert new in message
 
 
-def test_a_motif_that_names_no_family_is_refused_and_says_what_to_run(
+def test_a_motif_that_names_no_family_is_refused_and_says_what_to_add(
     fake_repo: Path,
 ) -> None:
     """A section that cannot say which drawing it means. Guessing the one
     this product used to draw is the silent fall back the registry exists
-    to refuse, so this stops instead and names the migration."""
+    to refuse, so this stops instead and asks for the family by name."""
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
     del data[brand.MOTIF_KEY][brand.MOTIF_FAMILY]
     _write_json(fake_repo / BRAND_PATH, data)
@@ -1135,7 +1135,7 @@ def test_a_motif_that_names_no_family_is_refused_and_says_what_to_run(
     message = str(raised.value)
     assert brand.INSTANCE_PATH.as_posix() in message
     assert brand.MOTIF_FAMILY in message
-    assert brand.MOTIF_MIGRATION in message
+    assert "Add the family to the section" in message
 
 
 def test_a_family_this_product_cannot_draw_is_refused_by_name(
@@ -1169,7 +1169,7 @@ def test_the_command_refuses_a_superseded_motif_and_names_the_migration(
 
     assert main([]) == 1
     captured = capsys.readouterr()
-    assert brand.MOTIF_MIGRATION in captured.err
+    assert "Add the family to the section" in captured.err
     assert "clears AA" not in captured.out
 
 
@@ -2030,7 +2030,7 @@ def test_a_charter_still_naming_its_colours_after_hues_is_refused(
         brand.load(fake_repo)
     message = str(raised.value)
     assert brand.INSTANCE_PATH.as_posix() in message
-    assert brand.COLOUR_MIGRATION in message
+    assert "Rename the keys in the file" in message
     for old in brand.SUPERSEDED_COLOURS:
         assert old in message
 
@@ -2049,5 +2049,5 @@ def test_the_command_stops_on_a_charter_that_still_names_hues(
 
     assert main([]) == 1
     captured = capsys.readouterr()
-    assert brand.COLOUR_MIGRATION in captured.err
+    assert "Rename the keys in the file" in captured.err
     assert "clears AA" not in captured.out

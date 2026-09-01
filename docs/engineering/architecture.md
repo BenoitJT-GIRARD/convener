@@ -80,7 +80,7 @@ publishes it.*
 | `instance/` | instance | Everything this series owns rather than the code: the store itself under `data/`, the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. |
 | `services/` | product | Three small Cloudflare Workers with no server of their own to maintain: `auth-proxy` relays a volunteer's GitHub sign-in; `form-relay` turns a speaker-proposal submission into a commit; `signup-relay` does the same for a registration or a survey response. |
 | `site/` | product | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
-| `tools/` | product | Every operational tool, whatever the language: the `convener_ops` package every automated workflow runs, the generators under `scripts/`, the one-shot migrations under `migrations/`, the Node rendering harness under `visuals/`, and the tests for all of them. |
+| `tools/` | product | Every operational tool, whatever the language: the `convener_ops` package every automated workflow runs, the generators under `scripts/`, the Node rendering harness under `visuals/`, and the tests for all of them. |
 
 `declarations/boundary.yml` also names paths sitting on the other side of the directory
 that holds them:

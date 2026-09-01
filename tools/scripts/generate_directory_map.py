@@ -221,7 +221,7 @@ PURPOSE: Final[Mapping[str, str]] = {
     "tools": (
         "Every operational tool, whatever the language: the `convener_ops` "
         "package every automated workflow runs, the generators under "
-        "`scripts/`, the one-shot migrations under `migrations/`, the Node "
+        "`scripts/`, the Node "
         "rendering harness under `visuals/`, and the tests for all of them."
     ),
 }

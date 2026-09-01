@@ -175,11 +175,11 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-# `scripts` and `migrations` sit beside the package rather than inside
-# it -- the wheel ships `convener_ops` alone -- and are imported by their
-# tests. Named here rather than reached through `mypy_path`, so that the
-# same list states what is checked and where the modules are found.
-files = ["convener_ops", "tests", "scripts", "migrations"]
+# `scripts` sits beside the package rather than inside it -- the wheel
+# ships `convener_ops` alone -- and is imported by its tests. Named here
+# rather than reached through `mypy_path`, so that the same list states
+# what is checked and where the modules are found.
+files = ["convener_ops", "tests", "scripts"]
 
 [tool.coverage.run]
 # `branch` belongs here, not under [tool.coverage.report] -- coverage.py

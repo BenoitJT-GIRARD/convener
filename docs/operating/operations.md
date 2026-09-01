@@ -2175,32 +2175,27 @@ anyone who opens this repository.
 workflow step between the first two touches the network — the arithmetic is
 a pure function, and no test in this repository ever makes an API call.
 
-## The one-shot scripts
+## The one-shot script
 
-`tools/migrations/migrate_v3.py` and `tools/scripts/open_vote_window.py` have
-both already run, and their effects are committed. They are kept, separately, and neither
-is deleted nor merged into the other.
+`tools/scripts/open_vote_window.py` has already run and its effect is
+committed. It stamped `selection.opened_on` on the leads that had none, so
+the board had a window to vote in, and
+`tools/tests/scripts/test_open_vote_window.py` pins field by field what it
+touched and what it left alone. It is kept because the state it reads is
+one the records can still be in: a lead approved with no window opened is
+an ordinary record.
 
-Kept, because each is the record of what was done to the data on a day
-nobody will remember. Both are pure functions with a `main()` that reads,
-transforms and writes, both are idempotent, and each has a test file that
-pins, field by field, what it touched and — more usefully — what it left
-alone: `tools/tests/migrations/test_migrate_v3.py` and
-`tools/tests/scripts/test_open_vote_window.py`. Deleting the scripts would leave the
-two commits that changed every record in `instance/data/speakers.yml` with no
-statement of what they changed.
-
-Separate, because they are two decisions taken for two reasons. The
-migration moved every record to schema v3; the backfill stamped
-`selection.opened_on` on the leads so the board had a window to vote in.
-Merging them would fuse two acts into one file, and with them the two
-"nothing else was touched" proofs, which are per-act or they prove nothing.
-It would also make re-running the migration re-apply a backfill that was
-never part of it. This repository's argument throughout is that the history
-is the record; merging two executed records is rewriting one of them.
-
-Neither should be run again. If a third one-shot is ever needed, it is a
-third script with a third test, not an edit to either of these.
+Six migrations sat beside it under `tools/migrations/` until they were
+deleted. Each had already run here, and nothing in this repository has ever
+been pushed anywhere, so no data anywhere can be in the shape any of them
+read — schema v2 to v5, or a charter under the colour and motif key names
+that preceded the ones every template reads today. What each one did to the
+records is the diff of the commit that ran it, which is the same place this
+project reads every other act of the board from (D-01). What a duplicate is
+owed is the refusal rather than the script, and it has it:
+`convener_ops/publication/brand.py` refuses a charter under the old names,
+says which key became which, and asks for a rename anybody can make in a
+text editor.
 
 ## Reading the register (decision commits)
 

@@ -223,7 +223,7 @@ export interface SpeakerSelection {
   decided_on: string;
 }
 
-/** `''` is a real stored value, not an oversight: `tools/migrations/migrate_v3.py`
+/** `''` is a real stored value, not an oversight: the migration to schema v3
  *  writes it for every speaker whose status never reached a publishable
  *  state, and `tools/convener_ops/governance/validate.py` accepts it. It is spelled out here
  *  so that code reading `consent` has to face it -- neither `''` nor

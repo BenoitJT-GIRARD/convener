@@ -281,8 +281,8 @@ def test_each_half_of_the_comparison_reaches_the_whole_of_tools(
     hook_id: str, subcommand: str
 ) -> None:
     """Non-vacuity. Two empty sets are equal, and so are two sets that
-    happen to hold only the package: the four trees under `tools/` arrived
-    there at four different times, and each has been outside one of these
+    happen to hold only the package: the three trees under `tools/` arrived
+    there at three different times, and each has been outside one of these
     two gates at some point."""
     halves = (
         (hook_id, _hook_reach(hook_id)),
@@ -292,7 +292,6 @@ def test_each_half_of_the_comparison_reaches_the_whole_of_tools(
         for tree in (
             "tools/convener_ops/",
             "tools/scripts/",
-            "tools/migrations/",
             "tools/tests/",
         ):
             assert any(path.startswith(tree) for path in reach), (
@@ -314,7 +313,6 @@ def test_the_comparison_can_tell_a_narrower_hook_from_the_workflow() -> None:
     missed = _workflow_reach("check") - narrowed
     assert missed, "a hook scoped to the package alone was found to miss nothing"
     assert any(path.startswith("tools/scripts/") for path in missed)
-    assert any(path.startswith("tools/migrations/") for path in missed)
     assert any(path.startswith("tools/tests/") for path in missed)
 
 

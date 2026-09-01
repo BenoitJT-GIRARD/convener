@@ -27,7 +27,7 @@ horizontal bands laid across it. Three of them used to be `purple`,
 measured -- and the product's own charter holds a navy under `purple` and
 a coral under `turquoise`. `SUPERSEDED_COLOURS` below still knows those
 three spellings, so that a charter written before the rename is answered
-by name and pointed at the migration rather than raising a `KeyError`
+by name and told which key became which, rather than raising a `KeyError`
 inside a template.
 
 **A default palette is the product's too**, `assets/brand/convener/brand.json`,
@@ -85,8 +85,9 @@ and `ribbon_width_ratio` and named no family at all -- two field names
 that could only ever be true of that one drawing, and a section that
 could not say which drawing it meant. `SUPERSEDED_MOTIF_FIELDS` still
 knows those two spellings, and a section carrying no `family` is answered
-the same way, so a charter written before the rename is pointed at
-`MOTIF_MIGRATION` rather than meeting a `KeyError` inside a template. A
+the same way, so a charter written before the rename is told
+which two fields to rename rather than meeting a `KeyError` inside a
+template. A
 `family` naming a drawing this product does not have is refused by
 `publication/motifs/` itself, which lists the ones it does.
 
@@ -112,14 +113,12 @@ from . import motifs
 
 __all__ = [
     "AA_NORMAL_TEXT",
-    "COLOUR_MIGRATION",
     "DEFAULT_PATH",
     "INSTANCE_PATH",
     "MOTIF_COMMON_FIELDS",
     "MOTIF_FAMILY",
     "MOTIF_FIELDS",
     "MOTIF_KEY",
-    "MOTIF_MIGRATION",
     "SHIPPED_DIR",
     "SHIPPED_FILE",
     "SUPERSEDED_COLOURS",
@@ -200,15 +199,10 @@ MOTIF_FIELDS: Final[dict[str, tuple[str, ...]]] = {
 #: colour the motif is stroked in, and that stroke's weight as a fraction
 #: of the composition's shorter side -- so both stay true of a drawing that
 #: is not the ribbon, and neither keeps the ribbon's name.
-#: `tools/migrations/migrate_motif_family.py` renames from this same table.
 SUPERSEDED_MOTIF_FIELDS: Final = {
     "ribbon_stroke": "stroke",
     "ribbon_width_ratio": "width_ratio",
 }
-
-#: The command that renames them and writes the family down, quoted in the
-#: refusal, as it is run from `tools/`.
-MOTIF_MIGRATION: Final = "uv run python migrations/migrate_motif_family.py"
 
 #: WCAG 2.1's floor for normal text. AAA is 7; nothing here is held to
 #: AAA, because the charter records pairings that are legitimately AA.
@@ -222,18 +216,13 @@ _COLOUR_SECTIONS: Final = ("colour", "derived")
 #: positions, and the position each became. Every reader looks a colour up
 #: by name, so a charter still under the old names is a charter nothing
 #: here can draw from; this is what lets `load` say that in one sentence.
-#: `tools/migrations/migrate_charter_colour_names.py` renames from this
-#: same table, so the migration and the refusal can never disagree about
-#: which names moved where.
+#: The refusal below reads this table, so the rename it asks for and the
+#: names it refuses can never disagree about which moved where.
 SUPERSEDED_COLOURS: Final = {
     "purple": "dominant",
     "turquoise": "field",
     "cream": "band",
 }
-
-#: The command that renames them, quoted in the refusal, as it is run from
-#: `tools/`.
-COLOUR_MIGRATION: Final = "uv run python migrations/migrate_charter_colour_names.py"
 
 
 class SupersededCharterError(RuntimeError):
@@ -244,9 +233,9 @@ class SupersededCharterError(RuntimeError):
     under the old names answers none of the names anything asks for.
     Colours named after hues is the first; a `motif` under the ribbon's own
     field names, or naming no family at all, is the second. A duplicate
-    that upgrades without running the migration would otherwise meet a
+    that updates without renaming its own keys would otherwise meet a
     `KeyError` raised from inside a format string, which names neither the
-    file to open nor the command to run.
+    file to open nor the key to write.
 
     Carries the whole message rather than a code, for the reason
     `MissingMotifError` gives.
@@ -500,15 +489,15 @@ def _refuse_superseded_names(charter: dict[str, Any], *, named: str) -> None:
     raise SupersededCharterError(
         f"{named} names its colours after hues ({', '.join(found)}). The "
         f"charter names positions in the composition now ({moved}), and every "
-        "template reads a colour by that name. Run "
-        f"`{COLOUR_MIGRATION}` from `tools/` to rename them; no value changes."
+        "template reads a colour by that name. Rename the keys in the file; "
+        "no value changes."
     )
 
 
 def _refuse_superseded_motif(section: Any, *, named: str) -> None:
     """Stop on a `motif` written for the one drawing there used to be.
 
-    Three shapes, and the first two point at the same migration. A section
+    Three shapes, and the first two ask for the same rename. A section
     still under `ribbon_stroke` and `ribbon_width_ratio` names the ink
     after the drawing, which is the defect the colour keys had one section
     higher up. A section naming no `family` cannot say which drawing it
@@ -532,8 +521,8 @@ def _refuse_superseded_motif(section: Any, *, named: str) -> None:
             f"({', '.join(found)}). The section names the drawing it wants "
             f"now ({MOTIF_FAMILY}), and the colour and weight it is stroked "
             f"in are the same two fields whatever that drawing is ({moved}). "
-            f"Run `{MOTIF_MIGRATION}` from `tools/` to rename them and write "
-            "the family down; no value changes."
+            "Rename the two keys in the file and add the family beside them; "
+            "no value changes."
         )
 
     if MOTIF_FAMILY not in section:
@@ -542,8 +531,8 @@ def _refuse_superseded_motif(section: Any, *, named: str) -> None:
             f"A charter says which drawing it wants by name ({motifs.names()}) "
             "now, and drawing whichever one this product happens to have "
             "would hand a duplicate a "
-            f"mark it never asked for. Run `{MOTIF_MIGRATION}` from `tools/` "
-            "to write the family down; no value changes."
+            "mark it never asked for. Add the family to the section; no "
+            "value changes."
         )
 
     try:

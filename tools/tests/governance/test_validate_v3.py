@@ -415,7 +415,7 @@ def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
 
 def test_selection_decided_on_must_be_a_date() -> None:
     # The migration copies decided_on into every generated ballot's date
-    # (tools/migrations/migrate_v3.py): a malformed value here would
+    # to schema v3: a malformed value here would
     # propagate into every ballot it touches, not stay in one field.
     s = speaker(selection={"ballots": [], "opened_on": "", "decided_on": "not-a-date"})
     errors = validate_speakers([s], editions=EDITIONS)

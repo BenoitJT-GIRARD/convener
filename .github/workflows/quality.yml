@@ -195,7 +195,7 @@ jobs:
       - name: Lint
         working-directory: tools
         # `.` is every Python file in the repository: the package, the
-        # generators, the migrations and the tests all sit under `tools/`,
+        # generators and the tests all sit under `tools/`,
         # and `tools/pyproject.toml` is the only ruff config there is. The
         # ruff hooks in `.pre-commit-config.yaml` cover the same set, and
         # `tools/tests/repository/test_lint_scope.py` reads both files and compares

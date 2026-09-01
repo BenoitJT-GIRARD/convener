@@ -10,15 +10,14 @@ import pytest
 
 from convener_ops.declaration.published import EditionPrefix
 
-#: `tools/scripts/` holds the generators and one-off utilities, and
-#: `tools/migrations/` the one-shot migrations. Both live outside the
-#: installed package (the wheel ships `convener_ops` alone) but are tested
-#: with it, so their directories join the import path here rather than in
-#: each test module.
+#: `tools/scripts/` holds the generators and one-off utilities. They live
+#: outside the installed package (the wheel ships `convener_ops` alone) but
+#: are tested with it, so that directory joins the import path here rather
+#: than in each test module.
 _TOOLS = Path(__file__).resolve().parents[1]
-for _directory in (_TOOLS / "scripts", _TOOLS / "migrations"):
-    if str(_directory) not in sys.path:
-        sys.path.insert(0, str(_directory))
+_SCRIPTS = _TOOLS / "scripts"
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
 
 @pytest.fixture(autouse=True)
@@ -28,8 +27,7 @@ def _isolate_environment() -> Iterator[None]:
     made *through monkeypatch itself* -- a stray `os.environ[key] = value`
     written directly by production code would survive past that test's
     own teardown and leak into whichever test runs next in the same
-    process. Nothing in `convener_ops`, the generators, the migrations or
-    this test tree does that
+    process. Nothing in `convener_ops`, the generators or this test tree does that
     today (checked by grep and by removing this
     fixture entirely: the suite's result is identical either way) -- this
     guards against a mutant introducing exactly that coupling, not a live

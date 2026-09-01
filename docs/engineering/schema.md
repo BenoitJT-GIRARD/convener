@@ -256,6 +256,6 @@ check and not a test; see `docs/handbook/governance/editorial-board.md`.
 ## History
 
 `instance/data/speakers.yml` was originally split across two files, joined on an event
-id. `tools/migrations/` holds the one-shot migrations that merged them into
+id. One-shot migrations, since deleted, merged them into
 today's unified schema; they already ran and are kept only as a record, not as
 something to run again.
