@@ -53,6 +53,17 @@ updates:
   # the schedule and the grouping, six paths under it. Dependabot still
   # opens one pull request per directory, so this is a shorter file and not
   # a cheaper one.
+  #
+  # The last three of them pin the same two versions -- `vitest` and
+  # `wrangler` -- in three `package.json`, and that is a literal copy this
+  # repository forbids in prose and tolerates here. It is a decision and
+  # not an oversight: npm workspaces would remove it and would cost more
+  # than it saves at three packages of one source file each, while the
+  # three lines below already hand the three trees to the same machine on
+  # the same schedule under the same group, so a bump one of them missed
+  # is a bump this file proposes again next month. What the three did not
+  # need to share by copy is their lint configuration, and they no longer
+  # do: `services/eslint.config.base.mjs`.
   - package-ecosystem: npm
     directories:
       - /app
