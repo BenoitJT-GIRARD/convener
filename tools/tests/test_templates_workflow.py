@@ -77,6 +77,9 @@ def test_the_path_filter_names_every_module_the_three_templates_read() -> None:
         "tools/convener_ops/publication/typeface.py",
         "tools/convener_ops/publication/motifs/**",
         "tools/convener_ops/publication/brand.py",
+        "tools/convener_ops/publication/lockup.py",
+        "tools/convener_ops/publication/visual.py",
+        "tools/convener_ops/publication/composition.py",
         "tools/convener_ops/publication/formats.py",
         "tools/convener_ops/publication/registration_code.py",
         "tools/convener_ops/declaration/published.py",
@@ -137,10 +140,33 @@ def test_job_permissions_are_read_only() -> None:
 def test_the_fixtures_are_rendered_before_the_browser_is_installed() -> None:
     """The Python half writes bytes and the Node half reads them, which is
     the boundary D-14 asks for -- and it means a broken render fails
-    before a 430MB download rather than after it."""
-    render = _WORKFLOW.index("convener-render-template-fixtures")
+    before a 430MB download rather than after it. Both sets of fixtures,
+    because both halves cost the same download."""
     install = _WORKFLOW.index("npm ci")
-    assert render < install
+    for command in (
+        "convener-render-template-fixtures",
+        "convener-render-poster-fixtures",
+    ):
+        assert _WORKFLOW.index(command) < install
+
+
+def test_the_poster_sweep_runs_here_and_over_the_same_cross_product() -> None:
+    """The composition nobody downloads and every duplicate publishes.
+
+    It belongs in this workflow rather than in `visuals.yml` for the
+    reason the two filters already differ over: that one renders the
+    example's charter and must not react to a duplicate's own, and this
+    one renders every charter and must. The poster is the third
+    composition drawn from a charter, and it was the one nothing swept.
+    """
+    assert "convener-render-poster-fixtures" in _WORKFLOW
+    assert "check-posters.mjs" in _WORKFLOW
+    assert (_ROOT / "tools" / "visuals" / "check-posters.mjs").is_file()
+    # The same cross product the templates are swept over: the checker
+    # reads the manifest, and the manifest is what the command writes.
+    assert "convener_ops.cli:render_poster_fixtures" in (
+        _ROOT / "tools" / "pyproject.toml"
+    ).read_text(encoding="utf-8")
 
 
 def test_the_chrome_download_shares_the_key_visuals_uses() -> None:

@@ -83,6 +83,8 @@ import math
 from dataclasses import dataclass
 from typing import Final
 
+from .. import composition
+
 Point = tuple[float, float]
 
 #: One chevron: the end of its upper arm, its tip, and the end of its
@@ -136,15 +138,17 @@ _PITCH: Final = _PITCH_RISES * _RISE
 #: column finishes above those rows and the slot gets the whole page.
 _REGISTER_TOP: Final = 0.725
 
-#: The row `.content` begins at, as a fraction of the page, on the format
-#: where it begins earliest. That band -- the "what to expect" copy and
-#: the speaker's photographic frame beside it -- is the one block on the
-#: right of a generated poster placed against the clearance alone rather
-#: than against a family's own reach
-#: (`visual._motif_content_right_margin`). Measured in the pinned engine
-#: it begins at 0.317 of a square and 0.224 of an A4 print, and the banner
-#: has none of it.
-_CONTENT_TOP: Final = 0.224
+#: The row `.content` begins at -- the "what to expect" copy and the
+#: speaker's photographic plate beside it -- from the one home the figure
+#: has. It was written out here, and identically in one other family, on
+#: the strength of `visual._motif_content_right_margin` padding that band
+#: with the clearance alone rather than with a family's own reach: a
+#: drawing that stayed above the band was a drawing that could not be
+#: painted across the plate. That margin asks the family now
+#: (`composition.CONTENT_TOP` carries the measurement and what reads it),
+#: so what this figure decides here is the drawing's own balance rather
+#: than the composition's safety.
+_CONTENT_TOP: Final = composition.CONTENT_TOP
 
 #: The last row of the page the left column's tips may reach, in heights:
 #: the register band, less the gutter every other edge of this drawing

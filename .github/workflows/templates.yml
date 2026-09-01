@@ -1,13 +1,22 @@
 name: Templates
 
-# Renders the three files a volunteer downloads -- the announcement, the
-# flyer and the video-call background -- for every charter this repository
-# holds crossed with every motif family it draws, and measures whether any
-# stroke of the drawing crosses any word of the type. See
-# `tools/visuals/check-templates.mjs`'s own module comment for what is
-# measured and why it needs a browser at all: how much room a line of type
-# takes is a property of the face, the weight and the string, and this
-# repository has no way to know it in Python.
+# Renders every composition this product draws a charter into, for every
+# charter this repository holds crossed with every motif family it draws,
+# and measures what the drawing does to the words:
+#
+# - the three files a volunteer downloads -- the announcement, the flyer
+#   and the video-call background (`check-templates.mjs`): no stroke
+#   crosses a word, and no block the composition places crosses another.
+# - the poster the cockpit generates for each event (`check-posters.mjs`):
+#   no stroke crosses a line of type or a plate. `visuals.yml` renders
+#   that composition too and compares its pixels, but at one charter --
+#   the example's -- so the family a duplicate may choose was drawn into
+#   it by nothing until this.
+#
+# Each checker's own module comment says what it measures and why it needs
+# a browser at all: how much room a line of type takes is a property of
+# the face, the weight and the string, and this repository has no way to
+# know it in Python.
 #
 # Why this is not a job inside `visuals.yml`, which already installs the
 # same pinned engine: that workflow deliberately does *not* react to this
@@ -35,6 +44,15 @@ name: Templates
 #   family's drawing, and the corridor arithmetic every block reads.
 # - `tools/convener_ops/publication/brand.py` -- which charter is in force
 #   and what its `motif` says.
+# - `tools/convener_ops/publication/lockup.py` -- the device beside the
+#   address on all three of those files and on the generated poster.
+# - `tools/convener_ops/publication/visual.py` -- the generated poster
+#   itself, which the second sweep below measures. Its safe areas are what
+#   keep the drawing off the words, and `visuals.yml` renders it at one
+#   charter only.
+# - `tools/convener_ops/publication/composition.py` -- where that poster's
+#   `.content` band begins, which decides how much of the drawing's
+#   right-hand reach it has to pay for.
 # - `tools/convener_ops/publication/formats.py` -- the square's own canvas
 #   and the print paper the flyer is drawn on.
 # - `tools/convener_ops/publication/registration_code.py` -- the code drawn
@@ -94,6 +112,9 @@ on:
       - 'tools/convener_ops/publication/typeface.py'
       - 'tools/convener_ops/publication/motifs/**'
       - 'tools/convener_ops/publication/brand.py'
+      - 'tools/convener_ops/publication/lockup.py'
+      - 'tools/convener_ops/publication/visual.py'
+      - 'tools/convener_ops/publication/composition.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/declaration/published.py'
@@ -116,6 +137,9 @@ on:
       - 'tools/convener_ops/publication/typeface.py'
       - 'tools/convener_ops/publication/motifs/**'
       - 'tools/convener_ops/publication/brand.py'
+      - 'tools/convener_ops/publication/lockup.py'
+      - 'tools/convener_ops/publication/visual.py'
+      - 'tools/convener_ops/publication/composition.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/declaration/published.py'
@@ -145,12 +169,13 @@ concurrency:
 jobs:
   templates:
     runs-on: ubuntu-latest
-    # Thirty-six renderings -- four charters, three families, three
-    # templates -- measure in a few seconds on a warm machine, and the
-    # count grows with each charter committed under `brand/` and each
+    # A hundred and eighty renderings -- six charters and five families,
+    # crossed with three templates and again with three canvases of the
+    # generated poster -- measure in under a minute on a warm machine, and
+    # the count grows with each charter committed under `brand/` and each
     # family registered. This allowance covers a cold cache miss that has
     # to fetch the ~430MB Chrome-for-Testing build besides.
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -161,6 +186,16 @@ jobs:
       - name: Render the template fixtures (pure Python/SVG, no browser yet)
         run: |
           uv run --project tools convener-render-template-fixtures "${{ runner.temp }}/template-fixtures"
+      # The same cross product, applied to the composition nobody
+      # downloads and every duplicate publishes: the poster the cockpit
+      # generates for each event. `visuals.yml` renders that composition
+      # too and compares its pixels, but at one charter -- the example's --
+      # because that is what a pinned reference image can be, and it is
+      # deliberately blind to a duplicate's own charter. So the family a
+      # duplicate may choose was never drawn into it by anything.
+      - name: Render the poster fixtures (pure Python/HTML, no browser yet)
+        run: |
+          uv run --project tools convener-render-poster-fixtures "${{ runner.temp }}/poster-fixtures"
       # Restored *before* `npm ci` so its own postinstall download can be
       # skipped entirely on a cache hit -- the same key `visuals.yml` uses,
       # so whichever of the two runs first pays for the download.
@@ -193,4 +228,17 @@ jobs:
         with:
           name: template-clearance
           path: ${{ runner.temp }}/template-clearance.json
+          retention-days: 14
+      - name: Measure the drawing against every block of the generated poster
+        working-directory: tools/visuals
+        run: |
+          node check-posters.mjs \
+            --fixtures "${{ runner.temp }}/poster-fixtures" \
+            --report "${{ runner.temp }}/poster-clearance.json"
+      - name: Upload the poster measurement for inspection
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: poster-clearance
+          path: ${{ runner.temp }}/poster-clearance.json
           retention-days: 14

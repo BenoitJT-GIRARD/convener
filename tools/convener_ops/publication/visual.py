@@ -137,12 +137,17 @@ computed from it adapts the same way the drawing itself does, at any
 `width`/`height` this function is called with.
 
 `.content` is the one exception, and reads a third variable,
-`--safe-r-content`, for its own right padding instead of `--safe-r` --
-`_motif_content_right_margin`'s own docstring explains why: the right
-motif never reaches anywhere near as far down the page as `.content`
-itself sits, so the full corridor's own right margin is not a number
-`.content` needs to clear a threat with, only width it would otherwise
-lose for nothing. `.content`'s own left padding still reads `--safe-l`
+`--safe-r-content`, for its own right padding instead of `--safe-r`:
+the family's reach over `.content`'s own rows rather than over the whole
+page, so the band pays for what the drawing does beside it and not for
+what it does above. That is a different margin from the full corridor's
+and it is measured the same way -- `motifs.safe_margins` answers per band
+of rows. It was the *clearance alone* until the poster was swept across
+the cross product, which was an argument about where the ribbon's right
+side happens to run turned into the rule for every family, and wrong
+about the ribbon: see `_motif_content_right_margin`'s own docstring for
+the fourteen pixels that argument cost this instance's own poster.
+`.content`'s own left padding still reads `--safe-l`
 unchanged -- the left tail's own fitted bulge sits deep inside `.content`'s
 own vertical range, not above it the way the right motif's reach is. The
 register band (below `.content` -- see "Why the code can never be
@@ -273,7 +278,7 @@ from typing import Final
 
 from ..declaration.published import load_identity
 from ..governance.rule import PARIS
-from . import brand, lockup, motifs
+from . import brand, composition, lockup, motifs
 from .registration_code import registration_code_svg
 
 __all__ = [
@@ -815,39 +820,61 @@ def _motif_safe_margins(width: float, height: float, root: Path) -> tuple[float,
 
 
 def _motif_content_right_margin(width: float, height: float, root: Path) -> float:
-    """The right-hand safe-area margin for `.content` alone, in `vw` --
-    narrower than `_motif_safe_margins`'s own right margin, and the one
-    margin in this composition that is not a drawing's own reach.
+    """The right-hand safe-area margin for `.content` alone, in `vw`:
+    the family's own reach over `.content`'s own rows.
 
-    What it rests on, measured rather than assumed. `.content` is this
-    composition's last band before the register band, and in the pinned
-    engine it begins at 0.317 of a square canvas and 0.224 of an A4 print
-    -- higher up the page than `0.475`, the fraction the ribbon's own
-    `right_tail_exit` sits at (`motifs/ribbon.py::waypoints`). So that
-    band and the right motif do share rows, and what keeps the ribbon off
-    the words is its shape row by row: its right side runs along the
-    canvas edge over most of that range and comes closest at
-    `right_tail_bulge`, 0.047 short sides in at 0.392 of the height, where
-    the photo frame beside it still clears the stroke -- a few units of
-    field between the two on the rendered square. A family drawn some
-    other way clears the band by finishing above it instead:
-    `motifs/bracket.py::_INNER_TOP` states the rows it fits in and
-    `tests/publication/motifs/test_bracket.py` holds it there.
+    Narrower than `_motif_safe_margins`'s full-height right margin, and
+    for a reason that is a measurement rather than a habit --
+    `motifs.safe_margins` answers per band of rows, so asking it over the
+    rows this band actually occupies costs `.content` only what the
+    drawing reaches *there*. The full-height margin would cost it width
+    the right motif was never going to reach at all: this fix's own first
+    attempt did exactly that, and it was that copy re-wrapping into the
+    "register" label beneath it, not the ribbon, that gave the mistake
+    away.
 
-    Reusing `_motif_safe_margins`'s own full-height right margin here
-    would cost `.content` -- the "what to expect" copy and the photo frame
-    beside it -- width the right motif was never going to reach: this
-    fix's own first attempt did exactly that, and it was that copy
-    re-wrapping into the "register" label beneath it, not the ribbon, that
-    gave the mistake away. `.content`'s own *left* margin still uses
-    `_motif_safe_margins`'s full corridor unchanged (see
-    `render_announcement`) -- the left tail's own fitted bulge sits at
-    `0.747` of the page, well inside `.content`'s own vertical range.
+    **What was here before, and what it cost.** The clearance alone --
+    the gutter, with no reach at all -- on the argument that "the ribbon's
+    right side runs along the canvas edge over most of that range and
+    comes closest at `right_tail_bulge`, 0.047 short sides in at 0.392 of
+    the height, where the photo frame beside it still clears the stroke".
+    That is an argument about one drawing rather than a property of any,
+    and it was wrong about that one too: rendered at this instance's own
+    charter, its own family and the square canvas its own forum gets, the
+    ribbon's right loop is painted **14.4 pixels across the speaker's
+    plate**, and 29.8 across it on the print. Nothing saw it because the
+    one rendering anything compared was the example's charter, and the
+    example's charter draws `bracket`, which finishes above this band
+    (`motifs/bracket.py::_INNER_TOP`). `tools/visuals/check-posters.mjs`
+    is what sees it now, at every charter, every family and every canvas.
+
+    `composition.CONTENT_TOP` is where the band's own row lives, because
+    two families read it as well and neither can import this module.
+    `.content`'s own *left* margin still uses `_motif_safe_margins`'s full
+    corridor unchanged (see `render_announcement`) -- the left tail's own
+    fitted bulge sits at `0.747` of the page, well inside `.content`'s own
+    vertical range, so the two answers there are the same answer.
     """
-    clearance = motifs.clearance(
-        brand.motif_family(root), width, height, ratio=brand.motif_width_ratio(root)
+    family = brand.motif_family(root)
+    ratio = brand.motif_width_ratio(root)
+    _left, right = motifs.safe_margins(
+        family,
+        width,
+        height,
+        ratio=ratio,
+        top=composition.CONTENT_TOP * height,
+        bottom=height,
     )
-    return clearance / width * 100.0
+    # `safe_margins` answers zero where the drawing does not enter those
+    # rows at all -- four of the five families, on this side -- and zero
+    # is the right answer to "how much does the drawing cost this band"
+    # and the wrong one to "how much air does the band keep". The gutter
+    # is the composition's and is kept whether or not there is anything to
+    # keep it from, which is what the clearance alone used to be doing
+    # here and is the half of that answer worth keeping.
+    return (
+        max(right, motifs.clearance(family, width, height, ratio=ratio)) / width * 100.0
+    )
 
 
 def _motif_overlay_svg(width: float, height: float, root: Path) -> str:

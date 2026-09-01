@@ -116,6 +116,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from .. import composition
+
 Point = tuple[float, float]
 
 
@@ -146,15 +148,17 @@ _NEAR: Final = 0.0
 #: drawing runs, in heights. One riser.
 _OVERHANG: Final = _STEP
 
-#: The row `.content` begins at, as a fraction of the page, on the format
-#: where it begins earliest. That band -- the "what to expect" copy and
-#: the speaker's photographic frame beside it -- is the one block on the
-#: right of a generated poster placed against the clearance alone rather
-#: than against a family's own reach
-#: (`visual._motif_content_right_margin`). Measured in the pinned engine
-#: it begins at 0.317 of a square and 0.224 of an A4 print, and the banner
-#: has none of it.
-_CONTENT_TOP: Final = 0.224
+#: The row `.content` begins at -- the "what to expect" copy and the
+#: speaker's photographic plate beside it -- from the one home the figure
+#: has. It was written out here, and identically in one other family, on
+#: the strength of `visual._motif_content_right_margin` padding that band
+#: with the clearance alone rather than with a family's own reach: a
+#: drawing that stayed above the band was a drawing that could not be
+#: painted across the plate. That margin asks the family now
+#: (`composition.CONTENT_TOP` carries the measurement and what reads it),
+#: so what this figure decides here is the drawing's own balance rather
+#: than the composition's safety.
+_CONTENT_TOP: Final = composition.CONTENT_TOP
 
 #: How many levels the right of the drawing has: every one that finishes
 #: above that band. A whole number rather than a fraction of a page,

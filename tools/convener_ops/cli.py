@@ -5769,6 +5769,96 @@ def render_template_fixtures() -> int:
     return 0
 
 
+def render_poster_fixtures() -> int:
+    """`convener-render-poster-fixtures OUTPUT_DIR`: writes the poster
+    sweep its input -- the composition `visual.py` generates, at every
+    charter this repository holds crossed with every family `motifs` draws
+    crossed with every canvas `formats.FORMATS` names.
+
+    The third fixture command, and it exists because the other two each
+    answer half of a question and neither answers this one.
+
+    - `render_visual_fixtures` renders **one** charter, the example's, at
+      three canvases, and the pinned reference images compare its pixels.
+      That is a regression check on the drawing this product happens to
+      ship, and it is deliberately blind to a duplicate's own charter --
+      `visuals.yml`'s own path filter says so, and
+      `test_visuals_workflow.py` holds it there. It could not sweep the
+      cross product without either pinning ninety images or comparing
+      none.
+    - `render_template_fixtures` renders the cross product, of the three
+      files a volunteer *downloads*. The poster the cockpit generates is
+      not one of them.
+
+    So the composition every duplicate actually publishes -- the one the
+    cockpit writes for each event -- was measured at one charter and one
+    family. `visual._motif_content_right_margin` pads `.content` (the
+    "what to expect" copy and the speaker's photographic plate) with the
+    clearance alone rather than with the drawing's own right-hand reach,
+    on the argument that the ribbon's right side runs along the canvas
+    edge over those rows. That argument is true of the ribbon and of the
+    bracket, and it is an argument about two drawings rather than a
+    property of any: a family with a deep right-hand drawing would paint
+    across the speaker's frame in every duplicate's poster with every gate
+    green. Every drawing this product ships is short on the right, and
+    until this that was a coincidence rather than a rule.
+
+    Same seam as the other two: this writes the bytes, `tools/visuals/`
+    reads them, and neither re-derives a page in the other's language.
+    `FIXTURE_ANNOUNCEMENT` is the same fixed, versioned identity the
+    reference images use, for the same reason -- an invented speaker, no
+    photograph, no clock, no network, so the same input always writes the
+    same page.
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-poster-fixtures OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+    out.mkdir(parents=True, exist_ok=True)
+
+    manifest: list[dict[str, Any]] = []
+    with tempfile.TemporaryDirectory() as scratch:
+        for label, charter, declaration in _template_charters(root):
+            for family in sorted(motifs.FAMILIES):
+                made = _template_fixture_root(
+                    Path(scratch), root, charter, declaration, family
+                )
+                for fmt in formats.FORMATS:
+                    name = f"{label}-{family}-{fmt.name}"
+                    (out / f"{name}.html").write_text(
+                        visual.render_announcement(
+                            visual.FIXTURE_ANNOUNCEMENT,
+                            width=fmt.width,
+                            height=fmt.height,
+                            root=made,
+                        ),
+                        encoding="utf-8",
+                    )
+                    manifest.append(
+                        {
+                            "name": name,
+                            "charter": label,
+                            "family": family,
+                            "format": fmt.name,
+                            "width": fmt.width,
+                            "height": fmt.height,
+                            "file": f"{name}.html",
+                        }
+                    )
+
+    fonts_dest = out / "fonts"
+    if fonts_dest.exists():
+        shutil.rmtree(fonts_dest)
+    shutil.copytree(root / "fonts", fonts_dest)
+
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(manifest)} poster fixture(s) to {out}")
+    return 0
+
+
 def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announcement]:
     """`public_data.to_public`'s own output, turned into the
     `visual.Announcement`s the production render needs -- never a

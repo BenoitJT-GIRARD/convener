@@ -37,6 +37,7 @@ lastmod
 lede
 ligne
 linecap
+lockup
 mdash
 middot
 mypy
