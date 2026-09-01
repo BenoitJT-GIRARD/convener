@@ -15,9 +15,10 @@ states the same three in prose, for a person, and one of the checks below
 holds that statement to this list.
 
 **An exception is named here, with its reason beside it.** `EXCEPTIONS`
-is the one place a path outside the three may be admitted, and it is
-empty. Both halves are refused -- a tracked file nobody named, and a name
-nobody tracks -- which is the shape
+is the one place a path outside the three may be admitted, and it holds
+one: `docs/README.md`, the page GitHub renders when a person opens the
+directory. Both halves are refused -- a tracked file nobody named, and a
+name nobody tracks -- which is the shape
 `tools/scripts/generate_directory_map.py::purposes_for` already uses for
 its own table, and for the same reason: a list that may only grow is a
 list that stops describing anything. A path that stops being an exception
@@ -63,9 +64,20 @@ TREES: Final[Mapping[str, str]] = {
 CONTENT_RULES: Final = "docs/engineering/content-rules.md"
 
 #: Every path under `docs/` allowed to sit outside the three trees, with
-#: the argument for it. Empty, and the two sweeps below are what keep an
-#: entry from becoming a place to put whatever nobody wanted to place.
-EXCEPTIONS: Final[Mapping[str, str]] = {}
+#: the argument for it. One entry, and the two sweeps below are what keep
+#: an entry from becoming a place to put whatever nobody wanted to place.
+EXCEPTIONS: Final[Mapping[str, str]] = {
+    "docs/README.md": (
+        "What GitHub renders when a person opens docs/ in a browser, and "
+        "the only file that can be it: GitHub renders a directory's "
+        "README.md and looks for nothing else. It sits outside the three "
+        "trees because it is how a reader picks one -- three rows of "
+        "tree, reader and index, and no page of any tree named on it. A "
+        "file of this name was deleted on the commit that made the three "
+        "trees, and it was a different thing: a second layout of the "
+        "handbook, which docs/handbook/index.md already was."
+    ),
+}
 
 
 def misplaced(tracked: Iterable[str], exceptions: Mapping[str, str]) -> tuple[str, ...]:

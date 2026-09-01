@@ -92,9 +92,11 @@ LINE_COMMENT: Final = re.compile(r"^\s*//.*$", re.MULTILINE)
 def trees(tracked: Iterable[str]) -> tuple[str, ...]:
     """Every tree under `docs/`, read from the files this repository tracks.
 
-    A directory holding a tracked file is a tree. Nothing sits at the root
-    of `docs/` -- `test_docs_directory.py` refuses that -- so the first
-    segment after `docs/` is a tree's name whenever there is one.
+    A directory holding a tracked file is a tree, so the first segment
+    after `docs/` is a tree's name whenever there is one. A file directly
+    at the root names no tree and contributes nothing here --
+    `docs/README.md` is one, and is the only one
+    `test_docs_directory.py` admits.
     """
     found = set()
     for name in tracked:
@@ -272,8 +274,8 @@ def test_a_tree_is_a_directory_holding_a_tracked_file() -> None:
 
 
 def test_a_file_at_the_root_of_docs_names_no_tree() -> None:
-    # `test_docs_directory.py` refuses that file. This module reads no tree
-    # out of it.
+    # `test_docs_directory.py` admits one such file by name and refuses
+    # every other. Either way this module reads no tree out of one.
     assert trees(("docs/index.md",)) == ()
 
 
