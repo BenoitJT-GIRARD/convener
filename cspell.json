@@ -117,7 +117,9 @@
   "files": [
     "docs/**/*.md",
     "AGENTS.md",
+    "CHANGELOG.md",
     "CLAUDE.md",
+    "CODE_OF_CONDUCT.md",
     "README.md",
     "TRADEMARK.md",
     "SECURITY.md",
@@ -130,6 +132,8 @@
     "app/README.md",
     "tools/README.md",
     "tools/visuals/README.md",
-    ".github/workflows/**"
+    ".github/workflows/**",
+    ".github/pull_request_template.md",
+    ".github/ISSUE_TEMPLATE/**"
   ]
 }

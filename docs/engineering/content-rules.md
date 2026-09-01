@@ -37,6 +37,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | The terms this software is under, and what the name is not under | `LICENSE`, whose head carries the term declining the name, and `TRADEMARK.md` |
 | How to report a vulnerability, and what a report can expect | `SECURITY.md` |
 | What a contributor certifies, and what an issue can expect | `CONTRIBUTING.md` |
+| What each published state changed, and what a merge asks of a duplicate | `CHANGELOG.md`, whose list of the paths a duplicate owns is generated from `declarations/boundary.yml` by `tools/scripts/generate_changelog.py` |
 | How to cite this software | `CITATION.cff` |
 | The notice both interfaces display in their footer | `NOTICE.json`, read by `site/scripts/notice.cjs` and `app/scripts/notice.mjs` |
 

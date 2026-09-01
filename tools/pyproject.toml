@@ -1,6 +1,20 @@
 [project]
 name = "convener-ops"
-version = "0.1.0"
+# The product's version, and the only place in this repository it is
+# written. This package is never published to an index -- nothing installs
+# it but this repository's own `uv sync` -- so the field was free, and
+# `CHANGELOG.md`'s newest entry, the annotated tag and this line all name
+# one state because there is one number for them to name.
+# `tools/scripts/generate_changelog.py --check` reads this file and fails a
+# changelog whose newest entry says something else, which is what stops a
+# release bumping one of the two.
+#
+# 1.0.0 and not 0.1.0, which this said for as long as the project existed
+# and never meant anything: the interface a version is about here is the
+# merge a duplicate does, and `declarations/boundary.yml` has declared and
+# enforced that interface for longer than any 0.x would have promised
+# about it. `CHANGELOG.md`'s first entry carries the rest of the argument.
+version = "1.0.0"
 description = "Operational tooling for a seminar series run from its own repository"
 requires-python = ">=3.12"
 dependencies = [

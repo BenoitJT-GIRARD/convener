@@ -22,10 +22,12 @@ inferred.** This is unpaid work by one maintainer.
 
 What does happen, when a report is valid: a fix lands on the default
 branch, the advisory is published with it, and you are credited in it
-unless you ask not to be. There are no releases and no backports — an
-instance takes the fix through the merge it already does with upstream, so
-"fixed" and "fixed everywhere" are the same event here, whenever each
-operator next merges.
+unless you ask not to be. Nothing is backported and no patched version is
+issued — an instance takes the fix through the merge it already does with
+upstream, so "fixed" and "fixed everywhere" are the same event here,
+whenever each operator next merges. `CHANGELOG.md` names the state the fix
+landed in, which is a name for a commit on that branch and never a version
+anybody goes back to.
 
 ## What is in scope
 
@@ -63,4 +65,7 @@ D-15's own reasoning for publishing this at all.
 
 The default branch, and nothing else. There is no release series to
 support: this product is duplicated rather than installed, and every
-instance is a merge behind the branch that carries the fix.
+instance is a merge behind the branch that carries the fix. The tags this
+repository carries name states of that branch, so that an operator can say
+which one they are on; none of them is a version this project maintains
+alongside it.

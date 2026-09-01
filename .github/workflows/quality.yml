@@ -340,6 +340,20 @@ jobs:
         # this needs no history at all; it runs in this job because this is
         # the job that has `uv`.
         run: uv run python scripts/generate_directory_map.py --check
+      - name: Changelog
+        working-directory: tools
+        # Two halves, and the second is what this step is really for.
+        # `CHANGELOG.md` carries a generated list of the paths
+        # `declarations/boundary.yml` hands to an instance, so the person
+        # writing a release note meets it rather than remembering it. The
+        # entries beside that block are prose, and the check holds the
+        # three things about them a reader depends on: every entry carries
+        # its section for a duplicate, no entry names a product path in
+        # that section, and the newest version is the one
+        # `tools/pyproject.toml` declares. Assertion-only, like the six
+        # above: writes nothing, and fails on a release that bumped one of
+        # the two numbers.
+        run: uv run python scripts/generate_changelog.py --check
 
   # The former `typescript`, `site` and `spelling` jobs, merged.
   # Three jobs, one Node, one checkout -- and `app/`'s own `npm ci` run

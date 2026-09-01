@@ -24,10 +24,13 @@
 # modified it adds its own author and its own address, which is what the
 # licence asks of it anyway.
 #
-# No `version` and no `date-released`, for a plainer reason: there are no
-# releases. A fix lands on the default branch and reaches an instance
-# through the merge it already does, so a version here would name something
-# nobody can check out.
+# No `version` and no `date-released`, and the reason is the paragraph
+# above rather than a shortage of numbers to write. `CHANGELOG.md` names
+# every published state and `tools/pyproject.toml` holds the number itself;
+# a third copy here would be one every duplicate inherits, so a citation of
+# somebody else's instance would name whichever upstream state upstream
+# last edited this file at. What is cited is the work and its author, and
+# both stay true at every state.
 cff-version: 1.2.0
 message: >-
   If you use this software, or run a seminar series on it, please cite it
