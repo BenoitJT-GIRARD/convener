@@ -239,6 +239,45 @@ rendering the repository's own README instead, and a bare request answers 200
 over a site that does not exist. Read the served page's source, not its status
 code.
 
+### 7. The dependency updates a duplicate switches off
+
+**Who:** a person.
+
+Switch Dependabot **version updates** off on the private repository, and leave
+Dependabot **alerts** on. Every manifest and every lockfile
+`.github/dependabot.yml` watches belongs to the product, and for a duplicate
+an update is a merge: a Dependabot pull request opened here edits a generated
+file upstream also bumps, and upstream's own bump of that same file is then a
+conflict with no readable resolution. One bump upstream reaches every instance
+through the merge each of them already does, so version updates belong there
+and nowhere else. Alerts are the half worth keeping — a setting rather than a
+file, costing no Actions minutes, telling you what you are running without
+proposing to rewrite a file you do not own.
+
+**Proves it is done.** Settings → Code security shows *Dependabot version
+updates* off and *Dependabot alerts* on, and no dependency-bump pull request
+is open on the first of the month after this.
+
+**Without it.** One grouped pull request per dependency tree per month, each
+one editing a generated file the product owns, and each one a conflict against
+upstream's own bump of it. Nothing goes red: those pull requests are green,
+and what stops working is the next merge from upstream — which is the failure
+`declarations/boundary.yml` exists to prevent, arriving through the one file
+in this repository that configures a service rather than running one.
+
+**In a browser, in full:**
+
+1. Open the private repository's Settings → Code security.
+2. Find *Dependabot version updates* and switch it off. This is the only place
+   they can be switched off — `.github/dependabot.yml` is what configures them
+   and it is the product's own file, so deleting it would itself be editing a
+   product file, which is the same conflict by a shorter route.
+3. Find *Dependabot alerts* in the same list and make sure it is on. It reads
+   the manifests you are running against GitHub's advisory database and opens
+   no pull request.
+4. Nothing here is done to the public repository, which holds a built site and
+   neither a manifest nor a lockfile.
+
 ## Stage 3 — The four files a duplicate makes its own
 
 What makes the instance yours rather than the worked example's. Until the
@@ -248,7 +287,7 @@ The fourth carries no band: a charter is a finished design whoever measured
 it, so an instance publishing under somebody else's colours looks right on
 every page it serves.
 
-### 7. Who is publishing, and where
+### 8. Who is publishing, and where
 
 **Who:** an agent, or a person.
 
@@ -286,7 +325,7 @@ degrades the other way, quietly: every review request goes to a team in an
 organisation this repository does not own, GitHub resolves it to nobody, and
 the pull request waits for a review that cannot arrive.
 
-### 8. The Board, the season and the bar a vote is measured against
+### 9. The Board, the season and the bar a vote is measured against
 
 **Who:** an agent, or a person.
 
@@ -309,7 +348,7 @@ not a GitHub login is the specific half-done state this repository has met
 before: the file is valid, the person exists, and the cockpit still does not
 recognise them when they sign in.
 
-### 9. Your own records, starting empty
+### 10. Your own records, starting empty
 
 **Who:** an agent, or a person.
 
@@ -330,7 +369,7 @@ they were yours: three events with dates, an archive page, and a feed
 announcing them. Nothing warns about it, because a file full of well-formed
 records is exactly what this file is supposed to hold.
 
-### 10. The design the instance is drawn in
+### 11. The design the instance is drawn in
 
 **Who:** an agent, or a person.
 
@@ -375,7 +414,7 @@ The first real deployment, and the first honest answer to whether any of the
 stage above is right. Nothing until now has been verified against anything a
 visitor can open.
 
-### 11. The token that lets the cockpit push into the showcase
+### 12. The token that lets the cockpit push into the showcase
 
 **Who:** a person.
 
@@ -415,7 +454,7 @@ fallback publishing route, and nothing about the green run says so.
    secret, named `SHOWCASE_DEPLOY_TOKEN`. Then paste it into the shared store.
    GitHub will not show it again.
 
-### 12. The first publish, and reading it in a browser
+### 13. The first publish, and reading it in a browser
 
 **Who:** an agent, or a person.
 
@@ -444,7 +483,7 @@ all three deploy to one free Cloudflare account. Two of them also need a
 storage namespace, which does not exist until it is created and cannot be
 shipped filled in.
 
-### 13. The GitHub App that signs volunteers in
+### 14. The GitHub App that signs volunteers in
 
 **Who:** a person.
 
@@ -491,7 +530,7 @@ organisation did not issue and cannot revoke centrally.
    Generate no client secret. The device flow does not need one, and the relay
    is deliberately secret-free.
 
-### 14. The Cloudflare account, and the token CI deploys with
+### 15. The Cloudflare account, and the token CI deploys with
 
 **Who:** a person.
 
@@ -525,7 +564,7 @@ dependency the rest of this project avoids.
    secret, named `CLOUDFLARE_API_TOKEN`. Then paste it into the shared store;
    Cloudflare will not show it again either.
 
-### 15. The one value in the workers a duplicate has to fill in
+### 16. The one value in the workers a duplicate has to fill in
 
 **Who:** an agent, or a person.
 
@@ -557,7 +596,7 @@ grep -RE "REPLACE_WITH_|^ALLOWED_ORIGIN" services/*/wrangler.toml ; grep -RE "gi
 makes *Deploy form relay* and *Deploy signup relay* skip the deploy and end
 green, so nothing is deployed and the Actions tab says everything is fine.
 
-### 16. The two dispatch tokens the relays hold
+### 17. The two dispatch tokens the relays hold
 
 **Who:** a person.
 
@@ -593,7 +632,7 @@ encrypted, and then goes nowhere.
 6. Set an expiry you will notice, and record both renewal dates beside the
    tokens.
 
-### 17. The sign-in relay, deployed and pointed at
+### 18. The sign-in relay, deployed and pointed at
 
 **Who:** an agent, or a person.
 
@@ -622,7 +661,7 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 **Credentials.** `VITE_AUTH_PROXY_URL`, `VITE_GITHUB_APP_CLIENT_ID`
 
-### 18. The relay a registration passes through
+### 19. The relay a registration passes through
 
 **Who:** an agent, or a person.
 
@@ -685,7 +724,7 @@ The one surface a stranger reaches without being invited. It is built from
 code rather than clicked together, so that it can be rebuilt if the account is
 ever lost.
 
-### 19. The form account, and the key that builds from code
+### 20. The form account, and the key that builds from code
 
 **Who:** a person.
 
@@ -713,7 +752,7 @@ other than code.
 3. Generate a key and paste it into the shared store. It is a credential like
    any other; it simply never leaves an operator's own machine.
 
-### 20. The relay between the public form and the repository
+### 21. The relay between the public form and the repository
 
 **Who:** an agent, or a person.
 
@@ -734,7 +773,7 @@ visitor's side and leaves nothing on yours.
 
 **Credentials.** `CONVENER_DISPATCH_TOKEN`
 
-### 21. The form, built from this repository rather than clicked together
+### 22. The form, built from this repository rather than clicked together
 
 **Who:** an agent, or a person.
 
@@ -768,7 +807,7 @@ the reader compares literally, and a respondent whose answer does not match
 one of those tokens is recorded as undisclosed, silently, with no log line and
 at a steady rate rather than as an edge case.
 
-### 22. Publishing the form, pointing its webhook, and naming it
+### 23. Publishing the form, pointing its webhook, and naming it
 
 **Who:** a person.
 
@@ -821,7 +860,7 @@ Three credentials that are not features. Two are minted once and never
 rotated; the third is what makes this project's central promise — a key
 destroyed on a deadline — happen without anybody remembering to do it.
 
-### 23. The credential that destroys a key on its deadline
+### 24. The credential that destroys a key on its deadline
 
 **Who:** a person.
 
@@ -879,7 +918,7 @@ marks it so, on the row and again in its closing line.
    retention job red every day until it is replaced, which is the right way
    round, but somebody has to be the one to notice.
 
-### 24. The key that signs a certificate, minted by a person and only once
+### 25. The key that signs a certificate, minted by a person and only once
 
 **Who:** a person.
 
@@ -938,7 +977,7 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
    one of them and tries each in turn, so deleting one is what would make an
    already-issued certificate stop verifying.
 
-### 25. The salt behind a matching code and a register's fingerprint
+### 26. The salt behind a matching code and a register's fingerprint
 
 **Who:** a person.
 
@@ -1018,7 +1057,7 @@ Every remaining integration degrades visibly and none of them breaks anything.
 An instance that stops here is a working instance, and this stage is a menu
 rather than a queue.
 
-### 26. Where the Board is told what happened
+### 27. Where the Board is told what happened
 
 **Who:** an agent, or a person.
 
@@ -1048,7 +1087,7 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 **Credentials.** `CONVENER_NOTIFY_THREAD`, `CONVENER_NOTIFY_MENTION`
 
-### 27. Sending a confirmation, a certificate and a survey invitation
+### 28. Sending a confirmation, a certificate and a survey invitation
 
 **Who:** a person.
 
@@ -1111,7 +1150,7 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
    partially-set transport is worse than an unset one.
 4. Put the application password in the shared store.
 
-### 28. Where a recording is published
+### 29. Where a recording is published
 
 **Who:** a person.
 
@@ -1143,7 +1182,7 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 3. Set it as a repository secret named `CONVENER_VIDEO_CHANNEL_ID` on the
    private repository, and put the channel's credentials in the shared store.
 
-### 29. The room the webinar happens in
+### 30. The room the webinar happens in
 
 **Who:** a person.
 

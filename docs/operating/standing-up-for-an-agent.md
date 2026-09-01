@@ -36,7 +36,7 @@ web browser and a text editor finishes the whole sequence without an agent,
 and that is the path the product is designed around: nothing it does may
 depend on a tool somebody has to pay for. So nothing here makes that path
 slower or less complete, and no step below is reachable only through an agent.
-15 of the 29 steps are a person's whatever else is available — a flow that
+16 of the 30 steps are a person's whatever else is available — a flow that
 exists only in a browser, or a value that must never leave the hands of
 whoever minted it.
 
@@ -165,7 +165,7 @@ here.
 
 ## The sequence, in order
 
-29 steps in 8 stages. 15 are handed over; the rest an agent carries out. Read
+30 steps in 8 stages. 16 are handed over; the rest an agent carries out. Read
 each step's own entry in `STANDING-UP.yml` before carrying it out or handing
 it over.
 
@@ -184,59 +184,60 @@ it over.
 | 4 | `private_cockpit` | carry out | The private repository, duplicated and never forked |
 | 5 | `public_showcase` | carry out | The public repository the site is published into |
 | 6 | `pages_source` | carry out | Pages, on the public repository only |
+| 7 | `dependency_updates` | hand over | The dependency updates a duplicate switches off |
 
 ### Stage 3 — The four files a duplicate makes its own
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 7 | `instance_declaration` | carry out | Who is publishing, and where |
-| 8 | `board_and_thresholds` | carry out | The Board, the season and the bar a vote is measured against |
-| 9 | `own_records` | carry out | Your own records, starting empty |
-| 10 | `own_charter` | carry out | The design the instance is drawn in |
+| 8 | `instance_declaration` | carry out | Who is publishing, and where |
+| 9 | `board_and_thresholds` | carry out | The Board, the season and the bar a vote is measured against |
+| 10 | `own_records` | carry out | Your own records, starting empty |
+| 11 | `own_charter` | carry out | The design the instance is drawn in |
 
 ### Stage 4 — Getting a public site
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 11 | `showcase_deploy_token` | hand over | The token that lets the cockpit push into the showcase |
-| 12 | `first_publish` | carry out | The first publish, and reading it in a browser |
+| 12 | `showcase_deploy_token` | hand over | The token that lets the cockpit push into the showcase |
+| 13 | `first_publish` | carry out | The first publish, and reading it in a browser |
 
 ### Stage 5 — The three workers
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 13 | `github_app` | hand over | The GitHub App that signs volunteers in |
-| 14 | `cloudflare_account` | hand over | The Cloudflare account, and the token CI deploys with |
-| 15 | `relay_bindings` | carry out | The one value in the workers a duplicate has to fill in |
-| 16 | `relay_tokens` | hand over | The two dispatch tokens the relays hold |
-| 17 | `auth_relay` | carry out | The sign-in relay, deployed and pointed at |
-| 18 | `signup_relay` | carry out | The relay a registration passes through |
+| 14 | `github_app` | hand over | The GitHub App that signs volunteers in |
+| 15 | `cloudflare_account` | hand over | The Cloudflare account, and the token CI deploys with |
+| 16 | `relay_bindings` | carry out | The one value in the workers a duplicate has to fill in |
+| 17 | `relay_tokens` | hand over | The two dispatch tokens the relays hold |
+| 18 | `auth_relay` | carry out | The sign-in relay, deployed and pointed at |
+| 19 | `signup_relay` | carry out | The relay a registration passes through |
 
 ### Stage 6 — The public proposal form
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 19 | `tally_account` | hand over | The form account, and the key that builds from code |
-| 20 | `form_relay` | carry out | The relay between the public form and the repository |
-| 21 | `tally_form` | carry out | The form, built from this repository rather than clicked together |
-| 22 | `proposal_form_live` | hand over | Publishing the form, pointing its webhook, and naming it |
+| 20 | `tally_account` | hand over | The form account, and the key that builds from code |
+| 21 | `form_relay` | carry out | The relay between the public form and the repository |
+| 22 | `tally_form` | carry out | The form, built from this repository rather than clicked together |
+| 23 | `proposal_form_live` | hand over | Publishing the form, pointing its webhook, and naming it |
 
 ### Stage 7 — What protects a participant's record
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 23 | `retention_token` | hand over | The credential that destroys a key on its deadline |
-| 24 | `signing_key` | hand over | The key that signs a certificate, minted by a person and only once |
-| 25 | `matching_salt` | hand over | The salt behind a matching code and a register's fingerprint |
+| 24 | `retention_token` | hand over | The credential that destroys a key on its deadline |
+| 25 | `signing_key` | hand over | The key that signs a certificate, minted by a person and only once |
+| 26 | `matching_salt` | hand over | The salt behind a matching code and a register's fingerprint |
 
 ### Stage 8 — What is left, and what each costs to skip
 
 | # | Step | Action | Title |
 |---|---|---|---|
-| 26 | `board_notifications` | carry out | Where the Board is told what happened |
-| 27 | `outbound_email` | hand over | Sending a confirmation, a certificate and a survey invitation |
-| 28 | `video_channel` | hand over | Where a recording is published |
-| 29 | `meeting_platform` | hand over | The room the webinar happens in |
+| 27 | `board_notifications` | carry out | Where the Board is told what happened |
+| 28 | `outbound_email` | hand over | Sending a confirmation, a certificate and a survey invitation |
+| 29 | `video_channel` | hand over | Where a recording is published |
+| 30 | `meeting_platform` | hand over | The room the webinar happens in |
 
 ## When the sequence ends
 

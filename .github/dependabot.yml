@@ -29,23 +29,21 @@
 # known-vulnerable package from one advisory to the next time somebody
 # thinks to look, and it is worth paying here.
 #
-# What a duplicate does with it: turns it off
-# -------------------------------------------
-# Every manifest and every lockfile named below belongs to the **product**,
-# by `declarations/boundary.yml`'s default -- and for a duplicate an update is a
-# merge. A duplicate whose Dependabot bumps `app/package-lock.json` has
-# edited a product file, and upstream's own bump of that same generated
-# file is then a conflict with no readable resolution, arriving monthly
-# until somebody stops merging. That is precisely the failure the boundary
-# exists to prevent.
+# What a duplicate does with this file, and where that is written
+# ---------------------------------------------------------------
+# Not here. Every manifest and every lockfile named below belongs to the
+# **product** by `declarations/boundary.yml`'s default, so a duplicate whose
+# Dependabot bumps one of them has edited a product file and bought a
+# monthly conflict with upstream's own bump of it -- and the operator who
+# has to switch that off never opens this file. The paragraph that used to
+# stand here was addressed to them and reached nobody.
 #
-# So version updates belong upstream and nowhere else: one bump there
-# reaches every instance through the merge each of them already does. A
-# duplicate switches them off in its own settings (Code security ->
-# Dependabot version updates) and keeps Dependabot *alerts*, which are
-# enabled in settings rather than configured here, cost no Actions minutes,
-# and tell an operator what they are running without proposing to rewrite a
-# file they do not own.
+# It is a step of the standing-up sequence now: `STANDING-UP.yml`, step
+# `dependency_updates`, in the stage that creates the two repositories.
+# That declaration is rendered into `docs/operating/standing-up.md` for a
+# person and `docs/operating/standing-up-for-an-agent.md` for an agent, and
+# it carries what the step costs to skip beside what it does, which a
+# comment in a configuration file cannot.
 
 version: 2
 updates:

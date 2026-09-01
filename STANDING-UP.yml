@@ -311,6 +311,47 @@ steps:
       answers 200 over a site that does not exist. Read the served page's
       source, not its status code.
 
+  - id: dependency_updates
+    stage: repositories
+    title: The dependency updates a duplicate switches off
+    actor: human
+    does: >-
+      Switch Dependabot **version updates** off on the private repository,
+      and leave Dependabot **alerts** on. Every manifest and every lockfile
+      `.github/dependabot.yml` watches belongs to the product, and for a
+      duplicate an update is a merge: a Dependabot pull request opened here
+      edits a generated file upstream also bumps, and upstream's own bump of
+      that same file is then a conflict with no readable resolution. One
+      bump upstream reaches every instance through the merge each of them
+      already does, so version updates belong there and nowhere else. Alerts
+      are the half worth keeping — a setting rather than a file, costing no
+      Actions minutes, telling you what you are running without proposing to
+      rewrite a file you do not own.
+    check: >-
+      Settings → Code security shows *Dependabot version updates* off and
+      *Dependabot alerts* on, and no dependency-bump pull request is open on
+      the first of the month after this.
+    degraded: >-
+      One grouped pull request per dependency tree per month, each one
+      editing a generated file the product owns, and each one a conflict
+      against upstream's own bump of it. Nothing goes red: those pull
+      requests are green, and what stops working is the next merge from
+      upstream — which is the failure `declarations/boundary.yml` exists to
+      prevent, arriving through the one file in this repository that
+      configures a service rather than running one.
+    walkthrough:
+      - Open the private repository's Settings → Code security.
+      - Find *Dependabot version updates* and switch it off. This is the
+        only place they can be switched off — `.github/dependabot.yml` is
+        what configures them and it is the product's own file, so deleting
+        it would itself be editing a product file, which is the same
+        conflict by a shorter route.
+      - Find *Dependabot alerts* in the same list and make sure it is on. It
+        reads the manifests you are running against GitHub's advisory
+        database and opens no pull request.
+      - Nothing here is done to the public repository, which holds a built
+        site and neither a manifest nor a lockfile.
+
   - id: instance_declaration
     stage: identity
     title: Who is publishing, and where
