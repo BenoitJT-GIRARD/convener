@@ -1,6 +1,22 @@
 # Automatic reviewer assignment on pull requests.
 # Later patterns override earlier ones.
 #
+# Two kinds of repository carry this file, and they need different values
+# -----------------------------------------------------------------------
+# This one is an **instance**: a series run by an Editorial Board, where a
+# review request goes to that board's own team, and the setup below is how
+# that team is named.
+#
+# The **product** -- the public repository
+# `docs/operating/publishing-the-product.md` derives and pushes -- has no
+# Editorial Board and no organisation team to name. One maintainer, one
+# line, `* @<that maintainer>`, and the whole of what this file earns
+# there is that an outside contributor's pull request reaches them without
+# anybody having to watch the repository. It is written in that repository
+# after the first push, and it cannot be written here: the derivation
+# carries this file over with the organisation half rewritten into the
+# worked example's, which is a team in an organisation nobody owns.
+#
 # One-off setup, once per instance, and stated here rather than pointed at:
 # this file used to send a reader to a TODO.md that no longer exists, so
 # the only guidance it carried pointed at nothing.
@@ -21,7 +37,9 @@
 # the boundary declares, two relay configurations, and this file. It
 # cannot drift: `tools/tests/declaration/test_published.py::
 # test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
-# refuses it naming any organisation other than the declared one.
+# refuses a team in any organisation other than the declared one, in
+# either shape, and requires the team itself wherever an instance is
+# declared at all.
 #
 # Longer form, with the rest of the board's own setup:
 # docs/operating/operations.md, "Board notifications", step 2.

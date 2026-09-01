@@ -98,7 +98,7 @@ import re
 import subprocess
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 from urllib.parse import urlsplit
 
 import pytest
@@ -1068,21 +1068,106 @@ def test_the_generated_templates_carry_the_identity_the_declaration_names() -> N
         )
 
 
+#: The team an *instance* sends its review requests to, and the slug
+#: `app/src/auth/role.ts` asks GitHub about when it decides who signs in
+#: as a Board member. The literal that file writes, rather than a name for
+#: it: it is the value being compared here, and GitHub is the thing that
+#: has to agree with it.
+BOARD_TEAM: Final = "editorial-board"
+
+
+def _codeowners_owners(text: str) -> list[str]:
+    """Every owner `.github/CODEOWNERS` names, in file order.
+
+    GitHub reads that file with a comment syntax and nothing else, so a
+    `#` opens a comment wherever it appears and the first token of what is
+    left is the pattern. `tools/tests/repository/test_codeowners.py` takes
+    the file apart the same way and asks a different question of the same
+    tokens: whether each pattern matches anything. This one asks who the
+    tokens after it are.
+    """
+    owners: list[str] = []
+    for raw in text.splitlines():
+        line = raw.partition("#")[0].strip()
+        if not line:
+            continue
+        _pattern, *rest = line.split()
+        owners.extend(rest)
+    return owners
+
+
 def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> None:
-    """The exemption above, checked rather than merely granted.
+    """The exemption above, checked rather than merely granted -- and two
+    shapes are correct, because two kinds of repository carry this file.
 
     `.github/CODEOWNERS` is read by GitHub verbatim, before any code of
     this project's runs, so the copy has to exist. What must not happen is
     that it drifts, and a copy nothing compares is a copy that will.
+
+    **An instance** is a series run by an Editorial Board. Every review
+    request goes to that board's GitHub team, whose slug is `BOARD_TEAM`
+    above -- the same one `app/src/auth/role.ts` asks GitHub about when it
+    decides who signs in as a Board member -- inside the organisation that
+    is the owner half of `instance/config.json`'s `identity.repository`. A
+    team under any other organisation is the defect this check was written
+    for: every review request goes to nobody, and nothing anywhere else
+    says so.
+
+    **The product** is a public repository with one maintainer. There is
+    no Editorial Board in it and no organisation team to name, and the one
+    thing the file earns there is that an outside contributor's pull
+    request reaches that maintainer; the value is a single user handle.
+    That shape is not hypothetical, and the derivation is what makes it
+    reachable: a derived repository declares the worked example's
+    identity, so a check that knew only the first shape would demand
+    `@example-instance/editorial-board` -- a team in an organisation
+    nobody owns -- of the one repository where a maintainer's own handle
+    is the right answer, and
+    `docs/operating/publishing-the-product.md` tells that maintainer to
+    write exactly that.
+
+    So two clauses, and they divide the way the two kinds of repository
+    do. **Wherever a team is named at all**, it has to be the declared
+    organisation's board -- that clause holds in every repository, product
+    included, and it is the original check. **Wherever an instance is
+    declared**, the team has to be there: a file that quietly lost it
+    would leave a board's own repository routing nothing to the board.
+    `helpers.instance_identity` is what tells the two apart, and it is the
+    same condition the twenty-four abstaining tests use -- a repository
+    still shipping the example as its instance is either a derived product
+    or a duplicate that has not been made anybody's yet, and neither has a
+    board to name.
     """
     identity = published.load_identity()
     owner, _, _ = identity.repository.partition("/")
+    board = f"@{owner}/{BOARD_TEAM}"
 
     codeowners = (ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
-    assert f"@{owner}/editorial-board" in codeowners, (
-        ".github/CODEOWNERS names a team outside the organisation "
-        f"instance/config.json declares ({owner}) -- every review request it "
-        "makes would go to nobody"
+    owners = _codeowners_owners(codeowners)
+    assert owners, (
+        ".github/CODEOWNERS names no owner on any rule, so it requests no "
+        "review from anybody -- neither of the two shapes this file has is "
+        "one with nobody in it"
+    )
+
+    named_teams = [name for name in owners if "/" in name]
+    outside = [name for name in named_teams if name != board]
+    assert outside == [], (
+        f".github/CODEOWNERS asks {outside} for a review, and "
+        f"instance/config.json declares the organisation {owner}. A team "
+        "outside it does not exist as far as GitHub is concerned, so every "
+        "review request that rule makes goes to nobody, silently"
+    )
+
+    if instance_identity.ships_the_example_as_its_instance():
+        return
+    assert board in owners, (
+        f".github/CODEOWNERS names no {board}, and instance/config.json "
+        "declares an instance of its own -- so this is a board's repository "
+        "with nothing routing a review to the board. The single-handle "
+        "shape belongs to the product, which declares the worked example's "
+        "identity and is told to write it in "
+        "docs/operating/publishing-the-product.md"
     )
 
 

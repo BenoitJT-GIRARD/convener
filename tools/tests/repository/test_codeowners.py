@@ -164,17 +164,34 @@ def test_the_reader_reproduces_the_defect_it_exists_for() -> None:
 
 
 def test_at_least_one_pattern_is_actually_evaluated() -> None:
-    """Non-vacuity. Every rule but `*` is skipped by name above, so a file
-    that lost its last path rule -- or a parser that stopped finding
-    rules at all -- would leave the sweep reporting green over nothing.
+    """Non-vacuity, in a file that has two legal shapes.
+
+    Every rule but `*` is skipped by name above, so an *instance*'s file --
+    which carries a path rule releasing `/instance/data/` from the review
+    the catch-all demands -- has to bring that rule here, or a file that
+    lost it, or a parser that stopped finding rules at all, would leave
+    the sweep reporting green over nothing.
+
+    The **product**'s own file has no path rule to find and never will:
+    one maintainer, one line, `*` and a handle, written after the first
+    push by `docs/operating/publishing-the-product.md`. So that shape is
+    admitted by *being* it -- exactly one rule, the catch-all, with an
+    owner on it -- rather than by the sweep finding nothing and taking
+    silence for a decision. A file that had lost its last path rule would
+    still carry the rules above it and fail here, which is the difference
+    between the two.
     """
+    rules = _rules()
     evaluated = [
-        pattern for _number, pattern, _owners in _rules() if pattern != _EVERYTHING
+        pattern for _number, pattern, _owners in rules if pattern != _EVERYTHING
     ]
-    assert evaluated, (
-        f"{CODEOWNERS.as_posix()} declares no rule this sweep evaluates -- "
-        "every pattern in it is the catch-all, so the sweep above proves "
-        "nothing about any path"
+    if evaluated:
+        return
+    assert len(rules) == 1 and rules[0][1] == _EVERYTHING and rules[0][2], (
+        f"{CODEOWNERS.as_posix()} declares no rule this sweep evaluates, and "
+        "it is not the product's one-line shape either (a single "
+        f"{_EVERYTHING!r} rule with an owner on it). Every pattern in it is "
+        "the catch-all, so the sweep above proves nothing about any path"
     )
 
 
