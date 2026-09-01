@@ -20,7 +20,7 @@ occupies.
 **A bare word is a path only where the code uses it as one.** A word with
 no separator in it is refused inside a `/` chain and admitted everywhere
 else. The clause was written for `"data"`, which three places in this
-package hold meaning something else: `cli.py::handle_proposal` and
+package hold meaning something else: `cli/journey/proposal.py::handle_proposal` and
 `platform_fcc.py` both read a `data` key off a JSON payload a third party
 sends, and `commit_format.DOMAIN` is the domain word a decision commit's
 subject carries. None of the four declared paths is a bare word any more

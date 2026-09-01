@@ -120,15 +120,15 @@ idempotence key than having none at all.
 **So the bound is per event, not per person, by choice: convenient, not
 forced.** `instance/data/survey-invitations.yml` (`registry_from_data`/
 `registry_to_data`, below) records only that event *X* was invited, and on
-what day -- no name, no address, no count of how many. `cli.py::invite_survey`
-refuses outright, before composing anything, once an event already carries
-an entry here, unless an operator ticks the workflow's own `resend_all` --
-which then re-invites *every* currently matched attendee, including
+what day -- no name, no address, no count of how many.
+`cli/journey/survey.py::invite_survey` refuses outright, before composing anything, once
+an event already carries an entry here, unless an operator ticks the workflow's own
+`resend_all` -- which then re-invites *every* currently matched attendee, including
 everyone the first run already reached. Duplicate, not targeted.
 
 **What actually shrinks how often that matters: a single in-place retry,
 which needs no identifier at all.**
-`cli.py::invite_survey` retries one immediate resend attempt for any
+`cli/journey/survey.py::invite_survey` retries one immediate resend attempt for any
 attendee whose first delivery attempt failed, inside the same run, before
 moving on -- a transient SMTP hiccup at message 3 of 40 no longer forces
 mailing all 40 again, because it usually never leaves this loop at all. The
@@ -151,7 +151,7 @@ Nothing nominative reaches a job log, on every path
 ---------------------------------------------------
 Mirrors `delivery.py` and `confirmation.py` exactly, for the identical
 reason: `compose` below returns a `confirmation.Confirmation`, and
-`cli.py::invite_survey` -- the only caller -- prints counts and event ids
+`cli/journey/survey.py::invite_survey` -- the only caller -- prints counts and event ids
 only, never a name, an address, or a rendered message, on the success path
 or on any refusal path (survey disabled, already invited, no registrations
 on file, a platform that cannot answer). `confirmation.deliver` is reused
@@ -320,7 +320,7 @@ InvitationRegistry = dict[str, date]
 
 def invitations_path(root: Path) -> Path:
     """`instance/data/survey-invitations.yml`, relative to `root`. Pure path
-    computation -- `cli.py` is still the only module that ever opens the
+    computation -- `cli/` is still the only sub-package that ever opens the
     path this returns."""
     return root / INVITATIONS_PATH
 
@@ -380,7 +380,7 @@ def registry_from_data(data: Any) -> InvitationRegistry:
 
 def registry_to_data(registry: Mapping[str, date]) -> dict[str, Any]:
     """The inverse of `registry_from_data`: a plain, YAML-safe structure
-    `cli.py` hands to its own YAML writer. Sorted by event id, the same
+    `cli/` hands to its own YAML writer. Sorted by event id, the same
     diff-friendly ordering `eventkeys.registry_to_data` already uses."""
     return {
         "v": INVITATIONS_FILE_VERSION,

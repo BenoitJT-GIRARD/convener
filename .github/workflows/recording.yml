@@ -10,7 +10,7 @@ name: Release a recording
 # recording is reachable, checked against `video/mp4` and
 # `Accept-Ranges: bytes` -- see tools/convener_ops/journey/platform_fcc.py's module
 # docstring for the full reasoning and
-# tools/convener_ops/cli.py::release_recording's own docstring for the order
+# tools/convener_ops/cli/journey/attendance.py::release_recording's own docstring for the order
 # this enforces.
 #
 # This is the route for a talk headed to YouTube ONLY. The discussion

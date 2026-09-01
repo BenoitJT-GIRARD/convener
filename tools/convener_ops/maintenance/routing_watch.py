@@ -122,7 +122,7 @@ What this still cannot see, written down rather than implied
   does not have. This control proves the *ability* to queue, which is the
   half that can be proved from files.
 
-Everything in this module is a pure function. `cli.py` supplies the parsed
+Everything in this module is a pure function. `cli/` supplies the parsed
 files and the clock; nothing here reads a file, an environment variable or
 a clock, and nothing here goes near the network.
 """
@@ -380,7 +380,7 @@ def findings(
     """Every reason this observation should make a noise. Empty is a
     projection that can still route.
 
-    `unreadable` is `cli.py`'s one-line account of why the file could not
+    `unreadable` is `cli/`'s one-line account of why the file could not
     be read at all, or `None`. When it is set it is the **only** finding
     returned: every divergence in that case is a consequence of it, and two
     findings describing one cause is how an operator learns to skim.
@@ -448,7 +448,7 @@ def annotation_lines(
     there is no stranger-controlled half to keep out of the colour of the
     run: nothing a submitter does can put an event in this list.
 
-    Composed here rather than in `cli.py` so a test can read the exact text
+    Composed here rather than in `cli/` so a test can read the exact text
     without capturing stdout.
     """
     lines = [f"::error::[{finding.kind}] {finding.text}" for finding in fired]

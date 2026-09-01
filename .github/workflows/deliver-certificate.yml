@@ -15,7 +15,7 @@ name: Deliver a certificate
 # certificates-public.json -- it names exactly one certificate without
 # naming a person. `convener-deliver-certificate` resolves it to a registration
 # by reusing `convener-reissue-certificate`'s own fingerprint-reversal path
-# (`cli.py::_find_register_entry`, `cli.py::_find_attendee_by_fingerprint`)
+# (`cli/journey/certificate.py::_find_register_entry`, `cli/journey/certificate.py::_find_attendee_by_fingerprint`)
 # rather than a second lookup of its own.
 #
 # Read only: unlike the three certificate workflows, this one never writes

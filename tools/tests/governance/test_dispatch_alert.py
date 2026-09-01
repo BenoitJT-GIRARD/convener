@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from convener_ops import cli
+from convener_ops.cli import governance as cli
 from convener_ops.governance.dispatch_alert import MAIN_BRANCH, alert_message
 from convener_ops.governance.notify import MENTION_ENV, THREAD_ENV
 
@@ -141,7 +141,7 @@ def test_cli_on_main_exits_zero_writes_off_main_false_and_no_body(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: tmp_path)
     _set_run_env(monkeypatch, head_branch="main")
     output_file = tmp_path / "gh_output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
@@ -158,7 +158,7 @@ def test_cli_off_main_no_channel_writes_off_main_true_and_no_body(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: tmp_path)
     _set_run_env(monkeypatch, head_branch="chore/cleanup")
     output_file = tmp_path / "gh_output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
@@ -177,7 +177,7 @@ def test_cli_off_main_with_channel_writes_the_body_and_off_main_true(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: tmp_path)
     _set_run_env(monkeypatch, head_branch="chore/cleanup")
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
@@ -202,7 +202,7 @@ def test_cli_without_github_output_prints_the_line_instead(
     own fallback prints the `key=value` line instead of raising, the same
     "inspectable instead of silent" idiom every other CLI output write in
     this package already uses."""
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: tmp_path)
     _set_run_env(monkeypatch, head_branch="chore/cleanup")
 
     assert cli.alert_secret_workflow_run() == 0
@@ -218,7 +218,7 @@ def test_cli_never_fails_the_process_itself(
     reading `off_main` -- this command's own exit code must stay 0 in
     every case, on or off main, channel or no channel, so that step is
     the only place D-25's loud failure actually happens."""
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: tmp_path)
     for branch in ("main", "chore/cleanup", ""):
         _set_run_env(monkeypatch, head_branch=branch)
         assert cli.alert_secret_workflow_run() == 0

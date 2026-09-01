@@ -48,7 +48,7 @@ import sys
 from collections.abc import Sequence
 from typing import Any
 
-from convener_ops.cli import dump_speakers
+from convener_ops.cli.store import dump_speakers
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 

@@ -353,7 +353,7 @@ def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -
 # ------------------------------------------------------------------ #
 # is_valid_identifier() -- the same one-line shape
 # check eventkeys.secret_name already gives EVENT_ID, applied to
-# CERTIFICATE_ID before cli.py ever echoes it into a job's own log.
+# CERTIFICATE_ID before cli/ ever echoes it into a job's own log.
 # ------------------------------------------------------------------ #
 
 
@@ -681,8 +681,8 @@ def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> Non
     """The two-halves guarantee: a genuinely new identifier
     for the corrected certificate, and the revoked row this replaces is
     returned completely untouched -- `reissue` never mutates `existing`,
-    it only reads it. The caller (`cli.py::reissue_certificate`) is what
-    appends the new entry alongside the old one."""
+    it only reads it. The caller (`cli/journey/certificate.py::reissue_certificate`) is
+    what appends the new entry alongside the old one."""
     private_pem, public_pem = generate()
     issued = issue(
         _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
@@ -718,7 +718,7 @@ def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> Non
 # ------------------------------------------------------------------ #
 # sign_for() -- sign an already-resolved
 # register row directly, with no fingerprint lookup at all. The primitive
-# cli.py::deliver_certificate needs so it can sign the exact row
+# cli/journey/certificate.py::deliver_certificate needs so it can sign the exact row
 # CERTIFICATE_ID named, rather than re-resolving one through issue() and
 # risking naming one certificate while attaching another.
 # ------------------------------------------------------------------ #
@@ -781,7 +781,7 @@ def test_sign_for_matches_the_token_issue_would_have_produced_for_the_same_entry
 
 def test_sign_for_does_not_inspect_or_refuse_a_revoked_entry_itself() -> None:
     """`sign_for` is a pure signing primitive -- refusing to deliver a
-    revoked certificate is `cli.py`'s own decision (both delivery
+    revoked certificate is `cli/`'s own decision (both delivery
     commands make it before ever calling this function), not something
     silently baked into the signer. If it were, a caller that legitimately
     needs to sign a revoked row for its own purposes (there is none today,
@@ -819,7 +819,7 @@ def test_certificate_event_truncates_a_title_longer_than_the_max_length() -> Non
     assert len(event.title) == _MAX_TITLE_LENGTH
     assert event.title == long_title[:_MAX_TITLE_LENGTH]
     # The truncation is not silent --
-    # this flag is what cli.py's own `_warn_if_title_truncated` reads.
+    # this flag is what cli/'s own `_warn_if_title_truncated` reads.
     assert event.title_truncated is True
 
 

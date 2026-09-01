@@ -19,7 +19,7 @@ name: Reissue a certificate
 # certificates-public.json -- it names exactly one certificate without
 # naming a person. `convener-reissue-certificate` resolves it to a
 # registration the same way `certificate.issue` does, run in reverse: see
-# that command's own docstring in tools/convener_ops/cli.py.
+# that command's own docstring in tools/convener_ops/cli/.
 #
 # It also takes an optional `conference_id`, the
 # same provider identifier -- never an address -- `recording.yml` and
@@ -27,7 +27,7 @@ name: Reissue a certificate
 # FCC path (CONVENER_MEETING_API_TOKEN configured) could not resolve any
 # attendance at all; see issue-certificates.yml's own comment for the
 # full reasoning, shared verbatim by both workflows' underlying command
-# through `cli.py::_conference_ids_from_env`.
+# through `cli/journey/event.py::conference_ids_from_env`.
 on:
   workflow_dispatch:
     inputs:

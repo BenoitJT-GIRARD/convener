@@ -40,7 +40,7 @@ field. A change to a template's wording now reaches both surfaces because
 there is only the one file to change; `tools/tests/publication/test_announce.py`'s own
 mutation of a template proves it.
 
-`root` is threaded in by the caller (`cli.py::render_announcements`) rather
+`root` is threaded in by the caller (`cli/publication.py::render_announcements`) rather
 than resolved here, the same convention `visual.render_announcement` and
 `_load_colours` already hold: a pure function that is handed its own inputs
 rather than reading `paths.repo_root()` itself is the one every test in

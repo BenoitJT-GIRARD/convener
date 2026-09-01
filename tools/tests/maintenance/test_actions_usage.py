@@ -8,7 +8,7 @@ layers that make the measurement mean something:
 * `actions_usage.py`'s pure arithmetic -- the per-job rounding GitHub
   actually bills by, the split into the half that cannot surprise anyone
   and the halves that can, and the boundaries the alarm turns on.
-* `cli.py`'s three commands, driven end to end against a temporary
+* `cli/maintenance.py`'s three commands, driven end to end against a temporary
   repository root and a fixture file. **The "prove it" lives here**: data
   that crosses the line, watched going off, and
   data one unit below it, watched staying quiet -- for both alarms.
@@ -33,7 +33,7 @@ from typing import Any
 import pytest
 from conftest import WorkflowYaml
 
-from convener_ops.cli import (
+from convener_ops.cli.maintenance import (
     actions_usage_window,
     check_actions_usage_liveness,
     record_actions_usage,
@@ -577,12 +577,12 @@ def test_the_committed_record_is_readable_by_its_own_reader() -> None:
 
 
 # ==================================================================== #
-# cli.py: the three commands, end to end, offline
+# cli/maintenance.py: the three commands, end to end, offline
 # ==================================================================== #
 
 
 class _FixedDatetime:
-    """A stand-in for the `datetime` class `cli.py` imports, whose `now()`
+    """A stand-in for the `datetime` class `cli/maintenance.py` imports, whose `now()`
     always returns the same instant -- the same idiom
     `test_retention_liveness.py::_FixedDatetime` uses."""
 
@@ -595,7 +595,7 @@ class _FixedDatetime:
 
 def _set_today(monkeypatch: pytest.MonkeyPatch, today: date) -> None:
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.maintenance.datetime",
         _FixedDatetime(datetime(today.year, today.month, today.day, 9, 0, tzinfo=UTC)),
     )
 

@@ -19,7 +19,7 @@ import pytest
 import yaml
 from conftest import speaker
 
-from convener_ops.cli import _scheduled_announcements, render_visuals
+from convener_ops.cli.publication import _scheduled_announcements, render_visuals
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication.formats import FORMATS
 from convener_ops.publication.public_data import to_public
@@ -100,7 +100,7 @@ def _use_fake_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, speakers: list[dict[str, Any]]
 ) -> Path:
     fake_root = _fake_root(tmp_path, speakers)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: fake_root)
+    monkeypatch.setattr("convener_ops.cli.publication.repo_root", lambda: fake_root)
     return fake_root
 
 
@@ -360,7 +360,7 @@ def test_invalid_yaml_fails_loudly_and_leaves_the_target_untouched(
     (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         "not: [valid", encoding="utf-8"
     )
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
+    monkeypatch.setattr("convener_ops.cli.publication.repo_root", lambda: tmp_path)
     out = tmp_path / "out"
     exit_code = _run(out, monkeypatch)
     assert exit_code == 1

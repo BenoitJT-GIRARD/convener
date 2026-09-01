@@ -1,7 +1,7 @@
 name: Visuals production
 
 # The trigger for the production seam
-# (`convener-render-visuals`, `tools/convener_ops/cli.py`), run against real, *scheduled*
+# (`convener-render-visuals`, `tools/convener_ops/cli/publication.py`), run against real, *scheduled*
 # editions in `instance/data/speakers.yml` -- locking a date, receiving a
 # portrait's consent, or correcting a title all land here through that one
 # file -- plus a GitHub-side manual command (`workflow_dispatch`)
@@ -85,10 +85,10 @@ name: Visuals production
 # list too, and deliberately *not* in visuals.yml's -- re-derived from what
 # each job's own render actually calls, not copied across the two.
 # `render_visuals` and `render_announcements` (this job's own two commands,
-# `cli.py`) each call `public_data.to_public` directly, before either one
+# `cli/`) each call `public_data.to_public` directly, before either one
 # reads a row -- the consent gate (`_gate_closed`,
 # `personal_disclosure_withheld`, `recording_withheld`) every one of
-# `cli.py`'s, `announce.py`'s and `visual.py`'s own docstring names as the
+# `cli/`'s, `announce.py`'s and `visual.py`'s own docstring names as the
 # reason a portrait or a room link cannot reach a rendered page. Harmless
 # today only because `_scheduled_announcements` never wires a portrait
 # through regardless of what the gate decides -- an accident of today's
@@ -123,7 +123,7 @@ on:
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'
-      - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/cli/publication.py'
       - 'tools/convener_ops/publication/announce.py'
       - 'tools/convener_ops/journey/registration.py'
       - 'tools/convener_ops/publication/public_data.py'

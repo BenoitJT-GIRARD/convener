@@ -28,7 +28,7 @@
  * - `registrations: 0` next to three nulls: nothing recorded and none
  *   recorded are different facts, and one must not serialise as the other.
  * - a multi-line abstract, the one shape whose *formatting* the two writers
- *   disagreed on until `cli.py::_Dumper` was taught js-yaml's literal block.
+ *   disagreed on until `cli/store.py::_Dumper` was taught js-yaml's literal block.
  * - a multi-line `bio`, so the literal block is pinned on a second field
  *   and not on the one field that happened to be tested first.
  * - a `seed_questions` carrying an apostrophe and accents: the apostrophe

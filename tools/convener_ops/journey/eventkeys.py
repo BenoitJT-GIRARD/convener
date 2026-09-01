@@ -102,14 +102,14 @@ Destruction is an operation, not a procedure
 -----------------------------------------------
 `destroy` and `key_status` are pure, like `validate.py`'s functions and for
 the same reason its own docstring gives: "nothing here touches the
-filesystem -- that belongs to `cli.py`." Deciding whether an event's key is
+filesystem -- that belongs to `cli/`." Deciding whether an event's key is
 `NEVER_CREATED`, `ACTIVE` or `DESTROYED`, and producing the record a
 destruction should write, do not need a disk read to be correct -- they need
 the two facts a caller already has cheaply: whether `public_key_path
 (event_id)` exists, and what the on-disk registry already says. Actually
 removing `CONVENER_EVENT_KEY_<ID>` from the repository's secrets, and persisting
 the record `destroy` returns, are real side effects, and belong to the
-retention job that calls this module, the same way `cli.py` -- not
+retention job that calls this module, the same way `cli/` -- not
 `validate.py` -- is the one that writes `instance/data/speakers.yml`.
 
 The distinction the registry has to preserve is `DESTROYED` versus
@@ -135,8 +135,8 @@ expiry), never a raw `datetime.now()` a caller might read on the wrong
 side of midnight UTC. Inclusive at the boundary: an event is due starting
 on day 90 itself, not day 91 -- unlike `sweep.expire_votes`'s own one-day
 grace for a board vote window, there is no benefit of the doubt to extend
-here. The retention job (`cli.py::retention_sweep`) calls this once per
-event whose key is still `ACTIVE`, and destroys exactly the ones it
+here. The retention job (`cli/journey/retention.py::retention_sweep`) calls this once
+per event whose key is still `ACTIVE`, and destroys exactly the ones it
 returns `True` for.
 
 The destruction registry lives in one file, not one per event
@@ -146,7 +146,7 @@ already assembled; `registry_from_data` and `registry_to_data` are its
 parse and serialise halves, reading and writing
 `instance/data/event-key-destructions.yml` (`destructions_path`) the same way
 `certificate.register_from_data`/`register_to_data` read and write
-`certificates.yml` -- pure, no filesystem access, `cli.py` is still the
+`certificates.yml` -- pure, no filesystem access, `cli/` is still the
 only module that opens the path. One file for every event, not a marker
 dropped into each event's own `instance/data/events/<id>/` directory: a scheduled
 sweep spanning many events writes one small file and one commit, not one
@@ -559,8 +559,8 @@ def destructions_path(root: Path) -> Path:
     """`instance/data/event-key-destructions.yml`, relative to `root` -- the one
     function that names where the destruction registry lives on disk, the
     same role `certificate.certificates_path` plays for that register.
-    Pure path computation: reads nothing, touches nothing; `cli.py` is
-    still the only module that ever opens the path this returns."""
+    Pure path computation: reads nothing, touches nothing; `cli/` is
+    still the only sub-package that ever opens the path this returns."""
     return root / DESTRUCTIONS_PATH
 
 
@@ -620,7 +620,7 @@ def registry_from_data(data: Any) -> dict[str, date]:
 
 def registry_to_data(registry: Mapping[str, date]) -> dict[str, Any]:
     """The inverse of `registry_from_data`: a plain, YAML-safe structure
-    `cli.py` hands to its own YAML writer. Sorted by event id -- like
+    `cli/` hands to its own YAML writer. Sorted by event id -- like
     `certificate.register_to_data`'s own field ordering -- so a diff on
     `instance/data/event-key-destructions.yml` shows only what a sweep actually
     added, never a reordering."""

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from convener_ops.cli import check_config, render_check
+from convener_ops.cli.declaration import check_config, render_check
 from convener_ops.declaration.integrations import Integration
 
 
@@ -123,7 +123,7 @@ integrations:
 """,
         encoding="utf-8",
     )
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: fake_root)
+    monkeypatch.setattr("convener_ops.cli.declaration.repo_root", lambda: fake_root)
     monkeypatch.delenv("CONVENER_AUTH_PROXY_URL", raising=False)
 
     exit_code = check_config()

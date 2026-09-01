@@ -13,7 +13,7 @@ from pathlib import Path
 import instance_identity
 import pytest
 
-from convener_ops.cli import render_visual_fixtures
+from convener_ops.cli.publication import render_visual_fixtures
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.journey.registration import signup_url

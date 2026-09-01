@@ -26,7 +26,7 @@ signed token back to its caller. The token is what goes on the document,
 printed as text and encoded as a machine-readable code
 (`verification_url` below builds the address that carries it). Nothing
 about *that* trip through this module ever reaches disk here: `issue`
-returns the token, `cli.py` mails it, and this module's own
+returns the token, `cli/` mails it, and this module's own
 persistence -- the register -- only ever receives the `CertificateEntry`
 this file defines, which has no field a name could occupy. The name lives
 exactly once, in the token, in the recipient's own inbox. We do not keep a
@@ -210,7 +210,7 @@ guessable space of institutional addresses makes practically reversible --
 publishing the address in every sense that matters, from a register this
 whole module exists to keep clear of exactly that. So this is one of this
 project's rare exceptions to D-13's "an absent integration is a normal
-state": **`cli.py` must not call `issue` at all when `CONVENER_MATCHING_SALT`
+state": **`cli/` must not call `issue` at all when `CONVENER_MATCHING_SALT`
 is unset** -- no certificate issued this run, the same *outward* shape as
 an ordinary D-13 absence (the job says so and exits cleanly), but for the
 stronger reason the global constraints name: an absent key here forbids
@@ -262,7 +262,7 @@ The public projection: identifiers and states, nothing else
 `{"identifier", "state"}` dicts, sorted by identifier, built from a
 register the same way `public_data.to_public` builds `events-public.json`
 from the speaker list -- an allowlist of exactly two columns, not a
-denylist of the one column (`fingerprint`) that must never leave. `cli.py`
+denylist of the one column (`fingerprint`) that must never leave. `cli/`
 writes the result to `instance/public-data/certificates-public.json`, following
 `events-public.json`'s own precedent (`publish-showcase.yml` copies that
 file to the public showcase; a future workflow does the same for this
@@ -483,8 +483,8 @@ _IDENTIFIER_BYTES: Final = 16
 
 #: `_new_identifier`'s own output shape, by construction: `token_hex(16)`
 #: is always exactly 32 lowercase hex characters.
-#: `CERTIFICATE_ID` reaches `cli.py::reissue_certificate` and
-#: `cli.py::revoke_certificate` straight from an operator's own
+#: `CERTIFICATE_ID` reaches `cli/journey/certificate.py::reissue_certificate` and
+#: `cli/journey/certificate.py::revoke_certificate` straight from an operator's own
 #: `workflow_dispatch` input, validated by nothing before this, and echoed
 #: into the job's own log once a lookup succeeds. `.strip()` alone removes
 #: a *leading or trailing* newline but not one embedded in the middle, so
@@ -540,7 +540,7 @@ _SECONDS_PER_HOUR: Final = 3600
 #: receiving a certificate -- a shortened title is still recognisably the
 #: same talk. Enforced once, in `CertificateEvent.__post_init__`, so every
 #: caller -- `issue`, `reissue`, and every `render_certificate` call in
-#: `cli.py`, all of which read `CertificateEvent.title` -- signs and
+#: `cli/`, all of which read `CertificateEvent.title` -- signs and
 #: displays the identical, already-bounded string; a document showing one
 #: title while the signed payload carries another is exactly what this
 #: module forbids, so this cannot be a truncation applied to the document
@@ -577,7 +577,7 @@ class CertificateEvent:
     never a constructor argument (`init=False`), always derived the same
     way `title` itself is. Before this, the truncation was silent: a
     signed, delivered certificate could quietly carry a shortened title
-    with nothing anywhere telling an operator it happened. `cli.py`'s
+    with nothing anywhere telling an operator it happened. `cli/`'s
     `issue_certificates` and `deliver_certificates` both read this flag,
     once, to print a `::warning::` naming the event -- the same
     discipline this module already gives the revoked-refusal case,
@@ -627,7 +627,7 @@ class IssueResult:
     #: `True` when `entry` already existed in the register `issue` was
     #: given -- this attendee has already been issued a certificate for
     #: this event, under this same fingerprint, and no new row was added.
-    #: `False` when `entry` is freshly minted. The caller (`cli.py`)
+    #: `False` when `entry` is freshly minted. The caller (`cli/`)
     #: decides what to do with either: append `entry` to the register on
     #: `False`, leave it untouched on `True`.
     already_registered: bool
@@ -645,7 +645,7 @@ def fingerprint(event_id: str, email: str, salt: str) -> str:
     function has no fallback to offer: a mandatory register field cannot be
     populated safely without a real salt (see the module docstring's
     "absence is not ordinary here" section), so the type itself refuses to
-    let a caller pass `None` and get something back. `cli.py` must resolve
+    let a caller pass `None` and get something back. `cli/` must resolve
     the secret's presence *before* calling this at all.
 
     `normalize_email` keeps the same "same address, same value" property
@@ -678,8 +678,8 @@ def duration_hours(duration_seconds: int) -> float:
     `duration_seconds` must already be bounded by the seminar's own
     scheduled length (`seminar_duration_minutes * 60`) before it reaches
     here -- this function does not clamp
-    it itself; `cli.py::issue_certificates` does, once, before calling
-    `issue`, because that is the one place both the attendee's summed
+    it itself; `cli/journey/certificate.py::issue_certificates` does, once, before
+    calling `issue`, because that is the one place both the attendee's summed
     duration and `EligibilityThreshold.seminar_duration_minutes` are
     already in hand. The clamp is not a workaround for a double count, it
     is the correct number: a certificate attests attendance *of the
@@ -775,7 +775,7 @@ def issue(
     docstring already relies on (a revoked certificate is corrected only
     by an operator's deliberate `reissue` call, never by this function),
     while still stopping `issue` from ever handing back a document that no
-    longer stands. A caller iterating many attendees (`cli.py`'s own
+    longer stands. A caller iterating many attendees (`cli/`'s own
     per-attendee loops) is expected to catch this per attendee and
     continue, the same way it already handles a render or transport
     failure -- never let one revoked fingerprint stop the whole run.
@@ -846,8 +846,8 @@ def sign_for(
 ) -> str:
     """Sign `entry` for `attendee` at `event`, without performing any
     register lookup at all -- the exact
-    primitive `cli.py::deliver_certificate` needs: it has already resolved
-    `entry` by `CERTIFICATE_ID`, a stronger, caller-supplied key than
+    primitive `cli/journey/certificate.py::deliver_certificate` needs: it has already
+    resolved `entry` by `CERTIFICATE_ID`, a stronger, caller-supplied key than
     fingerprint, and must sign *that* row, never re-resolve one by
     fingerprint through `issue` and risk naming one certificate in the
     log while attaching another -- a real defect this project has had
@@ -862,7 +862,7 @@ def sign_for(
     `signing.sign` raises for a key that will not load
     (`signing.SigningError`); never inspects `entry.state` itself --
     refusing to sign a revoked entry is the caller's own decision
-    (`cli.py`'s both delivery commands make it before ever reaching this
+    (`cli/`'s both delivery commands make it before ever reaching this
     function), not something a signing primitive should silently decide."""
     return _sign_certificate(entry, event, attendee, private_pem)
 
@@ -922,8 +922,8 @@ def reissue(
     exactly the property this paragraph's own warning still protects; see
     `issue`'s own docstring, "three-way, not two-way". So this remains a
     second, separate function, never called from `issue`'s own logic or
-    from `cli.py::issue_certificates`'s loop -- see
-    `cli.py::reissue_certificate` for the operator-facing command
+    from `cli/journey/certificate.py::issue_certificates`'s loop -- see
+    `cli/journey/certificate.py::reissue_certificate` for the operator-facing command
     that calls this, run by hand, for one person at a time, never on a
     schedule.
 
@@ -1053,7 +1053,7 @@ def register_from_data(data: Any) -> tuple[CertificateEntry, ...]:
     """Parse an already YAML-loaded `certificates.yml`, or start empty when
     `data` is `None` -- the event's first certificate, which finds no
     register on disk yet. This function never touches a filesystem path;
-    `cli.py` is the only place `certificates.yml` is ever opened, the same
+    `cli/` is the only place `certificates.yml` is ever opened, the same
     split `registration.load_registration_file` draws for
     `registrations.enc`.
 
@@ -1143,7 +1143,7 @@ def register_from_data(data: Any) -> tuple[CertificateEntry, ...]:
 
 def register_to_data(entries: Sequence[CertificateEntry]) -> dict[str, Any]:
     """The inverse of `register_from_data`: a plain, YAML-safe structure
-    `cli.py` hands to its own YAML writer (`cli._dump`). Field order is
+    `cli/` hands to its own YAML writer (`cli.store.dump`). Field order is
     fixed here so a diff on `certificates.yml` shows only what actually
     changed, never a reordering."""
     return {
@@ -1163,7 +1163,7 @@ def register_to_data(entries: Sequence[CertificateEntry]) -> dict[str, Any]:
 
 #: `instance/data/events/<event_id>/`, relative to a repository root -- the
 #: directory `certificates_path` below builds on, and the one
-#: `cli.py::certificates_public_data` globs. Exported
+#: `cli/journey/certificate.py::certificates_public_data` globs. Exported
 #: rather than buried inside `certificates_path` alone, so the one
 #: other place that needs "where do events' own directories live" (the
 #: glob) shares this one definition instead of typing `"data" / "events"`
@@ -1175,8 +1175,8 @@ def certificates_path(root: Path, event_id: str) -> Path:
     """`instance/data/events/<event_id>/certificates.yml`, relative to `root` --
     the one function that names where this event's certificate register
     lives on disk. Pure path computation, like
-    `signing.public_key_path`: reads nothing, touches nothing; `cli.py` is
-    still the only module that ever opens the path this returns.
+    `signing.public_key_path`: reads nothing, touches nothing; `cli/` is
+    still the only sub-package that ever opens the path this returns.
 
     Exported specifically so a *symbol* stands between this file and
     `registrations.enc`, its sibling in the same directory that the

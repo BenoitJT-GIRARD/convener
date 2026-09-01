@@ -27,7 +27,12 @@ from typing import Any
 import pytest
 from conftest import EDITIONS
 
-from convener_ops.cli import CONFIG_HEADER, SPEAKERS_HEADER, dump_config, dump_speakers
+from convener_ops.cli.store import (
+    CONFIG_HEADER,
+    SPEAKERS_HEADER,
+    dump_config,
+    dump_speakers,
+)
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.governance.validate import validate_config, validate_speakers
 

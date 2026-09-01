@@ -44,7 +44,7 @@ def test_survey_url_names_the_event_on_the_survey_pages_own_address() -> None:
 
 def test_survey_url_quotes_a_hostile_event_id() -> None:
     # This module never receives an unvalidated event id in practice
-    # (cli.py always checks `eventkeys.secret_name` first), but survey_url
+    # (cli/ always checks `eventkeys.secret_name` first), but survey_url
     # itself takes a bare string -- proving it quotes rather than trusting
     # its argument is cheap insurance against a future caller that skips
     # that check.

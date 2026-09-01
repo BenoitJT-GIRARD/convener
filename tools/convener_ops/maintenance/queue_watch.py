@@ -91,7 +91,7 @@ else. The messages differ too, which is the point of a control: one says
 the budget is no longer watched, this one says submissions are piling up
 unhandled, and the fix is not the same.
 
-Everything in this module is a pure function. `cli.py` supplies the queue's
+Everything in this module is a pure function. `cli/` supplies the queue's
 current contents, the previous record and the clock; nothing here reads a
 file, an environment variable or a clock, and nothing here goes near the
 network.
@@ -353,7 +353,7 @@ def record_from_data(data: Any) -> Record:
 
 
 def record_to_data(record: Record) -> dict[str, Any]:
-    """The plain, YAML-safe structure `cli.py` hands to its own YAML writer
+    """The plain, YAML-safe structure `cli/` hands to its own YAML writer
     -- the inverse of `record_from_data`.
 
     Ordered oldest first, then by entry name, so two drains that saw the
@@ -546,7 +546,7 @@ def annotation_lines(fired: Sequence[Alarm], stuck: Sequence[Waiting]) -> list[s
     threshold by surviving drains that could not finish it, which is the
     operator's to fix in every case.
 
-    Composed here rather than in `cli.py` so a test can read the exact text
+    Composed here rather than in `cli/` so a test can read the exact text
     without capturing stdout.
     """
     lines = [f"::error::[{alarm.kind}] {alarm.text}" for alarm in fired]

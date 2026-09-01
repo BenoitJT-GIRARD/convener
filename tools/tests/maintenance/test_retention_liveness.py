@@ -10,7 +10,7 @@ Two layers, mirroring `test_retention.py`'s own split:
 * `retention_liveness.py`'s own pure functions -- the record's shape and
   the staleness arithmetic, including the boundary a real watchdog run
   would actually hit.
-* `cli.py`'s `record_retention_run` and `check_retention_liveness` -- the
+* `cli/maintenance.py`'s `record_retention_run` and `check_retention_liveness` -- the
   two commands `retention.yml` and `retention-watchdog.yml` actually run.
   The second half is the "prove it": simulate the silence and show the
   watchdog firing, then show it silent when retention is healthy.
@@ -24,7 +24,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops.cli import check_retention_liveness, record_retention_run
+from convener_ops.cli.maintenance import check_retention_liveness, record_retention_run
 from convener_ops.maintenance import retention_liveness
 
 # ==================================================================== #
@@ -92,12 +92,12 @@ def test_is_stale_zero_days_is_healthy() -> None:
 
 
 # ==================================================================== #
-# cli.py: record_retention_run(), check_retention_liveness()
+# cli/maintenance.py: record_retention_run(), check_retention_liveness()
 # ==================================================================== #
 
 
 class _FixedDatetime:
-    """A stand-in for the `datetime` class `cli.py` imports, whose `now()`
+    """A stand-in for the `datetime` class `cli/maintenance.py` imports, whose `now()`
     always returns the same instant -- the same idiom
     `test_retention.py::_FixedDatetime` uses to pin `retention_sweep`'s
     own clock, reproduced here rather than imported across test modules."""
@@ -111,7 +111,7 @@ class _FixedDatetime:
 
 def _set_today(monkeypatch: pytest.MonkeyPatch, today: date) -> None:
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.maintenance.datetime",
         _FixedDatetime(datetime(today.year, today.month, today.day, 9, 0, tzinfo=UTC)),
     )
 

@@ -8,7 +8,7 @@ inside. `to_registration` is the only place a submitted envelope is ever
 turned into names an operator could read; every function below it either
 stays inside that same job's memory or hands back ciphertext, never the
 fields themselves. Nothing here touches the filesystem or the environment --
-that belongs to `cli.py`, the same split `eventkeys.py` keeps.
+that belongs to `cli/`, the same split `eventkeys.py` keeps.
 
 The file shape, and why it is not one envelope for the whole event
 --------------------------------------------------------------------
@@ -191,7 +191,7 @@ def signup_url(event_id: str, *, root: Path | None = None) -> str:
     derivation needs a Python-side value to be bound against, the same way
     `test_survey_invite.py` and `test_certificate.py` bind their own
     `_url` functions, so this exists to be that value rather than to be
-    called from `cli.py`.
+    called from `cli/`.
 
     `root` names the repository whose declaration the address is built
     from, and defaults to this one's -- `SIGNUP_BASE`, resolved once at
@@ -395,7 +395,7 @@ def load_registration_file(text: str | None) -> RegistrationFile:
 def dump_registration_file(file: RegistrationFile) -> str:
     """The bytes `registrations.enc` is written as: stable structure,
     two-space indent, one trailing newline -- readable in a diff, the same
-    reason `cli.py::_dump` formats `speakers.yml` deliberately rather than
+    reason `cli/store.py::dump` formats `speakers.yml` deliberately rather than
     however a library default would."""
     return (
         json.dumps({"v": FILE_VERSION, "registrations": list(file.entries)}, indent=2)
@@ -480,7 +480,7 @@ def find_by_email(
     `upsert`'s own handling of a stray undecryptable entry.
 
     Costs what `upsert`'s own module-docstring section already prices --
-    up to 500 RSA-OAEP decrypts, milliseconds each -- and `cli.py`'s
+    up to 500 RSA-OAEP decrypts, milliseconds each -- and `cli/`'s
     `handle_registration` calls this immediately before `upsert`, so one
     submission now pays that cost twice, roughly a thousand decrypts at
     the relay's per-event ceiling. Still cheap
@@ -505,7 +505,7 @@ def erase(
     concerned, and nothing else moves.
 
     Returns the updated file and whether an entry was actually removed
-    (`True`) as opposed to nothing matching (`False`) -- `cli.py` reports
+    (`True`) as opposed to nothing matching (`False`) -- `cli/` reports
     the second case as "no registration found", the same shape
     `find_by_email` already has no match for.
 
@@ -569,8 +569,8 @@ class AmbiguousMatchingCodeError(Exception):
     using it is not guessing -- it is reading the evidence the requester
     actually gave us. Refusing anyway would deny erasure to someone who
     supplied more than enough to identify themselves, which is the
-    opposite of what this rule is for. `cli.py::erase_registration` is the
-    one caller that attempts this second-field resolution against `tied`;
+    opposite of what this rule is for. `cli/journey/retention.py::erase_registration` is
+    the one caller that attempts this second-field resolution against `tied`;
     it still refuses if no address was given, or if the address given
     does not narrow `tied` to exactly one entry."""
 
@@ -597,7 +597,7 @@ def find_by_matching_code(
     match, and there is no reason to decrypt the whole file to learn that
     (the same ordinary D-13 absence `matching_code`'s own docstring
     describes -- an early erasure by code simply cannot be resolved
-    without it; `cli.py` falls back to the address instead, the
+    without it; `cli/` falls back to the address instead, the
     documented exception).
 
     Raises `AmbiguousMatchingCodeError` if more than one entry's own code

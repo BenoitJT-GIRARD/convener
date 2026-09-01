@@ -29,7 +29,7 @@ from migrate_v4 import (
     migrate_speakers,
 )
 
-from convener_ops.cli import SPEAKERS_HEADER, dump_speakers
+from convener_ops.cli.store import SPEAKERS_HEADER, dump_speakers
 from convener_ops.governance.validate import validate_speakers
 
 

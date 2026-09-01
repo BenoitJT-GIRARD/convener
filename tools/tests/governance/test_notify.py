@@ -19,7 +19,7 @@ import pytest
 from conftest import ballot, nomination, objection, speaker, workflow_triggers
 from conftest import config as make_config
 
-from convener_ops import cli
+from convener_ops.cli import governance as cli
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.governance import notify
@@ -1353,8 +1353,10 @@ def test_the_digest_writes_nothing_when_no_channel_is_configured(
     """The whole point of the digest. Today's repository is exactly this
     case."""
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest"]
+    )
 
     assert cli.notify_digest() == 0
 
@@ -1372,8 +1374,10 @@ def test_an_absent_channel_is_not_reported_as_a_failure(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest"]
+    )
 
     exit_code = cli.notify_digest()
 
@@ -1390,8 +1394,10 @@ def test_the_digest_writes_a_body_once_a_channel_is_configured(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest"]
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
@@ -1410,8 +1416,10 @@ def test_a_quiet_day_writes_no_body_even_with_a_channel_configured(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, QUIET_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest"]
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
@@ -1427,9 +1435,9 @@ def test_dry_run_prints_the_digest_and_writes_nothing(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
     monkeypatch.setattr(
-        "convener_ops.cli.sys.argv", ["convener-notify-digest", "--dry-run"]
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest", "--dry-run"]
     )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
@@ -1446,8 +1454,10 @@ def test_unreadable_data_is_reported_and_notifies_nothing(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, "- id: [unclosed", CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest"]
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
@@ -1487,10 +1497,13 @@ def test_immediate_says_nothing_when_there_is_no_previous_revision(
     """On a shallow clone or an initial commit the whole file would otherwise
     read as new, announcing every lead in it at once."""
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
     monkeypatch.setattr(
-        "convener_ops.cli._git_show", lambda _root, _revision: ("", "no parent commit")
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-immediate"]
+    )
+    monkeypatch.setattr(
+        "convener_ops.cli.governance._git_show",
+        lambda _root, _revision: ("", "no parent commit"),
     )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
@@ -1507,10 +1520,13 @@ def test_immediate_says_nothing_when_the_previous_revision_is_unreadable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
     monkeypatch.setattr(
-        "convener_ops.cli._git_show", lambda _root, _revision: ("- id: [unclosed", "")
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-immediate"]
+    )
+    monkeypatch.setattr(
+        "convener_ops.cli.governance._git_show",
+        lambda _root, _revision: ("- id: [unclosed", ""),
     )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
@@ -1529,10 +1545,12 @@ def test_immediate_writes_a_body_for_a_lead_from_the_form(
     (root / "instance" / "data" / "speakers.yml").write_text(
         "- id: spk-009\n  status: lead\n  source: form\n", encoding="utf-8"
     )
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
     monkeypatch.setattr(
-        "convener_ops.cli._git_show", lambda _root, _revision: ("[]\n", "")
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-immediate"]
+    )
+    monkeypatch.setattr(
+        "convener_ops.cli.governance._git_show", lambda _root, _revision: ("[]\n", "")
     )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@example/editorial")
@@ -1550,10 +1568,12 @@ def test_immediate_writes_nothing_for_an_ordinary_change(
     root = _repo(
         tmp_path, "- id: spk-009\n  status: lead\n  notes: rang them\n", CONFIG_YML
     )
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
     monkeypatch.setattr(
-        "convener_ops.cli._git_show",
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-immediate"]
+    )
+    monkeypatch.setattr(
+        "convener_ops.cli.governance._git_show",
         lambda _root, _revision: ("- id: spk-009\n  status: lead\n", ""),
     )
     monkeypatch.setenv(THREAD_ENV, "42")
@@ -1570,8 +1590,10 @@ def test_immediate_reports_unreadable_current_data(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _repo(tmp_path, "- id: [unclosed", CONFIG_YML)
-    monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-immediate"]
+    )
 
     assert cli.notify_immediate() == 1
     assert "invalid YAML" in capsys.readouterr().out

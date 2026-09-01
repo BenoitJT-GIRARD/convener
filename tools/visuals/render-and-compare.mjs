@@ -31,7 +31,7 @@
  * What this script does, in order
  * ----------------------------------
  * 1. Reads `manifest.json` from a fixtures directory that
- *    `convener-render-visual-fixtures` (Python, `tools/convener_ops/cli.py`) already
+ *    `convener-render-visual-fixtures` (Python, `tools/convener_ops/cli/`) already
  *    wrote -- one HTML page per named format (`formats.FORMATS`), plus a
  *    copy of the repository's self-hosted `fonts/` beside them. This
  *    script never re-derives a page's own markup in JavaScript: D-14's own

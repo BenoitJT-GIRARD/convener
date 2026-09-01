@@ -28,7 +28,7 @@ import pytest
 import yaml
 from conftest import config, speaker
 
-from convener_ops.cli import (
+from convener_ops.cli.journey.registration import (
     confirm_queued_registrations,
     drain_queue,
     plan_queue_drain,

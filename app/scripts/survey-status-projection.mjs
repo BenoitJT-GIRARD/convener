@@ -27,7 +27,7 @@ export const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..',
 /**
  * The published survey-enabled set, read from `srcPath` -- a **bare JSON
  * array** of lower-cased event ids, exactly what
- * `tools/convener_ops/cli.py::survey_status_public_data` writes (see that
+ * `tools/convener_ops/cli/publication.py::survey_status_public_data` writes (see that
  * function's own `test_survey_status_public_data_writes_only_the_enabled_ids`,
  * which asserts precisely this shape on disk).
  *

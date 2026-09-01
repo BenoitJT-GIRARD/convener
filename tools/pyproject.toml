@@ -139,7 +139,7 @@ target-version = "py312"
 # argument did not move; the arithmetic under it did, twice, unnoticed.
 #
 # Seven of those thirty-one have no equivalent under `select = ["S"]`,
-# and that is what settles it. `B404` (`import subprocess`, in cli.py,
+# and that is what settles it. `B404` (`import subprocess`, in cli/governance.py,
 # repository.py and derivation_guard.py -- three) is `S404` in ruff, and
 # `S404` is a preview rule: selecting it prints "has no effect because
 # preview is not enabled", and nothing in this project runs ruff in

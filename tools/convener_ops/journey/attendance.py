@@ -130,9 +130,9 @@ sequences -- `test_attendance.py::test_no_attendance_row_is_lost...` checks
 this directly, by summing durations in against durations out and by
 counting distinct people. `unmatched` is deliberately a short, returned
 list rather than a side effect: the host resolves it after the event
-by hand, and a caller (`cli.py`, later) decides how to put it in front
+by hand, and a caller (`cli/`, later) decides how to put it in front
 of a human -- this module never prints or writes anything itself, the same
-"every module but `cli.py` is pure" rule every other module in this
+"every module outside `cli/` is pure" rule every other module in this
 package already follows.
 
 Eligibility is a calculation, not a decision
@@ -229,7 +229,7 @@ class MatchEvent:
     the same code for the same address), and `salt` is
     `CONVENER_MATCHING_SALT`, read once by the caller and passed in rather than
     read from the environment here -- this module is pure, like every
-    `convener_ops` module but `cli.py`. `salt` is `None` exactly when
+    `convener_ops` module outside `cli/`. `salt` is `None` exactly when
     `matching_code` already treats that as ordinary (D-13): level 1 then
     never finds anything, and the cascade falls through to level 2 for
     every row, which is `matching_code`'s own documented fallback, not a
@@ -337,7 +337,7 @@ def _name_tokens_for_matching(display_name: str) -> frozenset[str]:
     two-word registrant name would make the exact instruction being
     followed the reason a match fails, and would leave level 3's only
     reachable population as people who ignored the e-mail -- the opposite
-    of what `_NO_CODE_FALLBACK` (`cli.py`) promises. Shape-only, not
+    of what `_NO_CODE_FALLBACK` (`cli/`) promises. Shape-only, not
     correctness: a *mistyped* code is still dropped, because level 3
     exists precisely for when the code did not work at level 1."""
     return frozenset(
@@ -589,7 +589,7 @@ class EligibilityThreshold:
     building this never re-derives what "the session's own length" means)
     and what share of it counts (`share`, the configurable fraction
     -- read once by the caller and passed in rather than read from the file
-    here, this module is pure like every `convener_ops` module but `cli.py`).
+    here, this module is pure like every `convener_ops` module outside `cli/`).
 
     `share` is a plain `float`, matching what YAML gives back for
     `instance/data/config.yml`'s own `eligibility_share`. An earlier version of this

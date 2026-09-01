@@ -53,7 +53,7 @@ longer than the identifier printed above it.]
   registration (never the platform's own, self-typed name), for at least
   the configurable share of the session `instance/data/config.yml`'s
   `eligibility_share` sets. Eligible is a calculation; issuing
-  one is `tools/convener_ops/cli.py::issue_certificates`' own decision, made
+  one is `tools/convener_ops/cli/journey/certificate.py::issue_certificates`' own decision, made
   once per attendee, not automatic from eligibility alone.
 - **The name comes from our registration, never from the platform.** A
   display name typed into the meeting platform is never trusted directly

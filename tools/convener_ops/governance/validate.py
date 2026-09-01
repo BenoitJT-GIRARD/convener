@@ -1,7 +1,7 @@
 """Pure validation of the operational data files.
 
 Every function takes already-parsed data and returns a list of human-readable
-errors. Nothing here touches the filesystem — that belongs to cli.py.
+errors. Nothing here touches the filesystem — that belongs to cli/.
 
 That rule is why `validate_speakers` is *handed* the edition prefix rather
 than reading it. This module used to fix an edition code as
@@ -10,7 +10,7 @@ repository, written into the product's own validator, where no sweep could
 ever find it: both instances were forced to write it, so the needle was
 present on both sides. The shape now comes from
 `published.EditionPrefix`, parsed from the one declaration by whoever calls
-this (`cli.py`, in the end).
+this (`cli/`, in the end).
 """
 
 from __future__ import annotations

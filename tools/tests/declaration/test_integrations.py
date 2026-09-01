@@ -144,7 +144,7 @@ def test_exactly_these_three_rows_declare_themselves_an_exception() -> None:
     the strongest reason in this project -- a retention job that exits 0
     having destroyed nothing must never look, from the Actions tab,
     identical to a run that genuinely had nothing to do. See
-    `tools/convener_ops/cli.py::retention_sweep`'s own docstring."""
+    `tools/convener_ops/cli/journey/retention.py::retention_sweep`'s own docstring."""
     declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
     exceptions = [i.name for i in declaration if not i.absent_is_normal]
     assert exceptions == ["event_keys", "retention_token", "certificate_fingerprint"]

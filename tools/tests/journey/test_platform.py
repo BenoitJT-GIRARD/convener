@@ -356,7 +356,7 @@ def test_missing_attendance_file_message_does_not_leak_the_repository_root(
     absolute `path` this class actually checked, which carries
     `CONVENER_REPO_ROOT` -- here, `tmp_path` itself, standing in for a CI
     runner's own filesystem layout -- into a job's own log for no reason,
-    the same leak already closed for `cli.py`'s own
+    the same leak already closed for `cli/`'s own
     register-path messages. Only the repository-relative form should ever
     appear; `tmp_path`'s own absolute string must not."""
     with pytest.raises(AttendanceImportError) as excinfo:

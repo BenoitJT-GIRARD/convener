@@ -10,7 +10,7 @@ import {
 } from '../src/verify/register';
 import cases from '../../tools/tests/fixtures/certificate-verification.json';
 
-// tools/convener_ops/cli.py::certificates_public_data writes a *bare array* --
+// tools/convener_ops/cli/journey/certificate.py::certificates_public_data writes a *bare array* --
 // see that function's own test,
 // test_certificates_public_data_aggregates_every_events_register.
 // projection_example used to be nested under a

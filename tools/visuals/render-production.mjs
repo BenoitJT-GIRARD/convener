@@ -1,5 +1,5 @@
 /* The production render step -- screenshots each real,
- * scheduled edition `convener-render-visuals` (Python, `tools/convener_ops/cli.py`)
+ * scheduled edition `convener-render-visuals` (Python, `tools/convener_ops/cli/`)
  * already wrote as a self-contained HTML page, on the identical pinned
  * engine `render-and-compare.mjs` uses for its regression
  * check.

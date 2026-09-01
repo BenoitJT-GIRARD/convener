@@ -31,7 +31,7 @@ from typing import Any
 import pytest
 from conftest import config, speaker
 
-from convener_ops.cli import registration_routing_public_data
+from convener_ops.cli.journey.registration import registration_routing_public_data
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.governance.rule import PARIS

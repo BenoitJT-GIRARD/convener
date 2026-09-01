@@ -33,7 +33,7 @@ from typing import Final
 
 import pytest
 
-from convener_ops.cli import _template_charters, render_poster_fixtures
+from convener_ops.cli.publication import _template_charters, render_poster_fixtures
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand, composition, motifs, visual
 from convener_ops.publication.formats import FORMATS
@@ -154,7 +154,7 @@ def test_the_content_margin_is_the_familys_own_reach_over_that_band(
     was paid for by nobody. And not the full-height right margin either,
     which would cost the band width the drawing never reaches there.
     """
-    from convener_ops.cli import _template_fixture_root
+    from convener_ops.cli.publication import _template_fixture_root
 
     _label, path, declaration = charter
     root = _template_fixture_root(tmp_path, ROOT, path, declaration, family)
@@ -183,7 +183,7 @@ def test_the_ribbon_pays_for_its_right_loop_and_the_others_do_not(
     to be exactly it -- which is also why nothing noticed for as long as
     the one charter anything rendered drew `bracket`.
     """
-    from convener_ops.cli import _template_fixture_root
+    from convener_ops.cli.publication import _template_fixture_root
 
     width = height = 1200.0
     margins = {}

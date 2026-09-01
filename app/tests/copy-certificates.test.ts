@@ -16,7 +16,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
 // effect of its own, called here against a temp directory it never
 // touches the real `public/` tree from.
 //
-// tools/convener_ops/cli.py::certificates_public_data writes a bare JSON array
+// tools/convener_ops/cli/journey/certificate.py::certificates_public_data writes a bare JSON array
 // -- see that function's own
 // test_certificates_public_data_aggregates_every_events_register.
 // projection_example itself used to be nested

@@ -18,7 +18,7 @@ Three layers, in three sections below:
 * `registration.py`'s `erase` and `find_by_matching_code` -- the early
   erasure procedure, tested the same way `upsert` is: assert
   `==` on the neighbours, not merely "the file still decrypts".
-* `cli.py`'s `retention_sweep`, `record_destructions` and
+* `cli/journey/retention.py`'s `retention_sweep`, `record_destructions` and
   `erase_registration` -- the commands `.github/workflows/retention.yml`
   and `erase-registration.yml` actually run, including the credential
   that must fail the job loud rather than let it exit green having
@@ -37,7 +37,11 @@ import pytest
 import yaml
 from conftest import speaker
 
-from convener_ops.cli import erase_registration, record_destructions, retention_sweep
+from convener_ops.cli.journey.retention import (
+    erase_registration,
+    record_destructions,
+    retention_sweep,
+)
 from convener_ops.declaration.paths import repo_root
 from convener_ops.journey import certificate, eventkeys
 from convener_ops.journey.certificate import (
@@ -114,8 +118,8 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
     **What this does not cover.** This proves the *scheme*
     cryptographically: destroying a key makes its ciphertext unreadable,
     full stop. It never calls `retention_sweep`, `record_destructions` or
-    anything else in `cli.py`, and `del private_pem` is a no-op on a local
-    Python name -- it would stay exactly this green even if a future
+    anything else in `cli/journey/retention.py`, and `del private_pem` is a no-op on a
+    local Python name -- it would stay exactly this green even if a future
     change to production code quietly kept a second copy of the key
     somewhere the retention sweep does not know to destroy. There is no
     way to assert "the GitHub secret is actually gone" offline; the
@@ -441,10 +445,10 @@ def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_firs
     without astronomical luck, so `matching_code` itself is monkeypatched
     to force one.
 
-    Also asserts `tied` carries both colliding entries: `cli.py::erase_
-    registration` reads this to attempt resolving the tie from a second
-    field the requester actually supplied (a coordinator ruling after the
-    review), so the exception must carry enough for that -- see
+    Also asserts `tied` carries both colliding entries:
+    `cli/journey/retention.py::erase_ registration` reads this to attempt resolving the
+    tie from a second field the requester actually supplied (a coordinator ruling after
+    the review), so the exception must carry enough for that -- see
     `test_erase_registration_resolves_an_ambiguous_matching_code_using_
     the_address`."""
     private_pem, _ = generate()
@@ -463,7 +467,8 @@ def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_firs
 
 
 # ==================================================================== #
-# cli.py: retention_sweep(), record_destructions(), erase_registration()
+# cli/journey/retention.py: retention_sweep(), record_destructions(),
+# erase_registration()
 # ==================================================================== #
 
 
@@ -579,7 +584,7 @@ def test_retention_sweep_reports_nothing_due_on_an_ordinary_day(
 
     # 2026-08-20 is day 19 of the retention window -- nowhere near due.
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 8, 20, 12, 0, tzinfo=UTC)),
     )
 
@@ -588,8 +593,8 @@ def test_retention_sweep_reports_nothing_due_on_an_ordinary_day(
 
 
 class _FixedDatetime:
-    """A stand-in for the `datetime` class `cli.py` imports, whose `now()`
-    always returns the same instant -- the idiom this suite needs to pin
+    """A stand-in for the `datetime` class `cli/journey/retention.py` imports, whose
+    `now()` always returns the same instant -- the idiom this suite needs to pin
     "today" for a boundary test without waiting for the calendar.
 
     `combine` is the real `datetime.combine`, not a fixed stand-in: a test
@@ -619,7 +624,7 @@ def test_retention_sweep_finds_an_event_past_its_deadline(
 
     # 2026-04-01 is exactly day 90 -- due.
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 4, 1, 3, 0, tzinfo=UTC)),
     )
 
@@ -652,7 +657,7 @@ def test_retention_sweep_uses_the_paris_day_not_the_utc_day(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     output_file = _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 3, 31, 22, 30, tzinfo=UTC)),
     )
 
@@ -686,7 +691,7 @@ def test_retention_sweep_uses_the_paris_day_not_a_fixed_cest_offset(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     output_file = _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 1, 1, 22, 30, tzinfo=UTC)),
     )
 
@@ -706,7 +711,7 @@ def test_retention_sweep_skips_an_event_already_in_the_registry(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 9, 1, 3, 0, tzinfo=UTC)),
     )
 
@@ -726,7 +731,7 @@ def test_retention_sweep_skips_an_event_with_no_speaker_record(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 9, 1, 3, 0, tzinfo=UTC)),
     )
 
@@ -751,7 +756,7 @@ def test_retention_sweep_skips_an_event_with_no_usable_date(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 9, 1, 3, 0, tzinfo=UTC)),
     )
 
@@ -993,7 +998,7 @@ def test_destruction_leaves_the_certificate_register_untouched(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 4, 1, 3, 0, tzinfo=UTC)),
     )
 
@@ -1029,7 +1034,7 @@ def test_destruction_leaves_the_ciphertext_file_in_place(
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "convener_ops.cli.datetime",
+        "convener_ops.cli.journey.retention.datetime",
         _FixedDatetime(datetime(2026, 4, 1, 3, 0, tzinfo=UTC)),
     )
 

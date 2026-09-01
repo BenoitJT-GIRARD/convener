@@ -38,7 +38,7 @@ import pytest
 import yaml
 from conftest import config, speaker
 
-from convener_ops.cli import drain_queue, plan_queue_drain
+from convener_ops.cli.journey.registration import drain_queue, plan_queue_drain
 from convener_ops.declaration.paths import repo_root
 from convener_ops.journey import eventkeys, submission_queue, survey
 from convener_ops.journey.submission_queue import (

@@ -62,7 +62,7 @@ name: Templates
 #   line, and a wider line is how one reaches a stroke.
 # - `tools/convener_ops/journey/registration.py` -- what the background's
 #   code encodes.
-# - `tools/convener_ops/cli.py` -- `render_template_fixtures` lives here,
+# - `tools/convener_ops/cli/publication.py` -- `render_template_fixtures` lives here,
 #   so a bug in how the eighteen renderings are written to disk is a real
 #   way this check could start measuring the wrong thing. Accepted even
 #   though most of that file has nothing to do with rendering, because a
@@ -119,7 +119,7 @@ on:
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/cli/publication.py'
       - 'instance/config.json'
       - 'instance/data/brand.json'
       - 'examples/the-example-collective/instance/config.json'
@@ -144,7 +144,7 @@ on:
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/cli/publication.py'
       - 'instance/config.json'
       - 'instance/data/brand.json'
       - 'examples/the-example-collective/instance/config.json'

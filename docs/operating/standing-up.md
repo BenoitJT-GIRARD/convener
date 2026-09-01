@@ -854,8 +854,8 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 > having destroyed nothing must never look, from the Actions tab, identical to
 > one that genuinely had nothing to do -- a promise with legal weight deserves
 > a red job every day until the credential is set, not a quiet skip. See
-> tools/convener_ops/cli.py::retention_sweep and docs/operating/operations.md,
-> 'Retention and early erasure'.
+> tools/convener_ops/cli/journey/retention.py::retention_sweep and
+> docs/operating/operations.md, 'Retention and early erasure'.
 
 This is one of the rows whose absence is not an ordinary state. The report
 marks it so, on the row and again in its closing line.

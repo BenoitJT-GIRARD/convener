@@ -2,7 +2,7 @@
  * `public/survey-status.json`, for `src/survey/SurveyForm.tsx` to fetch at
  * runtime -- the survey switch, published as
  * an operational fact rather than left unreachable by the browser (see
- * `tools/convener_ops/cli.py::survey_status_public_data`'s own docstring for
+ * `tools/convener_ops/cli/publication.py::survey_status_public_data`'s own docstring for
  * why this is a second file rather than folded into `events-public.json`).
  * Ships as part of the app's own built output (`dist/survey-status.json`)
  * the identical way `copy-certificates.mjs` publishes `certificates.json`

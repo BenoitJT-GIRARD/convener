@@ -112,8 +112,8 @@ mapping (by hand today; perhaps by the timestamp rule tomorrow, once it is
 verified) is left to whoever constructs this class.
 
 **This is a deliberate, standing limit, not a gap left for a reader to
-find.** `cli.py::release_recording` reads its one entry of `conference_ids`
-from `CONVENER_FCC_CONFERENCE_ID`, a value a human types into
+find.** `cli/journey/attendance.py::release_recording` reads its one entry of
+`conference_ids` from `CONVENER_FCC_CONFERENCE_ID`, a value a human types into
 `.github/workflows/recording.yml`'s `workflow_dispatch` form for the one
 event that run is about -- so nothing in this chain can run unattended,
 and `recording.yml` is `workflow_dispatch`-only, never `schedule:`, for
@@ -228,13 +228,13 @@ a corner case this module tolerates, it is the ordinary shape of every
 event, and it is why there are two call sites for `delete_recording`, not
 one, each with its own, opposite guard:
 
-* **The talk goes through `cli.py::release_recording`** -- the two-trace
-  guard above, ending in a conversion to MP4 and a YouTube upload, both
+* **The talk goes through `cli/journey/attendance.py::release_recording`** -- the
+  two-trace guard above, ending in a conversion to MP4 and a YouTube upload, both
   intended. `RETRIEVED_TICK` and `converted_recording_is_reachable` are
   both required because both are *supposed* to become true.
 * **Everything that must never be converted goes through
-  `cli.py::discard_recording`** -- the discussion segment, always; and a
-  talk whose publication consent was withheld, because the only way
+  `cli/journey/attendance.py::discard_recording`** -- the discussion segment, always;
+  and a talk whose publication consent was withheld, because the only way
   `release_recording`'s trace 2 could ever be satisfied is by converting
   it, and a converted file stays *publicly reachable at its own URL even
   after the conference is deleted* (verified empirically) -- exactly the
@@ -262,7 +262,7 @@ and the gate that enforces it took two attempts to get right, both
 recorded here rather than only in the fix history, because the mistake is
 an easy one to make again.
 
-**The gate is consent alone (`cli.py::_consent_granted`), not
+**The gate is consent alone (`cli/journey/attendance.py::_consent_granted`), not
 `public_data.recording_withheld`.** `recording_withheld` was wired in
 here once and it was wrong, caught on review: that function answers
 a different question -- "must this recording stay out of the public
@@ -654,8 +654,8 @@ class PlatformFCC:
         draws for `event_id` -- naming both `event_id` and the offending
         value, never silently passed through. `conference_ids` has no
         production populator yet (the module docstring's own seam); its
-        one caller today, `cli.py::release_recording`, reads a value an
-        operator types into a `workflow_dispatch` form, and this is the
+        one caller today, `cli/journey/attendance.py::release_recording`, reads a value
+        an operator types into a `workflow_dispatch` form, and this is the
         one place that value is validated before it can reach a URL this
         class builds -- closing the path a hand-typed
         `"618/../999"`-shaped id would otherwise ride into `DELETE
@@ -736,11 +736,12 @@ class PlatformFCC:
         deliberately not this method's job: `Platform`'s four-method shape
         is fixed and this class does not extend it, so the
         structural guard lives at the call site instead -- there are
-        exactly two, `cli.py::release_recording` (the two-trace guard,
-        `missing_retrieval_evidence` below) and `cli.py::discard_recording`
-        (the typed-confirmation guard, for a recording that must never be
-        retrieved -- see this module's own "Which recordings take which
-        route" section above). Both, and only those two, are pinned by
+        exactly two, `cli/journey/attendance.py::release_recording` (the two-trace
+        guard, `missing_retrieval_evidence` below) and
+        `cli/journey/attendance.py::discard_recording` (the typed-confirmation guard,
+        for a recording that must never be retrieved -- see this module's
+        own "Which recordings take which route" section above). Both, and
+        only those two, are pinned by
         `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`."""
         conference_id = self._conference_id(event_id)
         self.transport.delete(f"/conferences/{conference_id}", self.access_token)
@@ -885,7 +886,7 @@ def platform_from_env(
     through `ManualPlatform` -- the default, not a fallback bolted on.
     Mirrors `notify.py::resolve_channel`'s shape: given the environment as
     a plain mapping (never read from `os.environ` itself, so this stays as
-    pure as every other `convener_ops` module bar `cli.py`), decide once, up
+    pure as every other `convener_ops` module outside `cli/`), decide once, up
     front, which implementation a caller gets.
 
     A blank token counts as unset, the same "empty string is not a value"
@@ -896,7 +897,7 @@ def platform_from_env(
     `PlatformFCC.get_attendance` reads real per-person attendance straight
     from the provider's own API and never touches a committed, encrypted
     export, so it has no use for an event's private key. Every one of
-    `cli.py`'s callers that calls this function already decrypts
+    `cli/`'s callers that calls this function already decrypts
     `registrations.enc` with this same key in a local `private_pem`, so
     forwarding it here costs nothing new."""
     token = (env.get(TOKEN_ENV) or "").strip()

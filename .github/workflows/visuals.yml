@@ -28,7 +28,7 @@ name: Visuals
 #   line's own text is computed from (`visual.paris_standing_start`); a
 #   change here can change what the date line reads without touching
 #   `visual.py` itself.
-# - `tools/convener_ops/cli.py` -- `render_visual_fixtures` lives here (that
+# - `tools/convener_ops/cli/publication.py` -- `render_visual_fixtures` lives here (that
 #   module's own docstring: "the only module that touches the disk"), so a
 #   bug in how the three pages are actually written to disk is a real way
 #   this check could start comparing the wrong thing -- accepted even
@@ -159,7 +159,7 @@ on:
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'
-      - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/cli/publication.py'
       - 'examples/the-example-collective/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
@@ -182,7 +182,7 @@ on:
       - 'tools/convener_ops/publication/registration_code.py'
       - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/rule.py'
-      - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/cli/publication.py'
       - 'examples/the-example-collective/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'

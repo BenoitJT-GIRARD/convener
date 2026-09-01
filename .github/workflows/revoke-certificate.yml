@@ -3,7 +3,7 @@ name: Revoke a certificate
 # Revocation: the one operation this module always had a tested, correct
 # pure function for (`certificate.revoke`) and, for a long time, no caller
 # at all. A hand edit of the committed-clear register was ruled out
-# (see `tools/convener_ops/cli.py::revoke_certificate`'s own docstring): it
+# (see `tools/convener_ops/cli/journey/certificate.py::revoke_certificate`'s own docstring): it
 # depends on a volunteer having a working checkout, finding the right
 # file, editing the right row, and committing it correctly -- exactly the
 # "a collaborator's goodwill or their post" dependency this project

@@ -27,7 +27,7 @@ from typing import Final, NamedTuple
 
 import pytest
 
-from convener_ops import cli
+from convener_ops.cli import publication as cli
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand, brand_templates, motifs, typeface

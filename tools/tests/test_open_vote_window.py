@@ -30,7 +30,7 @@ from open_vote_window import (
     open_windows,
 )
 
-from convener_ops.cli import SPEAKERS_HEADER
+from convener_ops.cli.store import SPEAKERS_HEADER
 from convener_ops.governance.validate import STATUSES
 
 ON = "2026-08-18"

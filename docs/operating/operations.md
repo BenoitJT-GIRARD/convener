@@ -604,12 +604,12 @@ opposite guards, both structural rather than a convention a caller has to
 remember:
 
 **`convener-release-recording`** — for a talk headed to YouTube, only.
-(`tools/convener_ops/cli.py::release_recording`, run through
+(`tools/convener_ops/cli/journey/attendance.py::release_recording`, run through
 `.github/workflows/recording.yml`.) Retrieves, verifies the retrieval,
 then deletes, in that order. Before either trace is even checked, it
 first refuses unless the speaker's own consent is on record:
 `publication.consent` must be `"granted"` on the event's own speaker
-record (`tools/convener_ops/cli.py::_consent_granted`) — **not**
+record (`tools/convener_ops/cli/journey/attendance.py::_consent_granted`) — **not**
 `publication.outcome`, which the board's own, later `finalize-archive`
 step writes and which governs a different question entirely (whether the
 talk is *linked in the public feed*, not whether our copy may leave the
@@ -647,7 +647,7 @@ delete unless both
    own click does.
 
 **`convener-discard-recording`** — for the discussion segment, always, and for
-a talk whose publication consent was withheld. (`tools/convener_ops/cli.py::discard_recording`,
+a talk whose publication consent was withheld. (`tools/convener_ops/cli/journey/attendance.py::discard_recording`,
 run through `.github/workflows/discard-recording.yml`.) Neither of these
 may ever be converted: the only way to satisfy trace 2 above is a
 conversion, and a converted file stays *publicly reachable at its own URL
@@ -1425,7 +1425,7 @@ configured), the host's own attendance export never reaches continuous
 integration in the clear -- personal data must not, and `.gitignore` keeps
 `instance/data/events/<event id>/attendance-import.csv` out of every checkout on
 purpose. `convener-encrypt-attendance-export`
-(`tools/convener_ops/cli.py::encrypt_attendance_export`) is the step that
+(`tools/convener_ops/cli/journey/attendance.py::encrypt_attendance_export`) is the step that
 closes that gap:
 
 1. Download the attendance export from the meeting platform, saving it
@@ -1468,7 +1468,7 @@ downstream can proceed until this step is done.
 
 ## Matching attendance
 
-`convener-match-attendance` (`tools/convener_ops/cli.py::match_attendance`) reads one
+`convener-match-attendance` (`tools/convener_ops/cli/journey/attendance.py::match_attendance`) reads one
 event's stored registrations and its attendance export -- the platform's own
 API, or, with no `CONVENER_MEETING_API_TOKEN` configured, the manual
 implementation's attendance export -- and joins them through the
@@ -1492,7 +1492,7 @@ candidate's own record identifier, never its address. An unreachable
 connection (a telephone joiner: never host-resolvable regardless -- the
 matching cascade's own boundary) collapses to one count-and-duration line, naming
 nobody. This used to carry display names and addresses in the clear; the
-fix is in `cli.py::UNMATCHED_ATTENDANCE`'s own comment.
+fix is in `cli/journey/attendance.py::UNMATCHED_ATTENDANCE`'s own comment.
 
 Like every other command in this section, it needs `EVENT_PRIVATE_KEY` to
 decrypt `registrations.enc` -- and per *Event registration keys* above, that

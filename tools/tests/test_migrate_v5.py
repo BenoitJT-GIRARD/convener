@@ -16,7 +16,7 @@ import yaml
 from conftest import EDITIONS
 from migrate_v5 import NEW_FIELDS, _ascii, main, migrate_speaker, migrate_speakers
 
-from convener_ops.cli import SPEAKERS_HEADER, dump_speakers
+from convener_ops.cli.store import SPEAKERS_HEADER, dump_speakers
 from convener_ops.governance.validate import validate_speakers
 
 

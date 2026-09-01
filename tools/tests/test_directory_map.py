@@ -72,7 +72,7 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "examples": ("the-example-collective/README.md",),
     "services": ("auth-proxy/src/index.js",),
     "site": ("src/index.njk",),
-    "tools": ("convener_ops/cli.py",),
+    "tools": ("convener_ops/cli/__init__.py",),
 }
 
 #: `docs/engineering/architecture.md` as this script sees it: prose, the two

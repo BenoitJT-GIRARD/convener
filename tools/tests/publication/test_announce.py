@@ -322,7 +322,7 @@ class TestRecordingAnnouncement:
 
 class TestRoutedThroughTheRealGate:
     """Integration-level: these four functions are only ever called with
-    `public_data.to_public`'s own output in `cli.py::render_announcements`
+    `public_data.to_public`'s own output in `cli/publication.py::render_announcements`
     (and are documented never to be called any other way), so what actually
     has to hold is that *this* pipeline never leaks a withheld biography or
     an unconsented recording -- not merely that the functions behave once

@@ -18,33 +18,41 @@ import pytest
 import yaml
 from conftest import board_member, config, speaker
 
-from convener_ops.cli import (
+from convener_ops.cli.governance import validate
+from convener_ops.cli.journey.attendance import (
     UNMATCHED_ATTENDANCE,
-    _load,
-    agenda_internal,
+    discard_recording,
+    encrypt_attendance_export,
+    match_attendance,
+    release_recording,
+)
+from convener_ops.cli.journey.certificate import (
     certificates_public_data,
     deliver_certificate,
     deliver_certificates,
-    discard_recording,
-    encrypt_attendance_export,
-    encrypt_identifier,
-    handle_proposal,
-    handle_registration,
-    invite_survey,
     issue_certificates,
-    match_attendance,
-    public_data,
-    record_survey_invitation,
     reissue_certificate,
-    release_recording,
+    revoke_certificate,
+)
+from convener_ops.cli.journey.proposal import handle_proposal
+from convener_ops.cli.journey.registration import (
+    encrypt_identifier,
+    handle_registration,
     resend_confirmation,
     resolve_registration_secret,
-    revoke_certificate,
     send_confirmation,
-    survey_status_public_data,
-    sweep,
-    validate,
 )
+from convener_ops.cli.journey.survey import (
+    invite_survey,
+    record_survey_invitation,
+)
+from convener_ops.cli.maintenance import sweep
+from convener_ops.cli.publication import (
+    agenda_internal,
+    public_data,
+    survey_status_public_data,
+)
+from convener_ops.cli.store import load
 from convener_ops.declaration.paths import repo_root
 from convener_ops.governance.rule import paris_today
 from convener_ops.journey import eventkeys
@@ -83,7 +91,7 @@ from convener_ops.journey.survey_invite import survey_url
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
-    value, errors = _load(tmp_path / "missing.yml")
+    value, errors = load(tmp_path / "missing.yml")
     assert value is None
     assert errors == ["missing.yml: file missing"]
 
@@ -92,7 +100,7 @@ def test_load_malformed_yaml_reports_error(tmp_path: Path) -> None:
     bad = tmp_path / "bad.yml"
     bad.write_text("key: [unclosed\n", encoding="utf-8")
 
-    value, errors = _load(bad)
+    value, errors = load(bad)
 
     assert value is None
     assert len(errors) == 1
@@ -103,7 +111,7 @@ def test_load_valid_yaml_returns_data_and_no_errors(tmp_path: Path) -> None:
     good = tmp_path / "good.yml"
     good.write_text("season: 2026\n", encoding="utf-8")
 
-    value, errors = _load(good)
+    value, errors = load(good)
 
     assert value == {"season": 2026}
     assert errors == []
@@ -463,7 +471,7 @@ def test_handle_proposal_stamps_the_paris_day_not_the_utc_one(
     # Paris must not be dated on the UTC day that is still yesterday.
     _write_data(tmp_path, [], config())
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    monkeypatch.setattr("convener_ops.cli.datetime", _FrozenClock)
+    monkeypatch.setattr("convener_ops.cli.journey.proposal.datetime", _FrozenClock)
     payload = json.dumps({"fields": [{"label": "Name", "value": "Grace Hopper"}]})
     monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
     monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
@@ -496,7 +504,7 @@ def test_handle_proposal_accepts_a_correctly_signed_tally_shaped_body(
     # The production path end to end: a secret is configured (so
     # verify_signature cannot short-circuit through the D-13 empty-secret
     # escape), the payload is Tally's own shape -- {"data": {"fields": [...]}}
-    # -- which is what the workflow now passes through untouched (cli.py
+    # -- which is what the workflow now passes through untouched (cli/
     # reads payload["data"]["fields"], not the legacy payload["fields"]
     # fallback every other test here exercises), and the signature is the
     # real base64(HMAC-SHA256(secret, payload)) computed over that exact
@@ -1302,7 +1310,9 @@ def test_handle_registration_survives_an_unanticipated_confirmation_failure(
     def _broken_compose(*args: object, **kwargs: object) -> object:
         raise RuntimeError("an unanticipated failure inside compose()")
 
-    monkeypatch.setattr("convener_ops.cli.confirmation.compose", _broken_compose)
+    monkeypatch.setattr(
+        "convener_ops.cli.journey.registration.confirmation.compose", _broken_compose
+    )
 
     _handle_and_send(tmp_path, monkeypatch)
 
@@ -2043,7 +2053,7 @@ def test_match_attendance_catches_a_platform_request_failure_too(
             raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
 
     monkeypatch.setattr(
-        "convener_ops.cli.platform_from_env",
+        "convener_ops.cli.journey.attendance.platform_from_env",
         lambda *args, **kwargs: _FailingPlatform(),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2076,7 +2086,7 @@ def test_match_attendance_catches_an_unresolved_conference_id_too(
             )
 
     monkeypatch.setattr(
-        "convener_ops.cli.platform_from_env",
+        "convener_ops.cli.journey.attendance.platform_from_env",
         lambda *args, **kwargs: _FailingPlatform(),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2218,7 +2228,8 @@ def test_match_attendance_refuses_rather_than_leak_if_a_record_id_cannot_be_comp
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
     monkeypatch.setattr(
-        "convener_ops.cli.matching_code", lambda event_id, email, salt: None
+        "convener_ops.cli.journey.attendance.matching_code",
+        lambda event_id, email, salt: None,
     )
 
     with pytest.raises(RuntimeError, match="matching_code returned None"):
@@ -3322,7 +3333,7 @@ def test_issue_certificates_catches_a_platform_request_failure(
             raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
 
     monkeypatch.setattr(
-        "convener_ops.cli.platform_from_env",
+        "convener_ops.cli.journey.certificate.platform_from_env",
         lambda *args, **kwargs: _FailingPlatform(),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -3532,7 +3543,9 @@ def _patch_fcc_platform(
             transport=transport,  # type: ignore[arg-type]
         )
 
-    monkeypatch.setattr("convener_ops.cli.platform_from_env", fake_platform_from_env)
+    monkeypatch.setattr(
+        "convener_ops.cli.journey.certificate.platform_from_env", fake_platform_from_env
+    )
 
 
 def test_issue_certificates_uses_the_conference_id_named_by_the_environment(
@@ -3646,7 +3659,7 @@ def test_issue_certificates_clamps_a_double_counted_duration_at_the_seminar_leng
             attendee, event, private_pem, salt, existing, issued_on=issued_on
         )
 
-    monkeypatch.setattr("convener_ops.cli.issue", _spy)
+    monkeypatch.setattr("convener_ops.cli.journey.certificate.issue", _spy)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
@@ -4219,7 +4232,7 @@ def test_reissue_certificate_catches_a_platform_request_failure(
             raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
 
     monkeypatch.setattr(
-        "convener_ops.cli.platform_from_env",
+        "convener_ops.cli.journey.certificate.platform_from_env",
         lambda *args, **kwargs: _FailingPlatform(),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -5734,7 +5747,7 @@ def test_deliver_certificates_catches_a_platform_request_failure(
             raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
 
     monkeypatch.setattr(
-        "convener_ops.cli.platform_from_env",
+        "convener_ops.cli.journey.certificate.platform_from_env",
         lambda *args, **kwargs: _FailingPlatform(),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -5853,7 +5866,9 @@ def test_deliver_certificates_continues_past_a_render_failure_for_one_attendee(
     def _raise(*args: Any, **kwargs: Any) -> str:
         raise RuntimeError("a reason this job did not anticipate")
 
-    monkeypatch.setattr("convener_ops.cli.delivery.render_certificate", _raise)
+    monkeypatch.setattr(
+        "convener_ops.cli.journey.certificate.delivery.render_certificate", _raise
+    )
 
     assert deliver_certificates() == 0
     captured = capsys.readouterr()
@@ -6275,7 +6290,7 @@ def test_deliver_certificate_catches_a_platform_request_failure(
             raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
 
     monkeypatch.setattr(
-        "convener_ops.cli.platform_from_env",
+        "convener_ops.cli.journey.certificate.platform_from_env",
         lambda *args, **kwargs: _FailingPlatform(),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -6366,7 +6381,9 @@ def test_deliver_certificate_survives_an_unanticipated_delivery_failure(
     def _raise(*args: Any, **kwargs: Any) -> str:
         raise RuntimeError("a reason this job did not anticipate")
 
-    monkeypatch.setattr("convener_ops.cli.delivery.render_certificate", _raise)
+    monkeypatch.setattr(
+        "convener_ops.cli.journey.certificate.delivery.render_certificate", _raise
+    )
 
     assert deliver_certificate() == 0
     captured = capsys.readouterr()
@@ -6611,8 +6628,8 @@ def _write_speaker_for_recording(
 
     `consent_granted=True` sets
     `publication.consent: "granted"` and nothing else -- the one condition
-    `cli.py::_consent_granted` requires before `release_recording` will
-    even attempt the two-trace check. `outcome` is deliberately left
+    `cli/journey/attendance.py::_consent_granted` requires before `release_recording`
+    will even attempt the two-trace check. `outcome` is deliberately left
     blank even when `consent_granted=True`: the whole point is that
     `outcome` (the board's own, later archive gate) must not gate this
     function at all. Defaults to `False` (the ordinary state for a fresh
@@ -6667,7 +6684,9 @@ def _patch_platform(
             transport=transport,
         )
 
-    monkeypatch.setattr("convener_ops.cli.platform_from_env", fake_platform_from_env)
+    monkeypatch.setattr(
+        "convener_ops.cli.journey.attendance.platform_from_env", fake_platform_from_env
+    )
 
 
 @pytest.mark.parametrize(
@@ -6691,7 +6710,7 @@ def test_consent_granted_is_the_narrow_silence_is_never_a_yes_rule(
     own behaviour: only the literal string `"granted"` is a yes; every
     other value, including one this project has never seen before, and a
     missing or malformed `publication` block entirely, is silence."""
-    from convener_ops.cli import _consent_granted
+    from convener_ops.cli.journey.attendance import _consent_granted
 
     record: dict[str, Any] = {}
     if publication is not None:
@@ -7140,7 +7159,7 @@ def test_release_recording_refuses_a_path_shaped_conference_id(
 def test_release_recording_returns_1_when_no_conference_id_is_configured(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Closes the untested branch of `cli.py`'s
+    """Closes the untested branch of `cli/`'s
     `{event_id: conference_id} if conference_id else {}` conditional
     expression, invisible to `coverage --branch` as a branch (Important
     1) -- an absent `CONVENER_FCC_CONFERENCE_ID` must refuse cleanly, not
@@ -7303,7 +7322,7 @@ def test_release_recording_reports_when_the_post_delete_check_fails(
 
 
 def test_discard_confirmation_names_the_action_and_the_event() -> None:
-    from convener_ops.cli import _discard_confirmation
+    from convener_ops.cli.journey.attendance import _discard_confirmation
 
     assert _discard_confirmation("mrg-042") == "discard mrg-042"
 
@@ -7647,12 +7666,14 @@ def test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_eve
 def _delete_recording_call_sites(package_dir: Path) -> list[str]:
     """Every `.py` file under `package_dir`, at any depth, that calls
     `delete_recording(` for real (excluding `def delete_recording(`
-    declarations). `rglob`, not `glob`: the package holds `cli.py` and
-    six sub-packages, so a non-recursive glob would read one file and
-    report the other forty clean -- reproduced against a synthetic
-    package below."""
+    declarations). `rglob`, not `glob`: nothing sits at the root of this
+    package at all, so a non-recursive glob would read no module and
+    report the whole of it clean -- reproduced against a synthetic
+    package below. `as_posix`, because the answer is compared against a
+    path this module writes down, and a backslash on one platform would
+    make that comparison a platform test."""
     return [
-        str(path.relative_to(package_dir))
+        path.relative_to(package_dir).as_posix()
         for path in sorted(package_dir.rglob("*.py"))
         for _match in re.finditer(
             r"(?<!def )\bdelete_recording\(", path.read_text(encoding="utf-8")
@@ -7664,7 +7685,8 @@ def test_delete_recording_has_exactly_two_call_sites_both_in_cli() -> None:
     """The rule, pinned rather than left to a docstring, covering
     both routes: the only calls to
     `Platform.delete_recording` anywhere in `convener_ops` are inside
-    `release_recording` and `discard_recording`, both in `cli.py`. A third
+    `release_recording` and `discard_recording`, both in
+    `cli/journey/attendance.py`. A third
     call site anywhere -- a shortcut some future change adds -- would
     bypass whichever guard exists to provide; this test reads every
     module's own source, at any depth, and refuses to let a third one
@@ -7681,7 +7703,8 @@ def test_delete_recording_has_exactly_two_call_sites_both_in_cli() -> None:
     import convener_ops
 
     package_dir = Path(convener_ops.__file__).parent
-    assert _delete_recording_call_sites(package_dir) == ["cli.py", "cli.py"]
+    expected = "cli/journey/attendance.py"
+    assert _delete_recording_call_sites(package_dir) == [expected, expected]
 
 
 def test_release_recordings_delete_call_is_gated_on_missing_retrieval_evidence() -> (
@@ -7694,7 +7717,7 @@ def test_release_recordings_delete_call_is_gated_on_missing_retrieval_evidence()
     noticing."""
     import inspect
 
-    from convener_ops.cli import release_recording
+    from convener_ops.cli.journey.attendance import release_recording
 
     source = inspect.getsource(release_recording)
     evidence_at = source.index("missing_retrieval_evidence(")
@@ -7708,7 +7731,7 @@ def test_discard_recordings_delete_call_is_gated_on_the_confirmation() -> None:
     comparison, not merely happen to pass a test today."""
     import inspect
 
-    from convener_ops.cli import discard_recording
+    from convener_ops.cli.journey.attendance import discard_recording
 
     source = inspect.getsource(discard_recording)
     confirm_at = source.index("confirm_discard != expected")
@@ -7735,7 +7758,7 @@ def test_discard_recording_never_reads_the_retrieval_tick_or_evidence() -> None:
     mentions `runbook_progress`, `RETRIEVED_TICK`, or
     `missing_retrieval_evidence` at all -- as a name, an attribute, or a
     string literal such as `record.get("runbook_progress")`."""
-    from convener_ops.cli import discard_recording
+    from convener_ops.cli.journey.attendance import discard_recording
 
     body = _code_body_excluding_docstring(discard_recording)
     assert "missing_retrieval_evidence" not in body
@@ -7748,7 +7771,7 @@ def test_release_recording_never_reads_the_discard_confirmation() -> None:
     `_discard_confirmation` must never appear in `release_recording`'s own
     code body, so a typed discard confirmation can never substitute for
     the two retrieval traces it actually requires."""
-    from convener_ops.cli import release_recording
+    from convener_ops.cli.journey.attendance import release_recording
 
     body = _code_body_excluding_docstring(release_recording)
     assert "CONFIRM_DISCARD" not in body
@@ -7761,7 +7784,7 @@ def test_the_call_site_scan_is_recursive(tmp_path: Path) -> None:
     Read against a synthetic package rather than against `convener_ops`
     itself, so what is pinned is the walk and not the shape the real
     package happens to have."""
-    (tmp_path / "cli.py").write_text("def f():\n    pass\n", encoding="utf-8")
+    (tmp_path / "innocent.py").write_text("def f():\n    pass\n", encoding="utf-8")
     sub = tmp_path / "sub"
     sub.mkdir()
     (sub / "evil.py").write_text(
@@ -7769,4 +7792,4 @@ def test_the_call_site_scan_is_recursive(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    assert _delete_recording_call_sites(tmp_path) == [str(Path("sub") / "evil.py")]
+    assert _delete_recording_call_sites(tmp_path) == ["sub/evil.py"]

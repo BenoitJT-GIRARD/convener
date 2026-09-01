@@ -17,7 +17,7 @@ import pytest
 import yaml
 from conftest import ballot, board_member, config, nomination, speaker
 
-from convener_ops import cli
+from convener_ops.cli import maintenance as cli
 from convener_ops.governance.rule import (
     MINIMUM_ELIGIBLE,
     active_board,

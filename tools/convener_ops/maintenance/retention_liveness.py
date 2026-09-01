@@ -10,7 +10,7 @@ way. Neither ever turns a badge red, because no run happens at all.
 
 This module holds the pure half of the fix: a tiny, versioned record --
 `instance/data/retention-last-run.yml`, one field, `last_run` -- and the arithmetic
-that decides whether it is stale. `cli.py` is the only module that touches
+that decides whether it is stale. `cli/` is the only sub-package that touches
 disk (its own module docstring); the two console scripts built on this one
 (`convener-record-retention-run` and `convener-check-retention-liveness`) live there.
 
@@ -63,7 +63,7 @@ def last_run_path(root: Path) -> Path:
 
 
 def record_to_data(today: date) -> dict[str, Any]:
-    """The plain, YAML-safe structure `cli.py` hands to its own YAML
+    """The plain, YAML-safe structure `cli/` hands to its own YAML
     writer -- the inverse of `last_run_from_data`."""
     return {"v": LAST_RUN_FILE_VERSION, "last_run": today.isoformat()}
 
@@ -75,7 +75,7 @@ def last_run_from_data(data: Any) -> date:
     format -- the same closed-shape discipline
     `eventkeys.registry_from_data` holds itself to. A *missing* file is a
     fact about the filesystem, not a shape this function ever sees; the
-    caller (`cli.py::check_retention_liveness`) handles that case on its
+    caller (`cli/maintenance.py::check_retention_liveness`) handles that case on its
     own, before this function is ever called.
     """
     if not isinstance(data, dict) or data.get("v") != LAST_RUN_FILE_VERSION:

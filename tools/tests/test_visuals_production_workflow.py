@@ -91,7 +91,7 @@ _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/journey/registration.py",
     "tools/convener_ops/publication/formats.py",
     "tools/convener_ops/governance/rule.py",
-    "tools/convener_ops/cli.py",
+    "tools/convener_ops/cli/publication.py",
     "tools/convener_ops/declaration/published.py",
     "tools/convener_ops/publication/brand.py",
     "assets/fonts/**",
@@ -162,7 +162,7 @@ def test_public_data_py_is_in_the_filter_the_consent_gate_needs() -> None:
     """`render_visuals` and
     `render_announcements` (this job's own two commands) each call
     `public_data.to_public` directly before either one reads a row -- the
-    consent gate every one of `cli.py`'s, `announce.py`'s and
+    consent gate every one of `cli/`'s, `announce.py`'s and
     `visual.py`'s own docstrings names as the reason a portrait or a room
     link cannot reach a rendered page. A change to the gate's own logic
     must re-trigger this job the same way a change to `visual.py` itself

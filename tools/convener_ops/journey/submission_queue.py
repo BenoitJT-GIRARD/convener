@@ -355,7 +355,7 @@ class DrainOutcome:
 
 
 def ledger_to_data(handled: Iterable[str]) -> dict[str, Any]:
-    """The plain, YAML-safe structure `cli.py` hands to its own YAML writer
+    """The plain, YAML-safe structure `cli/` hands to its own YAML writer
     -- the inverse of `ledger_from_data`. Sorted, so a drain that handled
     the same entries in a different order still writes the same bytes and
     produces no commit of its own."""
@@ -440,10 +440,10 @@ def plan_drain(
     drain started.
 
     `survey_open` answers, for one event id, whether that event's survey
-    switch is on -- `cli.py::_survey_enabled` reading `instance/data/speakers.yml`.
-    Asked here rather than inside the drain so that an entry for a closed
-    survey never costs one of the `max_events` slots, which are the scarce
-    thing. Asked of survey entries only: there is no equivalent switch on
+    switch is on -- `cli/journey/event.py::survey_enabled` reading
+    `instance/data/speakers.yml`. Asked here rather than inside the drain so that an
+    entry for a closed survey never costs one of the `max_events` slots, which are the
+    scarce thing. Asked of survey entries only: there is no equivalent switch on
     the registration side, and the relay's own known-event check is what
     stands there instead.
 
@@ -736,7 +736,7 @@ def annotation_lines(outcome: DrainOutcome) -> list[str]:
     worth. Refusals are annotated, counted, and never silent; they simply
     do not get to decide the colour of the run.
 
-    Composed here rather than in `cli.py` so a test can read the exact text
+    Composed here rather than in `cli/` so a test can read the exact text
     without capturing stdout.
     """
     lines = [

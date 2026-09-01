@@ -12,7 +12,7 @@ Three layers, mirroring the split `test_queue_watch.py` already uses:
 
 * `routing_watch.py`'s own pure functions -- the published file's shape,
   which events are still live, and what counts as a divergence;
-* `cli.py`'s `check_registration_routing`, the command the daily job runs.
+* `cli/maintenance.py`'s `check_registration_routing`, the command the daily job runs.
   This is the "prove it" half: drive a missing file, a complete one, a live
   event the file has never heard of, a file whose every event is in the
   past, and five consecutive healthy days;
@@ -30,7 +30,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops.cli import check_registration_routing
+from convener_ops.cli.maintenance import check_registration_routing
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.journey import registration_routing
@@ -292,12 +292,12 @@ def test_the_summary_counts_both_halves() -> None:
 
 
 # ==================================================================== #
-# 4 - cli.py: the proofs, driven
+# 4 - cli/maintenance.py: the proofs, driven
 # ==================================================================== #
 
 
 class _FixedDatetime:
-    """A stand-in for the `datetime` class `cli.py` imports, whose `now()`
+    """A stand-in for the `datetime` class `cli/maintenance.py` imports, whose `now()`
     always returns the same instant -- the same idiom
     `test_queue_watch.py::_FixedDatetime` uses."""
 
@@ -350,7 +350,7 @@ def _repo(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.delenv("CONVENER_NOTIFY_THREAD", raising=False)
     monkeypatch.delenv("CONVENER_NOTIFY_MENTION", raising=False)
-    monkeypatch.setattr("convener_ops.cli.datetime", _FixedDatetime(now))
+    monkeypatch.setattr("convener_ops.cli.maintenance.datetime", _FixedDatetime(now))
     return tmp_path
 
 

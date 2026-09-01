@@ -159,7 +159,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
     """Each of these is named, with its own reasoning, in the workflow's
     own comment -- this only pins that none of them was quietly dropped
     later. Deliberately over-inclusive rather than under: `tools/convener_ops/
-    cli.py` re-runs this job for plenty of unrelated commands too, kept
+    cli/` re-runs this job for plenty of unrelated commands too, kept
     anyway because a path filter has no finer grain than a file."""
     expected_paths = {
         "tools/convener_ops/publication/visual.py",
@@ -167,7 +167,7 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/publication/registration_code.py",
         "tools/convener_ops/publication/formats.py",
         "tools/convener_ops/governance/rule.py",
-        "tools/convener_ops/cli.py",
+        "tools/convener_ops/cli/publication.py",
         "examples/the-example-collective/instance/config.json",
         "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/journey/registration.py",

@@ -49,7 +49,7 @@ Never written to disk, never printed -- and why not a build artefact
 either
 ------------------------------------------------------------------------------
 `render_certificate` returns a `str`; nothing in this module, and nothing
-in `cli.py`'s own callers, ever writes that string to a file anywhere
+in `cli/`'s own callers, ever writes that string to a file anywhere
 under the repository, at any point, on any path. The rule that no
 personal data reaches the repository is not one this module bends
 for a *rendered* document just because the document itself is derived
@@ -153,7 +153,7 @@ inspects or forwards the caught exception's own text anywhere, because
 `SMTPRecipientsRefused` message, and forwarding that string to a caller
 that might print it -- or even just format it into a wider message --
 would reopen the exact leak `confirmation.py`'s own module docstring
-already closed once. `cli.py`'s own callers print only counts, never a
+already closed once. `cli/`'s own callers print only counts, never a
 name or an address, on every path including the branch where an attendee
 was already on record before this run started (a real defect once found in
 `certificate.py` is the reason that branch gets its
@@ -233,7 +233,7 @@ def render_certificate(
     the fields `certificate._sign_certificate` signed to produce `token` in
     the first place (`certificate.full_name`, `event.title`, `event.date`,
     `certificate.duration_hours`) -- this function does not re-derive or
-    decode any of them from `token` itself; the caller (`cli.py`) already
+    decode any of them from `token` itself; the caller (`cli/`) already
     holds every one of them from the same call that produced `token`, and
     handing them through directly is what keeps this function a plain,
     total, easily tested function of five primitives rather than a second
@@ -359,7 +359,7 @@ class Delivery:
     """One certificate, ready to deliver or to hand to a fake transport in
     a test. `document` is the whole rendered HTML page (`render_certificate`'s
     own return value) -- carried here only for the length of one send, never
-    written anywhere by this module or by `cli.py`."""
+    written anywhere by this module or by `cli/`."""
 
     to: str
     subject: str
@@ -396,8 +396,8 @@ def compose(
     mirrors, and `DOCUMENT_INSTRUCTION` above for the one sentence pinned
     against it directly. Deterministic in every argument, the same
     property `confirmation.compose` has and for the same reason: a resend
-    (`cli.py::deliver_certificate`) reproduces the identical message, not
-    merely one carrying the same document."""
+    (`cli/journey/certificate.py::deliver_certificate`) reproduces the identical
+    message, not merely one carrying the same document."""
     subject = "Your certificate of attendance"
     if event_title:
         subject = f"{subject} — {event_title}"
@@ -486,17 +486,17 @@ class DeliveryResult:
     transiently. See the module docstring's "never written to disk"
     section for why -- a future caller must never be
     able to "helpfully" write an unsent certificate to a file, an artefact
-    included, the way an earlier version of `cli.py::_send_confirmation`
-    once wrote `confirmation.SendResult.unsent_body` to
-    `unsent-confirmation.eml`. That pattern was already wrong for an
-    unsent *confirmation* too, once a review found
+    included, the way an earlier version of
+    `cli/journey/registration.py::_send_confirmation` once wrote
+    `confirmation.SendResult.unsent_body` to `unsent-confirmation.eml`. That pattern was
+    already wrong for an unsent *confirmation* too, once a review found
     it the default path rather than the documented exception the record
     called it -- `confirmation.py`'s own module docstring carries that
     history -- but it would have been wrong here regardless of what that
     module did: a signed, nominative certificate is exactly what may
     never be deposited in a repository, an Actions build artefact
     included, and no retention window changes that. `sent` alone is
-    everything `cli.py` needs to print a one-line count; the certificate
+    everything `cli/` needs to print a one-line count; the certificate
     itself is never lost by this type refusing to carry a copy, because a
     retry reproduces it byte-identically (see the module docstring's
     "replayable, not regenerated" section) for as long as the

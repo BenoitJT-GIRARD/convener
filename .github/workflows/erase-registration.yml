@@ -126,7 +126,7 @@ jobs:
             fi
             # convener-erase-registration also rewrites the
             # committed attendance export when the erased person has rows
-            # there (tools/convener_ops/cli.py) -- staging only
+            # there (tools/convener_ops/cli/) -- staging only
             # the registration file left that rewrite dying with the
             # runner while the log reported it committed. Guarded the same
             # way: the file may not exist for an event with no attendance

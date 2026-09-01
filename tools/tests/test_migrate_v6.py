@@ -45,7 +45,7 @@ from migrate_v6 import (
     migrate_speakers_text,
 )
 
-from convener_ops.cli import SPEAKERS_HEADER, dump_config
+from convener_ops.cli.store import SPEAKERS_HEADER, dump_config
 from convener_ops.declaration.paths import repo_root
 from convener_ops.governance.validate import validate_config
 

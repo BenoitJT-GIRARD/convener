@@ -27,7 +27,7 @@ from typing import Final
 import yaml
 from conftest import workflow_triggers
 
-from convener_ops.cli import _template_charters
+from convener_ops.cli.publication import _template_charters
 from convener_ops.declaration.paths import repo_root
 
 _ROOT: Final = repo_root()
@@ -84,7 +84,7 @@ def test_the_path_filter_names_every_module_the_three_templates_read() -> None:
         "tools/convener_ops/publication/registration_code.py",
         "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/journey/registration.py",
-        "tools/convener_ops/cli.py",
+        "tools/convener_ops/cli/publication.py",
         "assets/fonts/**",
         "tools/uv.lock",
         "tools/visuals/**",

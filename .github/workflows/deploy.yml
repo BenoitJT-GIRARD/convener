@@ -118,7 +118,7 @@ jobs:
       # that repo's `app/` subtree to race against this workflow's own
       # wholesale refresh of it. Needs no secret: `convener-certificates-public-data`
       # only ever reads committed `instance/data/events/*/certificates.yml` files.
-      # An event with no certificates yet is a normal state (`cli.py`'s own
+      # An event with no certificates yet is a normal state (`cli/`'s own
       # `certificates_public_data`), so this step never fails for want of
       # one -- `scripts/copy-certificates.mjs`, below, is equally tolerant
       # of this step never having run at all.

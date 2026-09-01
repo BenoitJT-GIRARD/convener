@@ -12,7 +12,7 @@ Three layers, mirroring the split `test_retention_liveness.py` and
 * `queue_watch.py`'s own pure functions -- the record's shape, the carrying
   forward of an entry's age, the two boundaries a real run actually hits,
   and the bounds the configured threshold has to sit inside;
-* `cli.py`'s `record_queue_watch` and `check_queue_liveness` -- the two
+* `cli/maintenance.py`'s `record_queue_watch` and `check_queue_liveness` -- the two
   commands the daily job and the watchdog actually run. This is the "prove
   it" half: drive a stuck queue and watch the alarm fire, drive the same
   queue an hour under the threshold and watch it stay silent, drive a
@@ -31,7 +31,7 @@ from typing import Any
 import pytest
 from conftest import workflow_triggers
 
-from convener_ops.cli import check_queue_liveness, record_queue_watch
+from convener_ops.cli.maintenance import check_queue_liveness, record_queue_watch
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.journey import registration_routing
@@ -388,12 +388,12 @@ def test_a_lost_history_is_its_own_alarm_and_not_a_quiet_restart() -> None:
 
 
 # ==================================================================== #
-# 5 - cli.py: the five proofs, driven
+# 5 - cli/maintenance.py: the five proofs, driven
 # ==================================================================== #
 
 
 class _FixedDatetime:
-    """A stand-in for the `datetime` class `cli.py` imports, whose `now()`
+    """A stand-in for the `datetime` class `cli/maintenance.py` imports, whose `now()`
     always returns the same instant -- the same idiom
     `test_retention_liveness.py::_FixedDatetime` uses."""
 
@@ -417,7 +417,7 @@ def _repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, now: datetime) -> Pat
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.delenv("CONVENER_NOTIFY_THREAD", raising=False)
     monkeypatch.delenv("CONVENER_NOTIFY_MENTION", raising=False)
-    monkeypatch.setattr("convener_ops.cli.datetime", _FixedDatetime(now))
+    monkeypatch.setattr("convener_ops.cli.maintenance.datetime", _FixedDatetime(now))
     return tmp_path
 
 
@@ -439,7 +439,7 @@ def _drive(
     )
     monkeypatch.setenv("CONVENER_QUEUE_WAITING_FILE", str(listing))
     monkeypatch.setenv("CONVENER_QUEUE_DEFERRED_FILE", str(deferred))
-    monkeypatch.setattr("convener_ops.cli.datetime", _FixedDatetime(now))
+    monkeypatch.setattr("convener_ops.cli.maintenance.datetime", _FixedDatetime(now))
     return tmp_path
 
 
@@ -551,11 +551,13 @@ def test_the_drain_having_stopped_running_fires(
     assert record_queue_watch() == 0
 
     monkeypatch.setattr(
-        "convener_ops.cli.datetime", _FixedDatetime(_NOW + timedelta(days=2))
+        "convener_ops.cli.maintenance.datetime",
+        _FixedDatetime(_NOW + timedelta(days=2)),
     )
     assert check_queue_liveness() == 0
     monkeypatch.setattr(
-        "convener_ops.cli.datetime", _FixedDatetime(_NOW + timedelta(days=3))
+        "convener_ops.cli.maintenance.datetime",
+        _FixedDatetime(_NOW + timedelta(days=3)),
     )
     assert check_queue_liveness() == 1
     assert "no longer being drained" in capsys.readouterr().err

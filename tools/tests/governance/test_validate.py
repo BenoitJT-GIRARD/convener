@@ -118,7 +118,7 @@ def test_an_edition_code_past_four_digits_is_rejected() -> None:
     rather than leaving it unbounded: an unbounded id can grow
     `registration_code_modules`'s own QR version past the point where a
     printed poster's QR module drops below the scannable floor
-    (`formats.SCANNABLE_QR_MODULE_MM`) -- `cli.py::render_visuals` is the
+    (`formats.SCANNABLE_QR_MODULE_MM`) -- `cli/publication.py::render_visuals` is the
     check that runs that arithmetic for real, but a record this malformed
     should never pass `convener-validate` in the first place."""
     errors = validate_speakers([speaker(edition_code="MRG-99999")], editions=EDITIONS)

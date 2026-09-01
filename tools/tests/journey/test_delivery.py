@@ -161,7 +161,7 @@ def test_render_certificate_with_no_event_title_has_a_sensible_title_tag() -> No
 
 
 def test_render_certificate_is_deterministic() -> None:
-    """Same inputs, same bytes -- the property `cli.py`'s replay depends
+    """Same inputs, same bytes -- the property `cli/`'s replay depends
     on: a retried delivery must reproduce the identical
     document, not merely one carrying the same facts."""
     assert _document() == _document()

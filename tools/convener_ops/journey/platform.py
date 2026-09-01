@@ -28,7 +28,7 @@ The first version of this module opened its own file,
 `instance/data/events/<id>/config.yml`, reasoning that `instance/data/speakers.yml`'s
 `zoom_link` and `youtube_url` belonged to a schema it had no
 licence to change. Review found the reasoning sound but pointed at the
-wrong file: every `convener_ops` business-logic module except `cli.py` is pure,
+wrong file: every `convener_ops` business-logic module outside `cli/` is pure,
 receiving already-loaded data rather than reading a file itself --
 `rule.py`, `notify.py`, `sweep.py` and `public_data.py` all follow
 that rule, and it is the right one. The defect was that `ManualPlatform`
@@ -40,7 +40,7 @@ was reading a file at all, not which file it was reading. So:
   existing `zoom_link` and `youtube_url` -- the very fields the first
   version rejected, now reached the way every other pure module in this
   package reaches `instance/data/speakers.yml`'s content: already loaded, by
-  whoever wires this class up (`cli.py`, in the end).
+  whoever wires this class up (`cli/`, in the end).
 * **`event_id` is `edition_code`, lower-cased.** Nothing else in the
   codebase defines that mapping, and it cannot be implemented without one:
   `edition_code` is the only candidate consistent with existing convention
@@ -162,7 +162,7 @@ duplicate from a single well-formed column without this check.
 no filesystem, fully unit-testable -- and `ManualPlatform.get_attendance`
 is the thin wrapper that finds the file, calls it, and prints one line per
 dropped row to the job log (the same "printed where any volunteer can read
-it" idiom `cli.py` already uses for `board_notifications`'s fallback)
+it" idiom `cli/` already uses for `board_notifications`'s fallback)
 before returning the rows that parsed. A column missing from the header is
 a whole-file failure, named in the exception; a
 single malformed row is reported and excluded, never silently dropped, and
@@ -427,7 +427,7 @@ def parse_attendance_csv(
         # This used to echo the duplicated
         # column *names* -- the file's own header text, written by
         # whatever export tool produced it -- into the exception message,
-        # which every caller in `cli.py` prints straight to a job log.
+        # which every caller in `cli/` prints straight to a job log.
         # The committed encrypted export is what makes this branch
         # reachable from CI at all (the
         # manual path had no file to read there before); once it is,
@@ -649,8 +649,8 @@ def erase_attendance_rows(
 ) -> tuple[AttendanceExportFile, int]:
     """Remove every row addressed to `email` from `file` -- the attendance
     half of an early erasure request, called by
-    `cli.py::erase_registration` alongside `registration.erase` so the two
-    stores stay in step. Early erasure means the encrypted file is
+    `cli/journey/retention.py::erase_registration` alongside `registration.erase` so the
+    two stores stay in step. Early erasure means the encrypted file is
     rewritten without the record concerned and nothing else moves --
     terms that hold here exactly as they do for
     `registrations.enc`, because the shape is now the same: every entry
@@ -736,7 +736,7 @@ class ManualPlatform:
     #: the same "nothing more to say" an explicit empty string would be.
     config: Mapping[str, Any] | None = None
     #: The event's own decrypted private key, read from
-    #: `EVENT_PRIVATE_KEY` by whoever constructs this class (`cli.py`,
+    #: `EVENT_PRIVATE_KEY` by whoever constructs this class (`cli/`,
     #: never this module) -- the same key every other command touching
     #: `registrations.enc` already holds. Only needed to read
     #: `ENCRYPTED_ATTENDANCE_FILENAME`; `None` is fine as long as no event
@@ -806,7 +806,7 @@ class ManualPlatform:
         # that would carry CONVENER_REPO_ROOT (a CI runner's own filesystem
         # layout, or a test's tmp_path) into a job's log for no reason,
         # the same leak already closed for
-        # `cli.py`'s own register-path messages. `_validate_event_id`
+        # `cli/`'s own register-path messages. `_validate_event_id`
         # inside `_event_dir` above has already accepted `event_id` by
         # this point, so it is safe to reuse verbatim in a relative,
         # hand-built path rather than in either path above.

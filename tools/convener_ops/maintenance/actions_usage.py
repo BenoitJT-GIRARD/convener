@@ -58,7 +58,7 @@ a finding instead of quietly mis-adding it.
 
 Like the rest of `convener_ops` this module is pure: it reads no file, makes no
 network call, and knows nothing about GitHub beyond the shape of two JSON
-payloads it is handed. `cli.py` is the only module that touches disk, and
+payloads it is handed. `cli/` is the only sub-package that touches disk, and
 the API calls themselves live in a workflow step, in `gh` -- no test in
 this repository ever reaches the network.
 """
@@ -731,7 +731,7 @@ def is_stale(elapsed_days: int, max_silent_days: int) -> bool:
 def record_to_data(
     usage: Usage, previous: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    """The plain, YAML-safe structure `cli.py` hands to its own writer.
+    """The plain, YAML-safe structure `cli/` hands to its own writer.
 
     `latest` is today's window in full; `history` is the trend, newest
     last, with today's row replacing an earlier one for the same day so

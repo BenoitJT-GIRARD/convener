@@ -42,7 +42,7 @@ from typing import Any, Final
 import pytest
 from conftest import WorkflowYaml, workflow_event_names, workflow_triggers
 
-from convener_ops import cli as cli_module
+import convener_ops.cli
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import (
     DATA_DIR,
@@ -1619,7 +1619,25 @@ def test_rebasing_on_a_rejected_push_can_lose_an_entry(tmp_path: Path) -> None:
 # workflow's own mistake.
 # ------------------------------------------------------------------ #
 
-CLI_MODULE_PATH = Path("tools/convener_ops/cli.py")
+
+def _cli_source(command: str) -> Path:
+    """Where the command named `command` is written, derived rather than
+    listed: `convener_ops.cli` re-exports exactly the names
+    `tools/pyproject.toml` declares, and each one carries the module it
+    was defined in. A command moved from one module of `convener_ops/cli/`
+    to another moves this answer with it, which is the whole reason the
+    path is not typed out here."""
+    module = sys.modules[getattr(convener_ops.cli, command).__module__]
+    assert module.__file__ is not None
+    return Path(module.__file__).resolve().relative_to(ROOT)
+
+
+def _cli_module(command: str) -> ModuleType:
+    """The module `command` is written in, for resolving a constant it
+    names."""
+    return sys.modules[getattr(convener_ops.cli, command).__module__]
+
+
 ISSUE_CERTIFICATES_WORKFLOW = Path(".github/workflows/issue-certificates.yml")
 REISSUE_CERTIFICATE_WORKFLOW = Path(".github/workflows/reissue-certificate.yml")
 REVOKE_CERTIFICATE_WORKFLOW = Path(".github/workflows/revoke-certificate.yml")
@@ -1637,10 +1655,10 @@ _DOTTED_ENV_NAMES: dict[tuple[str, str], str] = {
 }
 
 #: Excluded from `_env_vars_read`'s own result:
-#: `_write_github_output` reads `GITHUB_OUTPUT` (`cli.py::issue_certificates`
-#: reaches it through that shared helper), but this
-#: is not a secret or an input a workflow author ever forwards through a
-#: step's own `env:` block -- the runner already sets it, unconditionally,
+#: `_write_github_output` reads `GITHUB_OUTPUT`
+#: (`cli/journey/certificate.py::issue_certificates` reaches it through that shared
+#: helper), but this is not a secret or an input a workflow author ever forwards through
+#: a step's own `env:` block -- the runner already sets it, unconditionally,
 #: for every step in a job. Treating it like `CONVENER_SIGNING_KEY` or
 #: `CERTIFICATE_ID` would make `test_issue_certificates_workflow_carries_
 #: every_env_var_the_command_reads` demand an `env:` entry that has no
@@ -1681,10 +1699,10 @@ def _calls_platform_from_env(func: ast.FunctionDef) -> bool:
 
 
 def _calls_delivery_deliver(func: ast.FunctionDef) -> bool:
-    """The analogue of `_calls_platform_from_env` above: `cli.py`
+    """The analogue of `_calls_platform_from_env` above: `cli/`
     calls `delivery.deliver(message, os.environ)` (a module-qualified
     attribute call, `confirmation.deliver`'s own calling convention --
-    `cli.py` imports `delivery` as a module, never a bare name), which
+    `cli/` imports `delivery` as a module, never a bare name), which
     hands `os.environ` down into `confirmation.smtp_config_from_env`
     *inside `delivery.py`*, a read `_env_vars_read` cannot otherwise see
     (the same "out of this function's own scope by design" limitation its
@@ -1701,8 +1719,8 @@ def _calls_delivery_deliver(func: ast.FunctionDef) -> bool:
 
 def _calls_confirmation_deliver(func: ast.FunctionDef) -> bool:
     """The analogue of `_calls_delivery_deliver` above:
-    `cli.py::invite_survey` calls `confirmation.deliver(message, os.environ)`
-    directly -- there is no dedicated transport for a survey invitation to
+    `cli/journey/survey.py::invite_survey` calls `confirmation.deliver(message,
+    os.environ)` directly -- there is no dedicated transport for a survey invitation to
     duplicate (`survey_invite.py`'s own module docstring explains why it
     reuses `confirmation.Confirmation`/`confirmation.deliver` rather than
     building a third copy of the same `smtplib` wiring `delivery.py`
@@ -1719,23 +1737,66 @@ def _calls_confirmation_deliver(func: ast.FunctionDef) -> bool:
     )
 
 
-def _module_function_names(path: Path) -> frozenset[str]:
-    """Every function `path`'s own module defines, at any nesting depth --
-    the universe `_env_vars_read`'s recursion (below) is allowed to walk
-    into. Bounded to names the module itself defines, so a call to an
-    *imported* function that happens to share a name with a local helper
-    is never mistaken for one (an import always binds a different name in
-    `ast.Call.func` than the module's own `def`, since Python has no way
-    to call an imported function through a bare, undotted name that also
-    resolves to something else)."""
-    tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
-    return frozenset(
-        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-    )
+def _helper_sources(path: Path) -> dict[str, Path]:
+    """Every function a plain, undotted call inside `path`'s own module can
+    reach, and the file each is written in -- the universe
+    `_env_vars_read`'s recursion (below) is allowed to walk into.
+
+    Two kinds, and the second is the one that was missing. A function the
+    module defines itself resolves to `path`. A function the module
+    imports by name from another module of `convener_ops.cli`
+    (`from convener_ops.cli.journey.event import conference_ids_from_env`)
+    is called exactly the same way -- an undotted `ast.Name` -- and reads
+    exactly the same environment, so it resolves to the file it is defined
+    in. Stopping at the module's own `def`s was correct while every
+    command and every helper it used sat in one file; the day the commands
+    were split into `convener_ops/cli/`, that walk lost
+    `CONVENER_FCC_CONFERENCE_ID` and `RESEND_ALL` from five commands at
+    once. It failed loudly rather than silently, because the sets it
+    derives are compared against what the workflows actually forward --
+    which is the only reason this is a paragraph and not a leak.
+
+    **`convener_ops.cli` and no further**, which is the same boundary the
+    single file used to draw. `repo_root` is imported by every command and
+    reads `CONVENER_REPO_ROOT`, a development override no workflow ever
+    forwards; following an import out of the command line would put it,
+    and every other read a called module happens to make, into the set a
+    workflow is then required to carry.
+
+    A dotted call (`module.function(...)`) is deliberately still out of
+    reach; the three that matter are named one by one below."""
+    source = (ROOT / path).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    found: dict[str, Path] = {
+        node.name: path for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
+    }
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.ImportFrom) and node.module):
+            continue
+        if not node.module.startswith("convener_ops.cli"):
+            continue
+        origin = Path("tools") / Path(node.module.replace(".", "/"))
+        for candidate in (origin.with_suffix(".py"), origin / "__init__.py"):
+            if (ROOT / candidate).is_file():
+                defined = {
+                    inner.name
+                    for inner in ast.walk(
+                        ast.parse((ROOT / candidate).read_text(encoding="utf-8"))
+                    )
+                    if isinstance(inner, ast.FunctionDef)
+                }
+                for alias in node.names:
+                    if alias.asname is None and alias.name in defined:
+                        found.setdefault(alias.name, candidate)
+                break
+    return found
 
 
 def _env_vars_read(
-    path: Path, function_name: str, *, _seen: frozenset[str] = frozenset()
+    path: Path,
+    function_name: str,
+    *,
+    _seen: frozenset[tuple[str, str]] = frozenset(),
 ) -> set[str]:
     """Every environment variable `function_name` (defined in `path`)
     reads directly (`os.environ.get(...)` or `os.environ[...]`), plus --
@@ -1749,7 +1810,7 @@ def _env_vars_read(
     The first version of this walk covered only
     `function_name`'s own body, which made it blind to a read moved out
     of that body and into a private helper -- exactly what
-    `cli.py::_conference_ids_from_env` is, this same round: without this
+    `cli/journey/event.py::conference_ids_from_env` is, this same round: without this
     recursion, adding `CONVENER_FCC_CONFERENCE_ID` there would have silently
     dropped out of the set this function derives, and the check below
     that compares it against the workflow's own forwarded `env:` keys
@@ -1769,9 +1830,9 @@ def _env_vars_read(
     identical reason `platform_from_env` needed one: `delivery.deliver`
     hands `os.environ` on to `confirmation.smtp_config_from_env`, a read
     genuinely inside a different module's own AST. There is a third,
-    identical case, `_calls_confirmation_deliver`: `cli.py::invite_survey`
-    calls `confirmation.deliver` directly, rather than through
-    `delivery.deliver`'s own indirection, so the same read needs its own
+    identical case, `_calls_confirmation_deliver`:
+    `cli/journey/survey.py::invite_survey` calls `confirmation.deliver` directly, rather
+    than through `delivery.deliver`'s own indirection, so the same read needs its own
     name to match on.
 
     **What this still cannot see**, so the docstring does not claim more
@@ -1783,9 +1844,9 @@ def _env_vars_read(
     `platform_from_env`, `delivery.deliver` and `confirmation.deliver` are
     the only such cases this function already knows about by name, since
     walking a different module's own AST from scratch is out of this
-    function's own scope by design (it answers "what does `cli.py` read",
-    not "what does everything `cli.py` calls read")."""
-    if function_name in _seen:
+    function's own scope by design (it answers "what does `cli/` read",
+    not "what does everything `cli/` calls read")."""
+    if (path.as_posix(), function_name) in _seen:
         return set()
     func = _function_node(path, function_name)
     names: set[str] = set()
@@ -1797,16 +1858,16 @@ def _env_vars_read(
                 and callee.attr == "get"
                 and _is_os_environ(callee.value)
             )
-            # `_env_flag_is_true(name)` reads
+            # `env_flag_is_true(name)` reads
             # `os.environ.get(name, ...)` one level down, through its own
             # parameter -- invisible to the recursion below, which only
             # ever sees a literal passed directly to `os.environ.get`
             # itself, never one threaded through a second function's own
             # argument. The literal lives at the *call site* here, not
             # inside the helper's body, so it is read directly off this
-            # call rather than by walking into `_env_flag_is_true` at all.
+            # call rather than by walking into `env_flag_is_true` at all.
             is_env_flag_is_true = (
-                isinstance(callee, ast.Name) and callee.id == "_env_flag_is_true"
+                isinstance(callee, ast.Name) and callee.id == "env_flag_is_true"
             )
             if (is_os_environ_get or is_env_flag_is_true) and node.args:
                 name = _literal_env_name(node.args[0])
@@ -1823,31 +1884,34 @@ def _env_vars_read(
     if _calls_confirmation_deliver(func):
         names |= confirmation.SMTP_ENV_VARS
 
-    seen = _seen | {function_name}
-    local_functions = _module_function_names(path)
+    seen = _seen | {(path.as_posix(), function_name)}
+    reachable = _helper_sources(path)
     called = {
         node.func.id
         for node in ast.walk(func)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     }
-    for helper in called & local_functions - seen:
-        names |= _env_vars_read(path, helper, _seen=seen)
+    for helper in sorted(called & reachable.keys()):
+        names |= _env_vars_read(reachable[helper], helper, _seen=seen)
     return names
 
 
 def _last_path_component(
-    expr: ast.expr, assigned: dict[str, ast.expr], _seen: frozenset[str] = frozenset()
+    expr: ast.expr,
+    assigned: dict[str, ast.expr],
+    module: ModuleType,
+    _seen: frozenset[str] = frozenset(),
 ) -> str | None:
     """The trailing literal component of a `Path(...) / a / b / c`-style
     chain -- either a string constant (`"registrations.enc"`) or a
-    module-level constant `cli_module` itself imports by name
+    module-level constant the command's own module imports by name
     (`ENCRYPTED_ATTENDANCE_FILENAME`), resolved against the real module
     rather than retyped. Recurses through `assigned` for a variable built
     in an earlier statement (`enc_path = root / rel_path`, `rel_path = ...`),
     the same "follow the assignment, do not hand-type the answer" idiom
     `_env_vars_read` already uses for environment variables."""
     if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
-        return _last_path_component(expr.right, assigned, _seen)
+        return _last_path_component(expr.right, assigned, module, _seen)
     if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
         return expr.value
     if isinstance(expr, ast.Call):
@@ -1856,16 +1920,24 @@ def _last_path_component(
         # module's own path-building does today, but this keeps the walk
         # from silently returning None for it if that ever changes.
         if expr.args:
-            return _last_path_component(expr.args[-1], assigned, _seen)
+            return _last_path_component(expr.args[-1], assigned, module, _seen)
         return None
     if isinstance(expr, ast.Name):
-        if hasattr(cli_module, expr.id):
-            value = getattr(cli_module, expr.id)
+        if hasattr(module, expr.id):
+            value = getattr(module, expr.id)
             if isinstance(value, str):
                 return value
         if expr.id in assigned and expr.id not in _seen:
-            return _last_path_component(assigned[expr.id], assigned, _seen | {expr.id})
+            return _last_path_component(
+                assigned[expr.id], assigned, module, _seen | {expr.id}
+            )
     return None
+
+
+def _module_of(path: Path) -> ModuleType:
+    """The imported module a repository-relative source path names."""
+    dotted = path.with_suffix("").as_posix().removeprefix("tools/").replace("/", ".")
+    return importlib.import_module(dotted.removesuffix(".__init__"))
 
 
 def _files_written(path: Path, function_name: str) -> set[str]:
@@ -1895,7 +1967,7 @@ def _files_written(path: Path, function_name: str) -> set[str]:
         ):
             expr = assigned.get(node.func.value.id)
             if expr is not None:
-                component = _last_path_component(expr, assigned)
+                component = _last_path_component(expr, assigned, _module_of(path))
                 if component:
                     written.add(component)
     return written
@@ -1937,7 +2009,7 @@ def _workflow_step_env_keys(
 
 
 def test_issue_certificates_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "issue_certificates")
+    expected = _env_vars_read(_cli_source("issue_certificates"), "issue_certificates")
     assert expected == {
         "EVENT_ID",
         "EVENT_PRIVATE_KEY",
@@ -1966,7 +2038,7 @@ def test_issue_certificates_workflow_carries_every_env_var_the_command_reads() -
 
 
 def test_reissue_certificate_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "reissue_certificate")
+    expected = _env_vars_read(_cli_source("reissue_certificate"), "reissue_certificate")
     assert expected == {
         "EVENT_ID",
         "EVENT_PRIVATE_KEY",
@@ -1990,7 +2062,7 @@ def test_reissue_certificate_workflow_carries_every_env_var_the_command_reads() 
 
 
 def test_revoke_certificate_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "revoke_certificate")
+    expected = _env_vars_read(_cli_source("revoke_certificate"), "revoke_certificate")
     assert expected == {"EVENT_ID", "CERTIFICATE_ID"}
     carried = _workflow_step_env_keys(
         REVOKE_CERTIFICATE_WORKFLOW, "revoke", "convener-revoke-certificate"
@@ -2015,7 +2087,9 @@ def test_revoke_certificate_workflow_carries_every_env_var_the_command_reads() -
 
 
 def test_issue_certificates_delivery_step_carries_every_env_var_it_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "deliver_certificates")
+    expected = _env_vars_read(
+        _cli_source("deliver_certificates"), "deliver_certificates"
+    )
     assert expected == {
         "EVENT_ID",
         "EVENT_PRIVATE_KEY",
@@ -2050,7 +2124,7 @@ def test_issue_certificates_delivery_step_carries_every_env_var_it_reads() -> No
 
 
 def test_deliver_certificate_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "deliver_certificate")
+    expected = _env_vars_read(_cli_source("deliver_certificate"), "deliver_certificate")
     assert expected == {
         "EVENT_ID",
         "EVENT_PRIVATE_KEY",
@@ -2755,11 +2829,11 @@ def test_issue_certificates_workflow_has_a_resend_all_input_defaulting_false() -
 # ------------------------------------------------------------------ #
 # The widened AST walk
 # (`_calls_confirmation_deliver`) surfaced a pre-existing gap that
-# predates this whole task -- `_send_confirmation` (`cli.py::_send_confirmation`)
-# resolves the room link through `platform_from_env`, which reads
-# `CONVENER_MEETING_API_TOKEN`, and neither workflow that reaches it forwarded
-# it. Benign today (the confirmation falls back to the manual `zoom_link`
-# rather than failing), but the same class of defect this whole derived-
+# predates this whole task -- `_send_confirmation`
+# (`cli/journey/registration.py::_send_confirmation`) resolves the room link through
+# `platform_from_env`, which reads `CONVENER_MEETING_API_TOKEN`, and neither workflow
+# that reaches it forwarded it. Benign today (the confirmation falls back to the manual
+# `zoom_link` rather than failing), but the same class of defect this whole derived-
 # environment idiom exists to catch, so it is asserted here now that the
 # walk can see it at all.
 # ------------------------------------------------------------------ #
@@ -2771,7 +2845,7 @@ RESEND_CONFIRMATION_WORKFLOW = Path(".github/workflows/resend-confirmation.yml")
 def test_registration_workflow_send_step_carries_every_env_var_the_command_reads() -> (
     None
 ):
-    expected = _env_vars_read(CLI_MODULE_PATH, "send_confirmation")
+    expected = _env_vars_read(_cli_source("send_confirmation"), "send_confirmation")
     assert expected == {
         "REGISTRATION_PAYLOAD",
         "EVENT_PRIVATE_KEY",
@@ -2795,7 +2869,7 @@ def test_registration_workflow_send_step_carries_every_env_var_the_command_reads
 
 
 def test_resend_confirmation_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "resend_confirmation")
+    expected = _env_vars_read(_cli_source("resend_confirmation"), "resend_confirmation")
     assert expected == {
         "EVENT_ID",
         "EMAIL_ENVELOPE",
@@ -2832,7 +2906,7 @@ ERASE_REGISTRATION_WORKFLOW = Path(".github/workflows/erase-registration.yml")
 
 
 def test_retention_sweep_step_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "retention_sweep")
+    expected = _env_vars_read(_cli_source("retention_sweep"), "retention_sweep")
     assert expected == {"CONVENER_RETENTION_TOKEN"}, (
         "the derivation itself found an unexpected set -- either "
         "retention_sweep changed what it reads, or this AST walk no "
@@ -2851,7 +2925,7 @@ def test_retention_sweep_step_carries_every_env_var_the_command_reads() -> None:
 
 
 def test_record_destructions_step_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "record_destructions")
+    expected = _env_vars_read(_cli_source("record_destructions"), "record_destructions")
     assert expected == {"DESTROYED_IDS", "DESTROYED_ON"}
     carried = _workflow_step_env_keys(
         RETENTION_WORKFLOW, "retention", "convener-record-destructions"
@@ -2864,7 +2938,7 @@ def test_record_destructions_step_carries_every_env_var_the_command_reads() -> N
 
 
 def test_erase_registration_step_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "erase_registration")
+    expected = _env_vars_read(_cli_source("erase_registration"), "erase_registration")
     assert expected == {
         "EVENT_ID",
         "MATCHING_CODE",
@@ -2891,7 +2965,7 @@ def test_erase_registration_workflow_stages_every_file_the_command_writes() -> N
     source rather than a hand-typed list, which is how the gap survived
     every review of the two halves separately; a future third file this
     command starts writing needs no matching edit here to stay caught."""
-    written = _files_written(CLI_MODULE_PATH, "erase_registration")
+    written = _files_written(_cli_source("erase_registration"), "erase_registration")
     assert written == {"registrations.enc", "attendance-import.csv.enc"}, (
         "the derivation itself found an unexpected set -- either "
         "erase_registration changed what it writes, or this AST walk no "
@@ -3036,7 +3110,7 @@ def _invite_survey_workflow() -> WorkflowYaml:
 
 
 def test_invite_survey_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "invite_survey")
+    expected = _env_vars_read(_cli_source("invite_survey"), "invite_survey")
     assert expected == {
         "EVENT_ID",
         "EVENT_PRIVATE_KEY",
@@ -3065,7 +3139,9 @@ def test_invite_survey_workflow_carries_every_env_var_the_command_reads() -> Non
 def test_record_survey_invitation_step_carries_every_env_var_the_command_reads() -> (
     None
 ):
-    expected = _env_vars_read(CLI_MODULE_PATH, "record_survey_invitation")
+    expected = _env_vars_read(
+        _cli_source("record_survey_invitation"), "record_survey_invitation"
+    )
     assert expected == {"EVENT_ID"}
     carried = _workflow_step_env_keys(
         INVITE_SURVEY_WORKFLOW, "invite", "convener-record-survey-invitation"
@@ -3137,7 +3213,7 @@ MATCH_ATTENDANCE_WORKFLOW = Path(".github/workflows/match-attendance.yml")
 
 
 def test_match_attendance_workflow_carries_every_env_var_the_command_reads() -> None:
-    expected = _env_vars_read(CLI_MODULE_PATH, "match_attendance")
+    expected = _env_vars_read(_cli_source("match_attendance"), "match_attendance")
     assert expected == {
         "EVENT_ID",
         "EVENT_PRIVATE_KEY",
@@ -3189,8 +3265,8 @@ def test_match_attendance_workflow_uploads_the_unmatched_list_privately() -> Non
     """The only artefact naming who could not be matched, and the only
     place the unmatched/unreachable distinction ever reaches a human --
     must be a short-retention, access-controlled build artefact, never a
-    public one, the same restriction `cli.py::UNMATCHED_ATTENDANCE`'s own
-    comment requires."""
+    public one, the same restriction `cli/journey/attendance.py::UNMATCHED_ATTENDANCE`'s
+    own comment requires."""
     loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
     steps = loaded["jobs"]["match"]["steps"]
     upload = next(
@@ -5042,7 +5118,7 @@ def test_the_python_input_reader_sees_a_command_reading_a_new_directory() -> Non
             return 0
         """
     )
-    found = _repository_paths_in_source(probe, cli_module)
+    found = _repository_paths_in_source(probe, _cli_module("certificates_public_data"))
     assert "declarations/integrations.yml" in found, (
         f"a command reading declarations/integrations.yml went unseen: {found}"
     )
@@ -5866,9 +5942,9 @@ def _dev_dependencies() -> list[str]:
 def _modules_carrying_a_suppression() -> list[str]:
     """Every module under `convener_ops` that silences a finding.
 
-    `rglob`, because the package is `cli.py` and six sub-packages: a flat
-    walk reads one of the five modules that carry a suppression, and the
-    check below passes on that one whatever became of the other four.
+    `rglob`, because the package is seven sub-packages and nothing at its
+    root: a flat walk reads none of the modules that carry a suppression,
+    and the check below passes on an empty list.
     `quality.yml` points bandit at the package with `-r`, so the sweep
     that holds the step has to be as deep as the step itself.
     """

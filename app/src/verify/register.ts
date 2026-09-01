@@ -6,7 +6,7 @@
  * What is fetched, and why the whole file rather than one row
  * -----------------------------------------------------------------------
  * `scripts/copy-certificates.mjs` publishes `certificate.public_register`'s
- * own output -- `tools/convener_ops/cli.py::certificates_public_data` writes it
+ * own output -- `tools/convener_ops/cli/journey/certificate.py::certificates_public_data` writes it
  * as **a bare JSON array** of `{"identifier", "state"}` objects, e.g.
  * `[{"identifier":"...","state":"issued"}, ...]`, confirmed against that
  * function's own `test_certificates_public_data_aggregates_every_events_register`.
@@ -16,7 +16,7 @@
  * was not -- the fixture itself was corrected, not merely documented
  * around, since a binding fixture that states the wrong shape is worse
  * than no fixture at all.) `isProjection` below is written, and tested,
- * against the real shape `cli.py` puts on disk, and a body shaped like
+ * against the real shape `cli/` puts on disk, and a body shaped like
  * `{"certificates": [...]}` is deliberately kept as one of this file's
  * own "wrong shape" test cases -- not treated as a friendlier alternative
  * to accept.

@@ -17,7 +17,7 @@ name: Retention sweep
 # docs/operating/operations.md, 'Retention and early erasure', for how to
 # create one. Without it, the "Compute what is due" step below fails this
 # job outright, on every run, whether or not anything is actually due for
-# destruction today -- see tools/convener_ops/cli.py::retention_sweep's own
+# destruction today -- see tools/convener_ops/cli/journey/retention.py::retention_sweep's own
 # docstring for why that is deliberate, not a bug: a green run that
 # destroyed nothing must never look the same, from the Actions tab, as a
 # green run that had nothing to destroy.
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     # Checkout, `uv sync`, a glob over instance/keys/events/*.pub against
     # instance/data/speakers.yml and the destruction registry -- no decrypt, no
-    # network call from Python at all (see cli.py::retention_sweep's own
+    # network call from Python at all (see cli/journey/retention.py::retention_sweep's own
     # docstring: it computes only, and never touches the GitHub API
     # itself).
     timeout-minutes: 10
@@ -127,7 +127,7 @@ jobs:
         # every id that *did* end up confirmed absent into `recorded_ids`
         # -- `destroyed_ids` and `destroyed_secrets` are parallel,
         # same-order lists (both built from the same `due` list in
-        # cli.py::retention_sweep) -- so a later, healthy event in the
+        # cli/journey/retention.py::retention_sweep) -- so a later, healthy event in the
         # same batch still gets recorded even if an earlier one failed.
         # The recording step below runs on `if: always()` and reads only
         # `recorded_ids`, so the registry never claims a destruction that

@@ -203,9 +203,9 @@ def test_every_path_this_package_names_is_classified() -> None:
     """A derived sweep, not a list: every `Path` constant any module of
     `convener_ops` declares, at any depth, put through the boundary.
 
-    `walk_packages`, not `iter_modules`: the package is `cli.py` and six
-    sub-packages, so a walk that stopped at the top level would read one
-    module of the forty-three and still hand back a plausible-looking
+    `walk_packages`, not `iter_modules`: the package is seven sub-packages
+    and nothing at its root, so a walk that stopped at the top level would
+    read no module at all and still hand back a plausible-looking
     dictionary.
 
     Its value is the direction it fails in. The ledgers the scheduled jobs

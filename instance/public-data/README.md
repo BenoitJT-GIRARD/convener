@@ -24,7 +24,7 @@ own contract has to survive holding nothing.
 | `certificates-public.json` | `convener-certificates-public-data` | the cockpit's certificate verification page |
 | `agenda-internal.ics` | `convener-agenda-internal` | an internal subscriber's calendar client, from this repository |
 
-Each command is one function in `tools/convener_ops/cli.py`, and the module
+Each command is one function in `tools/convener_ops/cli/`, and the module
 it calls into states which fields it drops. `docs/operating/operations.md`
 is the operator's procedure for all five.
 

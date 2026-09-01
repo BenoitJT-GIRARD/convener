@@ -31,7 +31,7 @@ export const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..',
 /**
  * The public certificate register projection, read from `srcPath` -- a
  * **bare JSON array** of `{"identifier", "state"}` objects, exactly what
- * `tools/convener_ops/cli.py::certificates_public_data` writes (see that
+ * `tools/convener_ops/cli/journey/certificate.py::certificates_public_data` writes (see that
  * function's own `test_certificates_public_data_aggregates_every_events_register`,
  * which asserts precisely this shape on disk).
  *

@@ -124,7 +124,7 @@ jobs:
           # known rather than overlooked.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           # Folded into `conference_ids` by
-          # `cli.py::_conference_ids_from_env`, the same way
+          # `cli/journey/event.py::conference_ids_from_env`, the same way
           # recording.yml's own `conference_id` input already reaches
           # `release_recording`. Blank when the operator leaves
           # the input empty -- the ordinary D-13 shape for the manual

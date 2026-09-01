@@ -43,7 +43,7 @@ quoting a value they did not write back to them would be worse, not better.
 When `changed` is non-empty the message says which fields changed and asks
 the reader to write in if it was not them; when it is empty (a first
 registration, or a resend) it says nothing about a change, because there
-was not one. A manual resend (`convener-resend-confirmation`, `cli.py`) always
+was not one. A manual resend (`convener-resend-confirmation`, `cli/`) always
 composes with `changed=()`: it repeats the current, stored message rather
 than describing an update, so it must never claim one.
 
@@ -68,7 +68,7 @@ the committed file, applied here to a *log* rather than to git history).
 So `deliver` below never prints anything, on any path. **Reported, not
 retained.** An earlier version of
 this module handed the *whole* composed text back to the caller as
-`SendResult.unsent_body`, for `cli.py` to write to a single fixed,
+`SendResult.unsent_body`, for `cli/` to write to a single fixed,
 `.gitignore`d file that `.github/workflows/registration.yml` and
 `.github/workflows/resend-confirmation.yml` then uploaded as a 14-day,
 access-controlled build artefact. That was reasonable for "do not lose an
@@ -222,7 +222,7 @@ def event_details(
     """Raises `EventNotFoundError` (naming `event_id`), exactly when
     `find_speaker` or `Platform.get_room` would -- no speaker record has
     this id. Deciding what a registration for an event with no matching
-    record should still send is the caller's call (`cli.py`), not this
+    record should still send is the caller's call (`cli/`), not this
     function's: it does not guess at a blank `EventDetails` itself."""
     record = find_speaker(speakers, event_id)
     title = str(record.get("title", "") or "")
@@ -523,12 +523,12 @@ class SendResult:
     **Deliberately narrower than an earlier version of this type:**
     no `unsent_body` field at all, the same shape
     `delivery.DeliveryResult` already uses and for the identical reason --
-    see that dataclass's own docstring. `sent` alone is everything `cli.py`
+    see that dataclass's own docstring. `sent` alone is everything `cli/`
     needs to print a one-line outcome and name the recovery
     (`convener-resend-confirmation`); the composed message itself is never
     carried out of this module on the unsent path, so there is nothing left
     for a future caller to "helpfully" write to a file or an artefact the
-    way `cli.py::_send_confirmation` once wrote this field to
+    way `cli/journey/registration.py::_send_confirmation` once wrote this field to
     `unsent-confirmation.eml`."""
 
     sent: bool

@@ -133,7 +133,7 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
  * published, build-time-derived `survey-status.json`.
  *
  * Fails closed on every ambiguity, the same direction
- * `tools/convener_ops/cli.py::_survey_enabled`'s own docstring commits to on
+ * `tools/convener_ops/cli/journey/event.py::survey_enabled`'s own docstring commits to on
  * the server side: an unreachable file, a non-2xx response, unparsable
  * JSON, or JSON that is not an array all read as "not enabled" here,
  * never as "we could not tell, so allow it". This is a page-level

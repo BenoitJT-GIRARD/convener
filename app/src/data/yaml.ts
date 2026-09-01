@@ -4,7 +4,7 @@ import type { Speaker, Config } from './types';
 
 /**
  * The one set of dump options this app writes YAML with, chosen so that the
- * bytes match what `tools/convener_ops/cli.py::_dump` writes for the same data.
+ * bytes match what `tools/convener_ops/cli/store.py::dump` writes for the same data.
  *
  * The two languages write the same two files -- the browser on every save,
  * the scheduled jobs on every sweep -- so a difference in *formatting* is a

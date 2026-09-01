@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from convener_ops import cli
+from convener_ops.cli import governance as cli
 from convener_ops.declaration.paths import REGISTER_PATH
 from convener_ops.governance.commit_format import (
     ACTS,

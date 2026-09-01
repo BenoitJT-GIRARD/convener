@@ -602,8 +602,8 @@ def test_get_recording_raises_when_the_event_has_no_recorded_conference() -> Non
 # ------------------------------------------------------------------ #
 # _conference_id -- digits-only validation.
 # `conference_ids` has no production populator; its one caller
-# (cli.py::release_recording) reads an operator-typed value, and this is
-# where it is validated before it can reach a URL this module builds.
+# (cli/journey/attendance.py::release_recording) reads an operator-typed value, and this
+# is where it is validated before it can reach a URL this module builds.
 # ------------------------------------------------------------------ #
 
 
@@ -657,7 +657,7 @@ def test_a_valid_digits_only_conference_id_is_accepted() -> None:
 # the provider, checked against `video/mp4` + `Accept-Ranges: bytes`, not
 # a bare 2xx status. Neither function here ever
 # calls get_recording or delete_recording itself -- the caller
-# (cli.py::release_recording) already holds `recording` from its own
+# (cli/journey/attendance.py::release_recording) already holds `recording` from its own
 # earlier call, and decides what to do with the result.
 # ------------------------------------------------------------------ #
 
@@ -1211,7 +1211,7 @@ def test_platform_from_env_forwards_speakers_and_config_either_way() -> None:
 
 def test_platform_from_env_forwards_private_pem_to_the_manual_implementation() -> None:
     """`ManualPlatform.get_attendance` needs an event's private
-    key to read a committed, encrypted attendance export -- `cli.py`'s
+    key to read a committed, encrypted attendance export -- `cli/`'s
     callers already hold it (the same key that decrypts
     `registrations.enc`), and `platform_from_env` is the one seam that
     hands it to `ManualPlatform` without either side reading it directly."""

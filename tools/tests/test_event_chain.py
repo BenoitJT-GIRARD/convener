@@ -12,7 +12,7 @@ the files that step reads directly -- through the same pure functions
 `registration.py`, `certificate.py` and `eventkeys.py` already export, the
 same way every other module's own tests in this package build a fixture --
 and then calls exactly one real, unmocked command from `convener_ops.cli`. No
-test here ever calls a second `cli.py` entry point to "warm up" the state
+test here ever calls a second `cli/` entry point to "warm up" the state
 another test drives: a step that secretly required its predecessor to have
 run *in this same process* -- a stray module-level cache, an env var one
 command sets and another reads back -- would have nothing here to read,
@@ -62,22 +62,26 @@ import pytest
 import yaml
 from conftest import config, speaker
 
-from convener_ops.cli import (
-    CERTIFICATES_HEADER,
+from convener_ops.cli.journey.attendance import (
     UNMATCHED_ATTENDANCE,
-    deliver_certificate,
-    deliver_certificates,
     discard_recording,
     encrypt_attendance_export,
-    erase_registration,
-    issue_certificates,
     match_attendance,
-    record_destructions,
-    reissue_certificate,
     release_recording,
-    resend_confirmation,
-    retention_sweep,
+)
+from convener_ops.cli.journey.certificate import (
+    CERTIFICATES_HEADER,
+    deliver_certificate,
+    deliver_certificates,
+    issue_certificates,
+    reissue_certificate,
     revoke_certificate,
+)
+from convener_ops.cli.journey.registration import resend_confirmation
+from convener_ops.cli.journey.retention import (
+    erase_registration,
+    record_destructions,
+    retention_sweep,
 )
 from convener_ops.governance.rule import paris_today
 from convener_ops.journey import eventkeys, signing
@@ -485,7 +489,7 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
 
     # `deliver_certificate` returns 0 on every
     # outcome once the attendee is resolved -- delivered, not delivered,
-    # and (via cli.py's own broad `except Exception`) blown up entirely.
+    # and (via cli/'s own broad `except Exception`) blown up entirely.
     # The exit code alone proved nothing here; inserting `raise
     # RuntimeError` immediately before `sign_for` used to leave this test
     # green. Asserting the printed outcome and that nothing was

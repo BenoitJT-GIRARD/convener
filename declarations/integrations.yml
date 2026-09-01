@@ -244,7 +244,7 @@ integrations:
       Actions tab, identical to one that genuinely had nothing to do --
       a promise with legal weight deserves a red job every day until the
       credential is set, not a quiet skip. See
-      tools/convener_ops/cli.py::retention_sweep and
+      tools/convener_ops/cli/journey/retention.py::retention_sweep and
       docs/operating/operations.md, 'Retention and early erasure'.
 
   - name: signing_key
