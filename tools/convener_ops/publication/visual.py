@@ -1014,6 +1014,18 @@ class Announcement:
 #: gate applies here exactly as it does to a real edition: a reference image is
 #: not an exemption from the consent gate, it is one more thing the gate
 #: must hold for.
+#:
+#: The edition code is numbered under the **example instance's** own
+#: prefix, and that is the same rule as the name above rather than a
+#: detail. `cli.render_visual_fixtures` renders this page as
+#: `instances/example/`, so the registration code it draws is a URL under
+#: the example's published address -- and it carried this instance's
+#: edition prefix inside that URL until it was measured. What that cost
+#: was the check itself: `convener-derive` rewrites a declared value
+#: wherever it appears, so the derived repository rendered the same
+#: fixture at a different code, drew a different QR, and failed
+#: `render-and-compare` against reference images no substitution can
+#: convert. A committed image is exactly where an identity must not be.
 FIXTURE_ANNOUNCEMENT: Final = Announcement(
     title="On analytical engines",
     talk_date=date(2026, 3, 12),
