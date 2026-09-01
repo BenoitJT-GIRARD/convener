@@ -92,6 +92,7 @@ from convener_ops.declaration.boundary import (
     declaration_from_data,
     instance_files,
     load,
+    retirements_must_land_where_the_instance_is,
 )
 from convener_ops.declaration.paths import repo_root
 from convener_ops.journey import registration_routing
@@ -651,7 +652,13 @@ def test_a_retired_path_may_be_a_configuration_file() -> None:
     which leaves this list as the only place its former ownership can be
     written."""
     (entry,) = boundary.retired_from_data(
-        _retiring({"path": "config/instance.json", "reason": "where it was"})
+        _retiring(
+            {
+                "path": "config/instance.json",
+                "became": "instance/data/",
+                "reason": "where it was",
+            }
+        )
     )
     assert entry.path == "config/instance.json"
 
@@ -661,11 +668,23 @@ def test_a_path_cannot_be_retired_and_handed_over_at_once() -> None:
     defect this whole declaration exists downstream of."""
     with pytest.raises(ValueError, match="retired and is also"):
         boundary.retired_from_data(
-            _retiring({"path": "instance/data/", "reason": "where it was"})
+            _retiring(
+                {
+                    "path": "instance/data/",
+                    "became": "instance/config.json",
+                    "reason": "where it was",
+                }
+            )
         )
     with pytest.raises(ValueError, match="retired and is also"):
         boundary.retired_from_data(
-            _retiring({"path": "instance/data/speakers.yml", "reason": "where it was"})
+            _retiring(
+                {
+                    "path": "instance/data/speakers.yml",
+                    "became": "instance/data/",
+                    "reason": "where it was",
+                }
+            )
         )
 
 
@@ -675,7 +694,169 @@ def test_a_retired_path_cannot_be_regenerated() -> None:
     merge."""
     with pytest.raises(ValueError, match="nothing regenerates it"):
         boundary.retired_from_data(
-            _retiring({"path": "data/", "reason": "where it was", "regenerated": False})
+            _retiring(
+                {
+                    "path": "data/",
+                    "became": "instance/data/",
+                    "reason": "where it was",
+                    "regenerated": False,
+                }
+            )
+        )
+
+
+def test_a_retired_path_says_what_it_became() -> None:
+    """The key the list was missing, and the whole of what it costs to
+    add one wrongly.
+
+    A retirement is a move: the instance's files sat at this path and are
+    at that one now. An entry that cannot name a destination is describing
+    a *deletion*, which is what the product does to its own files, and
+    retiring one of those takes the product's own history out of the
+    repository the product is published from -- with every gate green,
+    because until this key existed nothing in an entry's shape said
+    otherwise.
+    """
+    with pytest.raises(ValueError, match="became must be a non-empty path"):
+        boundary.retired_from_data(
+            _retiring({"path": "data/", "reason": "where they were"})
+        )
+
+
+def test_a_live_path_has_not_become_anything() -> None:
+    """The mirror of the refusal above, and the same argument the
+    `regenerated:` pair makes: a key that is only meaningful about a path
+    that is gone has no answer for one that is here, and a live entry
+    carrying one is somebody using the wrong list."""
+    with pytest.raises(ValueError, match="has not become anything"):
+        declaration_from_data(
+            {
+                "owner": PRODUCT,
+                "v": boundary.DECLARATION_VERSION,
+                "instance": [
+                    {
+                        "path": "instance/data/",
+                        "became": "instance/records/",
+                        "reason": "the records",
+                    }
+                ],
+            }
+        )
+
+
+def test_a_retirement_cannot_be_its_own_destination() -> None:
+    """Neither spelling of the same non-move: the path itself, and
+    somewhere under it. Both would satisfy every later check while saying
+    nothing about where the content went."""
+    with pytest.raises(ValueError, match="became itself"):
+        boundary.retired_from_data(
+            _retiring({"path": "data/", "became": "data/", "reason": "where they were"})
+        )
+    with pytest.raises(ValueError, match="sits inside"):
+        boundary.retired_from_data(
+            _retiring(
+                {
+                    "path": "data/",
+                    "became": "data/somewhere/",
+                    "reason": "where they were",
+                }
+            )
+        )
+
+
+def _retired_landing(became: str) -> Boundary:
+    """A boundary whose one retirement lands at `became`."""
+    return Boundary(
+        handed=(Handed(path="instance/data/", reason="the records"),),
+        config_owners={"instance/config.json": INSTANCE},
+        retired=(Handed(path="data/", reason="where they were", became=became),),
+    )
+
+
+def test_a_retirement_landing_outside_the_instance_is_refused() -> None:
+    """The refusal itself, on the whole boundary rather than on one list.
+
+    Whether a destination is the instance's is a question `instance:`
+    alone cannot answer -- four of this repository's own retirements land
+    on configuration files that state their own owner in their own
+    header -- so this is the one check that needs both halves, and it runs
+    where they meet.
+    """
+    for landing in ("tools/migrations-that-ran/", "docs/handbook/", "README.md"):
+        with pytest.raises(ValueError, match="does not hand to the instance"):
+            retirements_must_land_where_the_instance_is(_retired_landing(landing))
+
+
+def test_a_retirement_lands_on_either_half_of_the_declaration() -> None:
+    """The positive control, on both shapes the answer can come from: a
+    directory `instance:` hands over, and a configuration file whose own
+    header states it. A check that only read the first would refuse
+    `config/instance.json`'s own entry, which is correct."""
+    for landing in (
+        "instance/data/",
+        "instance/data/speakers.yml",
+        "instance/config.json",
+    ):
+        retirements_must_land_where_the_instance_is(_retired_landing(landing))
+
+
+def test_a_configuration_file_this_tree_does_not_hold_is_unknown_and_not_refused() -> (
+    None
+):
+    """The one tolerance, and the shape of tree it is for.
+
+    Half of this boundary is read off the configuration files themselves,
+    so a tree carrying the declaration and not the files -- the scratch
+    repositories the derivation and the directory map build -- has no
+    answer for the four retirements landing on one, and `owner_of`
+    reports the default, which is the product. *Not asked* is not *not
+    the instance's*, and refusing on it would refuse those trees rather
+    than the mistake.
+
+    `instance/` only. A file's location already says which side it is on
+    and the header refuses the one that landed on the wrong side, so an
+    absent file in `instance/` is unknown and an absent one in
+    `declarations/` is the product's -- the same sentence, read twice.
+    """
+    unknown = Boundary(
+        handed=(Handed(path="instance/data/", reason="the records"),),
+        config_owners={},
+        retired=(
+            Handed(
+                path="data/", reason="where they were", became="instance/config.json"
+            ),
+        ),
+    )
+    retirements_must_land_where_the_instance_is(unknown)
+
+    product_side = Boundary(
+        handed=(Handed(path="instance/data/", reason="the records"),),
+        config_owners={},
+        retired=(
+            Handed(
+                path="data/",
+                reason="where they were",
+                became="declarations/boundary.yml",
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="does not hand to the instance"):
+        retirements_must_land_where_the_instance_is(product_side)
+
+
+def test_every_retirement_this_repository_carries_lands_on_the_instance() -> None:
+    """The declaration as it stands, read rather than assumed. `load`
+    raises rather than returns for a landing that is not the instance's,
+    so this is the same statement spelled where a reader of the list will
+    look for it."""
+    board = load()
+    for entry in board.retired:
+        assert entry.became, f"{entry.path} says nothing about where it went"
+        probe = (
+            entry.became + "anything" if entry.became.endswith("/") else entry.became
+        )
+        assert board.owner_of(probe) == INSTANCE, (
+            f"{entry.path} became {entry.became}, which is not the instance's"
         )
 
 
@@ -686,7 +867,9 @@ def test_a_retired_entry_that_cannot_be_read_stops_rather_than_guesses() -> None
         boundary.retired_from_data(_retiring({"path": "data/"}))
     with pytest.raises(ValueError, match="must be a non-empty path"):
         boundary.retired_from_data(_retiring({"reason": "no path at all"}))
-    document = _retiring({"path": "data/", "reason": "where they were"})
+    document = _retiring(
+        {"path": "data/", "became": "instance/data/", "reason": "where they were"}
+    )
     document["retired"] = ["data/"]
     with pytest.raises(ValueError, match="not an entry"):
         boundary.retired_from_data(document)
@@ -714,8 +897,16 @@ def test_one_retired_entry_cannot_sit_inside_another() -> None:
     with pytest.raises(ValueError, match="sits inside"):
         boundary.retired_from_data(
             _retiring(
-                {"path": "data/", "reason": "where they were"},
-                {"path": "data/keys/", "reason": "where the keys were"},
+                {
+                    "path": "data/",
+                    "became": "instance/data/",
+                    "reason": "where they were",
+                },
+                {
+                    "path": "data/keys/",
+                    "became": "instance/keys/",
+                    "reason": "where the keys were",
+                },
             )
         )
 

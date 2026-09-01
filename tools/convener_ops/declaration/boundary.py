@@ -161,12 +161,25 @@ class Handed:
     is the right way round for a mechanism to fail. Naming the property
     here rather than only in `.gitattributes` is what lets a test refuse a
     path declared regenerated and never given the attribute.
+
+    `became` is the other half of the same statement, and only a
+    `retired:` entry carries one. A retired entry is a claim that the
+    instance's own files sat at a path, and a claim of that shape has a
+    present-tense counterpart or it is not one: the content went
+    somewhere, and somewhere the instance still owns. Saying where turns
+    the entry from "this path is gone" -- which is true of every path the
+    product has ever deleted -- into "these bytes are over there now",
+    which is true of an instance move and of nothing else. See
+    `retirements_must_land_where_the_instance_is` for the refusal and
+    `declarations/boundary.yml`'s own header for what it cost not to have
+    it.
     """
 
     path: str
     reason: str
     kept: tuple[Kept, ...] = ()
     regenerated: bool = False
+    became: str = ""
 
     @property
     def is_directory(self) -> bool:
@@ -404,6 +417,13 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
                 "state their own owner in their own `owner:` key. Naming "
                 "it here too would make one fact two places."
             )
+        if "became" in item:
+            raise ValueError(
+                f"{named}: {path!r} is a path the instance owns now, so it "
+                "has not become anything. became: says where a path's "
+                "content went after the instance stopped owning it, which "
+                "is a statement only a retired entry can make."
+            )
         regenerated = item.get("regenerated", False)
         if not isinstance(regenerated, bool):
             raise ValueError(
@@ -453,7 +473,7 @@ def retired_from_data(data: Any) -> tuple[Handed, ...]:
     carries `kept:` for the product's own files inside it, and a
     malformed entry is refused by the same message.
 
-    Three differences, and each is what makes this list a second answer
+    Four differences, and each is what makes this list a second answer
     rather than a second copy:
 
     - **A retired path may be a configuration file.** `instance:` refuses
@@ -468,6 +488,15 @@ def retired_from_data(data: Any) -> tuple[Handed, ...]:
     - **A retired path may not be one `instance:` still hands over.** One
       of the two would be a copy of the other, and the copy is the defect
       this whole declaration exists downstream of.
+    - **A retired path must say what it became**, and a live one may not.
+      A live entry is about a path that is here; a retired one is about a
+      path that is not, and the only thing left to check it against is
+      where its content went. `became:` is that path, this function
+      refuses the shapes that cannot be one -- the retired path itself, or
+      somewhere under it -- and
+      `retirements_must_land_where_the_instance_is` refuses the rest,
+      because whether a destination is the instance's needs the whole
+      boundary and not one list of it.
     """
     named = DECLARATION_PATH.as_posix()
     raw = data.get("retired") if isinstance(data, dict) else None
@@ -490,11 +519,28 @@ def retired_from_data(data: Any) -> tuple[Handed, ...]:
                 "git has no version of it left to merge. regenerated: is "
                 "about a path both sides still rewrite."
             )
+        reason = _reason(item.get("reason"), path)
+        became = _relative_path(item.get("became"), f"the path {path} became")
+        if became == path:
+            raise ValueError(
+                f"{named}: {path!r} became itself, which is not a move. "
+                "became: names the path holding this one's content today, "
+                "and a path that is its own destination has none."
+            )
+        probe = became + "anything" if became.endswith("/") else became
+        if Handed(path=path, reason=reason).covers(probe):
+            raise ValueError(
+                f"{named}: {became!r} sits inside {path!r}, which is "
+                "retired. A retirement's destination is a path the "
+                "declaration hands to the instance today, never somewhere "
+                "under the path being retired."
+            )
         entries.append(
             Handed(
                 path=path,
-                reason=_reason(item.get("reason"), path),
+                reason=reason,
                 kept=_kept_from(item.get("kept"), path),
+                became=became,
             )
         )
     _no_nesting(entries)
@@ -508,6 +554,96 @@ def retired_from_data(data: Any) -> tuple[Handed, ...]:
                 "prevent."
             )
     return tuple(entries)
+
+
+def retirements_must_land_where_the_instance_is(board: Boundary) -> None:
+    """Refuse a retired entry whose `became:` is not a path the instance
+    owns today.
+
+    **The rule, in one sentence: a retirement is a move, and a move ends
+    somewhere.** `retired:` widens *instance* ownership over a history,
+    and `convener_ops.derivation.repository` reads the widened answer to
+    decide what a public repository may not carry. So an entry is a claim
+    that this instance's own files sat at a path -- and every such claim
+    has a present-tense counterpart, because the files did not evaporate:
+    they are at `instance/data/`, or at `instance/config.json`, or folded
+    into one of them. An entry that can name no such counterpart is not
+    describing a retirement. It is describing a *deletion*, which is
+    something the product does to its own files all the time, and
+    retiring one of those strips the product's own history out of the
+    repository the product is published from.
+
+    **Why this is a refusal and not a measurement.** The measurable
+    version -- ask git where the retired path's files went, and require
+    the answer to be the instance's -- was written and does not hold: two
+    of this repository's own eight retirements have no rename for git to
+    find. `keys/` moved with only the product's own `kept:` README
+    surviving it, and `site/src/_data/site.json` was not moved at all but
+    folded, four identity keys at a time, into `instance/config.json`.
+    Both are correct entries, and a control that fires on a correct entry
+    is one somebody turns off. So the mapping is *declared* rather than
+    inferred, this refuses a declaration that does not land on the
+    instance, and `tools/tests/derivation/test_retirement.py` holds the
+    declaration against what git and the working tree can still see of the
+    move -- which is the half that can be measured without an exemption.
+
+    No history and no existence check: a derived repository loads this
+    same file with its instance paths filtered out of its history and laid
+    back in from the example, and a check that asked whether a destination
+    *exists* would refuse the derivation rather than the mistake. Half the
+    boundary is read off the configuration files themselves, though, so a
+    tree holding this declaration and not those files cannot answer for
+    four of the retirements below -- see `_absent_instance_configuration`
+    for what that is allowed to mean and what it is not.
+    """
+    named = DECLARATION_PATH.as_posix()
+    for entry in board.retired:
+        probe = entry.became
+        if board.owner_of(probe) == INSTANCE:
+            continue
+        if probe.endswith("/") and board.owner_of(probe + "anything") == INSTANCE:
+            continue
+        if _absent_instance_configuration(board, probe):
+            continue
+        raise ValueError(
+            f"{named}: {entry.path!r} is retired and says it became "
+            f"{entry.became!r}, which the declaration does not hand to the "
+            "instance. A retirement is a move, and this list widens "
+            "*instance* ownership over this repository's history: an entry "
+            "whose content did not end up somewhere the instance owns today "
+            "is not a retirement but a deletion, and retiring a deleted "
+            "path takes the product's own history out of the repository the "
+            "product is published from. A product path that goes needs no "
+            "entry here at all."
+        )
+
+
+def _absent_instance_configuration(board: Boundary, path: str) -> bool:
+    """Whether `path` is a configuration file of `instance/` that this
+    tree does not hold, so that its own header cannot be asked.
+
+    Four of this repository's retirements land on one of those, and half
+    of the boundary's answer is read off the files themselves -- so a tree
+    carrying this declaration and not the files it describes has no answer
+    for those four, and `owner_of` reports the default, which is the
+    product. That is the difference between *not the instance's* and *not
+    asked*, and refusing on it would refuse the derivation's own scratch
+    trees rather than the mistake.
+
+    `instance/` and not `declarations/`, though both hold files that
+    answer for themselves. A file's location already says which side it is
+    on and the header is what refuses the one that landed on the wrong
+    side -- so an absent file in `instance/` is unknown, and one in
+    `declarations/` is the product's, said by the same sentence. There is
+    no tolerance at all in this repository, where every one of the four
+    is present: `tools/tests/declaration/test_boundary.py` reads them.
+    """
+    named = PurePosixPath(path)
+    return (
+        named.parent.as_posix() == "instance"
+        and named.suffix in CONFIG_READERS
+        and path not in board.config_owners
+    )
 
 
 def config_owners(root: Path) -> dict[str, str]:
@@ -557,11 +693,13 @@ def load(root: Path | None = None) -> Boundary:
 
     base = root if root is not None else repo_root()
     data = yaml.safe_load((base / DECLARATION_PATH).read_text(encoding="utf-8"))
-    return Boundary(
+    board = Boundary(
         handed=declaration_from_data(data),
         config_owners=config_owners(base),
         retired=retired_from_data(data),
     )
+    retirements_must_land_where_the_instance_is(board)
+    return board
 
 
 def instance_files(root: Path, boundary: Boundary) -> tuple[str, ...]:

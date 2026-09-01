@@ -119,6 +119,44 @@
 # `declarations/`, `examples/` becoming `examples/` and `assets/brand/` and
 # `fonts/` moving under `assets/` are all that shape, and none of them
 # is below.
+#
+# `became:` -- a retirement is a move, and a move ends somewhere
+# --------------------------------------------------------------
+# That measurement reads the *tip*, twice: a blob still tracked at a
+# product path, and a `git show -M` rename target. Both readings ask
+# where the files are now, so both pass in silence over a path that was
+# **deleted** rather than renamed -- there is no tip copy to find and no
+# rename to detect. Measured, on this repository: adding
+# `- path: tools/migrations/` below, on the day the six one-shot
+# migrations were deleted, kept every gate green and took the derivation
+# from 24 paths never leaving to 30. Six product files' whole history
+# stripped out of the public repository, and the only trace a count on a
+# plan nobody diffs.
+#
+# So each entry says where its content went. `became:` is that path, and
+# it has to be one `instance:` or a configuration header hands to the
+# instance **today** -- `boundary.retirements_must_land_where_the_instance_is`
+# refuses anything else, at load, which is before the derivation reads a
+# single commit. The claim an entry here makes is that this instance's
+# own files sat at a path; every such claim has a present-tense
+# counterpart, because the files did not evaporate. A path with no such
+# counterpart was deleted, not retired, and the product deletes its own
+# files all the time.
+#
+# It is declared rather than inferred, and that is the measurement's
+# doing rather than a preference. Asking git where each retired path's
+# files went answers for six of the eight entries below and for neither
+# of the other two: `keys/` moved with only the product's own `kept:`
+# readme surviving the move, and `site/src/_data/site.json` was never
+# moved at all -- its four identity keys were folded into
+# `instance/config.json` and the file deleted. Both entries are correct,
+# and a control that fires on a correct entry is one somebody turns off.
+# What can be measured without an exemption is the declaration against
+# the move, and `test_retirement.py` measures exactly that: every rename
+# git can see out of a retired path has to land at or under that entry's
+# `became:`, and something of what was stored under it has to still be
+# readable there. `tools/migrations/` shares no line with any of the
+# eight instance paths this file names, so no `became:` saves it.
 
 # `kept:` -- the product's own files inside a directory the instance owns
 # ----------------------------------------------------------------------
@@ -202,6 +240,7 @@ instance:
 
 retired:
   - path: data/
+    became: instance/data/
     reason: >-
       Where instance/data/ was until 2026-08-28: the board and its
       thresholds (config.yml), the speakers and events (speakers.yml and,
@@ -218,6 +257,7 @@ retired:
           then as it does now, so a derived repository keeps its history
           rather than starting it at the move.
   - path: keys/
+    became: instance/keys/
     reason: >-
       Where instance/keys/ was until 2026-08-28. One published signing
       key is reachable under it, and a fresh duplicate has no reason to
@@ -228,6 +268,7 @@ retired:
           The wire format and the directory's contract, at the path it
           had before the move. Product documentation then as now.
   - path: config/instance.json
+    became: instance/config.json
     reason: >-
       Where instance/config.json was until 2026-08-28: this series'
       published address, its organisation, its name in every form the
@@ -236,19 +277,23 @@ retired:
       file that is not there any more states nothing -- which is why a
       retired configuration path is named here and a live one may not be.
   - path: config/actions-budget.yml
+    became: instance/actions-budget.yml
     reason: >-
       Where instance/actions-budget.yml was until 2026-08-28: this
       organisation's GitHub Actions allowance and the thresholds it is
       watched against.
   - path: config/queue-drain.yml
+    became: instance/queue-drain.yml
     reason: >-
       Where instance/queue-drain.yml was until 2026-08-28: how fast this
       instance drains its submission queue.
   - path: config/registration-lanes.yml
+    became: instance/registration-lanes.yml
     reason: >-
       Where instance/registration-lanes.yml was until 2026-08-28: the
       lanes this instance routes registrations through.
   - path: docs/governance/register.md
+    became: docs/handbook/governance/register.md
     reason: >-
       Where docs/handbook/governance/register.md was until 2026-08-31,
       when docs/ was split into one tree per reader. Every version
@@ -257,6 +302,7 @@ retired:
       no reason to inherit -- so a history read through the present
       tense alone would hand all of them over as the product's.
   - path: site/src/_data/site.json
+    became: instance/config.json
     reason: >-
       Four identity keys the showcase's build read through Eleventy's
       global-data convention -- the series' title, its tagline, its
