@@ -51,10 +51,11 @@ creates. These two files create a few more of their own -- a caption on a
 photographic frame, a label beside a QR slot -- and it was precisely an
 uninspected pairing that let the 1.00 above survive. So `_LEGIBILITY`
 below names every ink-on-ground this module actually draws, and rendering
-refuses if one of them falls under AA. It is a claim a reviewer has to
-keep true against the markup, which is why each entry says where it is;
-what it buys is that the check holds for *any* palette, including one a
-duplicate writes tomorrow.
+refuses if one of them falls under AA. Half of that claim is read back
+out of the markup and half is still a reviewer's, which is why each entry
+says where it is; the paragraph on the wordmark's casing below says which
+half is which. What it buys is that the check holds for *any* palette,
+including one a duplicate writes tomorrow.
 
 The ribbon these files draw is the ribbon
 -------------------------------------------
@@ -107,15 +108,30 @@ re-derived.
 **The question is settled by a control, not only by a rule.** The entry
 in `_LEGIBILITY` below naming this pairing is measured at build time, so
 declaring the raw treatment there fails `_values` at every one of the six
-charters and writes no template at all. What that control cannot see is
-the markup: `_LEGIBILITY` is a claim kept true by hand, and a change that
-set the accent to `field` without moving the entry beside it would pass
-every gate in this repository -- nothing reads a rendered `fill` back and
-measures it. So restoring the reference's treatment honestly costs a
-change to what the charter says about its own colours, at six files, and
-a build that refuses until they all say it; doing it dishonestly costs
-nothing and is invisible. That is the whole of what a maintainer has to
-weigh, and it is not a decision a generator gets to take on its own.
+charters and writes no template at all. So restoring the reference's
+treatment costs a change to what the charter says about its own colours,
+at six files, and a build that refuses until they all say it. That is
+what a maintainer has to weigh, and it is not a decision a generator gets
+to take on its own.
+
+What the arithmetic could not see was the markup. `_LEGIBILITY` is a list
+kept true by hand, and setting the accent to `field` without moving the
+entry beside it passed every gate here -- `generate_brand_css.py --check`
+and 2132 tests -- because nothing read a rendered `fill` back. That half
+is now read:
+`test_brand.py::test_the_only_colours_either_template_inks_type_in_are_the_measured_ones`
+walks both generated files, carries `fill` down the tree the way SVG
+inherits it, and holds the set of colours a run of type is actually set
+in equal to the set of inks this list measures. An ink the markup adds
+without an entry fails it, and an entry no type is set in any more fails
+it as a measurement of nothing.
+
+One half of the claim is still a reviewer's, and it is the ground rather
+than the ink: `where` says which surface each run sits on, and reading
+that back needs the rendered geometry -- which element paints behind
+which -- rather than an attribute. `tools/visuals/check-templates.mjs`
+already walks both files in a browser at every charter, which is where a
+control for it would go and why one is not attempted here.
 
 The third file, and why it is vector where it used to be a bitmap
 -------------------------------------------------------------------

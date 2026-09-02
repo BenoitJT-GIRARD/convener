@@ -1517,6 +1517,58 @@ def test_the_legibility_list_would_notice_a_pairing_that_failed() -> None:
     assert len(problems) == len(brand_templates._LEGIBILITY)
 
 
+def _inked_text_roles(path: Path, colours: dict[str, str]) -> set[str]:
+    """Every colour role either file actually sets a run of type in.
+
+    `fill` inherits down the tree in SVG, and most of the type in these two
+    files takes it from an ancestor, so the answer is only right if the walk
+    carries the last one it saw.
+    """
+    by_value = {value.lower(): role for role, value in colours.items()}
+    roles: set[str] = set()
+
+    def walk(element: ElementTree.Element, inherited: str | None) -> None:
+        fill = element.get("fill", inherited)
+        tag = element.tag.removeprefix("{http://www.w3.org/2000/svg}")
+        if tag in {"text", "tspan"} and (element.text or "").strip() and fill:
+            roles.add(by_value.get(fill.lower(), fill))
+        for child in element:
+            walk(child, fill)
+
+    walk(ElementTree.parse(path).getroot(), None)
+    return roles
+
+
+def test_the_only_colours_either_template_inks_type_in_are_the_measured_ones() -> None:
+    """`_LEGIBILITY` is a claim about markup, and this is what reads it back.
+
+    Every pairing in that list is measured at build time, so a colour named
+    there can never ship below AA. What the arithmetic cannot see is a colour
+    that is *not* named there: the second word of the wordmark takes
+    `field_text` and the reference sets it in `field` itself, which measures
+    1.40 to 1.43 on the band at the six charters this repository holds --
+    about a third of AA. Moving the markup to `field` and leaving the entry
+    beside it alone passed every gate here, `--check` and 2132 tests included,
+    because nothing read a rendered `fill` back.
+
+    This does. Set equality in both directions: an ink the markup adds without
+    an entry fails, and an entry no run of type is set in any more fails as
+    a measurement of nothing. The ground each run sits on is still the
+    reviewer's -- resolving that needs the rendered geometry, which is
+    `tools/visuals/check-templates.mjs`'s half of the claim.
+    """
+    colours = _charter_colours(BRAND_PATH)
+    measured = {pairing.ink for pairing in brand_templates._LEGIBILITY}
+    for rel in (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH):
+        inked = _inked_text_roles(ROOT / rel, colours)
+        assert inked == measured, (
+            f"{rel.as_posix()} inks type in {sorted(inked)}, and "
+            f"_LEGIBILITY measures {sorted(measured)}: every colour a run of "
+            "type is set in has to have an entry there, and every entry has "
+            "to name a colour some run of type is set in"
+        )
+
+
 # --------------------------------------------------------------------------
 # The third file: the video-call background
 # --------------------------------------------------------------------------
