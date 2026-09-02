@@ -11,6 +11,15 @@ holds no source: every byte there is reproducible from this directory.
 overwritten from `instance/public-data/events-public.json`
 (`uv run convener-public-data`, `tools/`) before every build; a local edit is not preserved.
 
+The file is the product's, so every invented value in it is written to belong
+to no instance. The edition codes and the forum threads are the exception the
+derivation already covers -- `MRG-05` and `mrg-03` are spellings of an edition
+prefix, and `convener_ops.derivation.repository` rewrites them into the example
+instance's. Anything else has no such rule and none can be written for it, so a
+recording link reads `NOT-A-VIDEO` rather than an identifier shaped like a
+particular series' numbering: an eleven-character video id that says what it
+is, beside a room link that already says `SHOULD-NEVER-APPEAR-IN-BUILT-HTML`.
+
 `site.*` is derived, not written down here: `.eleventy.js` composes it --
 title, tagline, the forum, the proposal form, the organisation's own name
 -- from `instance/config.json`, the one file that says whose series this
