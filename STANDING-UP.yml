@@ -34,6 +34,31 @@
 # product makes about itself, like `NOTICE.json` and `CITATION.cff`, not an
 # input to anything it does.
 #
+# And its name is in capitals, which is settled
+# ----------------------------------------------
+# Fourteen files sit at this root that are not dotfiles, twelve of them in
+# capitals, and eleven of those twelve are looked up by name -- `README.md`,
+# `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`,
+# `CHANGELOG.md`, `CITATION.cff`, `NOTICE.json`, `TRADEMARK.md`, `AGENTS.md`
+# and `CLAUDE.md`, each by an ecosystem that already knows the name it wants.
+# This file is the twelfth and nothing looks it up, which is what makes the
+# casing a question at all: it borrows a convention it is not a member of.
+#
+# It keeps the capitals, and the reason is what the convention says rather
+# than who registered it. SCREAMING-CASE at a root reads as *open this before
+# you do anything*, and that is exactly this file's job: it is the one page a
+# person reads before there is an instance to read anything else from. The
+# directory beside it makes the point from the other side --
+# `declarations/` holds files the running product parses and a person never
+# opens, and a reader who cannot tell those two apart at a glance walks the
+# sequence out of a file that is not it.
+#
+# Lowering it to `standing-up.yml` costs a sweep across two generators and
+# their tests, the two documents generated from it, `AGENTS.md`, `README.md`,
+# `docs/engineering/content-rules.md`, `docs/operating/` and `.github/`, and
+# buys no change in what anything does. So the rename is
+# closed, and this paragraph is what closes it.
+
 # What a step carries, and why each field is required
 # ---------------------------------------------------
 # `actor` is `human` or `agent`, and the distinction is operational rather
