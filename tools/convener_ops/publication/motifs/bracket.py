@@ -45,8 +45,9 @@ Off `convener-mark.svg` itself, in the units of its own 512 viewBox.
   crossing the page is a line and takes the thinner of the two.
 
 The dot is not drawn here. `motif.logo_dots` is where the mark's coral
-circle already goes -- the four filled squares of the wordmark, in both
-downloadable templates -- and the charter's own `_logo_dots` says so.
+circle already goes -- the one filled circle `lockup.device` closes the
+lock-up on, in both downloadable templates and in the poster the cockpit
+generates -- and the charter's own `_logo_dots` says so.
 
 Nothing is a pixel count
 -------------------------
@@ -146,8 +147,8 @@ _OUTER_HALF_WIDTH: Final = 0.061
 
 #: The left bracket's top arm and half-height, in heights: its spine runs
 #: from 0.17 of the page to 0.458. The top clears the band both
-#: downloadable templates set their wordmark in -- the mark's own squares
-#: and the rule beside them -- which is a property of those compositions'
+#: downloadable templates set their wordmark in -- the lock-up's own
+#: device and the rule under it -- which is a property of those compositions'
 #: own top band and not of any drawing. The height is set from the other
 #: end: the
 #: right bracket is this one at `_INNER_OVER_OUTER`, and what that one has

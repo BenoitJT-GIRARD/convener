@@ -78,7 +78,7 @@
     "width_ratio": 0.0125,
     "logo_dots": "#7b5fd6",
     "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the line crossing the page. 7.61 on the field and 10.68 on the bands, so it reads wherever the composition puts it.",
-    "_logo_dots": "The lilac axis, raw, in the one place a colour belonging to no rung may go: the filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.99 -- past the 3.0 WCAG asks of a graphical object that has to be made out, and the strongest any charter here gives its own squares.",
+    "_logo_dots": "The lilac axis, raw, in the one place a colour belonging to no rung may go: the dot the lock-up beside the wordmark closes on, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.99 -- past the 3.0 WCAG asks of a graphical object that has to be made out, and the strongest any charter here gives its own squares.",
     "_width_ratio": "Not a measurement of anybody's artwork -- this charter has none -- but the proportion that keeps a ledge a ledge. `motifs/steps.py` lays each ledge 0.0625 of the composition's shorter side deep, and 0.0125 is a fifth of that, so a ledge is drawn five times as long as it is thick at every size this product renders. A heavier stroke closes the ground between one level and the next, and the drawing stops being sixteen levels and becomes a band."
   },
 

@@ -255,6 +255,50 @@ def test_the_dot_is_the_one_the_products_own_mark_closes_on() -> None:
     assert measured == pytest.approx(lockup.DOT, abs=5e-7)
 
 
+#: A colour no charter here writes, so that counting what `logo_dots`
+#: inks is a count of that field rather than of a hex two roles happen to
+#: share -- this instance's charter sets `field` and `logo_dots` to the
+#: same turquoise, and the page's own ground is a `<rect>` filled in it.
+_ONLY_THE_DOT: Final = "#010203"
+
+
+@pytest.mark.parametrize("family", sorted(motifs.FAMILIES))
+@pytest.mark.parametrize("page", PAGES, ids=lambda page: page[0])
+def test_the_charters_dot_colour_fills_one_circle_and_nothing_else(
+    tmp_path: Path, page: tuple[str, object, float, float], family: str
+) -> None:
+    """`logo_dots` is a colour for one shape, and the shape is the dot.
+
+    Its name is plural because it once inked a row of filled squares in the
+    wordmark, traced off one instance's poster. Those went with the rest of
+    the traced device, and seven comments went on describing them: three
+    said four squares (`brand.py`, `motifs/bracket.py` and
+    `assets/brand/convener/`'s own `_logo_dots`) and four an uncounted row
+    of them (`brand_templates.py` and the other three charters), against a
+    drawing that had been one circle for as long as nothing counted it.
+    This counts.
+    """
+    _name, render, _width, _height = page
+    root = _fixture_root(tmp_path, brand.INSTANCE_PATH, family)
+    charter = root / brand.INSTANCE_PATH
+    values = json.loads(charter.read_text(encoding="utf-8"))
+    values["motif"]["logo_dots"] = _ONLY_THE_DOT
+    charter.write_text(json.dumps(values, indent=2) + "\n", encoding="utf-8")
+    drawn = [
+        element
+        for element in ElementTree.fromstring(render(root)).iter()  # type: ignore[operator]
+        if str(element.get("fill", "")).lower() == _ONLY_THE_DOT
+    ]
+    assert len(drawn) == 1, (
+        f"{len(drawn)} element(s) are filled in the charter's logo_dots and "
+        "exactly one may be: the dot the lock-up closes on"
+    )
+    assert drawn[0].tag == f"{SVG}circle", (
+        f"the one element filled in logo_dots is a <{drawn[0].tag}> and has "
+        "to be the lock-up's <circle>"
+    )
+
+
 def test_the_device_is_the_charters_own_drawing_and_not_the_products_mark(
     tmp_path: Path,
 ) -> None:

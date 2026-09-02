@@ -294,8 +294,8 @@ class _Pairing:
 
 
 #: Every ink-on-ground the two files below actually draw. Text only:
-#: `rule_strong` outlines the QR slot and `logo_dots` fills the wordmark's
-#: squares, and neither is text -- WCAG exempts a logotype from the
+#: `rule_strong` outlines the QR slot and `logo_dots` fills the dot the
+#: lock-up closes on, and neither is text -- WCAG exempts a logotype from the
 #: non-text contrast rule outright, and a dashed placeholder border is
 #: decoration around content that replaces it.
 _LEGIBILITY: Final = (

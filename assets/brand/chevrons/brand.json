@@ -36,7 +36,7 @@
     "dominant_tint": "#f0d9e4",
     "rule_strong": "#989494",
     "_dominant_hover": "The one value `assets/brand/convener/brand.json` and `assets/brand/lattice/brand.json` both had to except from their own rule, and here it is no exception at all: a hover state is a ratio like everything else, 14.00 against white where the dominant at rest is 12.00. It is only ever a filled background (`--dominant-hover`, `--accent-hover`), never text.",
-    "_axes": "Neither axis appears raw in this file except once. The mulberry #9e1450 is the source of `dominant`, `dominant_hover` and `dominant_tint` and is darkened or lightened out of all three; the mint #109352 is the source of `field`, `field_tint` and `field_text`, and appears unmixed only as `motif.logo_dots`, where at 3.95 on white it can be neither body text nor a light ground but is what a wordmark's squares want."
+    "_axes": "Neither axis appears raw in this file except once. The mulberry #9e1450 is the source of `dominant`, `dominant_hover` and `dominant_tint` and is darkened or lightened out of all three; the mint #109352 is the source of `field`, `field_tint` and `field_text`, and appears unmixed only as `motif.logo_dots`, where at 3.95 on white it can be neither body text nor a light ground but is what a lock-up's dot wants."
   },
 
   "contrast": {
@@ -78,7 +78,7 @@
     "width_ratio": 0.02145,
     "logo_dots": "#109352",
     "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the columns standing either side of the page. 7.00 on the field and 9.94 on the bands, so it reads wherever the composition puts it.",
-    "_logo_dots": "The mint axis, raw, in the one place its 3.95 on white does not disqualify it: the filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.27 -- weak for text, which it is not, and past the 3.0 WCAG asks of a graphical object that has to be made out.",
+    "_logo_dots": "The mint axis, raw, in the one place its 3.95 on white does not disqualify it: the dot the lock-up beside the wordmark closes on, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.27 -- weak for text, which it is not, and past the 3.0 WCAG asks of a graphical object that has to be made out.",
     "_width_ratio": "Not a measurement of anybody's artwork -- this charter has none -- but the proportion that keeps a chevron an angle rather than a wedge. `motifs/chevrons.py` draws each arm 0.0858 of the composition's shorter side long, and 0.02145 is a quarter of that, so an arm is drawn four times as long as it is wide at every size this product renders. A heavier stroke fills the opening at the tip; a lighter one loses the drawing on a printed page, which is where a chevron column carries the most of the composition."
   },
 

@@ -179,8 +179,8 @@ MOTIF_KEY: Final = "motif"
 MOTIF_FAMILY: Final = "family"
 
 #: What a `motif` carries whatever it draws: the drawing's own name, and
-#: the colour of the wordmark's four squares, which belong to the wordmark
-#: rather than to the drawing.
+#: the colour of the dot the lock-up beside the wordmark closes on, which
+#: belongs to that device rather than to the drawing.
 MOTIF_COMMON_FIELDS: Final = (MOTIF_FAMILY, "logo_dots")
 
 #: What a complete `motif` carries, per family. A flat tuple until the

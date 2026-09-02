@@ -36,7 +36,7 @@
     "dominant_tint": "#e7dad7",
     "rule_strong": "#899aa9",
     "_dominant_hover": "The one value not set by matching a luminance, and for the reason `assets/brand/convener/brand.json` already gives: the dominant's own hover state is barely a luminance step in the charter this rule is taken from (0.0324 to 0.0314), and copying that proportion would round to the dominant itself -- a hover state indistinguishable from its rest state, which is not a state. It is the dominant a fifth of the way to black instead: 14.71 against white, against 12.75 at rest, and it is only ever a filled background (`--dominant-hover`, `--accent-hover`), never text.",
-    "_axes": "Neither axis appears raw in this file except once. The brick #6e2412 is the source of `dominant`, `dominant_hover` and `dominant_tint` and is darkened out of all three; the sky #0f8fd0 is the source of `field`, `field_tint` and `field_text` and appears unmixed only as `motif.logo_dots`, where at 3.58 on white it can be neither body text nor a light ground but is exactly what a wordmark's squares want."
+    "_axes": "Neither axis appears raw in this file except once. The brick #6e2412 is the source of `dominant`, `dominant_hover` and `dominant_tint` and is darkened out of all three; the sky #0f8fd0 is the source of `field`, `field_tint` and `field_text` and appears unmixed only as `motif.logo_dots`, where at 3.58 on white it can be neither body text nor a light ground but is exactly what a lock-up's dot wants."
   },
 
   "contrast": {
@@ -78,7 +78,7 @@
     "width_ratio": 0.015,
     "logo_dots": "#0f8fd0",
     "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the field standing either side of the page. 7.92 on the field and 11.26 on the bands, so it reads wherever the composition puts it.",
-    "_logo_dots": "The sky axis, raw, in the one place its 3.58 on white does not disqualify it: the filled squares of the wordmark, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.16 -- weak for text, which it is not, and past the 3.0 WCAG asks of a graphical object that has to be made out, which no charter here had managed before (the product's coral measures 2.51 in the same place and leans on the exemption alone).",
+    "_logo_dots": "The sky axis, raw, in the one place its 3.58 on white does not disqualify it: the dot the lock-up beside the wordmark closes on, which WCAG exempts from the non-text contrast rule as a logotype. Both downloadable templates set the wordmark inside a band, where it measures 3.16 -- weak for text, which it is not, and past the 3.0 WCAG asks of a graphical object that has to be made out, which no charter here had managed before (the product's coral measures 2.51 in the same place and leans on the exemption alone).",
     "_width_ratio": "Not a measurement of anybody's artwork -- this charter has none -- but the proportion that makes a mark a mark. `motifs/lattice.py` draws each mark one step long, and a step is 0.045 of the composition's shorter side; at 0.015 a mark is drawn three times as long as it is wide, which is what separates a short stroke from a round dot at every size this product renders. It is the finest weight any charter here carries, and deliberately: the drawing is a texture of thirty-six marks rather than one stroke crossing a page, and a texture drawn at a poster stroke's weight is a smudge."
   },
 
