@@ -35,6 +35,16 @@ commit or `--check` fails the build. The list is *tracked* rather than
 on-disk, deliberately: `node_modules/`, `.venv/`, `__pycache__` and every other
 build residue is on disk in a working copy and is not part of this repository.
 
+**The list of files at the root** comes from the same call, and it is the half
+this map did not have. Every tracked path with no directory component is a row,
+dotfiles included. Until it existed, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`,
+`gates.sh`, `cspell.json` and `NOTICE.json` were named by no page of this
+repository, and neither were the six dotfiles beside them; the answer to *what
+is this file for* was to open it. `README.md` mentions several of them in
+passing and cannot mention them all, because it is a front page rather than an
+index of the root, which is the same reason the directory table is here and not
+there.
+
 **The owner** comes from `declarations/boundary.yml`, through
 `convener_ops.declaration.boundary`. A directory is the instance's when every
 tracked file inside it is the instance's, once the files the declaration itself
@@ -92,6 +102,10 @@ this repository does not have. So a directory added without a line fails, a
 directory removed without its line being removed fails, and the table cannot
 silently narrow -- which is the failure mode the two hand-written tables had,
 and had for long enough that four directories were missing from both.
+`root_purposes_for` is the same refusal on `ROOT_FILE_PURPOSE`, which is why
+the root files are a generated table and not the hand-written list this
+repository removes everywhere else: a list written once goes stale at the next
+file added, silently, and that is exactly the state it would be closing.
 
 Spliced, not written whole
 --------------------------
@@ -228,6 +242,104 @@ PURPOSE: Final[Mapping[str, str]] = {
     ),
 }
 
+#: One line per tracked file sitting at the root, saying what it is. The
+#: same thing `PURPOSE` is for a directory, held by the same refusals, and
+#: it exists for the same measured reason: this map covered directories
+#: only, so `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `gates.sh`, `cspell.json`
+#: and `NOTICE.json` appeared on no page of this repository at all, and
+#: neither did any of the six dotfiles beside them. `README.md` names some
+#: of them in passing and cannot name them all: it is the front page, not
+#: an index of the root.
+#:
+#: The rows say what a file *is*. Why each one is at the root rather than
+#: filed under a directory is the same answer for most of them -- something
+#: outside this repository looks the name up there -- and it is each file's
+#: own to give, not this table's to repeat eleven times.
+ROOT_FILE_PURPOSE: Final[Mapping[str, str]] = {
+    ".editorconfig": (
+        "What an editor has to get right before a commit is made, so that "
+        "the formatting hooks and `.gitattributes`' line-ending rule never "
+        "have to correct it afterwards."
+    ),
+    ".gitattributes": (
+        "How git treats each kind of file: line endings, which extensions "
+        "are binary, and the one calendar file whose format requires the "
+        "endings the blanket rule would otherwise strip."
+    ),
+    ".gitignore": (
+        "Everything a working copy grows that this repository does not "
+        "track: both dependency trees, the virtual environment, every "
+        "build output, and every shape of `.env` but the example."
+    ),
+    ".gitleaks.toml": (
+        "What the secret scanner may pass over, with the reason beside it. "
+        "The workflow and the local hook both find it by name, so neither "
+        "can drift from it."
+    ),
+    ".nvmrc": (
+        "The Node version, written once and read by every workflow and "
+        "every local install."
+    ),
+    ".pre-commit-config.yaml": (
+        "The optional local hook: the formatting, linting, secret scanning "
+        "and British-English spelling continuous integration runs anyway, "
+        "offered before a commit instead of after a push."
+    ),
+    "AGENTS.md": (
+        "The one page an agent reads first. It carries no procedure of its "
+        "own; it says where each one lives."
+    ),
+    "CHANGELOG.md": (
+        "What each released state changed and what a merge asks of a "
+        "duplicate. Its list of the paths a duplicate owns is generated "
+        "from `declarations/boundary.yml`."
+    ),
+    "CITATION.cff": (
+        "How to cite this software, in the format behind GitHub's *Cite "
+        "this repository* button."
+    ),
+    "CLAUDE.md": (
+        "A bridge and nothing else: one agent's tooling reads this name and "
+        "does not read `AGENTS.md`, so this file points at it."
+    ),
+    "CODE_OF_CONDUCT.md": (
+        "The behaviour expected of anybody taking part, and what "
+        "enforcement here actually is."
+    ),
+    "CONTRIBUTING.md": (
+        "What a contribution certifies, how a commit is signed off, and "
+        "which gates a change has to leave green."
+    ),
+    "LICENSE": (
+        "The AGPL-3.0-or-later, word for word, with the copyright at its "
+        "head. An edited copy stops being recognised as this licence by "
+        "GitHub and by every detection tool."
+    ),
+    "NOTICE.json": (
+        "The attribution both interfaces show in their footer, and the "
+        "notice section 7 of the licence makes enforceable."
+    ),
+    "README.md": (
+        "The front page: what this runs, what it looks like, how an "
+        "instance is stood up, and what the licence asks."
+    ),
+    "SECURITY.md": (
+        "Where a vulnerability is reported privately, and what a report can "
+        "and cannot expect."
+    ),
+    "TRADEMARK.md": (
+        "What the name and the mark are not covered by, the licence grant "
+        "being about the code, and what a fork renames."
+    ),
+    "cspell.json": (
+        "The dictionary and the file list the British-English spelling gate reads."
+    ),
+    "gates.sh": (
+        "Every gate `.github/workflows/quality.yml` runs, one target each, "
+        "and `all` for the lot in that workflow's own order."
+    ),
+}
+
 
 # --------------------------------------------------------------------------
 # What the repository holds, read from the index
@@ -265,11 +377,22 @@ def tracked_files(root: Path) -> tuple[str, ...]:
 def top_level_directories(tracked: Iterable[str]) -> tuple[str, ...]:
     """The first component of every tracked path that has one, sorted.
 
-    A file at the root contributes nothing, which is the intended reading:
-    `README.md` and `LICENSE` are not directories and the map does not
-    claim to place them.
+    A file at the root contributes nothing here: it is not a directory, and
+    `root_files` below is where it is accounted for.
     """
     return tuple(sorted({name.split("/", 1)[0] for name in tracked if "/" in name}))
+
+
+def root_files(tracked: Iterable[str]) -> tuple[str, ...]:
+    """Every tracked path with no directory component, sorted.
+
+    The other half of the root, and the half this map did not have. A
+    dotfile is one of these like any other: `.gitignore` and `.nvmrc` are
+    read by more of this repository than several of the directories above,
+    and a map that quietly skipped anything beginning with a dot would be
+    the same silence in a smaller place.
+    """
+    return tuple(sorted(name for name in tracked if "/" not in name))
 
 
 def owner_of_directory(
@@ -321,37 +444,61 @@ def crossings(
     return tuple(found)
 
 
-def purposes_for(directories: Sequence[str]) -> dict[str, str]:
-    """`PURPOSE`, held against what the repository actually holds.
+def _lines_for(
+    names: Sequence[str],
+    table: Mapping[str, str],
+    table_name: str,
+    singular: str,
+    plural: str,
+) -> dict[str, str]:
+    """`table`, held against what the repository actually holds.
 
     Refuses both halves of the drift this generator exists to end: a
-    tracked directory nobody wrote a line for, and a line for a directory
-    that is not there. Either one raises, naming the directories, and
-    `--check` turns that into a failed build rather than a shorter table
-    nobody notices.
+    tracked path nobody wrote a line for, and a line for a path that is not
+    there. Either one raises, naming the paths, and `--check` turns that
+    into a failed build rather than a shorter table nobody notices.
     """
-    missing = [name for name in directories if name not in PURPOSE]
-    extra = [name for name in PURPOSE if name not in directories]
+    missing = [name for name in names if name not in table]
+    extra = [name for name in table if name not in names]
     if missing or extra:
         parts = []
         if missing:
             parts.append(
-                "no line in PURPOSE for tracked "
-                f"{'directories' if len(missing) > 1 else 'directory'} "
+                f"no line in {table_name} for tracked "
+                f"{plural if len(missing) > 1 else singular} "
                 f"{', '.join(missing)}"
             )
         if extra:
             parts.append(
-                "a line in PURPOSE for "
+                f"a line in {table_name} for "
                 f"{', '.join(extra)}, which this repository does not track"
             )
         raise ValueError(
             "tools/scripts/generate_directory_map.py: "
             + "; and ".join(parts)
             + ". The owner is derived and the purpose is not: add or remove "
-            "the sentence in PURPOSE on the same commit as the directory."
+            f"the sentence in {table_name} on the same commit as the "
+            f"{singular}."
         )
-    return {name: PURPOSE[name] for name in directories}
+    return {name: table[name] for name in names}
+
+
+def purposes_for(directories: Sequence[str]) -> dict[str, str]:
+    """`PURPOSE`, held against the directories this repository tracks."""
+    return _lines_for(directories, PURPOSE, "PURPOSE", "directory", "directories")
+
+
+def root_purposes_for(files: Sequence[str]) -> dict[str, str]:
+    """`ROOT_FILE_PURPOSE`, held against the files sitting at the root.
+
+    The same refusal as the one above, on the half of the root the map did
+    not cover: a file added to the root without a line fails the build on
+    the commit that adds it, which is what stops this table going the way
+    the two hand-written directory tables went.
+    """
+    return _lines_for(
+        files, ROOT_FILE_PURPOSE, "ROOT_FILE_PURPOSE", "root file", "root files"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -360,13 +507,18 @@ def purposes_for(directories: Sequence[str]) -> dict[str, str]:
 
 
 _PREAMBLE: Final = f"""\
-*The rows below are generated: every tracked top-level directory, with
-the owner `{DECLARATION}` gives it. Do not edit this block — run*
+*The rows below are generated: every tracked top-level directory and every
+tracked file at the root, with the owner `{DECLARATION}` gives it. Do not
+edit this block — run*
 `{COMMAND}`
-*from `tools/` and commit what it writes. What each directory holds is
-the one line nothing derives, and it is written in
+*from `tools/` and commit what it writes. What each one holds or is is the
+one line nothing derives, and it is written in
 `tools/scripts/generate_directory_map.py`, beside the code that
 publishes it.*
+"""
+
+_FILES_LEAD: Final = """\
+And the files at the root, which no row above accounts for:
 """
 
 _CROSSING_LEAD: Final = f"""\
@@ -387,12 +539,21 @@ def render_block(
     owners: Mapping[str, str],
     purposes: Mapping[str, str],
     crossed: Sequence[tuple[str, str]],
+    files: Sequence[str] = (),
+    file_owners: Mapping[str, str] | None = None,
+    file_purposes: Mapping[str, str] | None = None,
 ) -> str:
     """The text between the markers, for exactly these inputs.
 
     Pure, and takes everything it prints as an argument, so the rendering
     can be exercised against a repository somebody made up rather than only
     against whatever this one happens to hold today.
+
+    Two tables rather than one. A directory and a file at the root are both
+    things a reader has to place, and the columns differ by a word --
+    *holds* against *is* -- but the crossing list under the first belongs to
+    directories alone, and a single table would put a `.gitignore` between
+    `docs/` and `examples/` for the sake of one heading fewer.
     """
     rows = ["| Directory | Owner | What it holds |", "|---|---|---|"]
     for name in directories:
@@ -401,6 +562,14 @@ def render_block(
     if crossed:
         blocks.append(_CROSSING_LEAD)
         blocks.append("\n".join(_crossing_line(path, owner) for path, owner in crossed))
+    if files:
+        owned = file_owners or {}
+        said = file_purposes or {}
+        file_rows = ["| File | Owner | What it is |", "|---|---|---|"]
+        for name in files:
+            file_rows.append(f"| `{name}` | {owned[name]} | {said[name]} |")
+        blocks.append(_FILES_LEAD)
+        blocks.append("\n".join(file_rows))
     return "\n".join(block.rstrip("\n") + "\n" for block in blocks)
 
 
@@ -434,7 +603,22 @@ def directory_map(root: Path) -> str:
     owners = {name: owner_of_directory(name, tracked, boundary) for name in directories}
     purposes = purposes_for(directories)
     crossed = crossings(owners, tracked, boundary)
-    inner = render_block(directories, owners, purposes, crossed)
+    files = root_files(tracked)
+    if not files:
+        raise ValueError(
+            f"git ls-files reported no tracked file at the root of {root} -- "
+            "every repository this map can describe has at least a README"
+        )
+    file_owners = {name: boundary.owner_of(name) for name in files}
+    inner = render_block(
+        directories,
+        owners,
+        purposes,
+        crossed,
+        files,
+        file_owners,
+        root_purposes_for(files),
+    )
     return splice((root / DOC_PATH).read_text(encoding="utf-8"), inner)
 
 
@@ -475,7 +659,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        print(f"{DOC_PATH.as_posix()} matches the tracked directories")
+        print(f"{DOC_PATH.as_posix()} matches the tracked root")
         return 0
 
     if current == rendered:

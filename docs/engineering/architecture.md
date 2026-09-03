@@ -58,14 +58,15 @@ the address above come out of it, and so does the repository the two
 publishing workflows push into — see *Operations* for how an operator sets
 that up.
 
-## Every directory, and who owns it
+## Every path at the root, and who owns it
 
 <!-- BEGIN GENERATED DIRECTORY MAP -- tools/scripts/generate_directory_map.py -->
-*The rows below are generated: every tracked top-level directory, with
-the owner `declarations/boundary.yml` gives it. Do not edit this block — run*
+*The rows below are generated: every tracked top-level directory and every
+tracked file at the root, with the owner `declarations/boundary.yml` gives it. Do not
+edit this block — run*
 `uv run python scripts/generate_directory_map.py`
-*from `tools/` and commit what it writes. What each directory holds is
-the one line nothing derives, and it is written in
+*from `tools/` and commit what it writes. What each one holds or is is the
+one line nothing derives, and it is written in
 `tools/scripts/generate_directory_map.py`, beside the code that
 publishes it.*
 
@@ -90,6 +91,30 @@ that holds them:
 - `instance/keys/events/README.md` — the product's, inside a directory the instance owns.
 - `instance/keys/signing/README.md` — the product's, inside a directory the instance owns.
 - `instance/public-data/README.md` — the product's, inside a directory the instance owns.
+
+And the files at the root, which no row above accounts for:
+
+| File | Owner | What it is |
+|---|---|---|
+| `.editorconfig` | product | What an editor has to get right before a commit is made, so that the formatting hooks and `.gitattributes`' line-ending rule never have to correct it afterwards. |
+| `.gitattributes` | product | How git treats each kind of file: line endings, which extensions are binary, and the one calendar file whose format requires the endings the blanket rule would otherwise strip. |
+| `.gitignore` | product | Everything a working copy grows that this repository does not track: both dependency trees, the virtual environment, every build output, and every shape of `.env` but the example. |
+| `.gitleaks.toml` | product | What the secret scanner may pass over, with the reason beside it. The workflow and the local hook both find it by name, so neither can drift from it. |
+| `.nvmrc` | product | The Node version, written once and read by every workflow and every local install. |
+| `.pre-commit-config.yaml` | product | The optional local hook: the formatting, linting, secret scanning and British-English spelling continuous integration runs anyway, offered before a commit instead of after a push. |
+| `AGENTS.md` | product | The one page an agent reads first. It carries no procedure of its own; it says where each one lives. |
+| `CHANGELOG.md` | product | What each released state changed and what a merge asks of a duplicate. Its list of the paths a duplicate owns is generated from `declarations/boundary.yml`. |
+| `CITATION.cff` | product | How to cite this software, in the format behind GitHub's *Cite this repository* button. |
+| `CLAUDE.md` | product | A bridge and nothing else: one agent's tooling reads this name and does not read `AGENTS.md`, so this file points at it. |
+| `CODE_OF_CONDUCT.md` | product | The behaviour expected of anybody taking part, and what enforcement here actually is. |
+| `CONTRIBUTING.md` | product | What a contribution certifies, how a commit is signed off, and which gates a change has to leave green. |
+| `LICENSE` | product | The AGPL-3.0-or-later, word for word, with the copyright at its head. An edited copy stops being recognised as this licence by GitHub and by every detection tool. |
+| `NOTICE.json` | product | The attribution both interfaces show in their footer, and the notice section 7 of the licence makes enforceable. |
+| `README.md` | product | The front page: what this runs, what it looks like, how an instance is stood up, and what the licence asks. |
+| `SECURITY.md` | product | Where a vulnerability is reported privately, and what a report can and cannot expect. |
+| `TRADEMARK.md` | product | What the name and the mark are not covered by, the licence grant being about the code, and what a fork renames. |
+| `cspell.json` | product | The dictionary and the file list the British-English spelling gate reads. |
+| `gates.sh` | product | Every gate `.github/workflows/quality.yml` runs, one target each, and `all` for the lot in that workflow's own order. |
 <!-- END GENERATED DIRECTORY MAP -- edit tools/scripts/generate_directory_map.py, not this block -->
 
 ## What this series owns, and what anybody duplicating it would keep

@@ -26,6 +26,13 @@ The dev server serves under the path prefix `instance/config.json`
 declares, never at a bare root, and the first screen asks for a GitHub
 fine-grained personal access token scoped to this repository.
 
+`.env.example` beside this file holds the three build-time values a local
+run may set, and says what each of them does. All three are blank, which is
+a working state: the sign-in falls back to a personal access token and the
+registration form reports that registrations are not open. Copy it to
+`.env` to fill any of them in. None of the three is a secret and none of
+them may become one — the file says why, and it is the `VITE_` prefix.
+
 `?demo=1` on any URL skips the sign-in entirely and runs the same
 application against `examples/the-example-collective/` — an invented
 instance with its own speakers, its own board and its own edition

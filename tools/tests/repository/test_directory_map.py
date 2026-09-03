@@ -36,12 +36,15 @@ from generate_directory_map import (
     COMMAND,
     DOC_PATH,
     PURPOSE,
+    ROOT_FILE_PURPOSE,
     crossings,
     directory_map,
     main,
     owner_of_directory,
     purposes_for,
     render_block,
+    root_files,
+    root_purposes_for,
     splice,
     top_level_directories,
     tracked_files,
@@ -54,8 +57,8 @@ ROOT = repo_root()
 README = ROOT / "README.md"
 
 #: The anchor `README.md` links to, and the heading it has to answer to.
-HEADING = "## Every directory, and who owns it"
-ANCHOR = "docs/engineering/architecture.md#every-directory-and-who-owns-it"
+HEADING = "## Every path at the root, and who owns it"
+ANCHOR = "docs/engineering/architecture.md#every-path-at-the-root-and-who-owns-it"
 
 #: A repository with this repository's shape and none of its content: one
 #: tracked file per top-level directory, plus the four paths whose owner is
@@ -75,6 +78,34 @@ FAKE_TREE: dict[str, tuple[str, ...]] = {
     "tools": ("convener_ops/cli/__init__.py",),
 }
 
+#: The other half of the fake root: one tracked file per line of
+#: `ROOT_FILE_PURPOSE`, written out for the reason `FAKE_TREE` is. The two
+#: lists have to agree with the generator's two tables or `root_purposes_for`
+#: refuses, which is the same coupling `FAKE_TREE` already has with
+#: `PURPOSE` and the same one that makes a file added without a line a red
+#: build rather than a shorter table.
+FAKE_ROOT_FILES: tuple[str, ...] = (
+    ".editorconfig",
+    ".gitattributes",
+    ".gitignore",
+    ".gitleaks.toml",
+    ".nvmrc",
+    ".pre-commit-config.yaml",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CITATION.cff",
+    "CLAUDE.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "NOTICE.json",
+    "README.md",
+    "SECURITY.md",
+    "TRADEMARK.md",
+    "cspell.json",
+    "gates.sh",
+)
+
 #: `docs/engineering/architecture.md` as this script sees it: prose, the two
 #: markers, and prose again. Nothing outside them may move.
 SKELETON = f"""# Architecture
@@ -91,12 +122,16 @@ Prose after it, equally untouched.
 
 
 def fake_tracked() -> tuple[str, ...]:
-    """Every path `FAKE_TREE` holds, in the form git reports."""
+    """Every path `FAKE_TREE` and `FAKE_ROOT_FILES` hold, as git reports
+    them."""
     return tuple(
         sorted(
-            f"{directory}/{name}"
-            for directory, names in FAKE_TREE.items()
-            for name in names
+            [
+                f"{directory}/{name}"
+                for directory, names in FAKE_TREE.items()
+                for name in names
+            ]
+            + list(FAKE_ROOT_FILES)
         )
     )
 
@@ -174,11 +209,93 @@ def test_the_map_names_every_tracked_top_level_directory() -> None:
             f"{DOC_PATH.as_posix()} has no row for the tracked directory "
             f"{directory}/ -- run `{COMMAND}` from `tools/`"
         )
-    rows = [line for line in block.splitlines() if line.startswith("| `")]
+    rows = [
+        line
+        for line in block.splitlines()
+        if line.startswith("| `") and line.split("|")[1].strip().endswith("/`")
+    ]
     assert len(rows) == len(directories), (
         f"the map holds {len(rows)} rows for {len(directories)} tracked "
         "directories, so it names something this repository does not track"
     )
+
+
+def test_the_map_names_every_tracked_file_at_the_root() -> None:
+    """The same reading, on the half of the root that had no table at all.
+
+    `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `gates.sh`, `cspell.json` and
+    `NOTICE.json` were on no page of this repository, and neither were the
+    six dotfiles beside them: the map covered directories, and a file at
+    the root is not one. This reads the index here rather than through the
+    generator, for the reason the check above does.
+    """
+    listed = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout.splitlines()
+    files = sorted(name for name in listed if "/" not in name)
+
+    assert len(files) > 10, (
+        f"the index reports {len(files)} files at the root of this "
+        "repository, which is not the root this map describes"
+    )
+    page = (ROOT / DOC_PATH).read_text(encoding="utf-8")
+    block = page.partition(_BEGIN)[2].partition(_END)[0]
+    for name in files:
+        assert f"| `{name}` |" in block, (
+            f"{DOC_PATH.as_posix()} has no row for the tracked root file "
+            f"{name} -- run `{COMMAND}` from `tools/`"
+        )
+    rows = [
+        line
+        for line in block.splitlines()
+        if line.startswith("| `") and not line.split("|")[1].strip().endswith("/`")
+    ]
+    assert len(rows) == len(files), (
+        f"the map holds {len(rows)} file rows for {len(files)} tracked root "
+        "files, so it names something this repository does not track"
+    )
+
+
+def test_a_path_inside_a_directory_is_not_read_as_a_root_file() -> None:
+    """The two halves of the index divide it between them, with nothing
+    counted twice and nothing dropped."""
+    tracked = fake_tracked()
+
+    assert root_files(tracked) == tuple(sorted(FAKE_ROOT_FILES))
+    assert set(root_files(tracked)) & set(top_level_directories(tracked)) == set()
+    assert len(root_files(tracked)) + sum(
+        len(names) for names in FAKE_TREE.values()
+    ) == len(tracked)
+
+
+def test_a_root_file_with_no_line_is_refused_by_name() -> None:
+    """The same failure the directory table has, on the file table."""
+    with pytest.raises(ValueError) as raised:
+        root_purposes_for([*sorted(ROOT_FILE_PURPOSE), "INVENTED.md"])
+
+    assert "INVENTED.md" in str(raised.value)
+    assert "ROOT_FILE_PURPOSE" in str(raised.value)
+
+
+def test_a_line_for_a_root_file_that_is_gone_is_refused_too() -> None:
+    remaining = [name for name in sorted(ROOT_FILE_PURPOSE) if name != "gates.sh"]
+
+    with pytest.raises(ValueError) as raised:
+        root_purposes_for(remaining)
+
+    assert "gates.sh" in str(raised.value)
+
+
+def test_every_root_file_line_is_one_line_of_prose() -> None:
+    for name, sentence in ROOT_FILE_PURPOSE.items():
+        assert "\n" not in sentence, f"{name}'s line is more than a line"
+        assert "|" not in sentence, f"{name}'s line would break the table"
+        assert sentence.endswith("."), f"{name}'s line is not a sentence"
 
 
 def test_the_committed_page_is_what_the_repository_derives() -> None:
@@ -339,7 +456,7 @@ def test_writing_then_checking_passes(
 ) -> None:
     assert main([]) == 0
     assert main(["--check"]) == 0
-    assert "matches the tracked directories" in capsys.readouterr().out
+    assert "matches the tracked root" in capsys.readouterr().out
 
 
 def test_a_second_write_changes_nothing_and_says_so(
@@ -375,6 +492,20 @@ def test_a_directory_added_without_a_line_fails_the_check(
 
     assert main(["--check"]) == 1
     assert "invented" in capsys.readouterr().err
+
+
+def test_a_root_file_added_without_a_line_fails_the_check(
+    fake_repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The mutation the hand-written list this replaces could not have."""
+    assert main([]) == 0
+    monkeypatch.setattr(
+        "generate_directory_map.tracked_files",
+        lambda _root: (*fake_tracked(), "INVENTED.md"),
+    )
+
+    assert main(["--check"]) == 1
+    assert "INVENTED.md" in capsys.readouterr().err
 
 
 def test_an_owner_changed_in_the_declaration_fails_the_check(

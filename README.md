@@ -104,9 +104,10 @@ the two applications and the public showcase, where a participant's personal
 data goes and when it stops being readable, and the handover procedure.
 [**The decision records**](docs/engineering/decisions/index.md) are one per
 structural choice, with what was rejected and what it costs. Every tracked
-directory, with its owner and what it holds, is [one generated
-table](docs/engineering/architecture.md#every-directory-and-who-owns-it): a
-directory added without a row fails the build.
+directory and every file at the root, with its owner and what it is, is [one
+generated
+table](docs/engineering/architecture.md#every-path-at-the-root-and-who-owns-it):
+a path added without a row fails the build.
 
 ### Which documentation is yours
 
