@@ -10,54 +10,41 @@
 # three palettes, five addresses and two path lists, and a corrected page
 # beside a forgotten agent is the same defect with a longer fuse.
 #
-# At the repository root, and deliberately not in `declarations/`
-# ----------------------------------------------------------------
-# This file is a declaration, and the directory next to it is called
-# `declarations/`, so the question has to be answered here rather than left
-# to look like an oversight. `declarations/` already holds two the product
-# owns (`boundary.yml` and `integrations.yml`), so precedent alone would
-# have allowed a third. The argument against it is `NOTICE.json`'s, and it
-# holds here for the same two reasons.
+# In `declarations/`, with the other two, and in lower case
+# ------------------------------------------------------------
+# This file sat at the repository root until 2026-09-04, on two arguments
+# the root supplied and this directory does not. Both are answered here.
 #
-# First, everything `declarations/boundary.yml` does not hand to the instance
-# belongs to the product, so a file at the root is the product's without
-# anybody declaring it -- which is why there is no `owner:` key below, and
-# why adding one would have been the copy this file exists to refuse.
+# The first was ownership. Everything `declarations/boundary.yml` does not
+# hand to the instance belongs to the product, so a file at the root was the
+# product's with nobody declaring it, and an `owner:` key there would have
+# been a second statement of something already said. Inside `declarations/`
+# the rule is the directory's: every file it holds directly answers for
+# itself, because that directory -- when it was `config/` -- was found
+# holding the product's files beside the instance's, having filled up by
+# accumulation with nobody ever deciding. `boundary.config_owners` refuses a
+# file here that gives no answer. This file's answer is `owner: product`,
+# below, beside `v:`, and it is the same answer its position gave for free.
 #
-# Second, and the one that settles it: the two files in `declarations/` are
-# read by the running product to decide what it does. `boundary.py` reads the
-# boundary on every sweep; `integrations.py` reads the integrations on every
-# `convener-check-config`. This file is read by neither, and cannot be -- it
-# describes the acts that bring a repository into existence, which is to say
-# it is read *before* there is a running product to read anything, by a
-# person with a browser and by whatever helps them. It is a statement the
-# product makes about itself, like `NOTICE.json` and `CITATION.cff`, not an
-# input to anything it does.
+# The second was the name. SCREAMING-CASE at a root reads as *open this
+# before you do anything*, which is what eleven of the root's thirteen
+# ordinary files trade on -- `README.md`, `LICENSE`, `CONTRIBUTING.md`,
+# `CODE_OF_CONDUCT.md` and the rest, each looked up under that name by an
+# ecosystem that already knows the name it wants. Nothing looks this file
+# up, so it was borrowing a convention it was not a member of; and inside a
+# directory there is no root for the convention to work on at all. Its two
+# neighbours are `boundary.yml` and `integrations.yml`, and a third name
+# shouting between them would announce a different kind of file, when the
+# move is the statement that it is the same kind. So `standing-up.yml`, and
+# the argument the capitals rested on goes with the position it rested on.
 #
-# And its name is in capitals, which is settled
-# ----------------------------------------------
-# Fourteen files sit at this root that are not dotfiles, twelve of them in
-# capitals, and eleven of those twelve are looked up by name -- `README.md`,
-# `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`,
-# `CHANGELOG.md`, `CITATION.cff`, `NOTICE.json`, `TRADEMARK.md`, `AGENTS.md`
-# and `CLAUDE.md`, each by an ecosystem that already knows the name it wants.
-# This file is the twelfth and nothing looks it up, which is what makes the
-# casing a question at all: it borrows a convention it is not a member of.
-#
-# It keeps the capitals, and the reason is what the convention says rather
-# than who registered it. SCREAMING-CASE at a root reads as *open this before
-# you do anything*, and that is exactly this file's job: it is the one page a
-# person reads before there is an instance to read anything else from. The
-# directory beside it makes the point from the other side --
-# `declarations/` holds files the running product parses and a person never
-# opens, and a reader who cannot tell those two apart at a glance walks the
-# sequence out of a file that is not it.
-#
-# Lowering it to `standing-up.yml` costs a sweep across two generators and
-# their tests, the two documents generated from it, `AGENTS.md`, `README.md`,
-# `docs/engineering/content-rules.md`, `docs/operating/` and `.github/`, and
-# buys no change in what anything does. So the rename is
-# closed, and this paragraph is what closes it.
+# What the two beside it have and this one has not is a reader in the
+# running product: `boundary.py` reads the boundary on every sweep,
+# `integrations.py` reads the integrations on every `convener-check-config`,
+# and this file is read before there is a running product to read anything
+# -- by a person with a browser, and by whatever helps them. That says when
+# each of the three is read. What `declarations/` gathers is what the
+# product declares about itself, and all three are that.
 
 # What a step carries, and why each field is required
 # ---------------------------------------------------
@@ -94,6 +81,11 @@
 # No secret value appears anywhere below, and none ever may. What is declared
 # is which secret exists, which repository or worker it belongs to, and the
 # menu path a person sets it through.
+#
+# `owner:` is the directory's own rule, argued for at the top of this
+# header. Product: a duplicate carries out this sequence and does not
+# write it, so a step changed here is a change to the product.
+owner: product
 v: 1
 
 # The two repositories an instance runs on. Their asymmetry is the whole of

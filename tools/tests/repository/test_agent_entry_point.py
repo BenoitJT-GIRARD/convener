@@ -1,7 +1,7 @@
 """One way in for an agent, and no vendor's own copy of anything.
 
 `AGENTS.md` is the page an agent reads first. It carries no procedure: it
-names `STANDING-UP.yml` and the two renderings generated from it, and
+names `declarations/standing-up.yml` and the two renderings generated from it, and
 `tools/scripts/generate_standing_up_run_sheet.py` states the rule that stops a
 third -- a second agent vendor is served by another line on that page, never
 by a second rendering under a directory that vendor's tooling happens to

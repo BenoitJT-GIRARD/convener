@@ -1,7 +1,7 @@
 """One sequence, three readers, and the control that keeps them one.
 
-`STANDING-UP.yml` declares what somebody with no repositories and no accounts
-does to have a running instance. `docs/operating/standing-up.md` is that
+`declarations/standing-up.yml` declares what somebody with no repositories
+and no accounts does to have a running instance. `docs/operating/standing-up.md` is that
 sequence as a person reads it; `docs/operating/standing-up-for-an-agent.md` is
 the run sheet an agent carries it out from. Two documents describing one procedure
 diverge; the whole point of the declaration is that there is only one, so this
@@ -140,9 +140,9 @@ def section_of(text: str, number: int) -> str:
 def test_the_committed_page_is_what_the_declaration_derives() -> None:
     """The whole binding, on the real tree.
 
-    A step added to `STANDING-UP.yml` without regenerating fails here, and so
-    does a page corrected by hand -- which is the drift every generated page in
-    this repository has actually suffered at least once.
+    A step added to `declarations/standing-up.yml` without regenerating fails
+    here, and so does a page corrected by hand -- which is the drift every
+    generated page in this repository has actually suffered at least once.
     """
     assert page() == standing_up_doc(ROOT), (
         f"{DOC_PATH.as_posix()} is not what {DECLARATION_PATH.as_posix()} "
@@ -251,8 +251,8 @@ def test_the_two_repositories_and_their_visibilities_are_stated() -> None:
 def test_the_committed_run_sheet_is_what_the_declaration_derives() -> None:
     """The same binding the page has, on the artefact an agent acts on.
 
-    A step added to `STANDING-UP.yml` without regenerating fails here, and so
-    does a run sheet corrected by hand.
+    A step added to `declarations/standing-up.yml` without regenerating fails
+    here, and so does a run sheet corrected by hand.
     """
     assert run_sheet() == standing_up_run_sheet(ROOT), (
         f"{RUN_SHEET_PATH.as_posix()} is not what {DECLARATION_PATH.as_posix()} "
@@ -320,10 +320,11 @@ def test_the_run_sheet_restates_no_step_and_reads_the_declaration_instead() -> N
     """The claim that makes this a third reader rather than a third copy.
 
     What a step does, what proves it, what it costs to skip and the lines a
-    person is handed word for word are read out of `STANDING-UP.yml` when the
-    step comes up. A run sheet that grew a copy of any of them would pass the
-    byte comparison above -- the generator would have written the copy -- and
-    fail here, which is the whole reason this test exists beside that one.
+    person is handed word for word are read out of
+    `declarations/standing-up.yml` when the step comes up. A run sheet that
+    grew a copy of any of them would pass the byte comparison above -- the
+    generator would have written the copy -- and fail here, which is the whole
+    reason this test exists beside that one.
     """
     flat = " ".join(run_sheet().split())
     for step in declaration().steps:

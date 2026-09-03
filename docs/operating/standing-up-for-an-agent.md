@@ -1,7 +1,7 @@
 # Carrying out the standing-up sequence
 
-This page is generated from `STANDING-UP.yml`, the one declaration of this
-sequence. Do not edit it: run `uv run python
+This page is generated from `declarations/standing-up.yml`, the one
+declaration of this sequence. Do not edit it: run `uv run python
 scripts/generate_standing_up_run_sheet.py` from `tools/` and commit what it
 writes, and continuous integration refuses a page the declaration does not
 derive. `docs/operating/standing-up.md` is the same declaration rendered for a
@@ -10,18 +10,19 @@ discovers this page on its own, so that pointer is the only route in. The
 prose below lives in `tools/scripts/generate_standing_up_run_sheet.py`; the
 run sheet at the end comes from the declaration.
 
-*Carry out STANDING-UP.yml, the declared sequence that turns no repositories
-and no accounts into a running instance of this product: run the steps it
-marks for an agent, hand the browser-only steps to the person word for word,
-and prove each one with its own declared check. Use when standing an instance
-up, resuming a half-standing one, or working out which steps are still
-outstanding.*
+*Carry out declarations/standing-up.yml, the declared sequence that turns no
+repositories and no accounts into a running instance of this product: run the
+steps it marks for an agent, hand the browser-only steps to the person word
+for word, and prove each one with its own declared check. Use when standing an
+instance up, resuming a half-standing one, or working out which steps are
+still outstanding.*
 
 ## What this page is, and what it is not
 
-`STANDING-UP.yml` declares what somebody with no repositories and no accounts
-does, in order, to have a running instance. It is a declaration rather than a
-page because more than one thing reads it, and this is one of them.
+`declarations/standing-up.yml` declares what somebody with no repositories and
+no accounts does, in order, to have a running instance. It is a declaration
+rather than a page because more than one thing reads it, and this is one of
+them.
 
 **No step's content is repeated here, deliberately.** What a step does, what
 proves it is done, what an instance loses by skipping it, and the lines a
@@ -42,9 +43,9 @@ whoever minted it.
 
 ## Before the first step
 
-1. Read `STANDING-UP.yml` from its first line to its last, header included.
-   The header states what each field means, why a step belongs to a person or
-   to an agent, and the five places where the order carries weight.
+1. Read `declarations/standing-up.yml` from its first line to its last, header
+   included. The header states what each field means, why a step belongs to a
+   person or to an agent, and the five places where the order carries weight.
 2. Run `cd tools && uv run convener-check-config` and show the person what it
    prints. Each row reported absent is a step below that has not happened yet,
    and that row's `meanwhile:` line is what its absence costs today.
@@ -166,8 +167,8 @@ here.
 ## The sequence, in order
 
 30 steps in 8 stages. 16 are handed over; the rest an agent carries out. Read
-each step's own entry in `STANDING-UP.yml` before carrying it out or handing
-it over.
+each step's own entry in `declarations/standing-up.yml` before carrying it out
+or handing it over.
 
 ### Stage 1 — Nothing exists yet
 

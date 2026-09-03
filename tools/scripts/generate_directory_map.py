@@ -185,9 +185,11 @@ PURPOSE: Final[Mapping[str, str]] = {
         "rendered from a real build by `tools/visuals/render-readme-shots.mjs`."
     ),
     "declarations": (
-        "The product's own declarations, which the cockpit never reads: the "
-        "external integrations the code knows about, and `boundary.yml`, "
-        "which names the paths the instance owns."
+        "The product's own three: `boundary.yml`, which names the paths the "
+        "instance owns; `integrations.yml`, which names every external "
+        "dependency the code knows about and what breaks without it; and "
+        "`standing-up.yml`, the sequence that turns no repositories and no "
+        "accounts into a running instance."
     ),
     "docs": (
         "This handbook: volunteer-facing workflow and governance pages "

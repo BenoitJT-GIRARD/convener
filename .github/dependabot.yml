@@ -38,8 +38,9 @@
 # has to switch that off never opens this file. The paragraph that used to
 # stand here was addressed to them and reached nobody.
 #
-# It is a step of the standing-up sequence now: `STANDING-UP.yml`, step
-# `dependency_updates`, in the stage that creates the two repositories.
+# It is a step of the standing-up sequence now:
+# `declarations/standing-up.yml`, step `dependency_updates`, in the stage
+# that creates the two repositories.
 # That declaration is rendered into `docs/operating/standing-up.md` for a
 # person and `docs/operating/standing-up-for-an-agent.md` for an agent, and
 # it carries what the step costs to skip beside what it does, which a

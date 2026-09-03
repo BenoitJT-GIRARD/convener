@@ -4,7 +4,8 @@
 no accounts reads. A later agent skill carries the same sequence out. Two
 documents describing one procedure diverge -- this repository has already paid
 for that with three palettes, five addresses and two path lists -- so there is
-one declaration, `STANDING-UP.yml`, and this script renders the page from it.
+one declaration, `declarations/standing-up.yml`, and this script renders the
+page from it.
 
 What is derived and what is written
 -----------------------------------
@@ -71,9 +72,10 @@ import yaml
 from convener_ops.declaration.integrations import Integration, load_declaration
 from convener_ops.declaration.paths import repo_root
 
-#: The declaration this page is rendered from. At the repository root rather
-#: than in `declarations/`, and that file's own header argues why.
-DECLARATION_PATH: Final = Path("STANDING-UP.yml")
+#: The declaration this page is rendered from, beside the two other
+#: declarations the product owns; its own header argues for the place and
+#: for the name.
+DECLARATION_PATH: Final = Path("declarations") / "standing-up.yml"
 
 #: The page it renders.
 DOC_PATH: Final = Path("docs") / "operating" / "standing-up.md"
@@ -88,7 +90,7 @@ COMMAND: Final = "uv run python scripts/generate_standing_up_doc.py"
 DECLARATION_VERSION: Final = 1
 
 #: The two answers to "who carries this out", and the only two. See
-#: `STANDING-UP.yml`'s header for what each one means and why the line
+#: `declarations/standing-up.yml`'s header for what each one means and why the line
 #: between them is where it is.
 HUMAN: Final = "human"
 AGENT: Final = "agent"
@@ -430,7 +432,7 @@ def _deferred(raw: Any) -> tuple[Deferred, ...]:
 
 
 def sequence_from_data(data: Any) -> Sequence:
-    """Parse an already YAML-loaded `STANDING-UP.yml`.
+    """Parse an already YAML-loaded `declarations/standing-up.yml`.
 
     Refuses rather than repairs. Every rule refused here is one that would
     otherwise reach the page as a step nobody can carry out: an actor that is
@@ -747,7 +749,7 @@ def standing_up_doc(root: Path) -> str:
 def main(argv: Seq[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate the standing-up guide from STANDING-UP.yml and "
+            "Generate the standing-up guide from declarations/standing-up.yml and "
             "declarations/integrations.yml."
         )
     )

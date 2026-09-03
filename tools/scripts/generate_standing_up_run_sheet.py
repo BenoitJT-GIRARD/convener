@@ -1,7 +1,7 @@
 """The standing-up sequence, rendered as a procedure for an agent.
 
-`STANDING-UP.yml` declares what somebody with no repositories and no accounts
-does, in order, to have a running instance.
+`declarations/standing-up.yml` declares what somebody with no repositories
+and no accounts does, in order, to have a running instance.
 `tools/scripts/generate_standing_up_doc.py` renders it as the page a person follows.
 This script renders the same declaration as
 `docs/operating/standing-up-for-an-agent.md`: the procedure whatever carries
@@ -13,8 +13,8 @@ Four things about a step reach the run sheet: its **position**, its
 **identifier**, its **title**, and one word -- `carry out` or `hand over` --
 which is `actor` translated one for one and nothing else. Everything a step
 says stays where it is declared: `does`, `check`, `command`, `sets`,
-`degraded` and `walkthrough` are read out of `STANDING-UP.yml` at the moment
-the step comes up, by the agent following this page.
+`degraded` and `walkthrough` are read out of `declarations/standing-up.yml`
+at the moment the step comes up, by the agent following this page.
 
 That line is the whole design. A run sheet that copied the steps into it
 would be a third statement of one procedure, and the copy is always the one
@@ -41,7 +41,7 @@ to remove, arriving by a different door.
 
 Pure, so `--check` means something
 ----------------------------------
-The rendering reads `STANDING-UP.yml` and nothing else: no clock, no
+The rendering reads `declarations/standing-up.yml` and nothing else: no clock, no
 environment, no `declarations/`, no `instance/data/`. Two runs over the same file
 produce
 byte-identical output, so a difference can only be an edit made outside it --
@@ -113,7 +113,7 @@ ACTION: Final[dict[str, str]] = {
 #: reader sent here by `AGENTS.md` still needs a sentence saying what they
 #: have been sent to.
 DESCRIPTION: Final = (
-    "Carry out STANDING-UP.yml, the declared sequence that turns no "
+    "Carry out declarations/standing-up.yml, the declared sequence that turns no "
     "repositories and no accounts into a running instance of this product: "
     "run the steps it marks for an agent, hand the browser-only steps to the "
     "person word for word, and prove each one with its own declared check. "
@@ -478,7 +478,8 @@ def standing_up_run_sheet(root: Path) -> str:
 
 def main(argv: Seq[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate the standing-up run sheet from STANDING-UP.yml."
+        description="Generate the standing-up run sheet from "
+        "declarations/standing-up.yml."
     )
     parser.add_argument(
         "--check",

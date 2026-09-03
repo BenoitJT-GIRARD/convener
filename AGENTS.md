@@ -17,10 +17,11 @@ same page, and neither has a copy of it.
 
 ## Standing an instance up
 
-`STANDING-UP.yml`, at the root of this repository, declares the sequence that
-turns no repositories and no accounts into a running instance: every step in
-order, with the actor who carries it out, what proves it is done, and what an
-instance loses by skipping it. Nothing restates that file. Two renderings are
+`declarations/standing-up.yml`, beside the other two declarations this
+product owns, declares the sequence that turns no repositories and no
+accounts into a running instance: every step in order, with the actor who
+carries it out, what proves it is done, and what an instance loses by
+skipping it. Nothing restates that file. Two renderings are
 generated from it and refused by continuous integration if they drift:
 
 - `docs/operating/standing-up.md` — the guide a person follows with a web

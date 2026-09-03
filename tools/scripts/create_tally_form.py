@@ -84,7 +84,7 @@ The key is read from a `.env` at the repository root, which `.gitignore`
 already refuses, rather than written on the command line, where a shell would
 keep it in its history and any terminal recording would keep it for ever. The
 deletion is unconditional, so the file exists for one command and no longer;
-`STANDING-UP.yml`'s `tally_form` step declares those three as one line, and
+`declarations/standing-up.yml`'s `tally_form` step declares those three as one line, and
 this is the only credential in that whole sequence ever put in a file on the
 machine running the commands -- every other one is typed into a browser or
 into a prompt that reads it without showing it.

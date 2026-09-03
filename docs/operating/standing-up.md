@@ -1,6 +1,6 @@
 # Standing up an instance
 
-*This page is generated from* `STANDING-UP.yml` — *the one
+*This page is generated from* `declarations/standing-up.yml` — *the one
 declaration of this sequence, which the agent that carries it out reads too.
 Do not edit it: run* `uv run python scripts/generate_standing_up_doc.py` *from* `tools/` *and commit what it writes,
 and continuous integration refuses a page the declaration does not derive.

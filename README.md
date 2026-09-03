@@ -78,8 +78,8 @@ handful of accounts that all have a free tier this project fits inside.
   six files, and what everything else is that nobody has to touch.
 - **[The same sequence, written for an
   agent](docs/operating/standing-up-for-an-agent.md)** — if you work with one. Both
-  it and the guide are generated from `STANDING-UP.yml`, so an agent cannot
-  shorten the work by getting ahead of the browser route.
+  it and the guide are generated from `declarations/standing-up.yml`, so
+  an agent cannot shorten the work by getting ahead of the browser route.
 - **[What each release asks of you](CHANGELOG.md)** — an update is a merge,
   so every entry names the paths a release reached that are yours rather
   than upstream's, and what to do about each.

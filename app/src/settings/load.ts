@@ -1,7 +1,7 @@
 /**
  * Everything the settings screen reads, and where each piece comes from.
  *
- * Six files answer the two questions this screen asks --
+ * Four sources answer the two questions this screen asks --
  * what does this instance own, and what may each of its numbers be --
  * and none of them is a list typed into a component:
  *
@@ -17,13 +17,13 @@
  *
  * Two ways in, one reader
  * -----------------------
- * Signed in, the six files are read from the repository through
+ * Signed in, those files are read from the repository through
  * `github/contents.ts` -- the same door `instance/data/speakers.yml` comes through,
  * because a bound computed from a stale copy of `queue_beyond_hours` is a
  * bound that is wrong exactly when it matters. In demo mode nothing may be
- * read from anywhere but the origin that served the page, so the same six
- * travel in the bundle (`scripts/example-settings.mjs`) and are parsed by
- * this same module. The demonstration therefore exercises the code the
+ * read from anywhere but the origin that served the page, so the same set
+ * travels in the bundle (`scripts/example-settings.mjs`), read off the same
+ * two directories, and is parsed by this same module. The demonstration therefore exercises the code the
  * cockpit runs, rather than a shape laid out to look like it.
  *
  * Why the whole workflow, for one cron

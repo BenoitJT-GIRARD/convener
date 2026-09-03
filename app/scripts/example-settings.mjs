@@ -2,11 +2,10 @@
  * The example instance's own settings, on their way into the
  * demonstration.
  *
- * The settings screen reads six files: the two in
- * `declarations/` the *product* owns (`boundary.yml`, which says what an instance
- * owns, and `integrations.yml`, which says what every external dependency
- * is for) and the four that instance owns. Signed in, it reads all six from
- * the repository through `github/contents.ts`. In demo mode it cannot: a
+ * The settings screen reads every configuration file `declarations/` and
+ * `instance/` hold directly -- the product's own in the first, this
+ * instance's in the second. Signed in, it lists both directories and reads
+ * what it finds, through `github/contents.ts`. In demo mode it cannot: a
  * demonstration reads only from the origin that served it
  * (`src/net/request.ts`), and it has no repository at all.
  *
@@ -14,7 +13,7 @@
  * `src/data/demo.ts` already shows, the one
  * `tools/tests/repository/test_second_instance.py` lays into this repository's own
  * holes on every run. Its four configuration files are in
- * `examples/the-example-collective/instance/`; the two product files are this
+ * `examples/the-example-collective/instance/`; the product's are this
  * repository's own, because they are the product's and a duplicate does not
  * have its own copy of them.
  *
@@ -40,7 +39,7 @@
  * screen whose every bound reads `undefined`.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import yaml from 'js-yaml';
 
 /** This repository's own root, from this file's location -- the app's build
@@ -48,11 +47,30 @@ import yaml from 'js-yaml';
  *  process is not the same thing. */
 const ROOT = new URL('../../', import.meta.url);
 
-/** The two files in `declarations/` the product owns. Not taken from
- *  `examples/the-example-collective/`, which does not hold them and must not: they are
- *  the product's, and a duplicate inherits them rather than writing its
- *  own. */
-const PRODUCT_FILES = ['declarations/boundary.yml', 'declarations/integrations.yml'];
+/** What a configuration file is called, mirroring `CONFIG_SUFFIXES` in
+ *  `src/settings/declaration.ts` and `boundary.CONFIG_READERS` behind it. */
+const CONFIG_SUFFIXES = ['.yml', '.json'];
+
+/** The files `declarations/` holds, read off the directory rather than
+ *  listed. The signed-in path lists that directory and reads what is in it,
+ *  so a list typed here would be a second answer to the same question --
+ *  and the demonstration would go on showing the files somebody remembered
+ *  the day one was added. Not taken from `examples/the-example-collective/`,
+ *  which does not hold them and must not: they are the product's, and a
+ *  duplicate inherits them rather than writing its own. */
+function productFiles() {
+  const found = readdirSync(new URL('declarations/', ROOT))
+    .filter(name => CONFIG_SUFFIXES.some(suffix => name.endsWith(suffix)))
+    .sort()
+    .map(name => `declarations/${name}`);
+  if (found.length === 0) {
+    throw new Error(
+      'declarations/ holds no configuration file, so the demonstration would ' +
+        'have no product declaration to show',
+    );
+  }
+  return found;
+}
 
 /** The four the instance owns, read from the example's own copies. Named by
  *  their `instance/` path, which is where they sit in the tree the screen
@@ -78,13 +96,13 @@ function read(relative, named) {
 /**
  * The whole of what the demonstration's settings screen reads, as text.
  *
- * All six files, always, and in one call: they are one repository's answer
+ * Every file, always, and in one call: they are one repository's answer
  * to one question, and a build that carried the boundary of one and the
  * thresholds of another would be describing an instance nobody has.
  */
 export function exampleSettings() {
   const files = {};
-  for (const name of PRODUCT_FILES) files[name] = read(name, name);
+  for (const name of productFiles()) files[name] = read(name, name);
   for (const name of INSTANCE_FILES) {
     files[name] = read(`examples/the-example-collective/${name}`, `examples/the-example-collective/${name}`);
   }
