@@ -16,9 +16,8 @@ accounts and secrets, and keeps it running once volunteers are using it.
 - **[Publishing the product](publishing-the-product.md)** — creating and
   pushing the product repository, the one sequence
   `declarations/standing-up.yml` deliberately does not declare.
-- `docs/operating/operations.md` — every external integration, the secret
-  it needs, and what degrades without it. Named here rather than linked:
-  it is the page the app never publishes.
+- **[Operations](operations.md)** — every external integration, the secret
+  it needs, and what degrades without it.
 
 ## What is not here
 
