@@ -284,7 +284,7 @@ describe('what is waiting for me', () => {
  * alike. The `<select>` of board logins on the speaker page is a screen, not
  * a rule -- `assignItem` is exported, and a hand-edited file goes through the
  * reader and nothing else -- so the browser could accept and write a record
- * `convener-validate` then refuses. `tools/tests/governance/test_validate_v4.py` runs these
+ * `convener-validate` then refuses. `tools/tests/governance/test_validate_schema_v4.py` runs these
  * same cases through the other reader.
  */
 describe('the shared statement of who can own a line', () => {

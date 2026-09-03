@@ -1,6 +1,6 @@
 """Schema v5: the post-event survey's per-event switch, on the write side.
 
-The same two-language discipline `test_validate_v4.py`'s own module
+The same two-language discipline `test_validate_schema_v4.py`'s own module
 docstring states, applied to the one field schema v5 adds:
 
 - **An absent key is a defect.** A record with no `survey_enabled` at all
@@ -11,7 +11,7 @@ docstring states, applied to the one field schema v5 adds:
 
 Everything here is a whole record from `conftest.speaker()` with one thing
 taken away or changed, so a failure names the one thing -- the same idiom
-`test_validate_v4.py` uses.
+`test_validate_schema_v4.py` uses.
 """
 
 from __future__ import annotations

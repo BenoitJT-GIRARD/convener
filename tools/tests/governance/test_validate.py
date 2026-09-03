@@ -1,3 +1,28 @@
+"""What `convener-validate` refuses, and where the rest of it is tested.
+
+`convener_ops.governance.validate` is the largest module of its package and
+six modules in this directory are about it, which is one more division than
+a reader can be expected to guess. This one holds the shape rules -- what a
+record must be before any particular field of it is looked at -- and the
+five others are:
+
+- `test_channels.py` and `test_hand_edited.py`, by *subject*: the promotion
+  channels a volunteer types into `instance/data/config.yml`, and what
+  survives a file edited in GitHub's own web editor with keys left out and
+  scalars left unquoted.
+- `test_validate_schema_v3.py`, `test_validate_schema_v4.py` and
+  `test_validate_schema_v5.py`, by *the schema version that introduced the
+  rules they hold*. The number is the subject: `docs/engineering/schema.md`
+  publishes those versions, `validate.py` names one of them in
+  `SPEAKER_BOOL_V5`, and each of the three answers "what did this version
+  start requiring" -- v3 the ballots, the board membership and the
+  publication gate; v4 the fields the checklists ask for; v5 the survey's
+  own switch. All three test today's validator, and the files were called
+  `test_validate_v3.py` and so on until the word `schema` was put back into
+  the name: without it a reader reads three versions of a test file, which
+  is the one thing they are not.
+"""
+
 from __future__ import annotations
 
 import json

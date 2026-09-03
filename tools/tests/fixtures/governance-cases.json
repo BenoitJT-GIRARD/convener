@@ -1446,7 +1446,7 @@
       }
     }
   ],
-  "_checklist_assignee_comment": "Who may be named against a line of the journey. A GitHub login and nothing else: tools/convener_ops/governance/validate.py refuses an assignee outside ^[a-zA-Z0-9-]+$, while app/src/data/validate.ts accepted any string and app/src/state/assignment.ts any non-empty trimmed one -- so the browser could write a record its own validator passes and convener-validate rejects. `''` is not in these cases: it is the answer 'nobody in particular, which is the hosts', legal on both sides and the state most lines stay in. Read by tools/tests/governance/test_validate_v4.py and app/tests/state/assignment.test.ts. `assignItem` trims what a volunteer typed before applying the rule, so surrounding whitespace is not one of these cases: it is normalised on the writing side and refused on the reading one.",
+  "_checklist_assignee_comment": "Who may be named against a line of the journey. A GitHub login and nothing else: tools/convener_ops/governance/validate.py refuses an assignee outside ^[a-zA-Z0-9-]+$, while app/src/data/validate.ts accepted any string and app/src/state/assignment.ts any non-empty trimmed one -- so the browser could write a record its own validator passes and convener-validate rejects. `''` is not in these cases: it is the answer 'nobody in particular, which is the hosts', legal on both sides and the state most lines stay in. Read by tools/tests/governance/test_validate_schema_v4.py and app/tests/state/assignment.test.ts. `assignItem` trims what a volunteer typed before applying the rule, so surrounding whitespace is not one of these cases: it is normalised on the writing side and refused on the reading one.",
   "checklist_assignee_cases": [
     {
       "name": "a plain login",

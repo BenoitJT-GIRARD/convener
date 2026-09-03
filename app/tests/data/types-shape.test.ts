@@ -15,7 +15,7 @@
  *   two are different things and the reader has to tell them apart, in the
  *   same sentence style every other field already gets.
  *
- * The Python half is `tools/tests/governance/test_validate_v4.py`: the same keys, on
+ * The Python half is `tools/tests/governance/test_validate_schema_v4.py`: the same keys, on
  * the side that writes the file.
  */
 import yaml from 'js-yaml';

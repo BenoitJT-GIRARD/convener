@@ -282,7 +282,7 @@ describe('the AcceptedDate brand', () => {
  * module keys on the date -- so a file holding two hours on one day passed
  * validation and then had one recorded reply written against both, with
  * `lockDate` freezing whichever hour came first. These cases are read from
- * the same file by `tools/tests/governance/test_validate_v4.py`, so the pair cannot
+ * the same file by `tools/tests/governance/test_validate_schema_v4.py`, so the pair cannot
  * drift apart again without one of the two suites going red.
  */
 describe('the shared statement of what a candidate slot is', () => {

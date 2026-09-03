@@ -55,6 +55,29 @@ below is the mirror rather than a number, and it is the same rule
 `test_every_module_of_the_command_line_is_named_after_a_sub_package` holds
 one tree over, read from the test side.
 
+**And the half of that rule that is not about the mirror holds everywhere.**
+`tools/tests/cli/` mirrors a package, so it can be asked the strong
+question -- is this module named after something in the package it mirrors
+-- and no other test directory can. What every one of them can be asked is
+the question that actually found `test_cli.py`: is this module named after
+the directory it is sitting in. That question lived inside the mirror and
+nowhere else, so two modules on the other side of the tree carried their
+own directory's name with nothing to say so: the tests of
+`derivation/repository.py` and the tests of `governance/rule.py`, each
+named after the package holding it. They are
+`tools/tests/derivation/test_repository.py` and
+`tools/tests/governance/test_rule.py` now, and
+`test_no_test_module_is_named_after_the_package_that_holds_it` is that
+question asked of the whole tree.
+
+A suffix is not the same thing and is not refused:
+`tools/tests/governance/test_governance_fixture.py` is about the fixture the
+two languages share and `tools/tests/derivation/test_derivation_guard.py`
+about `derivation/derivation_guard.py`, and each names a subject the
+directory has rather than the directory. What the rule refuses is the name
+that says only *everything behind this door*, because that is a file with
+no subject and it grows until somebody measures it.
+
 A number was measured and not taken. `CEILING` applied to `tools/tests/`
 is born refusing three modules this has nothing to do with --
 `repository/test_workflows.py` at 6 001, `repository/test_site.py` at
@@ -72,6 +95,7 @@ from __future__ import annotations
 import ast
 import re
 import tomllib
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Final
 
@@ -91,9 +115,14 @@ DECLARATION: Final = repo_root() / "tools" / "pyproject.toml"
 #: the file a workflow step reads its predecessor's answer out of.
 SHARED: Final = frozenset({"store", "step_output"})
 
+#: Every test of this repository's Python. `COMMAND_LINE_TESTS` is one
+#: directory of it, and the strong mirror rule reaches only that one; the
+#: rule about a module named after its own directory reaches all of this.
+TESTS: Final = repo_root() / "tools" / "tests"
+
 #: Where the tests of `convener_ops/cli/` live, mirroring it directory for
 #: directory.
-COMMAND_LINE_TESTS: Final = repo_root() / "tools" / "tests" / "cli"
+COMMAND_LINE_TESTS: Final = TESTS / "cli"
 
 #: The one module under `tools/tests/cli/` named after nothing in
 #: `convener_ops/cli/`, and the reason it is not a hole in the rule: D-14's
@@ -297,6 +326,65 @@ def test_the_mirror_can_tell_a_package_name_from_a_module_name() -> None:
         "would admit `test_cli.py` back"
     )
     assert "certificate" in known and "journey" in known
+
+
+def named_after_their_package(paths: Iterable[Path]) -> list[str]:
+    """Every path whose module name is exactly its own directory's name.
+
+    Takes the paths rather than walking, so the rule can be shown what it
+    refuses without this repository having to hold one.
+    """
+    return sorted(
+        path.as_posix()
+        for path in paths
+        if path.stem.removeprefix("test_") == path.parent.name
+    )
+
+
+def test_the_rule_reads_a_package_name_apart_from_a_subject() -> None:
+    """Both directions, on names this tree has held.
+
+    A rule refusing nothing and a rule refusing everything both leave an
+    empty list behind on the day they are written."""
+    made_up = [
+        Path("governance/test_governance.py"),
+        Path("derivation/test_derivation.py"),
+        Path("governance/test_rule.py"),
+        Path("governance/test_governance_fixture.py"),
+        Path("derivation/test_derivation_guard.py"),
+        Path("cli/journey/test_attendance.py"),
+    ]
+
+    assert named_after_their_package(made_up) == [
+        "derivation/test_derivation.py",
+        "governance/test_governance.py",
+    ]
+
+
+def test_no_test_module_is_named_after_the_package_that_holds_it() -> None:
+    """`test_cli.py`'s rule, on every directory of the test tree.
+
+    The mirror above can only be asked of `tools/tests/cli/`, because it is
+    the only directory mirroring a package name for name. This is the half
+    that needs no mirror, and it is the half that actually found
+    `test_cli.py`: a module whose name is its own directory's holds the
+    tests of everything behind that directory, which is a file with no
+    subject and no reason to stop growing.
+    """
+    modules = sorted(TESTS.rglob("test_*.py"))
+    assert len(modules) > 100, (
+        f"the walk found {len(modules)} test modules, which is not this "
+        "repository's test tree -- the rule below would pass over nothing"
+    )
+    named = named_after_their_package(path.relative_to(TESTS) for path in modules)
+
+    assert named == [], (
+        f"{named} carry the name of the directory holding them rather than "
+        "of anything inside it. A test module is named after its subject, "
+        "and a package is not a subject: `tests/cli/test_cli.py` reached "
+        "7 795 lines under that name before its own directory's rule was "
+        "written, and this is that rule with no mirror needed"
+    )
 
 
 def test_the_command_line_re_exports_exactly_what_is_declared() -> None:
