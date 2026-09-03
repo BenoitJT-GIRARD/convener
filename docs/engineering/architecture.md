@@ -240,9 +240,16 @@ working, for every integration this system has, is documented in
 ## Contributing
 
 ```bash
-cd app && npm install && npm run dev     # localhost, under <repository>/app/
-cd site && npm install && npm start      # localhost, under <repository>/
-cd tools && uv sync
+cd app          # the cockpit, on localhost under <repository>/app/
+npm install
+npm run dev
+
+cd ../site      # the showcase, on localhost under <repository>/
+npm install
+npm start
+
+cd ../tools     # the Python tooling
+uv sync
 ```
 
 The cockpit asks for a GitHub fine-grained personal access token scoped to
@@ -254,8 +261,9 @@ Two commands answer the two questions that come up before anything else
 does:
 
 ```bash
-cd tools && uv run convener-validate       # do the records hold together?
-cd tools && uv run convener-check-config   # which integrations are set up?
+cd tools
+uv run convener-validate       # do the records hold together?
+uv run convener-check-config   # which integrations are set up?
 ```
 
 The optional local hook runs the formatting, linting, secret detection and

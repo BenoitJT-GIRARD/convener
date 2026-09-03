@@ -38,7 +38,9 @@ of its own, deliberately, so the demonstration runs on your own machine —
 from a real build, with no account and no data of anybody's:
 
 ```bash
-cd app && npm install && npm run dev
+cd app
+npm install
+npm run dev
 ```
 
 Open the address it prints, with `?demo=1` on the end. The records are the

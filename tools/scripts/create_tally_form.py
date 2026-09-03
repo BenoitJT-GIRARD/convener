@@ -76,18 +76,25 @@ each time for no reason other than the interpreter's own hash seed.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    set -a && . ../.env && set +a
-    uv run python scripts/create_tally_form.py
-    rm -f ../.env
+    uv run python scripts/create_tally_form.py --key-file ../.env
 
-The key is read from a `.env` at the repository root, which `.gitignore`
-already refuses, rather than written on the command line, where a shell would
-keep it in its history and any terminal recording would keep it for ever. The
-deletion is unconditional, so the file exists for one command and no longer;
-`declarations/standing-up.yml`'s `tally_form` step declares those three as one line, and
-this is the only credential in that whole sequence ever put in a file on the
-machine running the commands -- every other one is typed into a browser or
-into a prompt that reads it without showing it.
+`--key-file` names a file holding `TALLY_API_KEY=` and the key, which
+`.gitignore` already refuses to track, rather than putting the key on the
+command line, where a shell would keep it in its history and any terminal
+recording would keep it for ever. `take_key_file` removes that file in a
+`finally`, so it is gone whether the run then succeeded or not and it exists
+for one command and no longer.
+
+The three lines this replaced were `set -a`, a dot-source and an `rm -f`,
+and not one of the three is a thing Windows PowerShell 5.1 can be asked to
+do. The guarantee is the same and it is now in the tool rather than in a
+shell the reader may not have.
+
+Without `--key-file` the key is read from `TALLY_API_KEY` in the
+environment, which is what every test here does and what nothing else has
+ever needed. This is the only credential in the whole standing-up sequence
+ever put in a file on the machine running the commands -- every other one is
+typed into a browser or into a prompt that reads it without showing it.
 
 The form is found again on every re-run by matching `FORM_TITLE` against
 each existing form's name (`_find_form_id`) -- so renaming the form inside
@@ -97,6 +104,7 @@ form rather than updating the renamed one.
 
 from __future__ import annotations
 
+import argparse
 import http.client
 import json
 import os
@@ -106,6 +114,7 @@ import urllib.request
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Final
 
 from convener_ops.declaration.published import load_identity
@@ -585,13 +594,50 @@ def _ascii(text: str) -> str:
     return text.encode("ascii", "backslashreplace").decode("ascii")
 
 
+#: The one name a key file may carry, and the one variable the environment
+#: is asked for. Written once so the two doors cannot come to want two
+#: different spellings of the same credential.
+KEY_NAME: Final = "TALLY_API_KEY"
+
+
+def take_key_file(path: Path) -> str:
+    """The key `path` holds, with `path` removed in the same act.
+
+    The removal is in a `finally`, so the file is gone whether the read
+    succeeded, found no key, or raised: it exists for one command and no
+    longer, which is what `declarations/standing-up.yml`'s `tally_form` step
+    promises a reader. That guarantee used to be a trailing `; rm -f` on the
+    command line, where it held only for shells that have one.
+
+    What is parsed is a list of `NAME=value` lines and nothing more of the
+    `.env` convention -- no quoting, no `export`, no interpolation. The file
+    this reads is one line, written by hand by whoever is standing an
+    instance up, and a parser that accepted more shapes would be a parser
+    with more ways to hand back the wrong string.
+    """
+    if not path.exists():
+        print(f"error: no key file at {_ascii(str(path))}", file=sys.stderr)
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    finally:
+        path.unlink(missing_ok=True)
+        print(f"removed {_ascii(str(path))}")
+    for line in text.splitlines():
+        name, separator, value = line.partition("=")
+        if separator and name.strip() == KEY_NAME:
+            return value.strip()
+    return ""
+
+
 def main(
     argv: list[str] | None = None,
     *,
     client_factory: Callable[[str], TallyClient] = _live_client,
 ) -> int:
     """Create or update the public proposal form. The only entry point that
-    talks to the network, reading `TALLY_API_KEY` from the environment.
+    talks to the network, reading the key from `--key-file` or, without one,
+    from `TALLY_API_KEY` in the environment.
 
     Every failure this function can reach prints one plain-ASCII line to
     stderr and returns 1 -- no traceback -- because the first person to run
@@ -604,10 +650,27 @@ def main(
     this function is exercised in full -- missing key, success, and API
     failure -- without a single test reaching the network.
     """
-    del argv  # No arguments yet; kept for symmetry with the other scripts.
-    api_key = os.environ.get("TALLY_API_KEY", "").strip()
+    parser = argparse.ArgumentParser(
+        description="Create or update the public speaker-proposal form on Tally."
+    )
+    parser.add_argument(
+        "--key-file",
+        help=f"a file holding `{KEY_NAME}=` and the key. It is deleted as it "
+        "is read, whether the rest of the run then succeeds or not. Without "
+        f"it the key is read from {KEY_NAME} in the environment.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.key_file is None:
+        api_key = os.environ.get(KEY_NAME, "").strip()
+    else:
+        api_key = take_key_file(Path(args.key_file)).strip()
     if not api_key:
-        print("error: TALLY_API_KEY is not set", file=sys.stderr)
+        where = "the environment" if args.key_file is None else args.key_file
+        print(
+            f"error: {KEY_NAME} is not set in {_ascii(str(where))}",
+            file=sys.stderr,
+        )
         return 1
 
     client = client_factory(api_key)

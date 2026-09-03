@@ -18,8 +18,9 @@ The register begins with the grammar of decision commits, which is younger than 
 Regenerate it locally with:
 
 ```bash
-cd tools && uv run convener-register --dry-run   # print it
-cd tools && uv run convener-register             # rewrite the file
+cd tools
+uv run convener-register --dry-run   # print it
+uv run convener-register             # rewrite the file
 ```
 
 | Date | Decision | Why |

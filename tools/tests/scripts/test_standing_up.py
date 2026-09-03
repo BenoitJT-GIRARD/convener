@@ -472,7 +472,7 @@ SAMPLE: dict[str, Any] = {
             "actor": "agent",
             "does": "Write your own values into it.",
             "check": "The banner is gone.",
-            "command": "cd tools && uv run convener-validate",
+            "command": "cd tools\nuv run convener-validate",
             "degraded": "Every page says it is not configured.",
             "sets": ["A_TOKEN"],
         },
@@ -625,6 +625,32 @@ def test_an_unsupported_version_is_refused() -> None:
         sequence_from_data(sample(v=2))
 
 
+def test_a_command_keeps_its_line_breaks_where_the_prose_does_not() -> None:
+    """The one field whose whitespace means something.
+
+    A command needing a directory is two lines, because `&&` is not a
+    statement separator on every shell a reader opens, and a rendering that
+    folded the two would put the reader back at that prompt. The `does`
+    beside it is prose and is folded, which is the difference this test is
+    about.
+    """
+    parsed = sequence_from_data(sample())
+    step = parsed.steps[1]
+
+    assert step.command == "cd tools\nuv run convener-validate"
+    assert "\n" not in step.does
+    rendered = render_page(parsed, integration_rows(ROOT))
+    assert "```bash\ncd tools\nuv run convener-validate\n```" in rendered
+
+
+def test_a_command_with_a_gap_in_it_is_refused() -> None:
+    """A fenced block a reader copies whole has no blank line in it."""
+    data = sample()
+    data["steps"][1]["command"] = "cd tools\n\nuv run convener-validate"
+    with pytest.raises(ValueError, match="blank line"):
+        sequence_from_data(data)
+
+
 # --------------------------------------------------------------------------
 # The command, and the drifts it has to catch
 # --------------------------------------------------------------------------
@@ -745,8 +771,8 @@ def test_a_command_drifted_in_the_declaration_makes_the_check_fail(
     assert main([]) == 0
     _mutate_declaration(
         fake_repo,
-        "command: cd tools && uv run convener-validate",
-        "command: cd tools && uv run convener-validate --strict",
+        "      uv run convener-validate\n",
+        "      uv run convener-validate --strict\n",
     )
     assert main(["--check"]) == 1
 

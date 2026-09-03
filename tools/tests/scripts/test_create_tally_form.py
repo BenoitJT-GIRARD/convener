@@ -28,12 +28,14 @@ import http.client
 import io
 import urllib.error
 from email.message import Message
+from pathlib import Path
 from typing import Any
 
 import pytest
 from conftest import config
 from create_tally_form import (
     FORM_TITLE,
+    KEY_NAME,
     TallyClient,
     TallyError,
     _find_form_id,
@@ -42,6 +44,7 @@ from create_tally_form import (
     build_blocks,
     main,
     sync_form,
+    take_key_file,
 )
 
 from convener_ops.journey.proposal import (
@@ -627,7 +630,7 @@ def test_main_reports_a_missing_api_key_and_never_touches_a_client(
     def _must_not_be_called(api_key: str) -> TallyClient:
         raise AssertionError("client_factory must not run without an API key")
 
-    assert main(client_factory=_must_not_be_called) == 1
+    assert main([], client_factory=_must_not_be_called) == 1
     captured = capsys.readouterr()
     assert "TALLY_API_KEY" in captured.err
     assert _is_ascii(captured.err)
@@ -638,7 +641,7 @@ def test_main_creates_the_form_on_a_fresh_account(
 ) -> None:
     monkeypatch.setenv("TALLY_API_KEY", "tly-test-key")
     fake = FakeTally(forms={})
-    assert main(client_factory=lambda api_key: fake.client()) == 0
+    assert main([], client_factory=lambda api_key: fake.client()) == 0
     captured = capsys.readouterr()
     assert "created form" in captured.out
     assert len(fake.forms) == 1
@@ -649,10 +652,10 @@ def test_main_updates_rather_than_duplicates_on_a_second_run(
 ) -> None:
     monkeypatch.setenv("TALLY_API_KEY", "tly-test-key")
     fake = FakeTally(forms={})
-    main(client_factory=lambda api_key: fake.client())
+    main([], client_factory=lambda api_key: fake.client())
     capsys.readouterr()
 
-    assert main(client_factory=lambda api_key: fake.client()) == 0
+    assert main([], client_factory=lambda api_key: fake.client()) == 0
     captured = capsys.readouterr()
     assert "updated form" in captured.out
     assert len(fake.forms) == 1
@@ -667,7 +670,7 @@ def test_main_reports_an_api_error_in_plain_ascii_not_a_traceback(
         raise TallyError("GET /forms: HTTP 401 -- jeton invalide, réessayez")
 
     broken = TallyClient(get=_get, post=lambda *a: {}, patch=lambda *a: {})
-    assert main(client_factory=lambda api_key: broken) == 1
+    assert main([], client_factory=lambda api_key: broken) == 1
     captured = capsys.readouterr()
     assert _is_ascii(captured.err)
     assert "jeton invalide" in captured.err  # the ASCII part survives untouched
@@ -689,7 +692,7 @@ def test_main_ascii_escapes_the_form_id_not_only_the_title(
         return {"id": "café-id", "name": FORM_TITLE}
 
     client = TallyClient(get=_get, post=_post, patch=lambda *a: {})
-    assert main(client_factory=lambda api_key: client) == 0
+    assert main([], client_factory=lambda api_key: client) == 0
     captured = capsys.readouterr()
     assert _is_ascii(captured.out)
     assert "café" not in captured.out
@@ -803,3 +806,76 @@ def test_live_client_wires_the_api_key_into_every_call(
         ("tly-abc", "POST", "/forms", {"a": 1}),
         ("tly-abc", "PATCH", "/forms/1", {"b": 2}),
     ]
+
+
+# ------------------------------------------------------------------ #
+# --key-file: the credential reaches this command through a file, and the
+# file does not survive the command.
+# ------------------------------------------------------------------ #
+
+
+def test_the_key_file_gives_up_its_key_and_is_gone(tmp_path: Path) -> None:
+    """The whole of what the standing-up step promises, in one act."""
+    path = tmp_path / ".env"
+    path.write_text(f"{KEY_NAME}=tly-from-a-file\n", encoding="utf-8")
+
+    assert take_key_file(path) == "tly-from-a-file"
+    assert not path.exists()
+
+
+def test_the_key_file_is_gone_even_when_it_held_no_key(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The removal is unconditional, which is the property that makes the
+    file safe to write in the first place: a typo leaves no credential
+    lying at the root of a repository somebody is about to push."""
+    path = tmp_path / ".env"
+    path.write_text("SOMETHING_ELSE=value\n", encoding="utf-8")
+
+    assert take_key_file(path) == ""
+    assert not path.exists()
+    assert str(path) in capsys.readouterr().out
+
+
+def test_a_key_file_that_is_not_there_is_reported_and_not_guessed_at(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Falling back to the environment here would be the opposite of what
+    `--key-file` was asked for."""
+    assert take_key_file(tmp_path / ".env") == ""
+    assert "no key file" in capsys.readouterr().err
+
+
+def test_main_reads_the_key_out_of_the_file_and_never_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--key-file` is the source when it is given, and the only one."""
+    monkeypatch.setenv(KEY_NAME, "tly-from-the-environment")
+    path = tmp_path / ".env"
+    path.write_text(f"{KEY_NAME}=tly-from-a-file\n", encoding="utf-8")
+    fake = FakeTally(forms={})
+    seen: list[str] = []
+
+    def factory(api_key: str) -> TallyClient:
+        seen.append(api_key)
+        return fake.client()
+
+    assert main(["--key-file", str(path)], client_factory=factory) == 0
+    assert seen == ["tly-from-a-file"]
+    assert not path.exists()
+
+
+def test_main_names_the_file_when_it_holds_no_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A message naming the environment would send the reader looking in
+    the one place the key was never meant to be."""
+    monkeypatch.delenv(KEY_NAME, raising=False)
+    path = tmp_path / ".env"
+    path.write_text("\n", encoding="utf-8")
+
+    def never(api_key: str) -> TallyClient:
+        raise AssertionError("a client was built without a key")
+
+    assert main(["--key-file", str(path)], client_factory=never) == 1
+    assert str(path) in capsys.readouterr().err

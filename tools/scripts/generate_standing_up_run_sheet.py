@@ -94,8 +94,12 @@ COMMAND: Final = "uv run python scripts/generate_standing_up_run_sheet.py"
 #: nothing discovers a page under `docs/` on its own.
 ENTRY_POINT: Final = "AGENTS.md"
 
-#: The report most of the later checks are read out of.
-REPORT: Final = "cd tools && uv run convener-check-config"
+#: The report most of the later checks are read out of, and the directory
+#: it is run from. Two constants rather than one string: `cd tools && ...`
+#: is one line a POSIX shell runs and one line Windows PowerShell 5.1
+#: refuses, and this page is written for whatever an agent is running on.
+REPORT: Final = "uv run convener-check-config"
+REPORT_FROM: Final = "tools/"
 
 #: `actor`, translated into the one thing an agent does about it. Fixed
 #: strings rather than something composed per step: `tools/tests/
@@ -217,7 +221,8 @@ _BEFORE: Final = "\n\n".join(
                 "its last, header included. The header states what each field "
                 "means, why a step belongs to a person or to an agent, and the "
                 "five places where the order carries weight.",
-                f"Run `{REPORT}` and show the person what it prints. Each row "
+                f"Run `{REPORT}` from `{REPORT_FROM}` and show the person "
+                "what it prints. Each row "
                 "reported absent is a step below that has not happened yet, "
                 "and that row's `meanwhile:` line is what its absence costs "
                 "today.",
@@ -305,8 +310,9 @@ _PROOF: Final = "\n\n".join(
         _bullets(
             [
                 "Where it names a command, run the command and read what it prints.",
-                f"Where it names the configuration report, run `{REPORT}` and "
-                "find the row the check names by its own label.",
+                f"Where it names the configuration report, run `{REPORT}` "
+                f"from `{REPORT_FROM}` and find the row the check names by "
+                "its own label.",
                 "Where it can only be read in a browser, ask the person what "
                 "the page shows and take their answer. Asking is the check "
                 "working; inferring is the check skipped.",
@@ -403,8 +409,8 @@ _CLOSING: Final = "\n\n".join(
         "## When the sequence ends",
         _bullets(
             [
-                f"Run `{REPORT}` once more and show the person every row and "
-                "its state.",
+                f"Run `{REPORT}` from `{REPORT_FROM}` once more and show the "
+                "person every row and its state.",
                 "Confirm no `.env` is left anywhere in the working tree.",
                 "Confirm the working tree holds nothing else you did not mean "
                 "to leave in it.",

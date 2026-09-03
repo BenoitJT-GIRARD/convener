@@ -6,7 +6,8 @@ here is drawn by hand.
 ## Refreshing them
 
 ```
-cd tools && uv run --frozen python scripts/render_readme_shots.py
+cd tools
+uv run --frozen python scripts/render_readme_shots.py
 ```
 
 That builds this repository as the instance `examples/the-example-collective/` declares —

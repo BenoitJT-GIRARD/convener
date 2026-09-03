@@ -62,9 +62,9 @@ normal state in this project, not an error, and an instance that stops
 halfway down this page is a working instance. The steps where that is *not*
 true say so in those words.
 
-**Run the report.** `cd tools && uv run convener-check-config` prints every
-integration this product declares, what each one is waiting on, and what
-happens meanwhile. It is the same source the *Without it* paragraphs below
+**Run the report.** `uv run convener-check-config`, from `tools/`, prints
+every integration this product declares, what each one is waiting on, and
+what happens meanwhile. It is the same source the *Without it* paragraphs below
 quote, so it is worth running before the first step and after each of the
 later ones.
 
@@ -312,7 +312,8 @@ it answers long before the first publish: the command below refuses any
 organisation but the declared one.
 
 ```bash
-cd tools && uv run pytest tests/declaration/test_published.py -k literals
+cd tools
+uv run pytest tests/declaration/test_published.py -k literals
 ```
 
 **Without it.** The showcase and the cockpit both announce that they are not
@@ -338,7 +339,8 @@ that question.
 workflow is green on the commit that changed the file.
 
 ```bash
-cd tools && uv run convener-validate
+cd tools
+uv run convener-validate
 ```
 
 **Without it.** The Board screen has nobody on it, no ballot can reach a
@@ -361,7 +363,8 @@ nothing else.
 the showcase's archive page lists nothing.
 
 ```bash
-cd tools && uv run convener-validate
+cd tools
+uv run convener-validate
 ```
 
 **Without it.** Your showcase publishes an invented series' sessions as though
@@ -398,7 +401,9 @@ After the first publish, every page of the showcase and the cockpit's sign-in
 screen carry that charter's colours and its motif.
 
 ```bash
-cd tools && uv run python scripts/generate_brand_css.py --check && uv run python scripts/generate_motif.py --check
+cd tools
+uv run python scripts/generate_brand_css.py --check
+uv run python scripts/generate_motif.py --check
 ```
 
 **Without it.** Your showcase, your cockpit, the poster announcing each of
@@ -649,7 +654,8 @@ browser, sign out of the cockpit and reload — the screen offers a short code
 rather than a field asking for a token.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Authentication relay** *row of*
@@ -682,7 +688,8 @@ be correct: a registration further from its event than the queue threshold is
 written to a queue branch and confirmed on the next daily drain.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Registration relay** *row of*
@@ -777,28 +784,30 @@ visitor's side and leaves nothing on yours.
 
 **Who:** an agent, or a person.
 
-Run the one-shot script that builds the public proposal form on Tally, with
-the API key in the environment. It removes the whole of the manual path: every
-question, its label, whether it is required, and the closed vocabularies
-behind *Gender* and *Career stage* are read from this project's own reader
-rather than retyped, so a label renamed on one side breaks a test rather than
-breaking the live form. Re-running it finds the form by its title and updates
-it in place. The key reaches the command through a `.env` file at the
-repository root rather than through the command line, which a shell keeps in
-its history and every terminal recording keeps for ever; `.gitignore` already
-refuses that file, and the command below deletes it whether the run succeeded
-or not, so it exists for one command and no longer. It is the only credential
-in this sequence ever put in a file on the machine running these commands:
-every other one is typed into a browser or into a prompt that reads it without
-showing it.
+Put the Tally API key in a file called `.env` at the repository root, as
+`TALLY_API_KEY=` and the key, then run the one-shot script that builds the
+public proposal form. It removes the whole of the manual path: every question,
+its label, whether it is required, and the closed vocabularies behind *Gender*
+and *Career stage* are read from this project's own reader rather than
+retyped, so a label renamed on one side breaks a test rather than breaking the
+live form. Re-running it finds the form by its title and updates it in place.
+The key reaches the command through that file rather than through the command
+line, which a shell keeps in its history and every terminal recording keeps
+for ever; `.gitignore` already refuses the file, and the script deletes it as
+it reads it, whether the rest of the run then succeeds or not, so it exists
+for one command and no longer. It is the only credential in this sequence ever
+put in a file on the machine running these commands: every other one is typed
+into a browser or into a prompt that reads it without showing it.
 
 **Proves it is done.** Tally's dashboard shows one form, in `DRAFT`, whose
 questions match the reader's own field list. The script creates it as a draft
 deliberately — publishing is the next step, and it is a person's. `.env` is
-gone afterwards, whichever way the run ended.
+gone afterwards, whichever way the run ended, and the command says so when it
+removes it.
 
 ```bash
-cd tools && set -a && . ../.env && set +a && uv run python scripts/create_tally_form.py; rm -f ../.env
+cd tools
+uv run python scripts/create_tally_form.py --key-file ../.env
 ```
 
 **Without it.** The form is built by hand, which is slower and, more to the
@@ -875,7 +884,8 @@ credential* moves from `absent` to `production`. Until it does, the scheduled
 retention job is red every single day.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Retention sweep credential** *row of*
@@ -934,7 +944,8 @@ moves from `absent` to `production`, and `instance/keys/signing/` holds one
 public half named for the day it was generated.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Certificate signing key** *row of*
@@ -993,7 +1004,8 @@ salt* and *Certificate register fingerprint* both move from `absent` to
 absences mean different things, not because there are two values.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Registration matching salt** *row of*
@@ -1071,7 +1083,8 @@ moves from `absent` to `production`. Reading the day's message without sending
 it is a command of its own.
 
 ```bash
-cd tools && uv run convener-notify-digest --dry-run
+cd tools
+uv run convener-notify-digest --dry-run
 ```
 
 **Without it.** *The* **Board notifications** *row of*
@@ -1100,7 +1113,8 @@ mailbox already exists.
 from `absent` to `production`.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Outbound email** *row of*
@@ -1163,7 +1177,8 @@ anything.
 from `absent` to `production`.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Video channel** *row of*
@@ -1195,7 +1210,8 @@ event journey rather than a step of standing up.
 from `absent` to `production`.
 
 ```bash
-cd tools && uv run convener-check-config
+cd tools
+uv run convener-check-config
 ```
 
 **Without it.** *The* **Meeting platform** *row of*
@@ -1250,10 +1266,10 @@ it.
 | `VITE_AUTH_PROXY_URL` | repository-variable | `cockpit` | Settings → Secrets and variables → Actions → Variables → New repository variable |
 | `VITE_GITHUB_APP_CLIENT_ID` | repository-variable | `cockpit` | Settings → Secrets and variables → Actions → Variables → New repository variable |
 | `VITE_SIGNUP_RELAY_URL` | repository-variable | `cockpit` | Settings → Secrets and variables → Actions → Variables → New repository variable |
-| `CONVENER_DISPATCH_TOKEN` | worker-secret | services/form-relay | Cloudflare dashboard → Workers & Pages → the form relay → Settings → Variables and Secrets → Add, or `cd services/form-relay && npx wrangler secret put CONVENER_DISPATCH_TOKEN` |
-| `TALLY_WEBHOOK_SECRET` | worker-secret | services/form-relay | Cloudflare dashboard → Workers & Pages → the form relay → Settings → Variables and Secrets → Add, or `cd services/form-relay && npx wrangler secret put TALLY_WEBHOOK_SECRET` |
+| `CONVENER_DISPATCH_TOKEN` | worker-secret | services/form-relay | Cloudflare dashboard → Workers & Pages → the form relay → Settings → Variables and Secrets → Add, or `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from `services/form-relay` |
+| `TALLY_WEBHOOK_SECRET` | worker-secret | services/form-relay | Cloudflare dashboard → Workers & Pages → the form relay → Settings → Variables and Secrets → Add, or `npx wrangler secret put TALLY_WEBHOOK_SECRET` from `services/form-relay` |
 | `TALLY_WEBHOOK_SECRET` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
-| `CONVENER_DISPATCH_TOKEN` | worker-secret | services/signup-relay | Cloudflare dashboard → Workers & Pages → the signup relay → Settings → Variables and Secrets → Add, or `cd services/signup-relay && npx wrangler secret put CONVENER_DISPATCH_TOKEN` |
+| `CONVENER_DISPATCH_TOKEN` | worker-secret | services/signup-relay | Cloudflare dashboard → Workers & Pages → the signup relay → Settings → Variables and Secrets → Add, or `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from `services/signup-relay` |
 | `CONVENER_RETENTION_TOKEN` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CONVENER_SIGNING_KEY` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CONVENER_MATCHING_SALT` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |

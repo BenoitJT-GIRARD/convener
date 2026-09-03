@@ -218,6 +218,35 @@ def _text(raw: Any, what: str) -> str:
     return " ".join(raw.split())
 
 
+def _command(raw: Any, what: str) -> str:
+    """A command a reader types, with its line breaks kept.
+
+    `_text` above collapses every run of whitespace, which is what prose
+    wants and the opposite of what this field wants. A command that needs a
+    directory is two lines -- `cd tools`, then the command -- because `&&`
+    is not a statement separator on Windows PowerShell 5.1, the shell a
+    Windows machine opens by default, and
+    `tools/tests/repository/test_typed_commands.py` refuses a command that
+    assumes it is. Folding those two lines into one would put the operator
+    back at that prompt.
+
+    Each line is stripped of its own indentation and a blank one is
+    refused: the page renders this straight into a fenced block, and a
+    block with a gap in it is a block a reader stops copying halfway
+    through.
+    """
+    named = DECLARATION_PATH.as_posix()
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError(f"{named}: {what} must be a non-empty string, got {raw!r}")
+    lines = [" ".join(line.split()) for line in raw.strip().splitlines()]
+    if not all(lines):
+        raise ValueError(
+            f"{named}: {what} holds a blank line, and it is rendered into a "
+            "fenced block a reader copies whole"
+        )
+    return "\n".join(lines)
+
+
 def _strings(raw: Any, what: str) -> tuple[str, ...]:
     named = DECLARATION_PATH.as_posix()
     if raw is None:
@@ -333,7 +362,9 @@ def _steps(raw: Any, stages: tuple[Stage, ...]) -> tuple[Step, ...]:
                 actor=actor,
                 does=_text(item.get("does"), f"what {identifier} does"),
                 check=_text(item.get("check"), f"what proves {identifier} is done"),
-                command=_text(command, f"{identifier}'s command") if command else None,
+                command=(
+                    _command(command, f"{identifier}'s command") if command else None
+                ),
                 degraded=(
                     _text(degraded, f"what {identifier} costs to skip")
                     if degraded
@@ -613,9 +644,9 @@ normal state in this project, not an error, and an instance that stops
 halfway down this page is a working instance. The steps where that is *not*
 true say so in those words.
 
-**Run the report.** `cd tools && uv run convener-check-config` prints every
-integration this product declares, what each one is waiting on, and what
-happens meanwhile. It is the same source the *Without it* paragraphs below
+**Run the report.** `uv run convener-check-config`, from `tools/`, prints
+every integration this product declares, what each one is waiting on, and
+what happens meanwhile. It is the same source the *Without it* paragraphs below
 quote, so it is worth running before the first step and after each of the
 later ones.\
 """
@@ -647,6 +678,13 @@ def _credential_table(sequence: Sequence) -> list[str]:
         through = secret.set_through
         if secret.set_command:
             through = f"{through}, or `{secret.set_command}`"
+            if secret.kind.startswith("worker"):
+                # The directory, because a table cell has no second line to
+                # put a `cd` on and `cd x && y` is a command Windows
+                # PowerShell 5.1 refuses outright. The `Where` column beside
+                # this one already holds the same path; saying it again here
+                # is what makes the cell a command somebody can act on.
+                through = f"{through} from `{secret.home}`"
         rows.append(f"| `{secret.name}` | {secret.kind} | {home} | {through} |")
     return rows
 
