@@ -36,7 +36,9 @@ therefore runs in a subprocess of its own: a second instance is a second
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shutil
 import subprocess  # nosec B404
 import sys
@@ -260,17 +262,47 @@ def publish(root: Path) -> None:
     )
 
 
+#: What `npm run build` runs before the bundler, spelled the way
+#: `app/package.json` spells it. Read rather than retyped: the list here was
+#: a copy of that one and had fallen a script behind it, so every tree this
+#: module built shipped a cockpit with no `public/favicon.svg` in it -- and
+#: Vite, finding no such file, left `index.html`'s own `/favicon.svg`
+#: root-relative rather than resolving it against the base, which on a
+#: project's GitHub Pages address points outside the published tree
+#: entirely (D-26). Neither half showed up in anything this build checks,
+#: and the demonstration this builds is hosted.
+PREBUILD: Final = re.compile(r"node\s+scripts/([A-Za-z0-9._-]+\.mjs)")
+
+
+def prebuild_scripts(root: Path) -> list[str]:
+    """The scripts `app/package.json`'s own `prebuild` runs, in its order.
+
+    Refuses a `prebuild` it cannot read in full rather than running the part
+    it understood: a step silently dropped here is a file missing from a
+    build nobody is watching, which is what happened (D-25).
+    """
+    manifest = json.loads((root / "app" / "package.json").read_text(encoding="utf-8"))
+    line = str(manifest.get("scripts", {}).get("prebuild", "")).strip()
+    if not line:
+        raise SystemExit("app/package.json declares no prebuild step to mirror")
+    scripts: list[str] = []
+    for step in (part.strip() for part in line.split("&&")):
+        found = PREBUILD.fullmatch(step)
+        if found is None:
+            raise SystemExit(
+                "app/package.json's prebuild carries a step this build cannot "
+                f"run on its own: {step!r}. Every step has to be "
+                "`node scripts/<name>.mjs`, or this module has to learn the "
+                "new shape -- it may not quietly skip it."
+            )
+        scripts.append(found.group(1))
+    return scripts
+
+
 def build(root: Path) -> None:
     """The two bundlers, invoked the way a build invokes them."""
     env = environment(root)
-    for script in (
-        "copy-fonts.mjs",
-        "copy-handbook.mjs",
-        "copy-event-keys.mjs",
-        "copy-signing-keys.mjs",
-        "copy-certificates.mjs",
-        "copy-survey-status.mjs",
-    ):
+    for script in prebuild_scripts(root):
         run(
             ["node", str(root / "app" / "scripts" / script)],
             cwd=root / "app",
