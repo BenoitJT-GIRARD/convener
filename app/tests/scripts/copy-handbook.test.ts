@@ -139,8 +139,12 @@ describe('a real run against the real docs/ tree', () => {
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     const { files } = await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const onDisk = slash(await walkAll(dst));
-    expect(onDisk).toEqual(slash(files));
-    expect(onDisk).toEqual(publishedPaths(REGISTRY_SOURCE));
+    // Named, because this block has been seen to fail intermittently under
+    // the full suite (see `instance-identity.test.ts`'s own note) and a bare
+    // list comparison says which paths differ but never where they were
+    // read from.
+    expect(onDisk, `copied from ${DOCS} into ${dst}`).toEqual(slash(files));
+    expect(onDisk, `copied into ${dst}`).toEqual(publishedPaths(REGISTRY_SOURCE));
   });
 
   it('never publishes docs/operating/operations.md -- it names every secret this project uses', async () => {

@@ -192,6 +192,19 @@ describe('a second instance renders nothing of the first', () => {
   });
 });
 
+/**
+ * This block and `copy-handbook.test.ts`'s own real run have been seen to
+ * fail intermittently when the whole suite runs them together -- twice,
+ * against six consecutive clean runs of the same suite afterwards. Green in
+ * isolation, green on the retry, and the cause is not attributed: both
+ * modules copy the real `docs/` tree into `os.tmpdir()`, on a machine whose
+ * `%TEMP%` an application-control policy watches, and `copyHandbook` clears
+ * its destination before writing it.
+ *
+ * Nothing here claims a cure. What the assertions below now do is name what
+ * they were looking at, so the next occurrence arrives as a file list rather
+ * than as a diff of two markdown pages with no clue which two.
+ */
 describe('the handbook copied into the built bundle', () => {
   let dst: string;
 
@@ -212,25 +225,31 @@ describe('the handbook copied into the built bundle', () => {
       dst,
     });
     const copied = (await walkAll(dst)).filter((p: string) => p.endsWith('.md'));
-    expect(copied.length).toBeGreaterThan(30);
+    expect(copied.length, `copied into ${dst}: ${copied.join(', ')}`).toBeGreaterThan(30);
     expect(files).toContain('handbook/toolkit/emails/invitation.md');
 
     const { substitute } = await rendererWith(SECOND);
     const offending: string[] = [];
+    // Collected and reported together, named, rather than thrown on the
+    // first one -- the shape `test_cross_references.py` already uses. This
+    // loop reads eighty-odd markdown files, and a bare `toBe` on one of
+    // them prints two whole pages and says which of them it was nowhere.
+    const unfaithful: string[] = [];
     let naming = 0;
     for (const relative of copied) {
       const raw = await readFile(join(dst, relative), 'utf-8');
       // The copied file is the source file, byte for byte: the substitution
       // happens on render, which is what keeps `announce.py` and this
       // renderer reading one artefact rather than two.
-      expect(raw).toBe(page(relative));
+      if (raw !== page(relative)) unfaithful.push(relative);
       const out = substitute(raw, { speaker: invented(), today: '2026-11-12' });
       for (const value of FIRST_INSTANCE_VALUES) {
         if (out.includes(value)) offending.push(`${relative}: ${value}`);
       }
       if (out.includes(SECOND.organisation)) naming += 1;
     }
+    expect(unfaithful, `copied from ${DOCS} into ${dst}`).toEqual([]);
     expect(offending).toEqual([]);
-    expect(naming).toBeGreaterThan(15);
+    expect(naming, `${copied.length} page(s) rendered`).toBeGreaterThan(15);
   });
 });
