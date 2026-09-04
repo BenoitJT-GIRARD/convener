@@ -89,6 +89,11 @@ integrations:
     secrets:
       - VITE_AUTH_PROXY_URL
       - VITE_GITHUB_APP_CLIENT_ID
+    purpose: >-
+      Signs a volunteer in by showing them a short code, instead of asking
+      them to create a personal access token and paste it in. Deploy
+      services/auth-proxy/, then set the two values to that worker's own
+      address and to the GitHub App's client id.
     absent_behaviour: >-
       Sign-in falls back to a personal access token. The team app stays fully
       usable; onboarding is simply slower.
@@ -97,6 +102,11 @@ integrations:
     label: Registration relay
     secrets:
       - VITE_SIGNUP_RELAY_URL
+    purpose: >-
+      Carries an encrypted registration, and a post-event survey answer,
+      from a public page into this repository, so that no participant's
+      browser ever holds a token of ours. Deploy services/signup-relay/, set
+      this to that worker's own address, and rebuild.
     absent_behaviour: >-
       One variable with two consumers in app/src, and one row rather than
       two because -- unlike CONVENER_MATCHING_SALT below -- both consumers
@@ -132,6 +142,14 @@ integrations:
     label: Meeting platform
     secrets:
       - CONVENER_MEETING_API_TOKEN
+    purpose: >-
+      Reads per-person attendance off the meeting platform, and reports and
+      deletes the recording it holds, so neither has to be done by hand. It
+      creates no meeting and it holds no room link: the account is the
+      permanent room (D-06), so the link stays the event record's own
+      zoom_link whether this is set or not. The value is the current access
+      token, which expires roughly monthly and is renewed at a step of the
+      event journey.
     absent_behaviour: >-
       The manual adapter (tools/convener_ops/journey/platform.py::ManualPlatform) is used.
       The room and recording links are typed by hand into instance/data/speakers.yml's
@@ -158,6 +176,17 @@ integrations:
       - CONVENER_SMTP_USER
       - CONVENER_SMTP_PASSWORD
       - CONVENER_SMTP_FROM
+    purpose: >-
+      Sends the three messages a scheduled job addresses to a participant:
+      the registration confirmation, the certificate, and the post-event
+      survey invitation. Those three, and no others. Every message the event
+      journey hands a volunteer -- the invitation, the reminder, the
+      thank-you, each template under docs/handbook/toolkit/emails/ -- is
+      copied out of the workspace and sent from that volunteer's own
+      mailbox, which is the split D-07 draws between writing to the outside
+      world and writing to each other. The workspace has no send button, and
+      setting this adds none. Set the five to an organisation mailbox
+      reachable over SMTP.
     absent_behaviour: >-
       Three consumers, all reported rather than retained -- none ever
       prints a composed message, sent or not,
@@ -191,6 +220,12 @@ integrations:
     label: Video channel
     secrets:
       - CONVENER_VIDEO_CHANNEL_ID
+    purpose: >-
+      Names the channel this series publishes recordings to, so that what is
+      published belongs to the organisation rather than to whoever happened
+      to upload it (D-10). Create the channel with the organisation's own
+      address and set this to its identifier. Uploading stays a person's
+      act either way.
     absent_behaviour: >-
       Recording URLs are entered by hand after publishing. No upload is
       attempted.
@@ -200,6 +235,12 @@ integrations:
     secrets:
       - CONVENER_NOTIFY_THREAD
       - CONVENER_NOTIFY_MENTION
+    purpose: >-
+      Posts the daily digest, and anything that cannot wait for it, onto one
+      thread the Board watches, mentioning the team so that GitHub delivers
+      the mail itself (D-07). Set the thread to the issue it should be
+      written on and the mention to the team that should be pinged; one
+      without the other addresses nobody.
     absent_behaviour: >-
       Nothing is sent. The digest and the immediate events are still composed
       and printed to the job log, where any volunteer can read them, but they
@@ -214,6 +255,13 @@ integrations:
     secrets:
       - CONVENER_EVENT_KEY_<ID>
     absent_is_normal: false
+    purpose: >-
+      Holds the private half of the key one event's registrations were
+      encrypted under, so that the job reading them can and nobody else
+      can. One per event, named for that event's own identifier. Generate
+      the pair with the product's own command when the event opens for
+      registration, publish the public half, and set the private half as
+      that event's secret.
     absent_behaviour: >-
       Unlike every other row here, this is not a normal state to degrade out
       of. CONVENER_EVENT_KEY_<ID> is set once per event -- <ID> stands for the
@@ -230,6 +278,12 @@ integrations:
     secrets:
       - CONVENER_RETENTION_TOKEN
     absent_is_normal: false
+    purpose: >-
+      Lets the retention sweep destroy an event's key once its retention
+      period runs out, which is the one act a workflow's own token cannot
+      perform whatever permissions it is granted. Set it to a fine-grained
+      personal access token scoped to this repository, with the Secrets
+      permission set to read and write and nothing else.
     absent_behaviour: >-
       The third exception to D-13, and the strongest one in this
       project. Destroying an event's key means deleting a repository
@@ -251,6 +305,10 @@ integrations:
     label: Certificate signing key
     secrets:
       - CONVENER_SIGNING_KEY
+    purpose: >-
+      Signs every certificate this series issues, so that the public
+      verifier can tell one this series issued from one somebody typed. One
+      key for the whole series, generated once by an operator.
     absent_behaviour: >-
       No certificate is issued in this run. The job that would sign one
       (tools/convener_ops/journey/certificate.py) cannot, and does not fall
@@ -270,6 +328,11 @@ integrations:
     label: Registration matching salt
     secrets:
       - CONVENER_MATCHING_SALT
+    purpose: >-
+      Derives the short code a participant is asked to put in their display
+      name, so that attendance matches a registration without the code being
+      guessable from an address. Generate one long random string once and
+      leave it alone: changing it invalidates every code already sent out.
     absent_behaviour: >-
       tools/convener_ops/journey/registration.py::matching_code returns nothing: no
       matching code is derived, printed, or put in the confirmation email.
@@ -294,6 +357,12 @@ integrations:
     secrets:
       - CONVENER_MATCHING_SALT
     absent_is_normal: false
+    purpose: >-
+      Salts the certificate register's own trace of an address, so that a
+      certificate can be looked up and revoked without the register ever
+      carrying the address itself. The same secret as the row above, read
+      for a second, separately derived purpose; there is nothing further to
+      set.
     absent_behaviour: >-
       tools/convener_ops/journey/certificate.py::fingerprint reads the same
       CONVENER_MATCHING_SALT as the matching_salt row above, for a second,

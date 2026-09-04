@@ -13,10 +13,12 @@ integrations:
   - name: auth_proxy
     label: Authentication relay
     secrets: [CONVENER_AUTH_PROXY_URL, CONVENER_GITHUB_APP_CLIENT_ID]
+    purpose: Signs a volunteer in with a short code.
     absent_behaviour: Sign-in falls back to a personal access token.
   - name: meeting_provider
     label: Meeting platform
     secrets: [CONVENER_MEETING_API_TOKEN]
+    purpose: Reads attendance and the recording off the meeting platform.
     absent_behaviour: The manual adapter is used; no room link is published.
 """
 
@@ -50,6 +52,7 @@ integrations:
     label: Event registration encryption
     secrets: [CONVENER_EVENT_KEY_<ID>]
     absent_is_normal: false
+    purpose: Decrypts one event's registrations.
     absent_behaviour: The job that would decrypt registrations exits in error.
 """,
         encoding="utf-8",
@@ -287,3 +290,57 @@ def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:
     email = resolved["email_transport"]
     assert email.state == "absent"
     assert email.missing == ["CONVENER_SMTP_PORT"]
+
+
+def test_every_row_says_what_it_is_for_and_not_only_what_breaks() -> None:
+    """The question a maintainer asks first, which no row could answer.
+
+    Every row here has always carried `absent_behaviour` -- what happens
+    while the secret is unset -- and the cockpit's settings screen printed
+    it under *Without it*. None of them said what the integration was
+    *for*, so somebody reading that screen met five SMTP names and a
+    paragraph about a fallback, and had nowhere on the page to learn what
+    setting them would buy. `purpose` is the other half, and it is required
+    rather than optional for the same reason its neighbour is: a row that
+    cannot say what it is for is one nobody can decide whether to
+    configure.
+
+    The two are checked as *different* answers, not merely as present
+    strings. A `purpose` copied from `absent_behaviour` would satisfy a
+    presence check and leave the screen printing one fact twice.
+    """
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
+    assert len(declaration) > 5
+    for integration in declaration:
+        assert integration.purpose.strip(), f"{integration.name} declares no purpose"
+        assert len(integration.purpose.split()) > 15, (
+            f"{integration.name}'s purpose is too short to say what it is for"
+        )
+        assert integration.purpose.strip() != integration.absent_behaviour.strip(), (
+            f"{integration.name} answers both questions with the same sentence"
+        )
+
+
+def test_outbound_email_says_it_does_not_send_the_journey_s_own_templates() -> None:
+    """The one row whose *purpose* had to answer a question somebody asked.
+
+    A maintainer read *Outbound email*, five SMTP secrets and a declared
+    transport, and went looking through the workspace for the button that
+    would send an invitation with them. There is no such button, by
+    decision: D-07 separates the messages a scheduled job addresses to a
+    participant -- the registration confirmation, the certificate, the
+    survey invitation -- from the templates a volunteer copies out and
+    sends from their own mailbox. Nothing anywhere said so, so the search
+    was reasonable and the absence read as a gap.
+
+    Pinned here rather than left as prose somebody tidies away: the two
+    load-bearing halves are that the templates live under
+    `docs/handbook/toolkit/emails/` and go out from a person's own mailbox,
+    and that setting this transport adds no button. Either one deleted and
+    the row stops answering the question it was written for.
+    """
+    declaration = load_declaration(repo_root() / "declarations" / "integrations.yml")
+    email = next(i for i in declaration if i.name == "email_transport")
+    purpose = " ".join(email.purpose.split())
+    assert "docs/handbook/toolkit/emails/" in purpose
+    assert "send button" in purpose

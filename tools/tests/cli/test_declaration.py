@@ -13,6 +13,7 @@ def _absent() -> Integration:
         name="email_transport",
         label="Outbound email",
         secrets=["CONVENER_SMTP_HOST"],
+        purpose="Sends the messages a scheduled job addresses to a participant.",
         absent_behaviour="Messages are written to a log instead of being sent.",
         state="absent",
         missing=["CONVENER_SMTP_HOST"],
@@ -24,6 +25,7 @@ def _live() -> Integration:
         name="auth_proxy",
         label="Authentication relay",
         secrets=["CONVENER_AUTH_PROXY_URL"],
+        purpose="Signs a volunteer in with a short code.",
         absent_behaviour="Sign-in falls back to a personal access token.",
         state="production",
         missing=[],
@@ -35,6 +37,7 @@ def _exceptional_absent() -> Integration:
         name="event_keys",
         label="Event registration encryption",
         secrets=["CONVENER_EVENT_KEY_<ID>"],
+        purpose="Decrypts one event's registrations.",
         absent_behaviour="The job that would decrypt registrations exits in error.",
         absent_is_normal=False,
         state="absent",
@@ -82,6 +85,7 @@ def test_a_row_that_declares_itself_exceptional_but_is_live_changes_nothing() ->
         name="event_keys",
         label="Event registration encryption",
         secrets=["CONVENER_EVENT_KEY_<ID>"],
+        purpose="Decrypts one event's registrations.",
         absent_behaviour="unused",
         absent_is_normal=False,
         state="production",
@@ -119,6 +123,7 @@ integrations:
   - name: auth_proxy
     label: Authentication relay
     secrets: [CONVENER_AUTH_PROXY_URL]
+    purpose: Signs a volunteer in with a short code.
     absent_behaviour: Sign-in falls back to a personal access token.
 """,
         encoding="utf-8",

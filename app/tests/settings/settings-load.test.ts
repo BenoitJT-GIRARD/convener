@@ -94,19 +94,31 @@ describe('the integrations declaration', () => {
     expect(() => integrationsFromData({ integrations: ['smtp'] })).toThrow(/not a row/);
   });
 
-  it('refuses a row that cannot say what breaks without it', () => {
+  it('refuses a row that cannot say what it is for, or what breaks without it', () => {
+    // Both, and both by name: a row missing either renders on the screen as
+    // a heading with an empty promise under it.
     expect(() =>
       integrationsFromData({ integrations: [{ name: 'a', label: 'A' }] }),
+    ).toThrow(/purpose/);
+    expect(() =>
+      integrationsFromData({ integrations: [{ name: 'a', label: 'A', purpose: 'p' }] }),
     ).toThrow(/absent_behaviour/);
   });
 
   it('reads absent_is_normal as declared, defaulting to the ordinary case', () => {
     const rows = integrationsFromData({
       integrations: [
-        { name: 'a', label: 'A', absent_behaviour: 'nothing happens', secrets: ['X'] },
+        {
+          name: 'a',
+          label: 'A',
+          purpose: 'does a thing',
+          absent_behaviour: 'nothing happens',
+          secrets: ['X'],
+        },
         {
           name: 'b',
           label: 'B',
+          purpose: 'does another thing',
           absent_behaviour: 'something happens',
           absent_is_normal: false,
         },
@@ -194,6 +206,7 @@ describe('the integration report', () => {
       name: 'email_transport',
       label: 'Outbound email',
       secrets: ['CONVENER_SMTP_HOST', 'CONVENER_SMTP_USER'],
+      purpose: 'sends the three messages a job addresses to a participant',
       absentBehaviour: 'nothing is sent',
       absentIsNormal: true,
       ...overrides,

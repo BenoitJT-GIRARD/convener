@@ -197,6 +197,11 @@ export interface Integration {
   name: string;
   label: string;
   secrets: string[];
+  /** What this integration does once it is set, and what to fill in to get
+   *  there. The screen used to print only what happens *without* one, which
+   *  answers a question nobody asks first: a maintainer meets five SMTP
+   *  secrets and wants to know what they buy, not what breaks. */
+  purpose: string;
   absentBehaviour: string;
   /** True for all but three rows. A row that declares it false is one
    *  whose absence is not a harmless fallback -- data, not a name checked
@@ -204,9 +209,9 @@ export interface Integration {
   absentIsNormal: boolean;
 }
 
-/** Parse an already-loaded `declarations/integrations.yml`. Refuses a row with no
- *  behaviour recorded: a row that cannot say what breaks without it is a
- *  row this screen would render as an empty promise. */
+/** Parse an already-loaded `declarations/integrations.yml`. Refuses a row that
+ *  cannot say what it is for, or what breaks without it: either way the
+ *  screen would render the row as an empty promise. */
 export function integrationsFromData(data: unknown): Integration[] {
   const rows = asRecord(data)?.integrations;
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -228,6 +233,7 @@ export function integrationsFromData(data: unknown): Integration[] {
       secrets: Array.isArray(row.secrets)
         ? row.secrets.map(one => nonEmptyString(one, `${name}'s secret`, INTEGRATIONS_PATH))
         : [],
+      purpose: nonEmptyString(row.purpose, `${name}'s purpose`, INTEGRATIONS_PATH),
       absentBehaviour: nonEmptyString(
         row.absent_behaviour,
         `${name}'s absent_behaviour`,

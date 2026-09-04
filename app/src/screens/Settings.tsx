@@ -225,16 +225,23 @@ function IntegrationRow({ report }: { report: IntegrationReport }) {
         <span className="font-mono">{integration.secrets.join(', ') || 'no declared input'}</span>
         {family && ` · ${family.count} set under ${family.prefix}`}
       </p>
-      {missing.length > 0 && (
-        <p className="mt-1 text-xs text-ink-faint">
-          Not set: <span className="font-mono">{missing.join(', ')}</span> — set it in{' '}
-          {SECRETS_SETTINGS_PATH}, never here.
-        </p>
-      )}
+      {/* What it buys, before what it costs to be without: a maintainer
+          meeting five SMTP names wants to know what they are for, and the
+          row used to answer only the second question. */}
+      <p className="mt-1 text-xs text-ink-muted">
+        <strong className="uppercase tracking-wider text-[10px] mr-1">What it does</strong>
+        {integration.purpose}
+      </p>
       <p className="mt-1 text-xs text-ink-muted">
         <strong className="uppercase tracking-wider text-[10px] mr-1">Without it</strong>
         {integration.absentBehaviour}
       </p>
+      {missing.length > 0 && (
+        <p className="mt-1 text-xs text-ink-faint">
+          To turn it on, set <span className="font-mono">{missing.join(', ')}</span> in{' '}
+          {SECRETS_SETTINGS_PATH}.
+        </p>
+      )}
     </li>
   );
 }
@@ -346,22 +353,35 @@ export function Settings() {
   const owned = doc.instancePaths;
   const editable = editableFiles();
   const reports = names === null ? [] : reportAll(doc.integrations, names);
+  // Counted rather than written out: three rows declare their absence a
+  // fault today, and a fourth added to the declaration would leave a
+  // sentence here saying three.
+  const exceptional = doc.integrations.filter(one => !one.absentIsNormal).length;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-2xl font-bold">Settings</h1>
         <p className="mt-2 text-sm text-ink-muted max-w-prose">
-          What this instance owns, read from <code className="font-mono text-xs">declarations/boundary.yml</code>{' '}
-          and from each file&rsquo;s own <code className="font-mono text-xs">owner:</code> header — the
-          same declaration the tooling reads, never a list typed into this screen. The
-          numbers below are checked here because a file accepts whatever is written into
-          it and only a scheduled job finds out.
+          Everything on this page is read out of the repository when the screen opens,
+          so what you see is what is committed. Thresholds is the one section that takes
+          an edit; the other two report.
         </p>
       </div>
 
       <section>
         <h2 className="font-display text-lg font-bold">What this instance owns</h2>
+        <p className="mt-2 text-sm text-ink-muted max-w-prose">
+          Nothing here asks you to do anything. These are the paths this copy edits as
+          its own: an update is a merge, so it conflicts only where both sides have
+          touched the same file, and everything not listed is the product&rsquo;s to
+          write. Under each path is where its values are changed — {editable.length} are
+          the fields below, and the rest give the reason a form is the wrong instrument.
+          Read from <code className="font-mono text-xs">declarations/boundary.yml</code>{' '}
+          and from each configuration file&rsquo;s own{' '}
+          <code className="font-mono text-xs">owner:</code> header, the declaration the
+          command-line tools read too.
+        </p>
         <ul className="mt-2">
           {owned.map(path => {
             const here = editable.includes(path);
@@ -370,7 +390,7 @@ export function Settings() {
               <li key={path} className="py-2 border-t border-border text-sm">
                 <span className="font-mono text-xs">{path}</span>
                 <span className="ml-2 text-[11px] uppercase tracking-wider text-ink-faint">
-                  {doc.owners[path] === INSTANCE ? 'own header' : 'declared'}
+                  {doc.owners[path] === INSTANCE ? 'from its own header' : 'from the boundary'}
                 </span>
                 <p className="mt-1 text-xs text-ink-muted">
                   {here ? 'Settled below, and checked as you type.' : (why ?? 'No reason is recorded for this path — see app/src/settings/form.ts.')}
@@ -383,6 +403,16 @@ export function Settings() {
 
       <section>
         <h2 className="font-display text-lg font-bold">Thresholds</h2>
+        <p className="mt-2 text-sm text-ink-muted max-w-prose">
+          The {SETTINGS.length} numbers the scheduled jobs read, across {editable.length}{' '}
+          files: how long a public submission may wait before the Board is told, how
+          close to an event a registration stops waiting for the daily drain, and how
+          much of the month&rsquo;s Actions allowance this repository may spend. They are
+          settled here rather than in the files because several of them bound each
+          other, and a file accepts whatever is written into it — only a scheduled job
+          finds out, hours later, that it was impossible. Each field says what it
+          decides and when a saved value starts being read.
+        </p>
         {coupling === null ? (
           <p className="mt-2 text-sm text-danger">
             {doc.cadenceRefusal} No bound on this page can be computed, so nothing
@@ -434,11 +464,16 @@ export function Settings() {
       <section>
         <h2 className="font-display text-lg font-bold">Integrations</h2>
         <p className="mt-2 text-sm text-ink-muted max-w-prose">
-          Reported, never entered. This cockpit is a static bundle that writes with your
+          What this instance can reach outside itself. Each row says what the integration
+          does once it is set, what to set to get there, and what happens while it is
+          not. Leaving one unset is a working state everywhere but on the {exceptional}{' '}
+          rows marked <em>not a normal state</em>.
+        </p>
+        <p className="mt-2 text-sm text-ink-muted max-w-prose">
+          Reported, never entered. This workspace is a static page that writes with your
           own token; a token able to write a repository secret would be a right every
-          Board member held. So there is no field for one here — only the names GitHub
-          will confirm exist, and what each integration is for. Secrets are set in{' '}
-          {SECRETS_SETTINGS_PATH}.
+          Board member held. So there is no field for a secret here — only the names
+          GitHub will confirm exist. Set the values in {SECRETS_SETTINGS_PATH}.
         </p>
         {names?.refusal && (
           <p className="mt-2 text-xs text-dominant max-w-prose">{names.refusal}</p>

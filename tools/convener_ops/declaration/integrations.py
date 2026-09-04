@@ -40,6 +40,15 @@ class Integration:
     name: str
     label: str
     secrets: list[str]
+    #: What this integration does when it *is* set, and what to fill in to
+    #: get there. Required, like `absent_behaviour` beside it and for the
+    #: mirror-image reason: every row said what breaks without it and no row
+    #: said what it was for, so a maintainer reading the cockpit's settings
+    #: screen could see five SMTP secrets and no way to learn that they
+    #: serve three scheduled messages to participants rather than a send
+    #: button for the event journey's own templates. A row that cannot say
+    #: what it is for is a row nobody can decide whether to configure.
+    purpose: str
     absent_behaviour: str
     #: True for every row but three. See the module docstring; which rows
     #: those are is data, not a name checked against a hard-coded list, so
@@ -58,6 +67,7 @@ def load_declaration(path: Path) -> list[Integration]:
             name=entry["name"],
             label=entry["label"],
             secrets=list(entry.get("secrets") or []),
+            purpose=entry["purpose"],
             absent_behaviour=entry["absent_behaviour"],
             absent_is_normal=bool(entry.get("absent_is_normal", True)),
         )

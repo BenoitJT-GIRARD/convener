@@ -22,7 +22,12 @@ import { MemoryRouter } from 'react-router-dom';
 import yaml from 'js-yaml';
 import { AuthProvider } from '../../src/auth/AuthContext';
 import { Settings } from '../../src/screens/Settings';
-import { CONFIG_DIRS, CONFIG_SUFFIXES } from '../../src/settings/declaration';
+import {
+  CONFIG_DIRS,
+  CONFIG_SUFFIXES,
+  integrationsFromData,
+} from '../../src/settings/declaration';
+import { SETTINGS, editableFiles } from '../../src/settings/form';
 
 const ROOT = resolve(__dirname, '../..', '..');
 
@@ -197,11 +202,33 @@ describe('the settings screen', () => {
     expect(screen.getByText('instance/queue-drain.yml')).toBeInTheDocument();
     // Never the product's own files, which answer the same way and say the
     // other thing. The prose above the list names `declarations/boundary.yml` as
-    // the declaration it read, so the list itself is what is asked.
-    const owned = screen.getByRole('heading', { name: 'What this instance owns' })
-      .parentElement!;
+    // the declaration it read, so the list itself is what is asked -- read as
+    // the list element rather than the whole section, which carries that
+    // prose.
+    const owned = screen
+      .getByRole('heading', { name: 'What this instance owns' })
+      .parentElement!.querySelector('ul')!;
     expect(owned.textContent).not.toContain('declarations/integrations.yml');
     expect(owned.textContent).not.toContain('declarations/boundary.yml');
+  });
+
+  it('counts what it offers rather than writing the numbers into the sentence', async () => {
+    // Every count this page prints about itself is derived from what it
+    // draws. *Thresholds* used to open with three examples after a colon
+    // and nine fields under it, which reads as a list of everything there
+    // is; and the section above it said three paths were settled below,
+    // which is a number that moves the day a fourth file joins the form.
+    renderSettings(makeBackend());
+    const thresholds = await screen.findByText(
+      /numbers the scheduled jobs read/,
+      undefined,
+      FIRST_RENDER,
+    );
+    expect(thresholds.textContent).toContain(`The ${SETTINGS.length} numbers`);
+    expect(thresholds.textContent).toContain(`across ${editableFiles().length} files`);
+    expect(screen.getByText(/Nothing here asks you to do anything/).textContent).toContain(
+      `${editableFiles().length} are the fields below`,
+    );
   });
 
   it('says why a path it owns is nevertheless not a form', async () => {
@@ -361,7 +388,46 @@ describe('the integrations it reports and never accepts', () => {
     // A declared name carrying a placeholder is a family, and the count is
     // the answer: `CONVENER_EVENT_KEY_<ID>` is one secret per edition.
     expect(screen.getByText(/2 set under CONVENER_EVENT_KEY_/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Not set:/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/To turn it on, set/).length).toBeGreaterThan(0);
+  });
+
+  it('says what each one is for, and not only what breaks without it', async () => {
+    // The screen printed a fallback and never a purpose, so somebody
+    // reading it met five SMTP names with nothing on the page saying what
+    // setting them would buy. Both halves are drawn now, from the
+    // declaration's own two fields.
+    renderSettings(makeBackend({ refuseSecrets: true }));
+    expect(await screen.findByText('Outbound email', undefined, FIRST_RENDER)).toBeInTheDocument();
+    expect(screen.getAllByText(/What it does/).length).toBeGreaterThan(5);
+  });
+
+  it('answers, where it is asked, that no button here sends a journey email', async () => {
+    // The question this row exists to close: a maintainer went looking
+    // through the workspace for the send button five declared SMTP secrets
+    // implied, and there is none by decision (D-07). The row says so at the
+    // place the search started.
+    renderSettings(makeBackend({ refuseSecrets: true }));
+    expect(await screen.findByText('Outbound email', undefined, FIRST_RENDER)).toBeInTheDocument();
+    expect(screen.getByText(/no send button/)).toBeInTheDocument();
+  });
+
+  it('counts the rows whose absence is a fault, rather than saying three', async () => {
+    // Three rows declare `absent_is_normal: false` today. The sentence
+    // introducing the list says how many, and it reads the answer off the
+    // rows it is about to draw -- a fourth added to the declaration would
+    // otherwise leave the page saying three with four marked below it.
+    const declared = integrationsFromData(
+      yaml.load(readFileSync(resolve(ROOT, 'declarations/integrations.yml'), 'utf-8')),
+    );
+    const exceptional = declared.filter(one => !one.absentIsNormal).length;
+    expect(exceptional).toBeGreaterThan(0);
+    renderSettings(makeBackend());
+    const lead = await screen.findByText(
+      /What this instance can reach outside itself/,
+      undefined,
+      FIRST_RENDER,
+    );
+    expect(lead.textContent).toContain(`but on the ${exceptional} rows`);
   });
 
   it('says what breaks without each, whatever the answer was', async () => {

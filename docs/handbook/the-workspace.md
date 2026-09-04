@@ -11,7 +11,7 @@ you are a **board** user if you are on the organisation's editorial team, and an
 **organizer** user otherwise. The difference shows up as controls that are
 present or absent, never as an error after you press something.
 
-## The nine tabs
+## The ten tabs
 
 | Tab | What it answers |
 |---|---|
@@ -24,6 +24,7 @@ present or absent, never as an error after you press something.
 | **Consent** | Which speakers have not yet been asked whether their recording may be published, and the message that asks them. |
 | **Handbook** | This handbook, rendered from the same files that are in the repository. |
 | **Templates** | Every message and script, filled in from a record when you open one from an event, blank when you browse them here. |
+| **Settings** | What this copy of the product owns and what it can reach: the paths an update leaves alone, the numbers the scheduled jobs read — settled here because several of them bound each other — and one row per outside service saying what it does, what to set to get it, and what happens meanwhile. No field on it holds a secret; those are set in the repository's own settings. |
 
 The two lists never hold the same event. **The Agenda holds what still owes you
 something; the Archive holds what is closed**, and archiving is the gesture

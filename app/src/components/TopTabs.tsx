@@ -1,22 +1,10 @@
 import { NavLink } from 'react-router-dom';
-
-const LINKS = [
-  { to: '/', label: 'Inbox' },
-  { to: '/pipeline', label: 'Pipeline' },
-  { to: '/agenda', label: 'Agenda' },
-  { to: '/archive', label: 'Archive' },
-  { to: '/board', label: 'Board' },
-  { to: '/diversity', label: 'Diversity' },
-  { to: '/consent', label: 'Consent' },
-  { to: '/handbook', label: 'Handbook' },
-  { to: '/templates', label: 'Templates' },
-  { to: '/settings', label: 'Settings' },
-];
+import { TABS } from './tabs';
 
 export function TopTabs() {
   return (
     <nav className="flex gap-1 border-b border-border mb-6">
-      {LINKS.map(l => (
+      {TABS.map(l => (
         <NavLink
           key={l.to}
           to={l.to}
