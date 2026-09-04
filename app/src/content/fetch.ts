@@ -43,6 +43,34 @@ export function isSafeHref(href: string): boolean {
   return !HAS_SCHEME.test(href) || SAFE_SCHEME.test(href);
 }
 
+/** Which content key renders a given file under `docs/`, or `undefined`
+ *  when nothing does. Built once from the registry rather than searched
+ *  on every link: `handbookUrl` runs for every link of every page the
+ *  cockpit renders. */
+const KEY_BY_FILE: Map<string, string> = new Map(
+  // Reversed in declaration order, so a file carried by both a whole-page
+  // entry and a fragment of it resolves to the page: a fragment is a
+  // window onto a section (see `content/transclude.ts`), and a link
+  // written to the file means the file.
+  Object.entries(CONTENT_REGISTRY)
+    .filter(([, entry]) => entry.anchor === null)
+    .map(([key, entry]) => [entry.file, key]),
+);
+
+/**
+ * The address of a page of the handbook *inside this application*.
+ *
+ * A fragment and nothing else, so that everything else about the current
+ * address survives being clicked: the router is a `HashRouter`
+ * (`src/App.tsx`), and the one thing that lives outside its fragment is
+ * the demonstration's own `?demo=1`. An absolute address composed here
+ * would drop it, and a visitor exploring the demonstration would land on
+ * a sign-in screen for having followed a link inside a page.
+ */
+export function handbookRoute(key: string, hash = ''): string {
+  return `#/handbook/${key}${hash}`;
+}
+
 /**
  * Where a link written inside a handbook file points once that file is
  * rendered by the app.
@@ -57,6 +85,23 @@ export function isSafeHref(href: string): boolean {
  * both. A link with an unknown scheme resolves to nothing rather than being
  * passed through: this replaces react-markdown's own sanitiser, so it keeps
  * the guarantee that sanitiser gave.
+ *
+ * **A page is not a download, and that is the whole of the second clause
+ * below.** Resolved under `docs/` a link to another *page* addressed the
+ * markdown file itself, which a browser shows as what it is: the source
+ * text, asterisks and all, outside the application, with no way back into
+ * it. Every cross-reference the handbook writes did that -- the three in
+ * the frame a lead is validated from, the ones under "Not for the
+ * volunteer sending this", the two the forum announcement carries -- so
+ * it was a class rather than a handful of links, which is why the answer
+ * is here and not in the pages. A target the registry renders resolves to
+ * the route that renders it; anything else it cannot render (an asset,
+ * a template, an image) still resolves to the file, because for those the
+ * file *is* the destination.
+ *
+ * `tests/content/raw-markdown.test.ts` is what holds it: it walks every
+ * registered page's own links and refuses any that still resolves to a
+ * markdown file.
  */
 export function handbookUrl(key: string, href: string | null | undefined): string {
   if (!href) return '';
@@ -73,6 +118,8 @@ export function handbookUrl(key: string, href: string | null | undefined): strin
     else if (part === '..') segments.pop();
     else segments.push(part);
   }
+  const rendered = KEY_BY_FILE.get(segments.join('/'));
+  if (rendered !== undefined) return handbookRoute(rendered, hash);
   return `${BASE}/docs/${segments.map(encodeURIComponent).join('/')}${hash}`;
 }
 

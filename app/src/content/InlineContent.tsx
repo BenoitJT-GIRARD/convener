@@ -1,10 +1,50 @@
-import { useEffect, useState } from 'react';
+import { Children, isValidElement, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { fetchContent, editUrlFor, handbookUrl } from './fetch';
+import { slugify } from './transclude';
 import { substitute, substituteWithoutSpeaker, type SubstitutionContext } from './render';
 import { useAuth } from '../auth/AuthContext';
 import { isDemoMode } from '../data/demo';
+
+/** The text of a heading, whatever react-markdown made of its inline
+ *  markup -- a heading may hold emphasis or code, and the anchor is
+ *  computed from the words rather than from the nodes. */
+function headingText(children: ReactNode): string {
+  return Children.toArray(children)
+    .map(child => {
+      if (typeof child === 'string' || typeof child === 'number') return String(child);
+      if (isValidElement<{ children?: ReactNode }>(child)) {
+        return headingText(child.props.children);
+      }
+      return '';
+    })
+    .join('');
+}
+
+/**
+ * Every heading of a rendered page carries the anchor its own prose
+ * already links to.
+ *
+ * `transclude.ts::slugify` is GitHub's rule, and it is the rule the
+ * registry's own fragments are declared under, so a heading is reachable
+ * by the same name from a link, from an include and from this. Without
+ * these, `#/handbook/toolkit/run-of-show#results-that-have-not-been-peer-
+ * reviewed` would open the right page at the top of it.
+ *
+ * Page renders only: an inline render is a fragment dropped into a
+ * screen that already has headings of its own, and several of them can
+ * sit on one screen, so ids there would be duplicates rather than
+ * anchors.
+ */
+const HEADING_ANCHORS: Components = {
+  h1: ({ children }) => <h1 id={slugify(headingText(children))}>{children}</h1>,
+  h2: ({ children }) => <h2 id={slugify(headingText(children))}>{children}</h2>,
+  h3: ({ children }) => <h3 id={slugify(headingText(children))}>{children}</h3>,
+  h4: ({ children }) => <h4 id={slugify(headingText(children))}>{children}</h4>,
+};
 
 interface Props {
   contentKey: string;
@@ -74,6 +114,7 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           urlTransform={href => handbookUrl(contentKey, href)}
+          components={variant === 'page' ? HEADING_ANCHORS : undefined}
         >
           {rendered}
         </ReactMarkdown>

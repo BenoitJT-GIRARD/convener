@@ -38,7 +38,14 @@ function Shell() {
           <Route path="board" element={<Board />} />
           <Route path="diversity" element={<Diversity />} />
           <Route path="consent" element={<Consent />} />
-          <Route path="handbook" element={<Handbook />} />
+          {/* A splat, so a page of the handbook has an address of its
+              own -- `#/handbook/governance/editorial-line`, the content
+              key exactly as `content/registry.ts` spells it. Every
+              cross-reference written inside a handbook page resolves to
+              one of these (`content/fetch.ts::handbookUrl`); before they
+              did, a link between two pages of the handbook left the
+              application and showed the markdown file. */}
+          <Route path="handbook/*" element={<Handbook />} />
           <Route path="templates" element={<Templates />} />
           <Route path="settings" element={<Settings />} />
           <Route path="speakers/new" element={<NewSpeaker />} />
