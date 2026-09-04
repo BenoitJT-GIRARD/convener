@@ -102,6 +102,25 @@ describe('the manual and the workspace describe one pipeline', () => {
     },
   );
 
+  it('names the same control on the page a host reads on the day', () => {
+    // `3-hosting.md` ends the session, and the last thing it asks for is the
+    // control that closes the status. Naming it there and rewording it here
+    // would leave two hosts looking for a button that is not on the screen.
+    const hosting = readFileSync(resolve(ROOT, 'docs/handbook/workflow/3-hosting.md'), 'utf-8');
+    for (const control of PHASES.find(p => p.status === 'scheduled')!.closes) {
+      expect(hosting).toContain(control);
+    }
+  });
+
+  it('describes the two closing lists the way the workspace splits them', () => {
+    // `the-workspace.md` is the page a volunteer reads to know which tab
+    // holds what, and the agenda and the archive share no status.
+    const workspace = readFileSync(resolve(ROOT, 'docs/handbook/the-workspace.md'), 'utf-8');
+    expect(workspace).toMatch(/The two lists never hold the same event/);
+    expect(workspace).toMatch(/Agenda holds what still owes you\s+something/);
+    expect(workspace).toMatch(/Archive holds what is closed/);
+  });
+
   it('ends every status a volunteer works through with a control of its own', () => {
     // A status whose last line is a field or a tick is a status with no way
     // out, which is what `scheduled` was: the header changed by itself when
