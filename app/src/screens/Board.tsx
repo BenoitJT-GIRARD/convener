@@ -281,8 +281,12 @@ export function Board() {
                     {nominationStanding(config, n, today).supports} of{' '}
                     {nominationStanding(config, n, today).bar} supports needed ·{' '}
                     {nominationStanding(config, n, today).eligible} eligible ·{' '}
-                    {nominationStanding(config, n, today).elapsed} of {NOMINATION_WINDOW_DAYS} days
-                    gone
+                    {/* Past the window it says so, rather than counting on
+                        past the number it is counting against: "22 of 14
+                        days gone" is arithmetic nobody reads as a rule. */}
+                    {nominationStanding(config, n, today).elapsed >= NOMINATION_WINDOW_DAYS
+                      ? `the ${NOMINATION_WINDOW_DAYS} days have run`
+                      : `${nominationStanding(config, n, today).elapsed} of ${NOMINATION_WINDOW_DAYS} days gone`}
                   </p>
                 )}
                 {n.supports.length > 0 && (
