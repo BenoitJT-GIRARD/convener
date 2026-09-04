@@ -18,23 +18,82 @@ seminars that have nobody to pay and nothing to pay them with.**
 
 ## What it looks like
 
-**The cockpit**, where a volunteer or a board member works. This is the
-demonstration mode: no account, no repository, the example instance's own
-invented records.
+Every picture below is one build of this repository, running the invented
+series it ships as its worked example. None of them is a mock-up, and
+nobody's records are in any of them.
 
-![The cockpit inbox: two leads to vote on, five webinars needing an action and two lines waiting on the person signed in, each with its speaker and institution](assets/screenshots/cockpit.png)
+**What a visitor sees.** No account, and nothing to install.
 
-**A public event page.** One per edition, generated — nobody writes these.
-The registration form on it encrypts what a participant types before it
-leaves their browser.
+<table>
+<tr>
+<td width="33%" valign="top">
+<img src="assets/screenshots/showcase.png" width="260" alt="The showcase: the series' own front page, with the next edition, its speaker, the date and a button to register free">
+</td>
+<td width="33%" valign="top">
+<img src="assets/screenshots/event-page.png" width="260" alt="A public event page: the talk title, the speaker, the abstract, and the panel above the registration form">
+</td>
+<td width="33%" valign="top">
+<img src="assets/screenshots/verification.png" width="260" alt="The verification page, showing a Certificate Verified panel with the holder, the event, the date and the identifier">
+</td>
+</tr>
+<tr>
+<td valign="top"><b>The showcase</b> — the programme, the past editions and
+their recordings, on a static site rebuilt whenever a record changes.</td>
+<td valign="top"><b>An event page</b> — one per edition, generated. Its
+registration form encrypts what a participant types before it leaves their
+browser.</td>
+<td valign="top"><b>The verification page</b> — anyone holding a certificate
+can confirm it years later, without an account and without sending anybody
+the certificate itself.</td>
+</tr>
+</table>
 
-![A public event page: the talk title, the speaker, the abstract, and the panel above the registration form](assets/screenshots/event-page.png)
+**What the team sees.** The cockpit: sign in with GitHub, or open the
+demonstration below and touch nobody's records at all.
 
-**The verification page.** Anyone holding a certificate can confirm it,
-years later, without an account and without sending anybody the certificate
-itself.
+<table>
+<tr>
+<td width="33%" valign="top">
+<img src="assets/screenshots/cockpit.png" width="260" alt="The cockpit inbox: two leads to vote on, five webinars needing an action and two lines waiting on the person signed in, each with its speaker and institution">
+</td>
+<td width="33%" valign="top">
+<img src="assets/screenshots/pipeline.png" width="260" alt="The pipeline: six columns — leads, approved, invited, confirmed, scheduled and delivered — each holding a card per speaker at that step">
+</td>
+<td width="33%" valign="top">
+<img src="assets/screenshots/diversity.png" width="260" alt="The diversity screen: career stage counted for applicants beside those selected, every figure given as a count out of the number who answered">
+</td>
+</tr>
+<tr>
+<td valign="top"><b>The inbox</b> — what is waiting, most overdue first: votes
+the board owes, work an event owes, and the lines somebody has put their name
+against.</td>
+<td valign="top"><b>The pipeline</b> — every live speaker, one column per
+status that still asks for work, from a suggested name to a talk that has
+been given and not yet wrapped up.</td>
+<td valign="top"><b>Diversity</b> — how the programme is composed, applicants
+beside those selected, one dimension at a time and never two at once.</td>
+</tr>
+</table>
 
-![The verification page, showing a Certificate Verified panel with the holder, the event, the date and the identifier](assets/screenshots/verification.png)
+**And the design is chosen, not inherited.** Four charters ship with the
+product; a duplicate names one in a single line of its own declaration, or
+writes its own colours instead. The same generated poster, in each of the
+four:
+
+<table>
+<tr>
+<td width="25%" valign="top"><img src="assets/screenshots/charter-convener.png" width="190" alt="The generated poster in the convener charter: navy on a pale coral ground"></td>
+<td width="25%" valign="top"><img src="assets/screenshots/charter-chevrons.png" width="190" alt="The same poster in the chevrons charter: mulberry on a mint ground"></td>
+<td width="25%" valign="top"><img src="assets/screenshots/charter-lattice.png" width="190" alt="The same poster in the lattice charter: brick on a sky-blue ground"></td>
+<td width="25%" valign="top"><img src="assets/screenshots/charter-steps.png" width="190" alt="The same poster in the steps charter: teal on a lilac ground"></td>
+</tr>
+<tr>
+<td valign="top"><code>convener</code></td>
+<td valign="top"><code>chevrons</code></td>
+<td valign="top"><code>lattice</code></td>
+<td valign="top"><code>steps</code></td>
+</tr>
+</table>
 
 ## Seeing it run
 
