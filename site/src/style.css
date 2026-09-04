@@ -207,6 +207,42 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   word-break: break-word;
 }
 
+/* ── Demonstration ────────────────────────────────
+ * The band the product's own demonstration publishes above its own
+ * masthead -- `_includes/layout.njk` emits it only while `site.demo` is
+ * set, so an instance somebody runs carries neither the markup nor a
+ * reserved strip of page.
+ *
+ * The shape of `.unconfigured` above, in the field rather than in
+ * --danger: this says what a page is, where that one says what is wrong
+ * with it, and a second alarm-coloured band would leave a duplicate that
+ * really is misconfigured with nothing to stand out against.
+ *
+ * --field carries the rule and --field-text the eyebrow, never the other
+ * way round: the plain field value is a ground and 1.61 against white in
+ * every charter this product ships. No figure is written here because
+ * every charter measures its own -- the pairing is `field_text_on_band`,
+ * one of the fourteen `tools/scripts/generate_brand_css.py` recomputes on
+ * every run and refuses below 4.5. */
+.demonstration {
+  background: var(--surface);
+  border-bottom: 6px solid var(--field);
+}
+.demonstration__inner {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.demonstration__inner p { max-width: 78ch; }
+.demonstration__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--field-text);
+  margin-bottom: .5rem;
+}
+
 /* ── Masthead ─────────────────────────────────────────────── */
 /* The identity band -- one of the bands, full-bleed, the same role the
  * logo band carries at the top of the designer's own composition.

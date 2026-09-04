@@ -1,0 +1,200 @@
+name: Demonstration
+
+# The hosted demonstration: this product, built as the invented instance it
+# ships, and published so that the answer to *what does it look like?* is a
+# link rather than "clone it and run it yourself".
+#
+# `README.md` used to say this product publishes nothing, deliberately.
+# That was a decision rather than a constraint and it is reversed here, on
+# a measurement: GitHub Pages is free on a public repository, and the
+# cockpit in demonstration mode makes no network call at all -- every
+# outbound request goes through `app/src/net/request.ts`, which refuses
+# anything that is not a read from the origin that served the page, and
+# `app/tests/net/demo-network.test.tsx` sweeps the module graph for a
+# request primitive reached any other way. There is nothing here to leak
+# and nothing here to bill.
+#
+# What is published is `tools/scripts/demonstration_build.py`'s own output
+# and nothing else: the showcase, one page per edition with its
+# registration form, the certificate verifier, the post-event survey and
+# the cockpit, all built from `examples/the-example-collective/` by the
+# same commands the two publishing workflows run. That module's docstring
+# carries the whole of what the build does, what it overrides and what it
+# honestly does not have.
+#
+# Why a schedule as well as a push
+# --------------------------------
+# The example's records are dated against one day and moved into the week
+# they are *read* in (`tools/scripts/example_dates.py`), and both halves of
+# this build bake that in: the showcase's pages are generated and the
+# cockpit's records are compiled into its bundle. So a demonstration built
+# once drifts a week behind every seventh night, and its inbox starts
+# printing things it is late on -- which is the defect the dating exists to
+# close. Rebuilt weekly, it never does. Thursday because the shift moves in
+# whole weeks and the example is written for one.
+#
+# What this cannot do until somebody does two things by hand
+# ----------------------------------------------------------
+# Publish. The push below is skipped -- loudly, in the job's own log --
+# until the repository variable `CONVENER_DEMONSTRATION_PAGES` is set to
+# `true`, the same shape `publish-showcase.yml` already uses for its own
+# deploy token (D-13: an integration that is not configured degrades
+# visibly rather than failing). The other half is a setting no workflow can
+# make for itself: this repository's *Pages* source has to be
+# "Deploy from a branch", branch `gh-pages`, folder `/`. Until both are
+# done this workflow builds the demonstration and checks that it builds,
+# which is the half that can be held here.
+#
+# Path-filtered, the same deliberate discipline `a11y.yml` and
+# `visuals.yml` state for their own filters -- and prefer including a path
+# you are unsure about over leaving it out (D-25: a filter that omits a
+# path means a broken demonstration stays published):
+#
+# - `site/**`, `app/**` -- the two builds this publishes.
+# - `examples/**` -- the instance it is built as.
+# - `declarations/**` -- the boundary that decides which files the example
+#   is laid into, and the declarations the cockpit's settings screen reads.
+# - `docs/**` -- the handbook the cockpit renders inline and publishes.
+# - `assets/**` -- the fonts and the charter both builds read.
+# - `tools/**` -- the build itself, the publishing commands it runs, and
+#   what `uv` resolves for them.
+# - `NOTICE.json` -- the notice both interfaces display.
+# - `.github/workflows/demonstration.yml` -- this file.
+#
+# Deliberately absent: `instance/**`. Nothing of the instance that happens
+# to run this repository reaches this build at all -- `second_instance_build`
+# deletes every file the boundary hands to an instance before laying the
+# example's into the holes -- so a change there cannot change what is
+# published here.
+on:
+  workflow_dispatch:
+  schedule:
+    # 05:20 UTC on Thursdays. Off the hour, like every other scheduled job
+    # in this repository, because the top of the hour is when Actions'
+    # own queue is longest.
+    - cron: '20 5 * * 4'
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'app/**'
+      - 'examples/**'
+      - 'declarations/**'
+      - 'docs/**'
+      - 'assets/**'
+      - 'tools/**'
+      - 'NOTICE.json'
+      - '.github/workflows/demonstration.yml'
+
+# One publish at a time, and the newest wins: a run still building an
+# older commit has nothing to say once a newer one is on its way. Not
+# grouped by `github.head_ref` the way the checking workflows are --
+# nothing here runs on a pull request, so there is one group.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  demonstration:
+    runs-on: ubuntu-latest
+    # The build lays out a scratch copy of this repository, runs six
+    # publishing commands, four Vite builds and Eleventy. Measured at
+    # well under a minute on a developer's machine with the packages
+    # already installed; the allowance here is the install.
+    timeout-minutes: 15
+    permissions:
+      # The push below writes the built tree to this repository's own
+      # `gh-pages` branch. Nothing else is written, and `main` is never
+      # touched.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+          enable-cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+          cache-dependency-path: |
+            site/package-lock.json
+            app/package-lock.json
+      - name: Install site
+        working-directory: site
+        run: npm ci
+      - name: Install app
+        working-directory: app
+        run: npm ci
+      # The address this demonstration is actually served at, derived
+      # rather than declared: GitHub Pages serves a project repository at
+      # `https://<owner>.github.io/<repository>/` and nowhere else, so the
+      # repository *is* the address, spelled differently -- the same
+      # derivation `published.Published.publish_repository` performs in the
+      # other direction. Lower-cased because that is the host Pages
+      # answers on, whatever case the owner's own login is written in.
+      #
+      # This is the one value the demonstration overrides: the example
+      # declares an address that resolves nowhere, on purpose, and it stays
+      # that way. See `demonstration_build.override_address`.
+      - name: Work out where this demonstration is served
+        id: address
+        run: |
+          set -euo pipefail
+          owner="$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')"
+          name="${GITHUB_REPOSITORY#*/}"
+          echo "url=https://${owner}.github.io/${name}/" >> "$GITHUB_OUTPUT"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+      - name: Build the demonstration
+        run: |
+          set -euo pipefail
+          uv run --project tools python tools/scripts/demonstration_build.py \
+            "${RUNNER_TEMP}/demonstration" --url "${DEMONSTRATION_URL}"
+        env:
+          DEMONSTRATION_URL: ${{ steps.address.outputs.url }}
+      # D-25, applied to a publish: a job that pushed an empty directory
+      # would report success and take the demonstration down.
+      - name: Refuse an empty build
+        run: |
+          set -euo pipefail
+          served="${RUNNER_TEMP}/demonstration/${DEMONSTRATION_NAME}"
+          for page in index.html verify/index.html app/index.html; do
+            if [ ! -f "${served}/${page}" ]; then
+              echo "::error::the demonstration built without ${page} -- refusing to publish it"
+              exit 1
+            fi
+          done
+          echo "built $(find "${served}" -type f | wc -l) file(s)"
+        env:
+          DEMONSTRATION_NAME: ${{ steps.address.outputs.name }}
+      # The contents of the served directory, not the directory the build
+      # wrote: Pages already serves a project repository under
+      # `/<repository>/`, and pushing the tree with that segment still in
+      # it would publish every page one level too deep.
+      #
+      # An orphan branch, rebuilt from nothing each time and force-pushed.
+      # Everything here is generated output with no history worth keeping,
+      # which is the same argument `publish-showcase.yml` makes about the
+      # repository it pushes into; and the force reaches `gh-pages` and
+      # nothing else, on a branch no source ever lives on.
+      - name: Publish to GitHub Pages
+        env:
+          DEMONSTRATION_NAME: ${{ steps.address.outputs.name }}
+          DEMONSTRATION_URL: ${{ steps.address.outputs.url }}
+          PAGES_ENABLED: ${{ vars.CONVENER_DEMONSTRATION_PAGES }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${PAGES_ENABLED:-}" != "true" ]; then
+            echo "::notice::CONVENER_DEMONSTRATION_PAGES is not set to 'true', so nothing was published. The demonstration built and was checked. To publish it: set that repository variable, and set this repository's Pages source to 'Deploy from a branch', branch gh-pages, folder /."
+            exit 0
+          fi
+          cd "${RUNNER_TEMP}/demonstration/${DEMONSTRATION_NAME}"
+          git init --quiet --initial-branch=gh-pages
+          git config user.name "convener-publisher"
+          git config user.email "convener-publisher@users.noreply.github.com"
+          git add --all
+          git commit --quiet -m "demonstration: rebuild"
+          git push --force --quiet \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          echo "::notice::published to ${DEMONSTRATION_URL}"

@@ -304,6 +304,21 @@ eleventyComputed:
     {% else %}
       <span class="archive__action--disabled">No thread yet</span>
     {% endif %}
+    {#
+      The post-event survey, which had no link on this site at all: it was
+      reached only from the address in the e-mail
+      `tools/convener_ops/journey/survey_invite.py` sends, so somebody who
+      had lost that mail had nowhere to start, and the page existed on a
+      site that never mentioned it.
+
+      Unconditional on a past edition, and the page itself answers whether
+      there is anything to fill in: `survey_enabled` is NEVER_PUBLISHED
+      (`public_data.py`), so this build genuinely cannot know, and the
+      island already renders "There is no survey currently open for this
+      event" when it is not. A pill that leads to that sentence is a
+      better answer than a page nothing points at.
+    #}
+    <a class="archive__action archive__action--alt unstyled" href="{{ ('/survey/' ~ (event.id | lower) ~ '/') | url }}" aria-label="Post-event survey for {{ event.title }}">Survey</a>
   </div>
 </section>
 {% endif %}

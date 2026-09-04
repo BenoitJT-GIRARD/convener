@@ -32,6 +32,7 @@ const {
   unconfigured,
 } = require('./scripts/published.cjs');
 const { notice } = require('./scripts/notice.cjs');
+const { isDemonstration, cockpitQuery } = require('./scripts/demonstration.cjs');
 
 const PUBLISHED = publishedAddress();
 
@@ -121,6 +122,25 @@ const SITE = {
   // published.py::unconfigured` states the whole rule and why the
   // `REPLACE` marker is deliberately not part of it.
   unconfigured: unconfigured(),
+  // Whether this build is the product's own demonstration rather than a
+  // series somebody runs -- `scripts/demonstration.cjs`, from one
+  // environment variable the demonstration's own build sets and nothing
+  // else ever does.
+  //
+  // It changes exactly two things and neither of them is the shape of a
+  // page: a band above the masthead saying whose records these are, and
+  // the flag on the two links into the cockpit, so that following one
+  // lands on the demonstration rather than on a sign-in screen. The
+  // structure and the navigation are the deployed instance's, because
+  // they are the same templates --
+  // `tools/tests/repository/test_navigation.py` builds the showcase both
+  // ways and refuses a page or a link that exists in one and not the
+  // other.
+  demo: isDemonstration(),
+  // `?demo=1`, or nothing at all. Appended in the template rather than
+  // composed here, because the prefix comes off Eleventy's own `url`
+  // filter and a whole href built here would have to restate it.
+  cockpitQuery: cockpitQuery(),
 };
 
 // Structured event data, share metadata, the sitemap and

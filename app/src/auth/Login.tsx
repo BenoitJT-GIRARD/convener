@@ -5,7 +5,7 @@ import { activateDemoMode } from '../data/demo';
 import { authEnv, availableStrategy } from './strategy';
 import { requestDeviceCode, pollForToken, DeviceFlowError } from './device';
 import type { DeviceCode } from './device';
-import { instanceIdentity } from '../instance';
+import { instanceIdentity, showcasePath } from '../instance';
 import { MOTIF } from '../design/motif';
 import { UnconfiguredBanner } from '../components/UnconfiguredBanner';
 
@@ -47,17 +47,28 @@ function Shell({ children }: { children: ReactNode }) {
         <UnconfiguredBanner />
       </div>
       <header className="bg-field text-dominant border-b-4 border-dominant relative z-10">
-        <div className="max-w-content mx-auto px-6 py-3 flex items-baseline gap-2">
-          <span className="font-mono text-sm">No.</span>
-          <span className="font-display font-extrabold tracking-wider uppercase text-sm">
-            {instance.organisation}
-          </span>
-          <span className="font-display font-medium text-sm tracking-wide">
-            {instance.series}
-          </span>
-          <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-white/25 border border-dominant/40">
-            Organiser
-          </span>
+        <div className="max-w-content mx-auto px-6 py-3 flex items-baseline justify-between gap-4 flex-wrap">
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-sm">No.</span>
+            <span className="font-display font-extrabold tracking-wider uppercase text-sm">
+              {instance.organisation}
+            </span>
+            <span className="font-display font-medium text-sm tracking-wide">
+              {instance.series}
+            </span>
+            <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-white/25 border border-dominant/40">
+              Organiser
+            </span>
+          </div>
+          {/* The same way back the cockpit's own chrome carries. This
+              screen is the one a visitor with no account actually
+              reaches, so it is the one that most needs it. */}
+          <a
+            href={showcasePath()}
+            className="font-display font-bold text-[11px] tracking-widest uppercase no-underline hover:underline underline-offset-2"
+          >
+            &larr; Public site
+          </a>
         </div>
       </header>
 

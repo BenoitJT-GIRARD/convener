@@ -13,6 +13,7 @@ import {
   withConfigHeader,
 } from './yaml';
 import { isDemoMode, demoSpeakers, demoConfig } from './demo';
+import { forgetDemoSession, readDemoSession, writeDemoSession } from './demo-session';
 import { configFile, speakersFile } from '../paths';
 import type { Speaker, Config } from './types';
 import type { Subject } from '../state/decisions';
@@ -82,12 +83,35 @@ function demoState(): State {
   };
 }
 
+/** The demonstration as this tab has it: what somebody has already done to
+ *  it, and the example instance for a tab that has done nothing yet.
+ *
+ *  Where a demonstration's edits live, and how long for, is
+ *  `./demo-session.ts` -- the session and not a day longer, and the whole
+ *  argument for that is in its own header. This context used to hold them
+ *  in `useState` and nowhere else, so a reload, or following a link out to
+ *  the showcase and back, put a visitor at the beginning again with no
+ *  sign that anything had happened. */
+function demoStateForThisTab(): State {
+  const kept = readDemoSession();
+  if (!kept) return demoState();
+  return {
+    loading: false,
+    error: null,
+    saveError: null,
+    speakers: kept.speakers,
+    config: kept.config,
+    spkSha: 'demo',
+    cfgSha: 'demo',
+  };
+}
+
 /** The synchronous half of loading: demo mode resolves immediately (no
  *  network), and having no token yet has nothing to load. Only the real
  *  GitHub read is genuinely asynchronous, so it's the only part that runs
  *  from inside the effect below. */
 function initialState(token: string | null): State {
-  if (isDemoMode()) return demoState();
+  if (isDemoMode()) return demoStateForThisTab();
   return {
     loading: !!token,
     error: null,
@@ -178,6 +202,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   async function reload() {
     if (!token) return;
     if (isDemoMode()) {
+      // The example instance's own records, put back. `reload` is the one
+      // gesture that means "show me what the repository holds", and in a
+      // demonstration the repository is the example -- so this is also
+      // where a visitor undoes the whole of what they have done.
+      forgetDemoSession();
       setS(demoState());
       return;
     }
@@ -195,7 +224,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   ): Promise<boolean> {
     if (!token) return false;
     if (isDemoMode()) {
-      setS(p => ({ ...p, speakers: transform(p.speakers) }));
+      setS(p => {
+        const next = { ...p, speakers: transform(p.speakers) };
+        writeDemoSession(next.speakers, next.config);
+        return next;
+      });
       return true;
     }
     try {
@@ -221,7 +254,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   ): Promise<boolean> {
     if (!token) return false;
     if (isDemoMode()) {
-      setS(p => ({ ...p, config: p.config ? transform(p.config) : p.config }));
+      setS(p => {
+        const next = { ...p, config: p.config ? transform(p.config) : p.config };
+        writeDemoSession(next.speakers, next.config);
+        return next;
+      });
       return true;
     }
     try {

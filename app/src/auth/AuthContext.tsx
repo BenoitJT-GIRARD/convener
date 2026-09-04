@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { validateToken } from './api';
 import { isDemoMode, exitDemoMode, DEMO_USER } from '../data/demo';
+import { forgetDemoSession } from '../data/demo-session';
 
 interface AuthState {
   token: string | null;
@@ -117,6 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function signOut() {
     removeLocalStorage(LEGACY_KEY);
     exitDemoMode();
+    // Signing out of a demonstration leaves it, so what this tab did in
+    // there goes with it -- the same gesture `Layout`'s own "Exit demo"
+    // makes (`data/demo-session.ts`).
+    forgetDemoSession();
     setS({ token: null, login: null, ready: true, startupError: null });
   }
 

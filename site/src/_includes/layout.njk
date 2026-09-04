@@ -121,6 +121,37 @@
 </div>
 {% endif %}
 
+{#
+  The demonstration says so, on every page, before anything else on it.
+
+  Above the masthead and below the "not configured" band, for the reason
+  that band is where it is: the masthead names whoever the declaration
+  says runs this series, and in a demonstration that is the invented
+  collective the product ships as its worked example. A visitor reading a
+  seminar programme is owed the sentence that says none of these people
+  exist -- and the reader who needs it is the visitor, not the operator.
+
+  One band and one link, and the link is the one the masthead beside it
+  already carries. A demonstration that grew navigation of its own would
+  stop being the thing it demonstrates, which is why
+  `tools/tests/repository/test_navigation.py` compares the two builds link
+  for link rather than trusting this comment.
+#}
+{% if site.demo %}
+<div class="demonstration">
+  <div class="container demonstration__inner">
+    <p class="demonstration__eyebrow">Demonstration</p>
+    <p>
+      This is the software running as an invented series &mdash; the worked
+      example it ships with. Nobody named here exists and no address here
+      resolves. Every page, every form and
+      <a href="{{ '/app/' | url }}{{ site.cockpitQuery }}">the organisers&rsquo; own cockpit</a>
+      are the ones a real instance publishes.
+    </p>
+  </div>
+</div>
+{% endif %}
+
 <header class="masthead">
   {# The charter's motif, carried here because layout.njk is the one piece
      of chrome every public page shares -- including the ones D-18
@@ -138,7 +169,12 @@
       <span class="masthead__brand-name">{{ site.organisation }}</span>
       <span class="masthead__brand-sub">{{ site.series }}</span>
     </a>
-    <a href="{{ '/app/' | url }}" class="masthead__access unstyled">Organiser access</a>
+    {# The cockpit, gated by sign-in, which is correct -- and carrying the
+       demonstration's own flag when this build is one, so a visitor
+       exploring it is not stopped at a sign-in screen for following a
+       link inside the demonstration. `site.cockpitQuery` is empty in
+       every other build. #}
+    <a href="{{ '/app/' | url }}{{ site.cockpitQuery }}" class="masthead__access unstyled">Organiser access</a>
   </div>
 </header>
 
@@ -152,9 +188,16 @@
     <nav class="colophon__nav">
       <a href="{{ '/archives/' | url }}" class="unstyled">Archives</a>
       <a href="{{ '/propose/' | url }}" class="unstyled">Propose a speaker</a>
+      {# The certificate verifier. It had no link anywhere on this site:
+         the only way to it was the address printed on a certificate, so
+         somebody holding one they had mislaid the link for, or checking
+         somebody else's, had nowhere to start. One line in the colophon
+         rather than a band of its own -- it is a thing you look for
+         knowing it exists, which is what a colophon is for. #}
+      <a href="{{ '/verify/' | url }}" class="unstyled">Verify a certificate</a>
       <a href="{{ '/data/' | url }}" class="unstyled">Data &amp; privacy</a>
       <a href="{{ site.forum }}" class="unstyled">Forum</a>
-      <a href="{{ '/app/' | url }}" class="unstyled">Organiser access</a>
+      <a href="{{ '/app/' | url }}{{ site.cockpitQuery }}" class="unstyled">Organiser access</a>
     </nav>
     {#
       The product's own Appropriate Legal Notice, in the sense section 0 of

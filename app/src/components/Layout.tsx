@@ -4,13 +4,19 @@ import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { useData } from '../data/DataContext';
 import { isDemoMode, exitDemoMode } from '../data/demo';
-import { instanceIdentity } from '../instance';
+import { forgetDemoSession } from '../data/demo-session';
+import { instanceIdentity, showcasePath } from '../instance';
 import { dataDir, speakersFile } from '../paths';
 import { productNotice } from '../notice';
 import { UnconfiguredBanner } from './UnconfiguredBanner';
 
 function exitDemo() {
   exitDemoMode();
+  // And what this tab did while it was in there. Leaving the
+  // demonstration and coming back to find your own edits waiting would be
+  // the demonstration remembering somebody who has said they are done
+  // with it (`data/demo-session.ts`).
+  forgetDemoSession();
   window.location.reload();
 }
 
@@ -43,6 +49,19 @@ export function Layout() {
             </span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
+            {/* The way back to the showcase, which this cockpit did not
+                have. The showcase is the entry point -- for an organiser
+                as much as for anybody else -- and the three public
+                islands all return to it through the masthead they share;
+                this was the one surface somebody could reach and not
+                leave. A path on this origin, never the declared address:
+                see `instance.ts::showcasePath`. */}
+            <a
+              href={showcasePath()}
+              className="font-display font-bold text-[11px] tracking-widest uppercase no-underline hover:underline underline-offset-2"
+            >
+              &larr; Public site
+            </a>
             {login && (
               <span className="font-mono text-xs">
                 {login}{role && ` · ${role}`}

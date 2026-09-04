@@ -130,6 +130,39 @@ export function editionPrefix(): string {
   return cachedEditionPrefix;
 }
 
+/**
+ * Where the showcase this cockpit belongs to is served, as a path on the
+ * same origin.
+ *
+ * The cockpit is published one segment under the showcase --
+ * `<prefix>/app/` beside `<prefix>/` -- so this is `published_url`'s own
+ * path and nothing composed. A path rather than the whole address, and
+ * that is the point: the two are one deployment, and an absolute link
+ * would send somebody looking at a demonstration, a preview or a local
+ * assembly of the built tree to whichever address the declaration
+ * happens to name -- which for the demonstration is not the site they
+ * are standing on.
+ *
+ * It exists because the cockpit had no way back at all. The showcase is
+ * the entry point for an organiser as much as for anybody else, and
+ * every one of the three public islands already returns to it through
+ * the masthead they share; the cockpit was the one surface a visitor
+ * could reach and not leave. `tools/tests/repository/test_navigation.py`
+ * holds the showcase's own half of that, and
+ * `tests/components/back-to-the-showcase.test.tsx` this one.
+ */
+export function showcasePath(): string {
+  const published = import.meta.env.VITE_PUBLISHED_URL as string | undefined;
+  if (!published) {
+    throw new Error(
+      'VITE_PUBLISHED_URL is unset: this bundle was built without ' +
+        "vite.config.ts's own define, so it cannot say where the showcase " +
+        'beside it is served (see instance/config.json)',
+    );
+  }
+  return new URL(published).pathname;
+}
+
 /** The organisation half of `repository` -- the GitHub organisation whose
  *  team membership decides who signs in as a Board member
  *  (`auth/role.ts`). One fact, not two: the repository the cockpit writes
