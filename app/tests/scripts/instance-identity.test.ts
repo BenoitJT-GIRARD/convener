@@ -205,6 +205,25 @@ describe('a second instance renders nothing of the first', () => {
  * they were looking at, so the next occurrence arrives as a file list rather
  * than as a diff of two markdown pages with no clue which two.
  */
+/** How long a real run of `copyHandbook` is given, and why it is not the
+ *  default five seconds.
+ *
+ *  This block copies the whole of `docs/` -- eighty files -- into
+ *  `os.tmpdir()`, clearing the destination first, and does it under the
+ *  coverage instrumentation the `test:cov` gate runs with. On this
+ *  project's own machine `%TEMP%` is watched by an application-control
+ *  policy, which is the cause `instance-identity.test.ts`'s own note
+ *  attributes the intermittent failures to; measured, these tests take
+ *  about half a second alone and have been seen past five with the whole
+ *  suite running beside them.
+ *
+ *  Thirty seconds weakens no assertion below -- each one still compares
+ *  exactly what it compared -- and it takes out of them the one thing that
+ *  was never theirs to test: how busy the machine is. A check whose colour
+ *  is the machine's is a check people learn to re-run, which is D-25's own
+ *  failure in slow motion. */
+const REAL_TREE_TIMEOUT = 30_000;
+
 describe('the handbook copied into the built bundle', () => {
   let dst: string;
 
@@ -252,4 +271,4 @@ describe('the handbook copied into the built bundle', () => {
     expect(offending).toEqual([]);
     expect(naming, `${copied.length} page(s) rendered`).toBeGreaterThan(15);
   });
-});
+}, REAL_TREE_TIMEOUT);
