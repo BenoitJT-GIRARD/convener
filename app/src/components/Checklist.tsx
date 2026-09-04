@@ -32,6 +32,21 @@ interface Props {
    *  static journey, which is what the screen showed before those lines
    *  existed. */
   config?: Config | null;
+  /**
+   * What fills the `button-group` lines, keyed by their journey key.
+   *
+   * The date negotiation and the buttons that close a status are not
+   * checklist rows and never will be, but *where they sit* is a fact about
+   * the journey and belongs in `state/phases.ts` with the rest of it. They
+   * used to sit above the whole checklist, in a block of their own, which is
+   * how a volunteer came to be asked to mark an invitation sent before the
+   * app would let them choose the dates it names.
+   *
+   * A key with nothing against it renders nothing, so a screen with no
+   * writer -- the demonstration's read-only views, a test of the rows alone
+   * -- shows the journey exactly as it did before these lines existed.
+   */
+  slots?: Record<string, React.ReactNode>;
   disabled?: boolean;
   today?: string;
 }
@@ -43,6 +58,7 @@ export function Checklist({
   onAssign,
   people,
   config,
+  slots,
   disabled,
   today,
 }: Props) {
@@ -60,27 +76,31 @@ export function Checklist({
     <div className="space-y-3">
       <h2 className="font-serif text-xl mb-3">{phase.label}</h2>
       {items.some(item => outstanding(speaker, item)) && <StarNote />}
-      {items.map(item => (
-        <div key={item.key}>
-          <Row
-            item={item}
-            speaker={speaker}
-            inWindow={item.window === undefined || daysUntil === null || daysUntil <= item.window}
-            disabled={disabled}
-            onToggle={onToggle}
-            onField={onField}
-          />
-          {onAssign && canCarryOwner(item) && (
-            <Owner
+      {items.map(item =>
+        item.form === 'button-group' ? (
+          <div key={item.key}>{slots?.[item.key] ?? null}</div>
+        ) : (
+          <div key={item.key}>
+            <Row
               item={item}
               speaker={speaker}
-              people={people ?? []}
+              inWindow={item.window === undefined || daysUntil === null || daysUntil <= item.window}
               disabled={disabled}
-              onAssign={onAssign}
+              onToggle={onToggle}
+              onField={onField}
             />
-          )}
-        </div>
-      ))}
+            {onAssign && canCarryOwner(item) && (
+              <Owner
+                item={item}
+                speaker={speaker}
+                people={people ?? []}
+                disabled={disabled}
+                onAssign={onAssign}
+              />
+            )}
+          </div>
+        ),
+      )}
     </div>
   );
 }
@@ -110,6 +130,8 @@ function Row({ item, speaker, inWindow, disabled, onToggle, onField }: RowProps)
           onToggle={onToggle}
         />
       );
+    // Filled by the record page through `slots` and never reached here:
+    // `Checklist` renders these lines itself, above.
     case 'button-group':
       return null;
   }

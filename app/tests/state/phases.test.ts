@@ -170,6 +170,40 @@ describe('the journey the volunteers actually keep', () => {
     ]);
   });
 
+  /**
+   * What you need to know, then what you do, then how you record that you
+   * did it -- the order the maintainer's three frictions all turn out to be
+   * about (R34, R35, R37). It is asserted key by key rather than described,
+   * because "the buttons come last" was true of the code that put *Mark
+   * invitation sent* in front of the dates the invitation names: the buttons
+   * were not in this sequence at all, they were in a block above it.
+   */
+  it.each([
+    [
+      'approved' as const,
+      [
+        'approved/host_1',
+        'approved/host_2',
+        'approved/offer-dates',
+        'approved/invitation-email',
+        'approved/send-invitation',
+      ],
+    ],
+    ['invited' as const, ['invited/follow-up-template', 'invited/replies', 'invited/decline']],
+    [
+      'confirmed' as const,
+      [
+        'confirmed/talk-details-template',
+        'confirmed/title',
+        'confirmed/abstract',
+        'confirmed/lock-date',
+      ],
+    ],
+    ['lead' as const, ['lead/selection-criteria', 'lead/acknowledge-proposal', 'lead/board-vote']],
+  ])('runs %s in the order know, do, record', (status, keys) => {
+    expect(phaseItems(phaseOf(status)!, config()).map(i => i.key)).toEqual(keys);
+  });
+
   it('runs the wrap-up in the order the work happens', () => {
     const phase = phaseOf('delivered')!;
     expect(phaseItems(phase, config()).map(i => i.key)).toEqual([

@@ -35,7 +35,7 @@ import { MemoryRouter } from 'react-router-dom';
 import yaml from 'js-yaml';
 import { AuthProvider } from '../../src/auth/AuthContext';
 import { DataProvider } from '../../src/data/DataContext';
-import { ActionButtons } from '../../src/components/ActionButtons';
+import { DatePanel } from '../../src/components/DatePanel';
 import { demoConfig, demoSpeakers } from '../../src/data/demo';
 import { editionCodePrefix, nextEditionCode } from '../../src/state/agenda';
 import { substitute } from '../../src/content/render';
@@ -153,7 +153,7 @@ describe.skipIf(ONE_INSTANCE)('the field that code is typed into', () => {
       <MemoryRouter>
         <AuthProvider>
           <DataProvider>
-            <ActionButtons speaker={confirmedExampleRecord()} role="board" />
+            <DatePanel speaker={confirmedExampleRecord()} role="board" mode="lock" />
           </DataProvider>
         </AuthProvider>
       </MemoryRouter>,

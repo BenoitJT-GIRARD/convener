@@ -218,10 +218,48 @@ describe('transitions v2', () => {
     expect(next.runbook_progress['approved/invitation-sent']).toBe(true);
   });
 
-  it('invited-accept → confirmed; invited-decline → decline-speaker', () => {
+  it('invited-accept records the evening as well as the acceptance', () => {
+    // One gesture for one fact. There is no way to reach `confirmed` while
+    // leaving the record silent about which evening was agreed, and no way
+    // to record an agreed evening on a record still reading `invited`.
+    const s: Speaker = {
+      ...base,
+      status: 'invited',
+      candidate_dates: [
+        { date: '2026-08-01', time: '14:30', answer: '' },
+        { date: '2026-08-08', time: '14:30', answer: '' },
+      ],
+    };
+    const next = applyTransition(s, 'invited-accept', '', cfg, '2026-05-23', {
+      date: '2026-08-08',
+      edition_code: '',
+    });
+    expect(next.status).toBe('confirmed');
+    expect(next.candidate_dates.map(c => c.answer)).toEqual(['', 'accepted']);
+  });
+
+  it('invited-accept refuses an acceptance with no evening attached', () => {
     const s: Speaker = { ...base, status: 'invited' };
-    expect(applyTransition(s, 'invited-accept', '', cfg, '2026-05-23').status).toBe('confirmed');
-    expect(applyTransition(s, 'invited-decline', '', cfg, '2026-05-23').status).toBe('decline-speaker');
+    expect(() => applyTransition(s, 'invited-accept', '', cfg, '2026-05-23')).toThrow(
+      /acceptance of one evening/,
+    );
+  });
+
+  it('invited-accept refuses an evening nobody was offered', () => {
+    const s: Speaker = { ...base, status: 'invited', candidate_dates: [] };
+    expect(() =>
+      applyTransition(s, 'invited-accept', '', cfg, '2026-05-23', {
+        date: '2026-08-08',
+        edition_code: '',
+      }),
+    ).toThrow(/never put to this speaker/);
+  });
+
+  it('invited-decline → decline-speaker', () => {
+    const s: Speaker = { ...base, status: 'invited' };
+    expect(applyTransition(s, 'invited-decline', '', cfg, '2026-05-23').status).toBe(
+      'decline-speaker',
+    );
   });
 
   it('lock-date locks the accepted slot, hour included, and the edition', () => {
@@ -344,6 +382,7 @@ describe('transitions v2', () => {
     ];
     const payloads: Partial<Record<Transition, TransitionPayload>> = {
       'ballot-cast': cast(),
+      'invited-accept': { date: '2026-06-01', edition_code: '' },
       'lock-date': { date: '2026-06-01', edition_code: 'MRG-09' },
       'consent-set': { consent: 'granted' },
       'publication-object': { reason: 'wait' },

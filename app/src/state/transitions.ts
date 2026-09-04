@@ -8,7 +8,7 @@ import type {
 } from '../data/types';
 import { BallotRejected, castBallot, withdrawBallot } from './ballots';
 import { activeBoard, isBoardMember } from './board';
-import { DateRejected, acceptedDates, lockDate } from './dates';
+import { DateRejected, acceptedDates, answerDate, lockDate } from './dates';
 import { PublicationBlocked, canArchive, decide, standingObjections } from './governance';
 
 export type Role = 'board' | 'organizer';
@@ -33,7 +33,11 @@ export type Transition =
 
 /** What the lock-in is applied with. There is no `time`: the hour comes from
  *  the slot the speaker accepted (`state/dates.ts`), so a lock-in cannot name
- *  an evening other than the one that was offered and agreed. */
+ *  an evening other than the one that was offered and agreed.
+ *
+ *  `invited-accept` is applied with the same shape and ignores
+ *  `edition_code`: an acceptance is the acceptance *of an evening*, and the
+ *  edition number is not chosen until the date is frozen a status later. */
 export interface LockDatePayload {
   date: string;
   edition_code: string;
@@ -228,8 +232,24 @@ export function applyTransition(
         status: 'invited',
         runbook_progress: { ...s.runbook_progress, 'approved/invitation-sent': true },
       };
-    case 'invited-accept':
-      return { ...s, status: 'confirmed' };
+    case 'invited-accept': {
+      // One gesture, not two. The speaker's yes and the evening they said it
+      // about used to be separate controls -- a global *Speaker accepted*
+      // beside a per-date *they accepted* -- and a record could carry either
+      // without the other: accepted with no evening named, or an evening
+      // agreed on a record still reading `invited`. The click on the date is
+      // now both, so neither half is expressible on its own.
+      const p = payload as LockDatePayload | undefined;
+      if (!p?.date) {
+        throw new DateRejected(
+          'An acceptance is an acceptance of one evening. Click the date the speaker agreed ' +
+            'to, so the record shows which one it was.',
+        );
+      }
+      // `answerDate` refuses a day nobody was offered, so an acceptance
+      // cannot appear against an evening this record never put to them.
+      return { ...answerDate(s, p.date, 'accepted').speaker, status: 'confirmed' };
+    }
     case 'invited-decline':
       return { ...s, status: 'decline-speaker' };
     case 'lock-date': {

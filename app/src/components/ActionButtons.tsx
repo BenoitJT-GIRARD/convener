@@ -10,13 +10,11 @@ import {
 } from '../state/transitions';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
-import { editionCodePrefix, nextEditionCode } from '../state/agenda';
-import { DateRejected, answerDate, lockBlockers, proposeDates } from '../state/dates';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
 import { parisToday } from '../state/derived';
 import { formatDecision, identifier, transitionDecision } from '../state/decisions';
-import type { BallotValue, DateAnswer, Speaker } from '../data/types';
+import type { BallotValue, Speaker } from '../data/types';
 
 /** Written out rather than left as "member(s)": a board of one is an
  *  ordinary state on a small series, and the count is read at the moment a
@@ -129,7 +127,7 @@ export function ActionButtons({ speaker, role }: Props) {
       if (!hostsSet) {
         buttons.push(
           <span className="text-sm text-ink-muted" key="msg">
-            Assign Host 1 and Host 2 in the form below before sending the invitation.
+            Name Host 1 and Host 2 above before sending the invitation.
           </span>,
         );
       } else {
@@ -138,31 +136,11 @@ export function ActionButtons({ speaker, role }: Props) {
       break;
     }
     case 'invited':
-      buttons.push(btn('Speaker accepted', 'invited-accept'));
+      // The one button of this status. Accepting is not here: it is the
+      // click on the evening the speaker agreed to, in the panel above --
+      // see `components/DatePanel.tsx`. This is its opposite and covers the
+      // whole offer: the speaker cannot come at all.
       buttons.push(btn('Speaker declined', 'invited-decline', 'danger'));
-      // The dates are negotiated while the invitation is out: that is when
-      // the speaker replies with the evenings that suit them. Recording the
-      // replies here is what gives the lock-in something to choose among.
-      buttons.push(
-        <CandidateDates
-          key="dates"
-          speaker={speaker}
-          disabled={locked}
-          canLock={false}
-          onLock={NO_LOCK}
-        />,
-      );
-      break;
-    case 'confirmed':
-      buttons.push(
-        <CandidateDates
-          key="dates"
-          speaker={speaker}
-          disabled={locked}
-          canLock
-          onLock={(d, e) => fire('lock-date', { date: d, edition_code: e })}
-        />,
-      );
       break;
     case 'parked':
     case 'decline-board':
@@ -301,263 +279,6 @@ function BallotForm({
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-/** Locking is not on offer while the invitation is still out, so the panel
- *  shown there is handed a callback it can never reach. */
-const NO_LOCK = () => {};
-
-/**
- * The date negotiation, on screen: the slots offered, the speaker's reply to
- * each, and -- only against a reply that says `accepted` -- the button that
- * freezes one of them.
- *
- * There is no field to type a date into and lock. The lock-in takes a date
- * out of this list or it does not happen, because `state/dates.ts` hands out
- * an `AcceptedDate` for nothing else; the volunteer is never in a position to
- * commit an outside researcher to an evening the record does not show them
- * agreeing to.
- *
- * The clash check runs on the offer, before the button is enabled, and its
- * sentence is the one `proposeDates` would throw with -- asked of the rule
- * rather than written a second time here.
- */
-function CandidateDates({
-  speaker,
-  disabled,
-  canLock,
-  onLock,
-}: {
-  speaker: Speaker;
-  disabled: boolean;
-  canLock: boolean;
-  onLock: (date: string, edition: string) => void;
-}) {
-  const { speakers, config, mutateSpeakers } = useData();
-  const { login } = useAuth();
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('12:30');
-  const [edition, setEdition] = useState('');
-  const [busy, setBusy] = useState(false);
-  const today = parisToday();
-  const locked = disabled || busy || !login || !config;
-
-  const slots = speaker.candidate_dates.map(c => ({ date: c.date, time: c.time }));
-
-  // Asked of the rule, not restated: `proposeDates` is pure, so the offer
-  // about to be made is tried here on the values on screen and its refusal
-  // becomes the disabled reason. A volunteer reads why the date will not do
-  // before clicking, never after a failed save.
-  let blocker: string | null = null;
-  if (config && date) {
-    try {
-      proposeDates(speaker, [...slots, { date, time }], speakers, config.overlap_window_days, today);
-    } catch (e) {
-      if (!(e instanceof DateRejected)) throw e;
-      blocker = e.message;
-    }
-  }
-
-  async function offer() {
-    if (locked || !config || !login || !date || blocker) return;
-    setBusy(true);
-    try {
-      // Everything the transformation writes is read from `current`: the
-      // slots already offered come from the record as freshly read, not from
-      // the copy this component rendered, so a date offered from another
-      // browser in the meantime survives instead of being overwritten. Only
-      // the one new slot comes from the form -- it is what the volunteer has
-      // just typed and exists nowhere else.
-      await mutateSpeakers(
-        current =>
-          current.map(sp =>
-            sp.id === speaker.id
-              ? proposeDates(
-                  sp,
-                  [...sp.candidate_dates.map(c => ({ date: c.date, time: c.time })), { date, time }],
-                  current,
-                  config.overlap_window_days,
-                  today,
-                )
-              : sp,
-          ),
-        // The act, not the day. Which evenings a researcher was offered is
-        // their availability rather than the programme, and the diff already
-        // carries it -- the same division `lock-date` and `availability-set`
-        // make.
-        formatDecision({
-          kind: 'date-propose',
-          entity: identifier(speaker.id),
-          actor: identifier(login),
-        }),
-      );
-      setDate('');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function reply(slotDate: string, answer: DateAnswer) {
-    if (locked || !login) return;
-    setBusy(true);
-    try {
-      await mutateSpeakers(
-        current =>
-          current.map(sp => (sp.id === speaker.id ? answerDate(sp, slotDate, answer).speaker : sp)),
-        // `${slotDate}=${answer}` stood here, which published which
-        // evenings a named researcher turned down into a subject line
-        // nothing can rewrite. `candidate_dates` is NEVER_PUBLISHED for
-        // exactly that reason (`state/consent.ts`). The reply is the
-        // qualifier; the day is in the diff.
-        formatDecision({
-          kind: 'date-answer',
-          entity: identifier(speaker.id),
-          actor: identifier(login),
-          detail: answer === '' ? 'cleared' : answer,
-        }),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Asked of the rule rather than restated: the same list disables the
-  // button, stars the edition box below and writes the sentence at the
-  // bottom, so a volunteer can never read one of the three and act on
-  // another. `lockDate` refuses on this same list.
-  const missing = lockBlockers(speaker, edition);
-
-  return (
-    <div className="space-y-2 w-full">
-      <p className="text-xs font-mono uppercase text-ink-muted">Dates offered</p>
-      {speaker.candidate_dates.length === 0 && (
-        <p className="text-xs text-ink-muted italic">
-          No dates offered yet. Offer the ones the invitation proposes, then record what the
-          speaker replies.
-        </p>
-      )}
-      <ul className="space-y-1">
-        {speaker.candidate_dates.map(c => (
-          <li key={c.date} className="flex gap-2 items-center flex-wrap text-sm">
-            <span className="font-mono">
-              {c.date} {c.time}
-            </span>
-            <span
-              className={
-                c.answer === 'accepted'
-                  ? 'text-xs text-field-text'
-                  : c.answer === 'declined'
-                    ? 'text-xs text-danger'
-                    : 'text-xs text-ink-muted italic'
-              }
-            >
-              {c.answer === 'accepted'
-                ? 'accepted by the speaker'
-                : c.answer === 'declined'
-                  ? 'declined by the speaker'
-                  : 'no reply yet'}
-            </span>
-            {c.answer !== 'accepted' && (
-              <button
-                type="button"
-                disabled={locked}
-                onClick={() => reply(c.date, 'accepted')}
-                className="text-xs text-field-text underline disabled:opacity-50"
-              >
-                they accepted
-              </button>
-            )}
-            {c.answer !== 'declined' && (
-              <button
-                type="button"
-                disabled={locked}
-                onClick={() => reply(c.date, 'declined')}
-                className="text-xs text-danger underline disabled:opacity-50"
-              >
-                they declined
-              </button>
-            )}
-            {canLock && c.answer === 'accepted' && (
-              <button
-                type="button"
-                disabled={locked || missing.length > 0}
-                onClick={() => onLock(c.date, edition)}
-                className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-dominant text-white border-2 border-dominant hover:bg-dominant-hover disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Lock this date &rarr;
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex gap-2 items-center flex-wrap">
-        <label className="flex items-center gap-1.5">
-          <span className="text-xs font-mono uppercase text-ink-muted">Offer date</span>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="flex items-center gap-1.5">
-          <span className="text-xs font-mono uppercase text-ink-muted">Time (Paris)</span>
-          <input
-            type="time"
-            value={time}
-            onChange={e => setTime(e.target.value)}
-            className="px-2 py-1 text-sm font-mono w-24"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={locked || !date || !time || !!blocker}
-          onClick={offer}
-          className="px-3 py-1.5 text-sm rounded border border-border text-ink-muted hover:text-ink disabled:opacity-50"
-        >
-          Offer this date
-        </button>
-      </div>
-
-      {canLock && (
-        <div className="flex gap-2 items-center flex-wrap">
-          <label className="flex items-center gap-1.5">
-            <span className="text-xs font-mono uppercase text-ink-muted">
-              Edition
-              {/* The one this screen owns: the title and the abstract are
-                  lines of the checklist and get their star there, while the
-                  edition number is typed here and nowhere else. It is also
-                  the one Benoît hunted for. */}
-              {!edition && <span className="text-danger ml-1">*</span>}
-            </span>
-            <input
-              type="text"
-              placeholder={`${editionCodePrefix()}N`}
-              value={edition}
-              onChange={e => setEdition(e.target.value)}
-              className="px-2 py-1 text-sm font-mono w-20"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => config && setEdition(nextEditionCode(speakers, config.next_edition_number))}
-            className="text-xs text-field-text underline"
-          >
-            Suggest the next code
-          </button>
-        </div>
-      )}
-
-      {blocker && <p className="text-danger text-xs">{blocker}</p>}
-      {canLock && missing.length > 0 && (
-        <p className="text-xs text-danger italic">
-          <span aria-hidden="true">*</span> {missing.join(', ')} — still to fill in before this
-          date can be locked.
-        </p>
-      )}
     </div>
   );
 }

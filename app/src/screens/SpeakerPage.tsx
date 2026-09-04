@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
+import { DatePanel } from '../components/DatePanel';
 import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
@@ -78,6 +79,29 @@ export function SpeakerPage() {
 
   const hasPhase = phaseOf(s.status) !== undefined;
 
+  /**
+   * What fills the journey's `button-group` lines on this record.
+   *
+   * Keyed by journey key rather than chosen here: `state/phases.ts` says
+   * where the date negotiation and the closing buttons sit inside each
+   * status, and this map only says what they are. Only the current phase's
+   * keys are ever read, so the three date panels and the one set of buttons
+   * listed here render one at a time.
+   *
+   * The order that comes out of it is the correction: what you need to know,
+   * then what you do, then how you record that you did it. The buttons used
+   * to sit above the whole checklist, which put *Mark invitation sent* in
+   * front of the dates the invitation names.
+   */
+  const slots: Record<string, React.ReactNode> = {
+    'approved/offer-dates': <DatePanel speaker={s} role={role} mode="offer" />,
+    'invited/replies': <DatePanel speaker={s} role={role} mode="reply" />,
+    'confirmed/lock-date': <DatePanel speaker={s} role={role} mode="lock" />,
+    'lead/board-vote': <ActionButtons speaker={s} role={role} />,
+    'approved/send-invitation': <ActionButtons speaker={s} role={role} />,
+    'invited/decline': <ActionButtons speaker={s} role={role} />,
+  };
+
   return (
     <div className="max-w-3xl">
       <p className="text-xs text-ink-muted font-mono mb-1">
@@ -110,9 +134,13 @@ export function SpeakerPage() {
         </div>
       )}
 
-      <div className="mt-6">
-        <ActionButtons speaker={s} role={role} />
-      </div>
+      {/* A status with no journey of its own -- parked, declined, archived --
+          still has controls, and they have nowhere in a checklist to sit. */}
+      {!hasPhase && (
+        <div className="mt-6">
+          <ActionButtons speaker={s} role={role} />
+        </div>
+      )}
 
       {hasPhase && (
         <div className="mt-10">
@@ -123,6 +151,7 @@ export function SpeakerPage() {
             onAssign={assign}
             people={people}
             config={config}
+            slots={slots}
           />
         </div>
       )}

@@ -137,6 +137,7 @@ export const PHASES: PhaseDef[] = [
         label: 'Proposal acknowledged to whoever sent it',
         contentKey: 'toolkit/emails/proposal-received',
       },
+      { key: 'lead/board-vote', form: 'button-group', label: 'The board’s ballot' },
     ],
   },
   {
@@ -145,6 +146,10 @@ export const PHASES: PhaseDef[] = [
     items: [
       { key: 'approved/host_1', form: 'field', fieldKey: 'host_1', label: 'Host 1', required: true },
       { key: 'approved/host_2', form: 'field', fieldKey: 'host_2', label: 'Host 2', required: true },
+      // Before the template, not after it. The invitation names the evenings
+      // it offers, so a template drafted first is a template with a hole in
+      // it -- which is what a volunteer used to be asked to mark as sent.
+      { key: 'approved/offer-dates', form: 'button-group', label: 'Dates offered' },
       {
         key: 'approved/invitation-email',
         form: 'content',
@@ -155,6 +160,7 @@ export const PHASES: PhaseDef[] = [
         label: 'Invitation email',
         contentKey: 'toolkit/emails/invitation',
       },
+      { key: 'approved/send-invitation', form: 'button-group', label: 'Mark invitation sent' },
     ],
   },
   {
@@ -168,12 +174,28 @@ export const PHASES: PhaseDef[] = [
         label: 'Follow-up template',
         contentKey: 'toolkit/emails/invitation',
       },
+      // The dates, each of them the control that records the acceptance: one
+      // gesture says both "they said yes" and "this is the evening". Offering
+      // a further one is here too, because the ordinary case is a speaker who
+      // can make none of the three and proposes a fourth.
+      { key: 'invited/replies', form: 'button-group', label: 'Dates offered' },
+      { key: 'invited/decline', form: 'button-group', label: 'Speaker declined' },
     ],
   },
   {
     status: 'confirmed',
     label: 'Confirmed — schedule a date',
     items: [
+      // The template first and it stays: the fields below are what the
+      // speaker is being asked for in it, and a volunteer who fills them in
+      // has just read the message that asks for them.
+      {
+        key: 'confirmed/talk-details-template',
+        form: 'content',
+        kind: 'task',
+        label: 'Talk details email',
+        contentKey: 'toolkit/emails/talk-details',
+      },
       // Both marked, because both are read by `dates.lockBlockers`: a date
       // cannot be locked without them, and until this was written down the
       // page said so nowhere.
@@ -185,13 +207,7 @@ export const PHASES: PhaseDef[] = [
         label: 'Abstract',
         required: true,
       },
-      {
-        key: 'confirmed/talk-details-template',
-        form: 'content',
-        kind: 'task',
-        label: 'Talk details email',
-        contentKey: 'toolkit/emails/talk-details',
-      },
+      { key: 'confirmed/lock-date', form: 'button-group', label: 'Lock this date' },
     ],
   },
   {
