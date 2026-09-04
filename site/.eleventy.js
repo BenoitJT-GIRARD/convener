@@ -529,6 +529,19 @@ module.exports = function (cfg) {
   // (style.css's relative `url('fonts/...')`, layout.njk's `| url`-filtered
   // preload) had to change.
   cfg.addPassthroughCopy({ '../assets/fonts': 'fonts' });
+  // The tab icon, copied from the one place the mark is drawn rather than
+  // committed a second time here — the arrangement `app/scripts/copy-mark.mjs`
+  // already makes for the cockpit, and that script's own comment carries the
+  // reasoning in full: a charter declares a palette and a motif family and
+  // never a logotype, so an instance naming `ribbon` has no mark of its own
+  // for this to follow, and what a tab shows before a page is read is the
+  // product a visitor is looking at.
+  //
+  // Declared rather than left to the browser's own guess. Without a
+  // `<link rel="icon">` a browser asks the domain root for `/favicon.ico`,
+  // which no build here writes, so every page of the showcase and of the
+  // cockpit beneath it was served with a 404 behind the tab.
+  cfg.addPassthroughCopy({ '../assets/brand/convener/convener-mark.svg': 'favicon.svg' });
   // The public showcase repository receives this
   // project's own build output at its root, alongside `app/`, which is
   // exactly what its already-active GitHub Pages setting ("branch main,

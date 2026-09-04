@@ -49,6 +49,12 @@
    showcase admits no such request, and this page also carries the data
    notice, so the contradiction was visible from the page itself. #}
 <link rel="preload" href="{{ '/fonts/archivo-latin-standard-normal.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+{# The tab icon. `.eleventy.js`'s own passthrough copy carries the argument
+   for which mark this is and why it is copied rather than committed here.
+   `| url` because this build is served under a prefix, and a bare
+   `/favicon.svg` would ask the domain root for a file that sits one
+   directory down. #}
+<link rel="icon" type="image/svg+xml" href="{{ '/favicon.svg' | url }}">
 <link rel="stylesheet" href="{{ '/style.css' | url }}">
 {#
   Open Graph / Twitter Card, so a shared event page

@@ -27,9 +27,9 @@
  * Each directive below is justified by what this project's own pages
  * actually load (checked by building the real site and reading a real
  * browser's console, not assumed): one stylesheet, three woff2 faces and,
- * on three pages, one island bundle -- all from this same origin. No page
- * this build emits carries an `<img>`, an `<iframe>`, a `<video>` or an
- * `<audio>` element at all.
+ * on three pages, one island bundle, and the tab icon every page declares
+ * -- all from this same origin. No page this build emits carries an
+ * `<img>`, an `<iframe>`, a `<video>` or an `<audio>` element at all.
  *
  * - `default-src 'none'`: everything not named below is refused, so the
  *   classes nobody enumerated (`frame-src`, `media-src`, `worker-src`,
@@ -50,13 +50,16 @@
  *   islands set no inline style either -- a real Chrome driven over every
  *   page this build emits reports no violation, which is how this was
  *   settled rather than argued.
- * - `img-src 'self'`: no page loads an image at present. `'self'` rather
- *   than `'none'` because the browser asks for `/favicon.ico` of its own
- *   accord and because a banner this project publishes itself
- *   (`event.njk`'s own `pageImage`, already same-origin) is the one image
- *   these pages would ever gain. A portrait is not: `public-data`'s own
- *   projection deliberately withholds `photo_url`, and this directive is
- *   what keeps that decision true in the browser as well as in the feed.
+ * - `img-src 'self'`: the tab icon every page declares
+ *   (`_includes/layout.njk`'s own `<link rel="icon">`, copied from the
+ *   product's mark by `.eleventy.js`). A favicon is fetched under this
+ *   directive, so `'none'` would refuse the one image these pages load,
+ *   and `'self'` is what admits it and nothing further. The only other
+ *   image these pages would ever gain is a banner this project publishes
+ *   itself (`event.njk`'s own `pageImage`, already same-origin). A
+ *   portrait is not: `public-data`'s own projection deliberately withholds
+ *   `photo_url`, and this directive is what keeps that decision true in
+ *   the browser as well as in the feed.
  * - `font-src 'self'`: the three woff2 faces D-17 chose, self-hosted and
  *   preloaded from `layout.njk`'s own head. That head once carried two
  *   preconnects and a stylesheet link to Google's font CDN, which handed

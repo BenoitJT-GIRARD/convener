@@ -215,7 +215,7 @@ _META_IGNORED_CSP_DIRECTIVES = ("frame-ancestors", "report-uri", "report-to", "s
 #: any origin whatever. `default-src 'none'` is what closes the classes
 #: nobody enumerated; the four `'self'` entries are what this build
 #: actually loads (one stylesheet, three woff2 faces, three island
-#: bundles, and the favicon a browser asks for by itself); `base-uri`
+#: bundles, and the tab icon every page declares); `base-uri`
 #: falls back to nothing, so it is named rather than left out.
 #: `connect-src` is deliberately absent here: its value depends on
 #: whether a relay is configured, and the two tests that own that
@@ -2817,6 +2817,46 @@ def test_the_build_emits_the_published_repositorys_own_readme(
     )
     assert (built_site / ".gitignore").is_file(), (
         "the build wrote no .gitignore for the published repository"
+    )
+
+
+def test_every_page_declares_a_tab_icon_and_the_build_writes_it(
+    built_site: Path,
+) -> None:
+    """Both halves, because either alone is a 404 nobody sees.
+
+    A browser given no `<link rel="icon">` asks the domain root for
+    `/favicon.ico` on its own, and this build wrote neither that file nor a
+    declaration of any other, so every page of the showcase -- and the
+    cockpit published beneath it -- was served with an empty tab and a
+    miss in the log. The declaration without the file is the same miss with
+    a different address; the file without the declaration is a file the
+    prefix puts somewhere the browser's own guess never looks.
+
+    The icon is the product's mark, copied by `.eleventy.js` from the one
+    place it is drawn. `app/scripts/copy-mark.mjs` makes the same
+    arrangement for the cockpit and its comment carries the argument for
+    which mark this is.
+    """
+    icon = built_site / "favicon.svg"
+    assert icon.is_file(), (
+        "the build wrote no favicon.svg -- every page below declares one, "
+        "so this is a tab icon that 404s on every visitor's first request"
+    )
+    assert "<svg" in icon.read_text(encoding="utf-8")
+
+    expected = f'<link rel="icon" type="image/svg+xml" href="{_pfx("/favicon.svg")}">'
+    pages = sorted(built_site.rglob("*.html"))
+    assert pages, "the build emitted no pages, so this sweep read nothing"
+    without = [
+        path.relative_to(built_site).as_posix()
+        for path in pages
+        if expected not in path.read_text(encoding="utf-8")
+    ]
+    assert without == [], (
+        f"{without} carry no {expected!r}. A page that declares no icon "
+        "sends the browser to the domain root for /favicon.ico, which this "
+        "build does not write and the prefix would not reach anyway."
     )
 
 
