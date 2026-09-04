@@ -1599,6 +1599,14 @@
       "message": "data: lock the date of spk-004 by hopper"
     },
     {
+      "name": "recording the talk as delivered, which a host does on the day rather than waiting for the overnight sweep",
+      "kind": "mark-delivered",
+      "entity": "spk-004",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: record the delivery of spk-004 by hopper"
+    },
+    {
       "name": "consent granted is an answer somebody heard, so it carries their name",
       "kind": "consent-set",
       "entity": "spk-009",

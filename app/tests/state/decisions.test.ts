@@ -158,6 +158,7 @@ describe('the grammar of decision commits', () => {
       'invited-accept',
       'invited-decline',
       'lock-date',
+      'mark-delivered',
       'finalize-archive',
       'consent-set',
       'publication-approve',

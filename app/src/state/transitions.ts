@@ -10,6 +10,7 @@ import { BallotRejected, castBallot, withdrawBallot } from './ballots';
 import { activeBoard, isBoardMember } from './board';
 import { DateRejected, acceptedDates, answerDate, lockDate } from './dates';
 import { PublicationBlocked, canArchive, decide, standingObjections } from './governance';
+import { deliveryRecordable } from './derived';
 
 export type Role = 'board' | 'organizer';
 
@@ -23,6 +24,7 @@ export type Transition =
   | 'invited-accept'
   | 'invited-decline'
   | 'lock-date'
+  | 'mark-delivered'
   | 'finalize-archive'
   | 'consent-set'
   | 'publication-approve'
@@ -140,6 +142,12 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       return s.status === 'invited';
     case 'lock-date':
       return s.status === 'confirmed';
+    case 'mark-delivered':
+      // Offered from the day before, and only on a dated record. The day is
+      // read by `applyTransition` as well, which is where a click that
+      // arrives before it is refused; this is what decides whether the
+      // control is drawn at all.
+      return s.status === 'scheduled' && !!s.date;
     case 'finalize-archive':
       // Also reachable from `archived` when the recording is not currently
       // published -- an objection took it down and was later lifted. It goes
@@ -269,6 +277,20 @@ export function applyTransition(
         );
       }
       return lockDate(s, accepted, p.edition_code);
+    }
+    case 'mark-delivered': {
+      // The hand on the transition the clock used to make on its own. It
+      // writes exactly what `tools/convener_ops/maintenance/sweep.py` writes
+      // -- one status, nothing else -- so the two paths cannot leave two
+      // different shapes of record behind.
+      if (!deliveryRecordable(s, today)) {
+        throw new DateRejected(
+          `This talk is on ${s.date || 'a day the record does not give'}, and it can be ` +
+            'recorded as delivered from the day before. Until then the runbook above is ' +
+            'still the work in front of you.',
+        );
+      }
+      return { ...s, status: 'delivered' };
     }
     case 'finalize-archive': {
       // The single writer of `outcome: 'published'` in this codebase, and it

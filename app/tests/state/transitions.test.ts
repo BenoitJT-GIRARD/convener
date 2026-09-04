@@ -373,6 +373,7 @@ describe('transitions v2', () => {
       'invited-accept',
       'invited-decline',
       'lock-date',
+      'mark-delivered',
       'consent-set',
       'publication-approve',
       'publication-object',
@@ -420,6 +421,36 @@ describe('transitions v2', () => {
     expect(canTransition({ ...base, status: 'invited' }, 'invited-accept', 'organizer')).toBe(true);
     expect(canTransition({ ...base, status: 'invited' }, 'invited-decline', 'organizer')).toBe(true);
     expect(canTransition(base, 'invited-accept', 'organizer')).toBe(false);
+  });
+
+  it('records the delivery by hand, from the day before', () => {
+    // R40: nothing let a volunteer through this transition, so the header
+    // moved on its own when the clock passed the talk and the checklist
+    // stayed the scheduled one.
+    const s: Speaker = { ...base, status: 'scheduled', date: '2026-08-01' };
+    expect(applyTransition(s, 'mark-delivered', 'a', cfg, '2026-07-31').status).toBe('delivered');
+    expect(applyTransition(s, 'mark-delivered', 'a', cfg, '2026-08-01').status).toBe('delivered');
+    // And afterwards: a talk nobody recorded on the day is recorded later.
+    expect(applyTransition(s, 'mark-delivered', 'a', cfg, '2026-09-14').status).toBe('delivered');
+  });
+
+  it('refuses to record a delivery before the day before', () => {
+    const s: Speaker = { ...base, status: 'scheduled', date: '2026-08-01' };
+    expect(() => applyTransition(s, 'mark-delivered', 'a', cfg, '2026-07-30')).toThrow(
+      /from the day before/,
+    );
+  });
+
+  it('offers the delivery control only on a dated, scheduled record', () => {
+    expect(
+      canTransition({ ...base, status: 'scheduled', date: '2026-08-01' }, 'mark-delivered', 'organizer'),
+    ).toBe(true);
+    expect(
+      canTransition({ ...base, status: 'scheduled', date: '' }, 'mark-delivered', 'organizer'),
+    ).toBe(false);
+    expect(
+      canTransition({ ...base, status: 'confirmed' }, 'mark-delivered', 'organizer'),
+    ).toBe(false);
   });
 
   it('lock-date is only allowed from confirmed', () => {

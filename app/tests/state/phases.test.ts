@@ -167,6 +167,7 @@ describe('the journey the volunteers actually keep', () => {
       'scheduled/T-0/recording-talk-started',
       'scheduled/T-0/recording-stopped-before-discussion',
       'scheduled/T-0/recording-discussion-started',
+      'scheduled/mark-delivered',
     ]);
   });
 

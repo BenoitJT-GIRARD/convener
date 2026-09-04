@@ -64,6 +64,10 @@ ACTS: Final[dict[str, str]] = {
     "date-propose": "propose a date for",
     "date-answer": "record a date reply for",
     "lock-date": "lock the date of",
+    # The talk itself, recorded by the hosts on the day rather than left to
+    # the overnight sweep. The day is not in the subject: it is already on
+    # the record, and `lock-date` sets the same precedent.
+    "mark-delivered": "record the delivery of",
     # Publishing a recording (G-06, G-07).
     "consent-set": "record the recording consent of",
     "publication-approve": "approve publication of",

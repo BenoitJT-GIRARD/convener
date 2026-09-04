@@ -81,9 +81,11 @@ describe('the recording sequence is three steps, not one tick', () => {
     expect(keys).toContain(DISCUSSION);
   });
 
-  it('runs them in the order the day runs, at the end of the runbook', () => {
+  it('runs them in the order the day runs, last of the work of the runbook', () => {
+    // Last of the *work*: the line after them is the control that closes the
+    // status, which is not a step of the day.
     const keys = phaseItems(phaseOf('scheduled')!, config()).map(i => i.key);
-    expect(keys.slice(-3)).toEqual([TALK, STOP, DISCUSSION]);
+    expect(keys.slice(-4, -1)).toEqual([TALK, STOP, DISCUSSION]);
   });
 
   it('says which of the three was skipped, because that is the whole question', () => {

@@ -57,6 +57,14 @@ Three pages cover the day between them:
 - Online talks can feel flat for a speaker — make the discussion feel rich. **Never end with "No more questions? Then we stop."** Instead: *"We still have great questions, but we are out of time — the conversation can carry on at {{ instance.organisation }}."*
 - Close by thanking the speaker and the audience, and announce the next session if you can.
 
+## Close the session on the record
+
+Before you leave the room, open the event's own page in the workspace and use
+**Mark it delivered** at the foot of the runbook. That is what opens the
+wrap-up list, and it is available from the day before the talk, so the two
+of you can do it while you are still sitting together. Nothing waits on it
+overnight, and nothing else has to be typed.
+
 ---
 
 After the webinar: **[Phase 4 — After the webinar](4-after.md)**.

@@ -12,7 +12,7 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
-import { parisToday } from '../state/derived';
+import { deliveryRecordable, parisToday } from '../state/derived';
 import { formatDecision, identifier, transitionDecision } from '../state/decisions';
 import type { BallotValue, Speaker } from '../data/types';
 
@@ -142,6 +142,34 @@ export function ActionButtons({ speaker, role }: Props) {
       // whole offer: the speaker cannot come at all.
       buttons.push(btn('Speaker declined', 'invited-decline', 'danger'));
       break;
+    case 'scheduled': {
+      // Available from the day before, and disabled with the reason beside
+      // it until then -- the same shape every other rule on this screen
+      // takes. `deliveryRecordable` is the rule; `applyTransition` asks it
+      // again at write time.
+      const open = deliveryRecordable(speaker, today);
+      buttons.push(
+        <button
+          key="mark-delivered"
+          type="button"
+          disabled={locked || !open}
+          onClick={() => fire('mark-delivered')}
+          className={btnCls('primary')}
+        >
+          Mark it delivered &rarr;
+        </button>,
+      );
+      if (!open) {
+        buttons.push(
+          <span className="text-sm text-ink-muted" key="msg">
+            {speaker.date
+              ? `This opens the day before the talk, which is on ${speaker.date}.`
+              : 'This opens the day before the talk, and this record carries no date yet.'}
+          </span>,
+        );
+      }
+      break;
+    }
     case 'parked':
     case 'decline-board':
       if (role === 'board') buttons.push(btn('Reactivate', 'reactivate'));

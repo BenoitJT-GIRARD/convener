@@ -194,3 +194,33 @@ export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
 export function effectiveStatus(s: Speaker, config: Config, now: Date): SpeakerStatus {
   return hasEnded(s, config, now) ? 'delivered' : s.status;
 }
+
+const ONE_DAY_MS = 86_400_000;
+
+/**
+ * Whether a volunteer may record this talk as delivered by hand today.
+ *
+ * From the day before, and for the reason the day before is the answer: the
+ * hosts are in the room, the recording has just stopped, and the wrap-up is
+ * what they are about to do. Waiting for a scheduled job to notice means the
+ * checklist they need is not there while they are still sitting together.
+ *
+ * **Why there is a hand on this at all.** The clock alone used to be the
+ * whole answer, and `effectiveStatus` above is that answer: it reports
+ * `delivered` for a talk whose hour has passed. But it is a *display*, and
+ * the checklist reads the stored status -- so a record whose evening had gone
+ * showed a header saying `Delivered` above the scheduled runbook, and no way
+ * anywhere to make the two agree. A header that changes on its own and a page
+ * that does not is worse than a header that waits.
+ *
+ * No arithmetic on days: the comparison is between two instants built from
+ * ISO days, so there is no second calendar in this file to disagree with
+ * `state/working-days.ts`.
+ */
+export function deliveryRecordable(s: Speaker, today: string): boolean {
+  if (s.status !== 'scheduled' || !s.date) return false;
+  const talk = Date.parse(`${s.date}T00:00:00Z`);
+  const now = Date.parse(`${today}T00:00:00Z`);
+  if (Number.isNaN(talk) || Number.isNaN(now)) return false;
+  return now >= talk - ONE_DAY_MS;
+}

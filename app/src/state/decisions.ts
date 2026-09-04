@@ -106,6 +106,7 @@ export type PlainDecisionKind =
   | 'invited-accept'
   | 'invited-decline'
   | 'lock-date'
+  | 'mark-delivered'
   | 'publication-approve'
   | 'publication-object'
   | 'finalize-archive'
@@ -188,6 +189,7 @@ export const ACTS: Record<DecisionKind, string> = {
   'date-propose': 'propose a date for',
   'date-answer': 'record a date reply for',
   'lock-date': 'lock the date of',
+  'mark-delivered': 'record the delivery of',
   'consent-set': 'record the recording consent of',
   'publication-approve': 'approve publication of',
   'publication-object': 'record an objection to publishing',

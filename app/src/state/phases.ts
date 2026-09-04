@@ -395,6 +395,11 @@ export const PHASES: PhaseDef[] = [
         window: 0,
         after: 'scheduled/T-0/recording-stopped-before-discussion',
       },
+      // The way out of this status, by hand, from the day before. There was
+      // none: the header changed on its own when the clock passed the talk
+      // and this list stayed exactly as it is, with nothing anywhere to make
+      // the two agree.
+      { key: 'scheduled/mark-delivered', form: 'button-group', label: 'Mark it delivered' },
     ],
   },
   {

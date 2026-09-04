@@ -24,9 +24,15 @@ export function SpeakerPage() {
   if (error) return <LoadError message={error} />;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
-  // Display only: what has aired, not necessarily what's recorded yet — the
-  // scheduled job (tools/convener_ops/maintenance/sweep.py) is the single writer for that.
-  const displayStatus = config ? effectiveStatus(s, config, new Date()) : s.status;
+  // What the clock says, against what the record says. The header shows the
+  // *record*: a header that moved on its own while the checklist below it did
+  // not is exactly the mismatch R40 records, and a status nobody wrote is not
+  // a status this page should assert. Where the two differ, the difference is
+  // said out loud and the control that closes it is at the end of the
+  // checklist. `tools/convener_ops/maintenance/sweep.py` is still the
+  // unattended writer, and now it is not the only way through.
+  const clockSays = config ? effectiveStatus(s, config, new Date()) : s.status;
+  const timePassed = clockSays !== s.status;
 
   async function toggle(key: string, value: boolean) {
     if (!login || !id) return;
@@ -100,6 +106,7 @@ export function SpeakerPage() {
     'lead/board-vote': <ActionButtons speaker={s} role={role} />,
     'approved/send-invitation': <ActionButtons speaker={s} role={role} />,
     'invited/decline': <ActionButtons speaker={s} role={role} />,
+    'scheduled/mark-delivered': <ActionButtons speaker={s} role={role} />,
   };
 
   return (
@@ -114,12 +121,18 @@ export function SpeakerPage() {
         {s.country && ` · ${s.country}`}
       </p>
       <p className="text-ink-muted mt-1">
-        Status: <strong>{displayStatus}</strong>
+        Status: <strong>{s.status}</strong>
         {s.date && ` · ${s.date}`}
         {s.time && ` · ${s.time}`}
         {s.host_1 && ` · host 1: ${s.host_1}`}
         {s.host_2 && ` · host 2: ${s.host_2}`}
       </p>
+      {timePassed && (
+        <p className="text-sm text-dominant mt-1">
+          This talk&apos;s time has passed. Record it as delivered at the end of the runbook
+          below, and the wrap-up opens.
+        </p>
+      )}
       <p className="text-ink-muted mt-1 text-sm">
         Proposed by <strong>{s.proposed_by || '(unknown)'}</strong> · source: {s.source}
         {s.email && ` · ${s.email}`}
