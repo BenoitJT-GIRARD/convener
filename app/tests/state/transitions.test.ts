@@ -228,6 +228,11 @@ describe('transitions v2', () => {
     const s: Speaker = {
       ...base,
       status: 'confirmed',
+      // The talk details, which `dates.lockBlockers` asks for alongside the
+      // edition number: an announcement is written from them, and a locked
+      // date is what makes the announcement due.
+      title: 'A talk with a title',
+      abstract: 'And an abstract.',
       candidate_dates: [{ date: '2026-08-01', time: '14:30', answer: 'accepted' }],
     };
     const next = applyTransition(s, 'lock-date', '', cfg, '2026-05-23', {

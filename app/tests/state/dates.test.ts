@@ -5,6 +5,7 @@ import {
   DateRejected,
   acceptedDates,
   answerDate,
+  lockBlockers,
   lockDate,
   proposeDates,
   type AcceptedDate,
@@ -19,8 +20,18 @@ const TODAY = '2026-09-01';
 /** Through the shared double, so a field added to `Speaker` reaches these
  *  records on its own rather than leaving the file describing a shape the
  *  reader would refuse. */
+/** A confirmed record with the talk details already collected, which is what
+ *  `lockBlockers` asks for besides the edition number. A record without them
+ *  is its own case below, not the starting point for every other one. */
 function withCandidates(candidate_dates: CandidateDate[], overrides: Partial<Speaker> = {}) {
-  return double({ id: 'spk-001', status: 'confirmed', candidate_dates, ...overrides });
+  return double({
+    id: 'spk-001',
+    status: 'confirmed',
+    title: 'A talk with a title',
+    abstract: 'And an abstract.',
+    candidate_dates,
+    ...overrides,
+  });
 }
 
 /** Somebody else's evening, already in the diary. `scheduled` is one of the
@@ -211,9 +222,28 @@ describe('locking a date', () => {
     expect(next.candidate_dates).toHaveLength(2);
   });
 
-  it('refuses to lock without an edition number', () => {
+  it('refuses to lock without an edition number, and names it', () => {
     const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
-    expect(() => lockDate(s, acceptedDates(s)[0], '')).toThrow(/edition number/);
+    expect(() => lockDate(s, acceptedDates(s)[0], '')).toThrow(/^Edition — still to fill in/);
+  });
+
+  it('refuses to lock without the talk details, and names each of them', () => {
+    // The bar used to be split: the screen checked the title and the
+    // abstract, `lockDate` checked the edition number, and neither said
+    // anything about the other's half. One list now, in the order the screen
+    // reads down the page.
+    const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }], {
+      title: '',
+      abstract: '',
+    });
+    expect(lockBlockers(s, '')).toEqual(['Title', 'Abstract', 'Edition']);
+    expect(lockBlockers(s, 'MRG-09')).toEqual(['Title', 'Abstract']);
+    expect(() => lockDate(s, acceptedDates(s)[0], 'MRG-09')).toThrow(/^Title, Abstract —/);
+  });
+
+  it('has nothing left to name once the three are in', () => {
+    const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
+    expect(lockBlockers(s, 'MRG-09')).toEqual([]);
   });
 
   it('accepts what answerDate hands back, in one negotiation', () => {

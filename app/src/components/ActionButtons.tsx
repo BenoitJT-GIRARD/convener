@@ -11,7 +11,7 @@ import {
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { editionCodePrefix, nextEditionCode } from '../state/agenda';
-import { DateRejected, answerDate, proposeDates } from '../state/dates';
+import { DateRejected, answerDate, lockBlockers, proposeDates } from '../state/dates';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
 import { parisToday } from '../state/derived';
@@ -423,7 +423,11 @@ function CandidateDates({
     }
   }
 
-  const titleMissing = !speaker.title || !speaker.abstract;
+  // Asked of the rule rather than restated: the same list disables the
+  // button, stars the edition box below and writes the sentence at the
+  // bottom, so a volunteer can never read one of the three and act on
+  // another. `lockDate` refuses on this same list.
+  const missing = lockBlockers(speaker, edition);
 
   return (
     <div className="space-y-2 w-full">
@@ -478,7 +482,7 @@ function CandidateDates({
             {canLock && c.answer === 'accepted' && (
               <button
                 type="button"
-                disabled={locked || !edition || titleMissing}
+                disabled={locked || missing.length > 0}
                 onClick={() => onLock(c.date, edition)}
                 className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-dominant text-white border-2 border-dominant hover:bg-dominant-hover disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -521,7 +525,14 @@ function CandidateDates({
       {canLock && (
         <div className="flex gap-2 items-center flex-wrap">
           <label className="flex items-center gap-1.5">
-            <span className="text-xs font-mono uppercase text-ink-muted">Edition</span>
+            <span className="text-xs font-mono uppercase text-ink-muted">
+              Edition
+              {/* The one this screen owns: the title and the abstract are
+                  lines of the checklist and get their star there, while the
+                  edition number is typed here and nowhere else. It is also
+                  the one Benoît hunted for. */}
+              {!edition && <span className="text-danger ml-1">*</span>}
+            </span>
             <input
               type="text"
               placeholder={`${editionCodePrefix()}N`}
@@ -541,10 +552,10 @@ function CandidateDates({
       )}
 
       {blocker && <p className="text-danger text-xs">{blocker}</p>}
-      {canLock && titleMissing && (
+      {canLock && missing.length > 0 && (
         <p className="text-xs text-danger italic">
-          Title and abstract are required before locking the date. Fill them in the checklist
-          above.
+          <span aria-hidden="true">*</span> {missing.join(', ')} — still to fill in before this
+          date can be locked.
         </p>
       )}
     </div>

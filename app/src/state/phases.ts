@@ -174,8 +174,17 @@ export const PHASES: PhaseDef[] = [
     status: 'confirmed',
     label: 'Confirmed — schedule a date',
     items: [
-      { key: 'confirmed/title', form: 'field', fieldKey: 'title', label: 'Title' },
-      { key: 'confirmed/abstract', form: 'field', fieldKey: 'abstract', label: 'Abstract' },
+      // Both marked, because both are read by `dates.lockBlockers`: a date
+      // cannot be locked without them, and until this was written down the
+      // page said so nowhere.
+      { key: 'confirmed/title', form: 'field', fieldKey: 'title', label: 'Title', required: true },
+      {
+        key: 'confirmed/abstract',
+        form: 'field',
+        fieldKey: 'abstract',
+        label: 'Abstract',
+        required: true,
+      },
       {
         key: 'confirmed/talk-details-template',
         form: 'content',

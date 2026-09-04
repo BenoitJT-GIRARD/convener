@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Config, Speaker } from '../data/types';
 import {
   canCarryOwner,
+  isItemDone,
   phaseOf,
   phaseItems,
   fieldValue,
@@ -54,10 +55,12 @@ export function Checklist({
       ? Math.round((targetDate - Date.parse(todayStr)) / 86400000)
       : null;
 
+  const items = phaseItems(phase, config ?? null);
   return (
     <div className="space-y-3">
       <h2 className="font-serif text-xl mb-3">{phase.label}</h2>
-      {phaseItems(phase, config ?? null).map(item => (
+      {items.some(item => outstanding(speaker, item)) && <StarNote />}
+      {items.map(item => (
         <div key={item.key}>
           <Row
             item={item}
@@ -212,7 +215,7 @@ function FieldRow({
     <label className="block border border-border rounded p-3">
       <span className="font-display font-bold text-xs uppercase tracking-widest text-ink-muted">
         {item.label}
-        {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
+        {outstanding(speaker, item) && <span className="text-danger ml-1">*</span>}
       </span>
       {long ? (
         <textarea
@@ -241,6 +244,33 @@ function FieldRow({
  *  volunteers write in capitals looking like every other tick. */
 function mustBeDone(item: RunbookItem): boolean {
   return item.required === true || item.blocksFinalisation === true;
+}
+
+/**
+ * A line that is not optional and is not done yet -- which is what the red
+ * star marks.
+ *
+ * It used to mark every line that was not optional, done or not, and said so
+ * nowhere. That is two defects in one mark: a page of stars a volunteer has
+ * already satisfied teaches them the star means nothing, and a star with no
+ * note beside it anywhere on the screen is a symbol without a key -- the
+ * orphan beside *Registrations* that R42 records. Marking only what is
+ * outstanding makes the page empty itself as the work is done, and gives the
+ * one sentence below something true to say.
+ */
+function outstanding(speaker: Speaker, item: RunbookItem): boolean {
+  return mustBeDone(item) && !isItemDone(speaker, item);
+}
+
+/** The star's own note, drawn once, and only while at least one star is on
+ *  the page. */
+function StarNote() {
+  return (
+    <p className="text-xs text-ink-muted">
+      <span className="text-danger">*</span> marks what this record still needs
+      before it can move on.
+    </p>
+  );
 }
 
 function CheckboxRow({
@@ -279,7 +309,7 @@ function CheckboxRow({
         <div className="flex-1">
           <p className="text-sm">
             {label}
-            {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
+            {outstanding(speaker, item) && <span className="text-danger ml-1">*</span>}
           </p>
           {item.note && <p className="text-xs text-ink-muted mt-1">{item.note}</p>}
           {previous !== undefined && (

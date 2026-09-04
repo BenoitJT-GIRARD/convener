@@ -212,6 +212,34 @@ export function answerDate(current: Speaker, date: string, answer: DateAnswer): 
 }
 
 /**
+ * What this record still needs before a date can be locked, named one at a
+ * time and in the order the screen shows them.
+ *
+ * One reading of the rule, asked three times over on the same screen: the
+ * button is disabled by it, each field the answer names carries a red star
+ * until it is filled, and the sentence beside the button is this list. The
+ * bar used to be split -- the title and the abstract were checked by the
+ * screen while the edition number was checked by `lockDate` -- so the
+ * sentence a volunteer read named two of the three and the button stayed
+ * off for the third, with nothing on the page saying which. Hunting for it
+ * is what R36 records.
+ *
+ * `editionCode` is an argument rather than a field of the record because it
+ * is not one: it is typed into the lock-in form and exists nowhere until the
+ * date is frozen.
+ *
+ * The order is the screen's own, top to bottom, so the sentence reads down
+ * the page rather than across an order chosen here.
+ */
+export function lockBlockers(current: Speaker, editionCode: string): string[] {
+  const missing: string[] = [];
+  if (!current.title) missing.push('Title');
+  if (!current.abstract) missing.push('Abstract');
+  if (!editionCode) missing.push('Edition');
+  return missing;
+}
+
+/**
  * Freeze the negotiated slot: the record moves to `scheduled` and
  * `Speaker.date` / `Speaker.time` finally hold one evening.
  *
@@ -235,9 +263,12 @@ export function lockDate(current: Speaker, accepted: AcceptedDate, editionCode: 
         'locking a date commits them to that evening.',
     );
   }
-  if (!editionCode) {
+  const missing = lockBlockers(current, editionCode);
+  if (missing.length > 0) {
     throw new DateRejected(
-      'The edition number is missing. Use "suggest" to take the next one in the series.',
+      `${missing.join(', ')} — still to fill in before this date can be locked. ` +
+        'The announcement, the poster and the event page are all written from ' +
+        'them, and none of the three can be issued twice.',
     );
   }
 
