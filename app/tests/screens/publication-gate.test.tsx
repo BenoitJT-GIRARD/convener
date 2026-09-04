@@ -417,7 +417,7 @@ describe('publication transitions', () => {
     expect(withdrawn.publication.outcome).toBe('');
     const gate = canArchive(withdrawn, cfg, '2026-08-19');
     expect(gate.allowed).toBe(false);
-    expect(gate.reason).toMatch(/taken down/);
+    expect(gate.reason).toMatch(/has to come down/);
     // And it does not put words in the board's mouth: the board decided
     // nothing here, so nothing this screen says may claim it did.
     expect(gate.reason).not.toContain('The board decided');

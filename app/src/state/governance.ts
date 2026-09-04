@@ -171,7 +171,7 @@ function consentBlocker(p: Publication): string {
   if (p.consent === 'refused') {
     return (
       'The speaker has refused permission for their recording to be published. ' +
-      'It cannot be archived, and any copy already online has to be taken down.'
+      'It must not go online, and any copy already there has to come down.'
     );
   }
   return (
