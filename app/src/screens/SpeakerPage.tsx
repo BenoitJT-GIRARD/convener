@@ -5,14 +5,16 @@ import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
+import { ClosedRecord } from '../components/ClosedRecord';
 import { DatePanel } from '../components/DatePanel';
 import { RegistrationCount } from '../components/RegistrationCount';
 import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
+import { InlineContent } from '../content/InlineContent';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
 import { assignItem } from '../state/assignment';
 import { dataEdit, identifier, itemKey } from '../state/decisions';
-import { effectiveStatus } from '../state/derived';
+import { effectiveStatus, parisToday } from '../state/derived';
 import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
 
@@ -151,11 +153,33 @@ export function SpeakerPage() {
         </div>
       )}
 
-      {/* A status with no journey of its own -- parked, declined, archived --
-          still has controls, and they have nowhere in a checklist to sit. */}
+      {/* A status with no journey of its own -- parked, declined, archived.
+          What it needs is a report rather than a checklist: why it is
+          closed, when, and what could reopen it. The control that does the
+          reopening follows it, in the order every other status is laid out
+          in -- what you need to know, then what you do. */}
       {!hasPhase && (
-        <div className="mt-6">
+        <div className="mt-6 space-y-4">
+          <ClosedRecord speaker={s} config={config} />
           <ActionButtons speaker={s} role={role} />
+          {/* The message that says the video is up, filled in from this
+              record. This page is the only place it is ever reachable
+              filled in: publishing writes `archived` in the same gesture,
+              so no delivered record ever carries it, and
+              `screens/Templates.tsx` renders every template blank. It came
+              here with the gate and stays after it, because it is a text to
+              copy and not a control over the record. */}
+          {s.status === 'archived' && s.publication.outcome === 'published' && (
+            <div className="border-t border-border pt-4">
+              <p className="font-display font-bold uppercase tracking-widest text-[11px] text-ink-muted mb-2">
+                Tell people it is up
+              </p>
+              <InlineContent
+                contentKey="toolkit/recording-announce"
+                ctx={{ speaker: s, host: s.host_1, today: parisToday() }}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -176,11 +200,17 @@ export function SpeakerPage() {
       {/* Archiving publishes a named researcher's recording, so it is no
           longer a bare button here: it lives behind the second gate (G-07,
           G-08), which asks for the speaker's permission and the board's
-          separately. Still shown once archived, because a speaker may
-          withdraw their permission afterwards and that has to be actionable. */}
-      {(s.status === 'delivered' || s.status === 'archived') && (
-        <PublicationGate speaker={s} role={role} />
-      )}
+          separately.
+
+          `delivered` and nowhere else. It used to be drawn on an archived
+          record too, on the argument that a speaker may withdraw their
+          permission afterwards and that has to stay actionable. The need is
+          real and the place was wrong: it left an event whose whole meaning
+          is that the question is settled asking it again, in radio buttons.
+          A withdrawal is recorded where speakers are asked (`screens/
+          Consent.tsx`), and the board's own half reopens the record first --
+          `ClosedRecord` above says so, and `ActionButtons` draws the door. */}
+      {s.status === 'delivered' && <PublicationGate speaker={s} role={role} />}
 
       <SpeakerDetails speaker={s} />
 

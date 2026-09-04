@@ -326,8 +326,12 @@ describe('publication transitions', () => {
     // The one ordering the gate cannot cover: publication first, objection
     // after. Leaving `published` standing here would be exactly the
     // contradictory shape the validator used to have to catch.
+    //
+    // `delivered` and still `published`, which is exactly the shape
+    // `publication-reopen` produces: publishing wrote `archived`, and a
+    // board member who wants to object reopens the record before they can.
     const s = speaker({
-      status: 'archived',
+      status: 'delivered',
       publication: publication({
         consent: 'granted',
         approved_by: 'alice',
@@ -428,6 +432,12 @@ describe('publication transitions', () => {
     // sit behind a board decision nobody took: `publication-resolve` is the
     // only way to clear a `withheld`, its vocabulary is "resolve the
     // objections", and there are no objections here to resolve.
+    //
+    // Both answers are recorded on the archived record -- `screens/
+    // Consent.tsx` is where a speaker's answer is written down, whichever
+    // way they answer and whenever they change their mind. What the board
+    // has to do to act on the second answer is reopen the record, which is
+    // one gesture and writes nothing about the answer.
     const archived = applyTransition(
       speaker({
         publication: publication({ consent: 'granted', approved_by: 'alice', approved_on: LONG_AGO }),
@@ -447,8 +457,16 @@ describe('publication transitions', () => {
     const gate = canArchive(regranted, cfg, '2026-08-20');
     expect(gate.reason).not.toContain('The board decided');
     expect(gate.allowed).toBe(true);
-    const republished = applyTransition(regranted, 'finalize-archive', 'alice', cfg, '2026-08-20');
+    // The gate is open, and the record has to be open too before it can be
+    // walked through: `finalize-archive` is drawn on `delivered` and
+    // nowhere else.
+    expect(canTransition(regranted, 'finalize-archive', 'board')).toBe(false);
+    const reopened = applyTransition(regranted, 'publication-reopen', 'alice', cfg, '2026-08-20');
+    expect(reopened.status).toBe('delivered');
+    expect(canTransition(reopened, 'finalize-archive', 'board')).toBe(true);
+    const republished = applyTransition(reopened, 'finalize-archive', 'alice', cfg, '2026-08-20');
     expect(republished.publication.outcome).toBe('published');
+    expect(republished.status).toBe('archived');
   });
 
   it('says the board decided only where the board actually decided', () => {
@@ -715,6 +733,72 @@ describe('PublicationGate on the speaker page', () => {
     await waitFor(() => expect(screen.getByText(/refused permission/)).toBeInTheDocument());
     expect(backend.current()[0].status).toBe('delivered');
     expect(backend.current()[0].publication.outcome).not.toBe('published');
+  });
+
+  it('reports on an archived event instead of asking it again', async () => {
+    // R63: the gate used to be drawn here, on a record whose whole meaning
+    // is that the two permissions were settled. What is drawn now is what
+    // was decided, and the one door back to deciding it.
+    const backend = makeBackend(config(), [
+      speaker({
+        status: 'archived',
+        youtube_url: 'https://video.example.test/watch/mrg-9',
+        publication: publication({
+          consent: 'granted',
+          approved_by: 'alice',
+          approved_on: LONG_AGO,
+          outcome: 'published',
+        }),
+      }),
+    ]);
+    renderSpeaker(backend);
+
+    expect(await screen.findByText(/How this event closed/)).toBeInTheDocument();
+    expect(screen.getByText(/The recording is published/)).toBeInTheDocument();
+    // None of the gate's own wording, and none of its controls.
+    expect(screen.queryByText('Publishing the recording')).toBeNull();
+    expect(screen.queryByText(/Record the speaker/)).toBeNull();
+    expect(screen.queryByText(/Approve again/)).toBeNull();
+    expect(screen.queryByText(PUBLISH)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reopen the publication decision' })).toBeInTheDocument();
+  });
+
+  it('keeps the message that tells people the recording is up', async () => {
+    // It came here with the gate, and this page is the only place it is
+    // ever reachable filled in from a record: publishing writes `archived`
+    // in the same gesture, so no delivered record ever carries it.
+    const backend = makeBackend(config(), [
+      speaker({
+        status: 'archived',
+        publication: publication({
+          consent: 'granted',
+          approved_by: 'alice',
+          approved_on: LONG_AGO,
+          outcome: 'published',
+        }),
+      }),
+    ]);
+    renderSpeaker(backend);
+    expect(await screen.findByText('Tell people it is up')).toBeInTheDocument();
+  });
+
+  it('puts the door back where the gate is, and moves nothing else', async () => {
+    const backend = makeBackend(config(), [
+      speaker({
+        status: 'archived',
+        publication: publication({
+          consent: 'granted',
+          approved_by: 'alice',
+          approved_on: LONG_AGO,
+          outcome: 'published',
+        }),
+      }),
+    ]);
+    renderSpeaker(backend);
+    fireEvent.click(await screen.findByRole('button', { name: 'Reopen the publication decision' }));
+    await waitFor(() => expect(backend.current()[0].status).toBe('delivered'));
+    expect(backend.current()[0].publication.outcome).toBe('published');
+    expect(backend.current()[0].publication.approved_by).toBe('alice');
   });
 
   it('flags an archived recording the speaker has since refused', async () => {

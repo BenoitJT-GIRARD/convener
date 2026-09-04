@@ -174,6 +174,14 @@ export function ActionButtons({ speaker, role }: Props) {
     case 'decline-board':
       if (role === 'board') buttons.push(btn('Reactivate', 'reactivate'));
       break;
+    case 'archived':
+      // The one control a closed event carries, and it is a door rather than
+      // a decision: it puts the record back to `delivered`, where the gate
+      // that publishes actually lives. What it is for is said above it by
+      // `components/ClosedRecord.tsx`, which is the report this button sits
+      // at the foot of.
+      if (role === 'board') buttons.push(btn('Reopen the publication decision', 'publication-reopen'));
+      break;
     default:
       break;
   }

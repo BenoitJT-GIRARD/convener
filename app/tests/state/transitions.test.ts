@@ -497,20 +497,50 @@ describe('transitions v2', () => {
     );
   });
 
-  it('refuses to re-archive a recording that is already published', () => {
-    const published: Speaker = {
+  it('offers nothing about publication on a record that is closed', () => {
+    // An archived event reports what was decided; it does not ask again.
+    // This used to be the other way round for the one case an objection
+    // creates -- a recording taken offline could be re-published from
+    // `archived` -- which left the gate drawn on a page whose whole meaning
+    // is that the question is settled.
+    for (const outcome of ['published', 'withheld', ''] as const) {
+      const closed: Speaker = {
+        ...base,
+        status: 'archived',
+        publication: { ...base.publication, consent: 'granted', outcome },
+      };
+      for (const t of [
+        'finalize-archive',
+        'archive-unpublished',
+        'publication-approve',
+        'publication-object',
+        'publication-resolve',
+      ] as const) {
+        expect(canTransition(closed, t, 'board'), `${t} on an archived record`).toBe(false);
+      }
+    }
+  });
+
+  it('opens the question again by moving the record, not by drawing the gate', () => {
+    const closed: Speaker = {
       ...base,
       status: 'archived',
-      publication: { ...base.publication, outcome: 'published' },
+      publication: { ...base.publication, consent: 'granted', outcome: 'withheld' },
     };
-    expect(canTransition(published, 'finalize-archive', 'organizer')).toBe(false);
-    // But an archived recording an objection took offline can go back
-    // through the same gated transition rather than through a second path.
-    const takenDown: Speaker = {
-      ...base,
-      status: 'archived',
-      publication: { ...base.publication, outcome: 'withheld' },
-    };
-    expect(canTransition(takenDown, 'finalize-archive', 'organizer')).toBe(true);
+    // The board's door, and only the board's.
+    expect(canTransition(closed, 'publication-reopen', 'organizer')).toBe(false);
+    expect(canTransition(closed, 'publication-reopen', 'board')).toBe(true);
+
+    const reopened = applyTransition(closed, 'publication-reopen', 'a', cfg, '2026-05-23');
+    expect(reopened.status).toBe('delivered');
+    // Nothing about the answer is written by the door itself: what the
+    // speaker said, who approved, and what the board resolved are the
+    // record's history and stay exactly as they were.
+    expect(reopened.publication).toEqual(closed.publication);
+    // And once it is open, the gate is drawn again.
+    expect(canTransition(reopened, 'publication-resolve', 'board')).toBe(true);
+
+    // A record that is not closed has no door to open.
+    expect(canTransition(reopened, 'publication-reopen', 'board')).toBe(false);
   });
 });

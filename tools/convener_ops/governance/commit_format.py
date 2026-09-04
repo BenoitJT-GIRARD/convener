@@ -78,6 +78,12 @@ ACTS: Final[dict[str, str]] = {
     # the speaker or the board has refused still leaves a record worth
     # closing, and closing it writes no published outcome.
     "archive-unpublished": "archive without publishing the recording of",
+    # And the way back. An archived event reports what was decided rather
+    # than offering the gate again, so a speaker who withdraws their
+    # permission -- or a board that changes its mind -- reopens the record
+    # first and answers second. The act says only that the question is open
+    # again; nothing about the answer is written here.
+    "publication-reopen": "reopen the publication decision on",
     # Who sits on the board (G-05), and who is available to vote (G-14).
     #
     # `availability-set` is a decision like the rest and not a diary

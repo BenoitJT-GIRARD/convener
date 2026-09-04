@@ -164,8 +164,14 @@ function calendarDaysBetween(from: string, to: string): number {
 }
 
 /** The ISO day `n` calendar days after `from`, or `null` when `from` is not
- *  an ISO day or `n` is not a whole number. */
-function addCalendarDays(from: string, n: number): string | null {
+ *  an ISO day or `n` is not a whole number.
+ *
+ *  Exported for `state/retention.ts`, which counts the same unit from a
+ *  different anchor. A second copy of this arithmetic is the one thing this
+ *  module's own header rules out: calendar days and working days are two
+ *  units, and the day either one is written twice is the day they start
+ *  disagreeing. */
+export function addCalendarDays(from: string, n: number): string | null {
   const epoch = epochOf(from);
   if (Number.isNaN(epoch) || !Number.isInteger(n)) return null;
   // A fixed epoch built from an ISO day, never a reading of the clock, so

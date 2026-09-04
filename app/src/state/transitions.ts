@@ -37,6 +37,7 @@ export type Transition =
   | 'publication-approve'
   | 'publication-object'
   | 'publication-resolve'
+  | 'publication-reopen'
   | 'vote-reopen'
   | 'override';
 
@@ -128,6 +129,7 @@ const BOARD_ONLY: Transition[] = [
   'publication-approve',
   'publication-object',
   'publication-resolve',
+  'publication-reopen',
   'vote-reopen',
   'override',
 ];
@@ -156,11 +158,15 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       // control is drawn at all.
       return s.status === 'scheduled' && !!s.date;
     case 'finalize-archive':
-      // Also reachable from `archived` when the recording is not currently
-      // published -- an objection took it down and was later lifted. It goes
-      // back through this one gated transition rather than through a second
-      // path that could publish on its own authority.
-      return s.status === 'delivered' || (s.status === 'archived' && s.publication.outcome !== 'published');
+      // `delivered` and nowhere else. It used to be reachable from
+      // `archived` as well, for the record whose recording an objection had
+      // taken down and a resolution had since cleared -- which meant an
+      // archived record still carrying the gate that publishes, on a page
+      // whose whole meaning is that the question is settled. That record
+      // now comes back through `publication-reopen` first, so there is one
+      // status the publication question can be open in and one door into
+      // it.
+      return s.status === 'delivered';
     case 'archive-unpublished':
       // Only where somebody has actually said no. A record still waiting on
       // an answer has a gate that will open; this is the door for the one
@@ -171,14 +177,23 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       // never closed: a speaker may withdraw permission at any time (G-07).
       return s.status === 'delivered' || s.status === 'archived';
     case 'publication-approve':
-      return s.status === 'delivered' || s.status === 'archived';
     case 'publication-object':
-      return s.status === 'delivered' || s.status === 'archived';
+      // The board's half of the gate, and `delivered` is the whole of where
+      // it is asked. An archived record reports what the board decided
+      // (`components/ClosedRecord.tsx`); it does not offer the board a way
+      // to decide it again in place.
+      return s.status === 'delivered';
     case 'publication-resolve':
       return (
-        (s.status === 'delivered' || s.status === 'archived') &&
+        s.status === 'delivered' &&
         (standingObjections(s.publication).length > 0 || s.publication.outcome === 'withheld')
       );
+    case 'publication-reopen':
+      // The one control an archived event carries, and it is a door rather
+      // than a decision: it puts the record back where the publication
+      // question can be asked, and writes nothing about the answer. The
+      // same shape `reactivate` gives a parked lead.
+      return s.status === 'archived';
     case 'vote-reopen':
       // Everything except the three outcomes a reopening could not undo: a
       // talk already given (`delivered`, `archived`) is history, and a
@@ -319,6 +334,13 @@ export function applyTransition(
         publication: { ...s.publication, outcome: 'published' },
       };
     }
+    case 'publication-reopen':
+      // Status and nothing else. What was recorded about the publication
+      // stays recorded -- the consent, the approval, the objections and
+      // their resolutions are the history of this record, and reopening it
+      // is not an act of the board about any of them. The gate reads them
+      // all again the moment the record is back in front of it.
+      return { ...s, status: 'delivered' };
     case 'archive-unpublished': {
       // Closing a record whose recording is not going online. It writes the
       // status and nothing else -- `publication` is carried through

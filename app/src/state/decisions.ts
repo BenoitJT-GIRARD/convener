@@ -109,6 +109,7 @@ export type PlainDecisionKind =
   | 'mark-delivered'
   | 'publication-approve'
   | 'publication-object'
+  | 'publication-reopen'
   | 'finalize-archive'
   | 'archive-unpublished'
   | 'nomination-open'
@@ -196,6 +197,7 @@ export const ACTS: Record<DecisionKind, string> = {
   'publication-approve': 'approve publication of',
   'publication-object': 'record an objection to publishing',
   'publication-resolve': 'resolve the objections on',
+  'publication-reopen': 'reopen the publication decision on',
   'finalize-archive': 'publish the recording of',
   'archive-unpublished': 'archive without publishing the recording of',
   'nomination-open': 'open a nomination for',

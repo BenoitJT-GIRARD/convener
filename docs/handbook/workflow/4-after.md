@@ -55,6 +55,24 @@ exactly that: the event is closed, nothing goes online, and the refusal stays
 on the record as the reason. Waiting on a permission that is not coming is not
 a step of this phase.
 
+## What an archived event shows afterwards
+
+Archiving is the gesture that says the question is settled, and the page says
+so from then on: what became of the recording and why, the link if it went
+online, any objections and how they were closed, and the day this event's
+registrations are due to stop being readable. It is a report, and none of the
+gate's own controls is on it any more.
+
+One thing is still possible, because it has to be. **A speaker may withdraw
+their permission at any time** — that is theirs, not the Board's, and it does
+not expire. Record what they say on the **Consent** tab, exactly as you
+recorded their first answer; a withdrawal takes the recording offline on the
+spot, and the archived page then says the recording is not published and why.
+Acting on it — putting a recording back up after a change of mind, or
+resolving an objection raised late — is a Board member pressing **Reopen the
+publication decision** on the archived page. That puts the record back to
+*delivered*, where the gate is, and changes nothing else.
+
 ## Thank the speaker
 
 Send a short, warm thank-you — [template](../toolkit/emails/thank-you.md). Mention the engagement and the audience numbers; speakers value it.

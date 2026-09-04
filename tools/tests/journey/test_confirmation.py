@@ -650,6 +650,12 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     keeps the prose
     copies from drifting apart until one does.
 
+    A fifth copy joined them when an archived event started reporting the
+    one day it still has ahead of it: `app/src/state/retention.ts` holds the
+    window the cockpit counts from, and a cockpit saying one number while
+    the confirmation e-mail a participant already has says another would be
+    the worst of the five to get wrong.
+
     There is a fourth restatement, `site/src/event.njk`'s own
     notice -- at first quoted from `SignupForm.tsx`'s own copy as a
     stopgap (that template's own comment said so), before the registration
@@ -674,6 +680,9 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     event_page_source = (
         Path(__file__).resolve().parents[3] / "site" / "src" / "event.njk"
     ).read_text(encoding="utf-8")
+    cockpit_source = (
+        Path(__file__).resolve().parents[3] / "app" / "src" / "state" / "retention.ts"
+    ).read_text(encoding="utf-8")
 
     def _days(text: str) -> str:
         match = re.search(r"(\d+) days", text)
@@ -684,8 +693,9 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     docs = _days(_normalised_docs_template())
     eventkeys = _days(eventkeys_source)
     event_page = _days(event_page_source)
+    cockpit = _days(cockpit_source)
 
-    assert code == docs == eventkeys == event_page == "90"
+    assert code == docs == eventkeys == event_page == cockpit == "90"
 
     # Belt and braces for the removal itself: a regression that pasted the
     # notice back into the island would put two copies on one built page,
