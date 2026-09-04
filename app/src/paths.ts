@@ -93,3 +93,14 @@ export function speakersFile(): string {
 export function configFile(): string {
   return `${dataDir()}config.yml`;
 }
+
+/**
+ * Where one event's sign-ups are kept, one encrypted envelope per person
+ * (`tools/convener_ops/journey/registration.py`).
+ *
+ * The cockpit never decrypts it and never asks to: what it reads is how many
+ * entries the list has, which is JSON structure rather than anybody's data.
+ */
+export function registrationsFile(eventId: string): string {
+  return `${dataDir()}events/${eventId}/registrations.enc`;
+}

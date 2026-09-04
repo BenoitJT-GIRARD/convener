@@ -30,15 +30,15 @@ coming along.
 
 - [ ] Meeting link in hand, recording arranged
 - [ ] LinkedIn access in place
-- [ ] **Speaker registered on the forum and to their own talk**
+- [ ] **Checked that the speaker has a forum account and is signed up to their own talk**
 - [ ] One line per promotion channel — as many as there are entries in `channels` in `instance/data/config.yml`, so what you see is what the Board has set
 
 ### T-7 days
 
 - [ ] Forum announcement seeded
 - [ ] Seeded a question on the forum
-- [ ] Waiting room and co-host rights set up
-- [ ] Meeting platform access token renewed (if due) — roughly monthly; see `docs/operating/operations.md` for the short browser step
+- [ ] Waiting room switched on, and both hosts given co-host rights
+- [ ] Meeting platform access token renewed, if it is close to a month old — see `docs/operating/operations.md` for the short browser step
 - [ ] Plan for the day agreed between hosts — the [run of show](../toolkit/run-of-show.md)
 
 ### T-3 days

@@ -138,8 +138,8 @@ describe('deriveInbox v2', () => {
       time: '12:30',
     });
     const labels = deriveInbox([s], CFG, 'alice', 'organizer', '2026-05-23').map(r => r.label);
-    expect(labels).toContain('Fill Registrations');
-    expect(labels).toContain('Fill Live peak');
+    expect(labels).toContain('Fill Number of registrations');
+    expect(labels).toContain('Fill Peak number in the room during the talk');
     expect(labels).toContain('Forum summary posted');
     expect(labels).toContain('Thank-you email sent to speaker');
   });

@@ -604,7 +604,9 @@ describe('PublicationGate on the speaker page', () => {
 
     expect(await screen.findByRole('button', { name: PUBLISH })).toBeDisabled();
     expect(
-      screen.getByText(/Speaker registered on the forum and to their own talk is not ticked\./),
+      screen.getByText(
+        /Checked that the speaker has a forum account and is signed up to their own talk is not ticked\./,
+      ),
     ).toBeInTheDocument();
     expect(backend.current()[0].publication.outcome).toBe('');
   });

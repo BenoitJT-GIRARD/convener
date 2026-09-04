@@ -217,6 +217,17 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'handbook/governance/board-rules.md',
     anchor: 'objecting-and-what-deferral-means',
   },
+  // Two wrap-up lines whose label names an outcome and not the work. What to
+  // do is written once, on the page a volunteer reads after the talk, and the
+  // line hands over that same section rather than a second telling of it.
+  'fragments/after-attendance-export': {
+    file: 'handbook/workflow/4-after.md',
+    anchor: 'if-the-event-ran-without-a-meeting-platform-account',
+  },
+  'fragments/after-retrieve-recording': {
+    file: 'handbook/workflow/4-after.md',
+    anchor: 'retrieve-the-recording-before-the-platform-copy-is-deleted',
+  },
   'fragments/roles-host-pair': { file: 'handbook/roles.md', anchor: 'two-event-hosts-per-webinar' },
   'fragments/roles-no-ladder': { file: 'handbook/roles.md', anchor: 'no-ladder-to-climb' },
 };

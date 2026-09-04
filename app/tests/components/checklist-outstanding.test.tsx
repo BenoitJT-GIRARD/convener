@@ -37,7 +37,7 @@ function starred(): string[] {
 describe('what a record still needs', () => {
   it('stars an empty wrap-up number, and says what the star means', () => {
     show({ status: 'delivered', date: '2026-08-01' });
-    expect(starred()).toContain('Registrations');
+    expect(starred()).toContain('Number of registrations');
     expect(screen.getByText(NOTE)).toBeTruthy();
   });
 
@@ -47,8 +47,8 @@ describe('what a record still needs', () => {
       date: '2026-08-01',
       metrics: { registrations: 40, live_peak: null, youtube_views_30d: null, forum_replies: null },
     });
-    expect(starred()).not.toContain('Registrations');
-    expect(starred()).toContain('Live peak');
+    expect(starred()).not.toContain('Number of registrations');
+    expect(starred()).toContain('Peak number in the room during the talk');
   });
 
   it('takes the star off a tick as soon as it is ticked', () => {

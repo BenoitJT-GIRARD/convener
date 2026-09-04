@@ -277,7 +277,7 @@ export const PHASES: PhaseDef[] = [
         // screen and the record cannot end up calling this two things.
         key: 'scheduled/T-14/speaker_registered',
         form: 'checkbox',
-        label: 'Speaker registered on the forum and to their own talk',
+        label: 'Checked that the speaker has a forum account and is signed up to their own talk',
         window: 14,
         blocksFinalisation: true,
       },
@@ -297,7 +297,7 @@ export const PHASES: PhaseDef[] = [
       {
         key: 'scheduled/T-7/waiting-room',
         form: 'checkbox',
-        label: 'Waiting room and co-host rights set up',
+        label: 'Waiting room switched on, and both hosts given co-host rights',
         window: 7,
       },
       {
@@ -322,7 +322,7 @@ export const PHASES: PhaseDef[] = [
         // that bar.
         key: 'scheduled/T-7/token-renewal',
         form: 'checkbox',
-        label: 'Meeting platform access token renewed (if due)',
+        label: 'Meeting platform access token renewed, if it is close to a month old',
         window: 7,
       },
       {
@@ -425,7 +425,8 @@ export const PHASES: PhaseDef[] = [
         // stands for.
         key: 'delivered/attendance-export-encrypted',
         form: 'checkbox',
-        label: 'Attendance export encrypted and committed (manual implementation only)',
+        label: 'Attendance export downloaded, encrypted and committed — manual implementation only',
+        contentKey: 'fragments/after-attendance-export',
       },
       {
         // The key -- 'delivered/recording-retrieved',
@@ -446,21 +447,28 @@ export const PHASES: PhaseDef[] = [
         // download makes it true.
         key: 'delivered/recording-retrieved',
         form: 'checkbox',
-        label: 'Recording retrieved and archived somewhere durable',
+        label: 'Recording downloaded from the platform and saved somewhere that outlives it',
+        contentKey: 'fragments/after-retrieve-recording',
         note: 'Only tick this once the file is genuinely downloaded and saved elsewhere — it is one of two proofs the release job checks before deleting the platform copy, and a false tick risks losing the recording for good.',
       },
       {
         key: 'delivered/registrations',
         form: 'field',
         fieldKey: 'registrations',
-        label: 'Registrations',
+        label: 'Number of registrations',
         required: true,
       },
+      // The one wrap-up number the repository can work out for itself: the
+      // sign-up file holds one envelope per person, and how many there are is
+      // structure rather than anybody's data. See
+      // `components/RegistrationCount.tsx`, and its own note on why the peak
+      // below cannot be filled the same way.
+      { key: 'delivered/count-registrations', form: 'button-group', label: 'Count the sign-ups' },
       {
         key: 'delivered/live-peak',
         form: 'field',
         fieldKey: 'live_peak',
-        label: 'Live peak',
+        label: 'Peak number in the room during the talk',
         required: true,
       },
       {

@@ -211,6 +211,7 @@ describe('the journey the volunteers actually keep', () => {
       'delivered/attendance-export-encrypted',
       'delivered/recording-retrieved',
       'delivered/registrations',
+      'delivered/count-registrations',
       'delivered/live-peak',
       'delivered/youtube-url',
       'delivered/youtube-views-30d',
@@ -303,8 +304,10 @@ describe('what stands between a record and its archive', () => {
 
   it('names each obstacle in a sentence about the work, not about a person', () => {
     const why = blockers(base).map(b => b.why);
-    expect(why).toContain('Speaker registered on the forum and to their own talk is not ticked.');
-    expect(why).toContain('Registrations is still empty.');
+    expect(why).toContain(
+      'Checked that the speaker has a forum account and is signed up to their own talk is not ticked.',
+    );
+    expect(why).toContain('Number of registrations is still empty.');
     expect(why).toContain('Forum summary posted is not ticked.');
     for (const sentence of why) expect(sentence).toMatch(/\.$/);
   });

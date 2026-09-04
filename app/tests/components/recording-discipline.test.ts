@@ -162,7 +162,10 @@ describe('the order is constrained where a volunteer meets it', () => {
   it('constrains only the sequence, and leaves the rest of the runbook alone', () => {
     show(onTheDay());
     expect(box('Visuals + flyer made').disabled).toBe(false);
-    expect(box('Speaker registered on the forum and to their own talk').disabled).toBe(false);
+    expect(
+      box('Checked that the speaker has a forum account and is signed up to their own talk')
+        .disabled,
+    ).toBe(false);
     const held = PHASES.flatMap(p => p.items).filter(i => i.after !== undefined);
     expect(held.map(i => i.key)).toEqual([STOP, DISCUSSION]);
   });

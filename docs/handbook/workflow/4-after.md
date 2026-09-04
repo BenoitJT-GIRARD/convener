@@ -62,8 +62,8 @@ Because it is a convention and not a law, it is configuration: `view_count_windo
 ## Checklist
 
 - [ ] Notes from the discussion written up while fresh
-- [ ] Attendance export encrypted and committed — manual implementation only, skip if the meeting-platform account handled the session
-- [ ] Recording retrieved and archived somewhere durable
+- [ ] Attendance export downloaded, encrypted and committed — manual implementation only, skip if the meeting-platform account handled the session
+- [ ] Recording downloaded from the platform and saved somewhere that outlives it
 - [ ] Draft summary shown to the speaker
 - [ ] Summary posted on the forum thread
 - [ ] Recording published on the video channel — only after the Board's green light

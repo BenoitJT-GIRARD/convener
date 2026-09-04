@@ -7,6 +7,7 @@ import {
 } from '../state/consent';
 import { dateLine, dateTimeLine } from '../state/derived';
 import { agreedSlot, offeredDatesLine } from '../state/dates';
+import { eventIdOf } from '../state/agenda';
 import type { Speaker } from '../data/types';
 // `docs/handbook/toolkit/`'s templates used to write the
 // organisation's name, the series' title, its forum and its contact
@@ -100,7 +101,7 @@ function signupBase(): string {
  */
 function signupLink(editionCode: string): string {
   if (!editionCode) return '';
-  return `${signupBase()}${encodeURIComponent(editionCode.toLowerCase())}/`;
+  return `${signupBase()}${encodeURIComponent(eventIdOf(editionCode))}/`;
 }
 
 interface Resolved {

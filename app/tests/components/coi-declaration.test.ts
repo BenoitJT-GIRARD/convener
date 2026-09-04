@@ -276,7 +276,7 @@ describe('two registration checks, a week apart, that cannot be read for each ot
 
   it('says what the T-14 line is about: the speaker being signed up', () => {
     expect(itemByKey(SPEAKER_REGISTERED)!.label).toBe(
-      'Speaker registered on the forum and to their own talk',
+      'Checked that the speaker has a forum account and is signed up to their own talk',
     );
   });
 
@@ -294,7 +294,7 @@ describe('two registration checks, a week apart, that cannot be read for each ot
       expect(label).not.toContain('registration link');
     }
     expect(day).toContain('room link');
-    expect(week).toContain('Speaker registered');
+    expect(week).toContain('signed up to their own talk');
   });
 
   it('keeps them a week apart and keeps only one of them blocking', () => {

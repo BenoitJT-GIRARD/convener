@@ -6,6 +6,7 @@ import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
 import { DatePanel } from '../components/DatePanel';
+import { RegistrationCount } from '../components/RegistrationCount';
 import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
@@ -107,6 +108,9 @@ export function SpeakerPage() {
     'approved/send-invitation': <ActionButtons speaker={s} role={role} />,
     'invited/decline': <ActionButtons speaker={s} role={role} />,
     'scheduled/mark-delivered': <ActionButtons speaker={s} role={role} />,
+    'delivered/count-registrations': (
+      <RegistrationCount speaker={s} onCounted={n => onField('registrations', String(n))} />
+    ),
   };
 
   return (
