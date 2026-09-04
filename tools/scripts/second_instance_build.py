@@ -44,6 +44,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Final
 
+import example_dates
+
 from convener_ops.declaration import boundary
 from convener_ops.declaration.paths import repo_root
 
@@ -144,8 +146,28 @@ def environment(root: Path) -> dict[str, str]:
     return env
 
 
+#: The example's own store, whose files carry days. `example_dates` moves
+#: every one of them by whole weeks on the way in, so the instance this tree
+#: is built as is as old today as it was written to be -- see that module.
+#: Nothing else under the example is dated: the four declarations beside
+#: `data/` hold thresholds and addresses.
+DATED = Path("instance") / "data"
+
+
+def _is_dated(relative: Path) -> bool:
+    return relative.parent == DATED and relative.suffix == ".yml"
+
+
 def lay_out(root: Path) -> None:
-    """The scratch tree: this repository's product, the example's instance."""
+    """The scratch tree: this repository's product, the example's instance.
+
+    The example's own store is dated on the way in (`_is_dated`,
+    `example_dates`), so the tree is the example instance as it stands this
+    week rather than as it stood on the day it was written. The copy under
+    `examples/` is left exactly as the tracked tree has it: it is the
+    product's own fixture there, and `app/scripts/example-instance.mjs`
+    applies the identical shift when it reads it into the cockpit's bundle.
+    """
     tracked = subprocess.run(  # nosec B603 B607
         ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
     ).stdout.splitlines()
@@ -167,6 +189,7 @@ def lay_out(root: Path) -> None:
         if owned.is_file():
             owned.unlink()
 
+    day = example_dates.today()
     for source in sorted((ROOT / EXAMPLE).rglob("*")):
         if not source.is_file():
             continue
@@ -175,7 +198,16 @@ def lay_out(root: Path) -> None:
             continue
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
+        if _is_dated(relative):
+            # `newline=""` on both halves: this is a substitution over the
+            # file, and the line endings the working copy has are the ones
+            # `shutil.copyfile` gives every other file in this tree.
+            with source.open(encoding="utf-8", newline="") as reading:
+                text = reading.read()
+            with target.open("w", encoding="utf-8", newline="") as writing:
+                writing.write(example_dates.shifted(text, day))
+        else:
+            shutil.copyfile(source, target)
 
 
 def publish(root: Path) -> None:

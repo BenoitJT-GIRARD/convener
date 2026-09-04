@@ -122,7 +122,7 @@ export function demoConfig(): Config {
   return config;
 }
 
-/** The example instance's own five records. */
+/** The example instance's own records. */
 export function demoSpeakers(): Speaker[] {
   speakers ??= parseSpeakers(exampleInstance().speakers);
   return speakers;

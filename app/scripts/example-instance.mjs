@@ -36,9 +36,22 @@
  * build that cannot read the example cannot demonstrate it, and the
  * alternative to stopping is a cockpit whose demonstration is an empty
  * table.
+ *
+ * **Dated on the way through.** `./example-dates.mjs` moves every day in
+ * both files by whole weeks, so the fixture is as old in the demonstration
+ * as it was written to be -- see that module, and
+ * `tools/scripts/example_dates.py` for the whole of the rule. Here rather
+ * than in `src/data/demo.ts`: that module reads the example instead of
+ * inventing, which is exactly why it is not the place a date is computed.
+ * And here rather than nowhere, because the records this hands the bundle
+ * and the records `tools/scripts/second_instance_build.py` lays into
+ * `instance/data/` are the same records, and only one of the two can be
+ * left un-dated before the cockpit and the showcase disagree about which
+ * evening a session is on.
  */
 
 import { readFileSync } from 'node:fs';
+import { shifted, today } from './example-dates.mjs';
 
 /** `examples/the-example-collective/instance/data/`, from this file's own location -- the app's
  *  build runs with `app/` as its working directory, so a path relative to
@@ -47,12 +60,12 @@ const DATA = new URL('../../examples/the-example-collective/instance/data/', imp
 
 const NAMED = 'examples/the-example-collective/instance/data';
 
-function read(name) {
+function read(name, day) {
   const text = readFileSync(new URL(name, DATA), 'utf8');
   if (text.trim() === '') {
     throw new Error(`${NAMED}/${name} is empty -- there would be nothing to demonstrate`);
   }
-  return text;
+  return shifted(text, day);
 }
 
 /**
@@ -63,5 +76,10 @@ function read(name) {
  * demonstrating a repository nobody has.
  */
 export function exampleInstance() {
-  return { config: read('config.yml'), speakers: read('speakers.yml') };
+  // One day for both files, read once. The two are one instance: a board
+  // dated from one call and a ballot dated from another could land a week
+  // apart across midnight, and a member would then have voted before
+  // joining.
+  const day = today();
+  return { config: read('config.yml', day), speakers: read('speakers.yml', day) };
 }

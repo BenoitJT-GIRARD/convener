@@ -22,12 +22,42 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEMO_USER, demoConfig, demoSpeakers } from '../../src/data/demo';
 import { parseConfig, parseSpeakers } from '../../src/data/yaml';
+import type { SpeakerStatus } from '../../src/data/types';
+import { shifted, today } from '../../scripts/example-dates.mjs';
+import { MIN_REPORTING_BASIS, distribution } from '../../src/state/diversity';
+import { parisToday } from '../../src/state/derived';
+import { lateness } from '../../src/state/sla';
+
+/** Every status the model has. Written out rather than imported: the type
+ *  is a union of string literals and has no run-time form, and a status
+ *  added to the union without a record behind it is exactly what the
+ *  clause below exists to refuse -- so the list being a second statement
+ *  of the vocabulary is the point of it. TypeScript refuses a member that
+ *  is not one. */
+const EVERY_STATUS: SpeakerStatus[] = [
+  'lead',
+  'approved',
+  'invited',
+  'confirmed',
+  'scheduled',
+  'delivered',
+  'archived',
+  'parked',
+  'decline-board',
+  'decline-speaker',
+];
 
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), '../..', '..');
 const EXAMPLE = resolve(REPOSITORY, 'examples', 'the-example-collective', 'instance', 'data');
 
+/** One of the example's own files, dated the way the build dates it.
+ *  `scripts/example-instance.mjs` moves every day in these two by whole
+ *  weeks on the way into the bundle, so the file on disk and the records
+ *  the cockpit holds are the same records at two different ages -- and a
+ *  comparison against the raw file would agree only during the anchor's
+ *  own week and start failing on its own the following Thursday. */
 function example(name: string): string {
-  return readFileSync(resolve(EXAMPLE, name), 'utf8');
+  return shifted(readFileSync(resolve(EXAMPLE, name), 'utf8'), today());
 }
 
 describe('the demonstration', () => {
@@ -77,5 +107,50 @@ describe('the demonstration', () => {
     // A title outside the Latin script, because a demonstration that only
     // ever renders ASCII proves nothing about the one that does not.
     expect(speakers.some(s => /[^\u0020-\u007e]/.test(s.title))).toBe(true);
+  });
+
+  it('carries a record at every status the pipeline has', () => {
+    // The fixture the pipeline is verified against. A status with no
+    // record behind it is a status verified by reading the code, and this
+    // is what ends that: every one of them can be opened.
+    const held = new Set(demoSpeakers().map(s => s.status));
+    for (const status of EVERY_STATUS) {
+      expect(held, `no ${status} record to open`).toContain(status);
+    }
+  });
+
+  it('is recent enough that no step of it is past its own turnaround time', () => {
+    // The defect this closes read "Forum summary is 281 days overdue" on a
+    // talk the example gave the autumn before last. The records are
+    // written for one day (`scripts/example-dates.mjs`) and moved into the
+    // week they are read in, so the demonstration opens on a pipeline
+    // nobody is late on -- whichever day it is opened on.
+    const config = demoConfig();
+    for (const one of demoSpeakers()) {
+      const late = lateness(one, config, parisToday());
+      expect(late.state, `${one.id} is ${JSON.stringify(late)}`).not.toBe('overdue');
+    }
+  });
+
+  it('measures on the Diversity screen instead of saying there is too little', () => {
+    // `state/diversity.ts` refuses a share below MIN_REPORTING_BASIS
+    // declared answers, and it asks its question of two populations. The
+    // example carried five records, so both panels of that screen said
+    // "not enough declared answers" and the screen demonstrated nothing
+    // but its own refusal.
+    const dist = distribution(
+      demoSpeakers(),
+      demoConfig().balance_window_months,
+      parisToday(),
+    );
+    for (const population of [dist.applicants, dist.selected]) {
+      expect(population.gender.declared).toBeGreaterThanOrEqual(MIN_REPORTING_BASIS);
+      expect(population.career_stage.declared).toBeGreaterThanOrEqual(MIN_REPORTING_BASIS);
+      expect(population.country.declared).toBeGreaterThanOrEqual(MIN_REPORTING_BASIS);
+    }
+    // And an undisclosed answer is still there, because it is an answer: a
+    // fixture where everybody declares would demonstrate a screen this
+    // project does not have.
+    expect(dist.applicants.gender.total).toBeGreaterThan(dist.applicants.gender.declared);
   });
 });

@@ -8,27 +8,27 @@
 # fictional board has no better figure to offer and inventing one would
 # suggest a threshold is identity when it is a rule.
 season: 2026
-next_edition_number: 4
+next_edition_number: 6
 overlap_window_days: 7
 board:
 - login: example-alba
-  joined_on: '2025-01-13'
+  joined_on: '2023-01-12'
   status: active
   unavailable_until: ''
 - login: example-brix
-  joined_on: '2025-01-13'
+  joined_on: '2023-01-12'
   status: active
   unavailable_until: ''
 - login: example-cedar
-  joined_on: '2025-04-07'
+  joined_on: '2023-10-19'
   status: active
   unavailable_until: ''
 - login: example-dune
-  joined_on: '2025-09-01'
+  joined_on: '2024-08-29'
   status: active
   unavailable_until: ''
 - login: example-elm
-  joined_on: '2026-02-16'
+  joined_on: '2025-07-10'
   status: active
   unavailable_until: ''
 seminar_duration_minutes: 90

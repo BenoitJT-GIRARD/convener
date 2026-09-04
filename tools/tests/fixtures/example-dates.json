@@ -1,0 +1,51 @@
+{
+  "_comment": "The D-14 boundary between tools/scripts/example_dates.py (Python, read by second_instance_build.lay_out when it lays the example instance into a scratch tree) and app/scripts/example-dates.mjs (Node, read by example-instance.mjs when it compiles the same records into the cockpit's bundle). Both sides move every day in the example's own store by whole weeks so the fixture is as old on the day the demonstration runs as it was written to be; the whole of the rule, and why it is weeks rather than days, is in the Python module's docstring. Both must answer identically here, because the two readers date the same records for one demonstration: a shift the bundle applied and the scratch tree did not would put the cockpit's copy of a session on a different evening from the showcase's, and a visitor clicking between the two would be told two dates for one edition. `anchor` is the day examples/the-example-collective/instance/data/ is written for and is the constant each side states; `shifts` fixes the arithmetic at the week boundaries and on both sides of the anchor; `texts` fixes what a substitution does to a document, including the two things it must leave alone -- a time, and a day the calendar does not have. Read by tools/tests/scripts/test_example_dates.py and app/tests/scripts/example-dates.test.ts.",
+  "anchor": "2026-09-03",
+  "shifts": [
+    { "today": "2026-09-03", "days": 0, "why": "the anchor itself" },
+    { "today": "2026-09-09", "days": 0, "why": "six days on, still the anchor's week" },
+    { "today": "2026-09-10", "days": 7, "why": "the seventh day is the next week" },
+    { "today": "2026-09-02", "days": -7, "why": "the day before the anchor is the week before it" },
+    { "today": "2026-08-20", "days": -14, "why": "the day README.md's pictures are photographed on" },
+    { "today": "2027-09-02", "days": 364, "why": "a year on, and 364 rather than 365: whole weeks" },
+    { "today": "2025-09-03", "days": -371, "why": "a year back is 365 days, and the floor takes it to the 53rd whole week rather than the 52nd" }
+  ],
+  "texts": [
+    {
+      "today": "2026-09-10",
+      "given": "date: '2026-09-03'\ntime: '18:00'\n",
+      "expected": "date: '2026-09-10'\ntime: '18:00'\n",
+      "why": "a day moves and a time does not: 18:00 is not a date"
+    },
+    {
+      "today": "2026-09-03",
+      "given": "date: '2026-09-03'\n",
+      "expected": "date: '2026-09-03'\n",
+      "why": "the anchor's own week moves nothing at all"
+    },
+    {
+      "today": "2026-09-10",
+      "given": "# written for 2026-09-03\nopened_on: '2026-08-27'\n",
+      "expected": "# written for 2026-09-10\nopened_on: '2026-09-03'\n",
+      "why": "the comment at the top of the file moves with the days it describes, so the shifted document says which day it is written for"
+    },
+    {
+      "today": "2026-09-10",
+      "given": "edition_code: MRG-5\nid: exm-016\n",
+      "expected": "edition_code: MRG-5\nid: exm-016\n",
+      "why": "an edition code and a record id are not dates, whatever digits they carry"
+    },
+    {
+      "today": "2026-09-10",
+      "given": "day: '2026-02-30'\n",
+      "expected": "day: '2026-02-30'\n",
+      "why": "a day the calendar does not have is left as it was found, for the validator to refuse by name"
+    },
+    {
+      "today": "2026-09-10",
+      "given": "serial: 12026-09-035\n",
+      "expected": "serial: 12026-09-035\n",
+      "why": "bounded on both sides: a longer run of digits is not half a date"
+    }
+  ]
+}

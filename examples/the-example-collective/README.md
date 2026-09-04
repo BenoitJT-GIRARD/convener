@@ -126,8 +126,8 @@ section above rather than missing.
 ## What it numbers its own editions
 
 `instance/config.json` declares `edition_prefix: MRG`, and
-`instance/data/speakers.yml` numbers the reading group's sessions `MRG-1`, `MRG-2`,
-`MRG-3`. The prefix is the instance's, not the product's: nothing in
+`instance/data/speakers.yml` numbers the reading group's sessions `MRG-1`
+upwards. The prefix is the instance's, not the product's: nothing in
 `tools/convener_ops/` or `app/src/` fixes one, and `validate_speakers` builds
 its pattern from whatever the declaration holds.
 

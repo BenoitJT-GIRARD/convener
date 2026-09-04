@@ -40,7 +40,7 @@ export function findOverlaps(
  * that is the wrong instance to ask. The demonstration shows
  * `examples/the-example-collective/`: its records, its board, its counter. A prefix
  * taken from the build therefore offered `MRG-4` for a series numbered
- * `MRG-1`, `MRG-2`, `MRG-3` -- a code belonging to neither instance, on
+ * `MRG-1` upwards -- a code belonging to neither instance, on
  * the first control a visitor touches on a screen that invites them to
  * number an edition. The demo band did not cover it either: it says
  * where the *records* come from, not where an offered code comes from.

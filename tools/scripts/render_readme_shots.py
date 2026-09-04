@@ -25,6 +25,16 @@ the same answer `convener-render-visual-fixtures` already gives for the
 reference renders under `tools/visuals/references/`: render as the
 example, and there is nothing in the file to leak.
 
+The day it all happens on
+-------------------------
+One, fixed, and the renderer is only half of what has to answer to it. It
+pins the *browser's* clock, which is what stops the inbox's own day counts
+moving overnight; this script pins the day the example instance's records are
+dated against (`_pin_the_day`, `example_dates`), which is what stops the
+records themselves moving every seventh night now that they follow the week
+they are read in. Both come off the same committed fixture, so the four
+pictures are one moment rather than four.
+
 What comes back
 ---------------
 The four PNGs, copied over the tracked ones. The set is checked against
@@ -36,6 +46,8 @@ in a README cannot survive.
 
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import subprocess  # nosec B404
 import sys
@@ -43,6 +55,7 @@ import tempfile
 from pathlib import Path
 from typing import Final
 
+import example_dates
 import second_instance_build
 
 #: Where the pictures live, and the one directory this script writes to
@@ -51,6 +64,45 @@ SHOTS = "assets/screenshots"
 
 #: The renderer, in the built tree's own terms.
 RENDERER: Final = Path("tools") / "visuals" / "render-readme-shots.mjs"
+
+#: The one signed certificate this repository commits. The renderer already
+#: reads it for the day it pins the browser's clock to; this script reads it
+#: for the same day, to pin the *records* to it -- see `_pin_the_day`.
+CERTIFICATE: Final = (
+    Path("tools") / "tests" / "fixtures" / "certificate-verification.json"
+)
+
+
+def _pin_the_day() -> str:
+    """Fix the day the example instance's own records are dated against, for
+    this whole run.
+
+    `examples/the-example-collective/instance/data/` is written for one day
+    and read against the week it is read in (`example_dates`), which is what
+    keeps the demonstration's inbox from filling with things it is late on.
+    Left alone here, that would move the fixture forward every seventh night
+    and change `cockpit.png` and `event-page.png` for a reason that has
+    nothing to do with the software -- the same failure the browser's own
+    clock had before it was pinned, one layer down and this time reaching two
+    of the four pictures rather than one.
+
+    So the day is set in this process's own environment, before anything
+    reads it: `lay_out` reads it here, and `second_instance_build.environment`
+    hands the same value to every child, which is where
+    `app/scripts/example-instance.mjs` reads it when it compiles the records
+    into the cockpit's bundle. One day, one moment, four pictures.
+
+    The day the certificate on the verification shot says its holder
+    attended, read off that fixture rather than written here -- the identical
+    value the renderer pins the browser to, so a reader comparing two of
+    these pictures is looking at one instant.
+    """
+    fixture = json.loads(
+        (second_instance_build.ROOT / CERTIFICATE).read_text(encoding="utf-8")
+    )
+    day = str(fixture["signed_example"]["payload_decoded"]["date"])
+    os.environ[example_dates.TODAY_ENV] = day
+    return day
 
 
 def _tracked_shots() -> set[str]:
@@ -82,6 +134,9 @@ def main() -> int:
     if not expected:
         print(f"::error::{SHOTS}/ holds no tracked raster to refresh", file=sys.stderr)
         return 1
+
+    day = _pin_the_day()
+    print(f"shots: the example instance's records are dated against {day}")
 
     scratch = Path(tempfile.mkdtemp(prefix="convener-readme-shots-")) / "repository"
     scratch.mkdir()

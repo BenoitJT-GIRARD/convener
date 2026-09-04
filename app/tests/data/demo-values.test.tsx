@@ -3,13 +3,13 @@
  * from.
  *
  * A defect found late and left standing for a while.
- * Demo mode shows `examples/the-example-collective/`: its five
+ * Demo mode shows `examples/the-example-collective/`: its own
  * records, its board, its counter. Three values *around* those records
  * were still taken from the instance that built the bundle, and each one
  * came out belonging to neither instance:
  *
  * - the next edition code the date lock offers -- `MRG-4` for a series
- *   numbered `MRG-1`, `MRG-2`, `MRG-3`, on the first control a visitor
+ *   numbered `MRG-1` upwards, on the first control a visitor
  *   touches on a screen that invites them to number an edition;
  * - the placeholder in the field that code is typed into, `MRG-N`;
  * - the registration link a promotion draft prints for one of those
