@@ -52,10 +52,9 @@ D-15's own reasoning for publishing this at all.
   running, it is in scope above and both reports are worth making.
 - **Limits this project already documents.** `docs/operating/operations.md` records that whoever holds an
   event's key and its attendance list can pair a survey answer with roughly
-  when it arrived; `docs/handbook/governance/traitement-donnees.md` records what a
-  certificate register does and does not hold; `TRADEMARK.md` records that
-  the mark is unregistered and what that is worth. A report that one of
-  these is true is a report that the documentation is accurate.
+  when it arrived, and `docs/handbook/governance/traitement-donnees.md`
+  records what a certificate register does and does not hold. A report that
+  one of these is true is a report that the documentation is accurate.
 - **The absence of a configured integration.** Every external integration
   here is optional and degrades visibly when it is missing, by design
   (D-13). The one deliberate exception fails the build outright rather than

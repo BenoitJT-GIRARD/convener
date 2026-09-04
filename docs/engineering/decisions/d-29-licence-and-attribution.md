@@ -4,19 +4,18 @@
 
 ## Context
 
-This product exists to be duplicated. Somebody forks it, edits a short list
+This product exists to be duplicated. Somebody copies it, edits a short list
 of files, and runs their own seminar series on it for nothing. The people who
 do that are volunteer-run scholarly societies: a mailing list, no budget, and
 no lawyer to ask.
 
-Until now this repository answered none of the three questions that audience
-actually has. Under what terms may they use it? May a fork keep calling itself
-by this product's name? And does the line in the footer that says who wrote
-the software mean anything, or is it decoration a fork deletes in an
-afternoon? With no `LICENSE` file at all, the default answer to the first
-question was the worst one available: copyright reserves everything by
-default, so a reader who cloned this had no permission to run it, let alone to
-publish a modified version.
+That audience arrives with three questions. Under what terms may they use it?
+May a fork keep calling itself by this product's name? And does the line in
+the footer that says who wrote the software mean anything, or is it decoration
+a fork deletes in an afternoon? The first has a default answer and it is the
+worst one available: copyright reserves everything unless something grants it,
+so a repository with no `LICENSE` gives a reader who clones it no permission
+to run the software, let alone to publish a modified version.
 
 **The risk that matters here is not the one the question usually reaches
 for.** Nobody is going to build a business reselling software that runs a
@@ -53,7 +52,7 @@ alternative pins this work to one document for ever, and correcting a defect
 discovered in that document would then need the written agreement of everybody
 who had ever contributed.
 
-### The name: a term section 7 permits, and a document that does not oversell it
+### The name: a term section 7 permits, and a document for whoever renames
 
 Paragraph e of section 7 exists for precisely this — declining to grant rights
 under trade-mark law — and it is the only way to hold a name back without
@@ -64,13 +63,14 @@ covered work as a whole, so the file that carries the licence is where a
 reader looks for it and where it can be read against the paragraph that
 authorises it.
 
-`TRADEMARK.md` says what the name covers, what a fork renames, and — at
-length, deliberately — how little an unregistered mark is worth. The mark is
-registered nowhere, and this project's founding constraint is that it costs
-nothing to run, so what that document holds is a request made in good faith
-and a refusal put on the record, and nothing more than that. A document
-claiming otherwise would be worse than no document at all, because somebody
-would rely on it.
+`TRADEMARK.md` is that term written for the person it lands on, and it is
+four short lists: what the name and the mark cover, what stays an instance's
+own identity, what a fork renames and what it keeps, and a closing line
+asking that all of it be respected in good faith. It argues none of it. The
+argument for holding a name back at all, and for holding it back this way, is
+this record — which is where a reader who wants it can find it, and where it
+stops standing between a fork and the four things it came to `TRADEMARK.md`
+to look up.
 
 ### Attribution: an Appropriate Legal Notice, not a credit
 
@@ -90,13 +90,16 @@ elements: the showcase's colophon, and the cockpit's own footer.
 `LICENSE` and `TRADEMARK.md`. Everything the boundary declaration does not
 hand to the instance belongs to the product by default
 (`declarations/boundary.yml`, `tools/convener_ops/declaration/boundary.py`), so a file there
-needs nobody to declare its owner — and it is deliberately not in `config/`,
-which is the directory an operator opens in order to configure an instance. A
-notice filed among the settings is a notice somebody eventually edits. It
-carries no instance value either: it names the software, its author, its
-licence and the absence of a warranty, and it says the same words in every
-instance ever derived from here. Two readers, one per side of the language
-boundary (D-14), and no third spelling of the sentence anywhere.
+needs nobody to declare its owner. It is deliberately outside `instance/`,
+which is the directory an operator opens in order to configure an instance: a
+notice filed among the settings is a notice somebody eventually edits. And it
+is deliberately outside `declarations/`, whose files the running product reads
+in order to decide what it does — this one decides nothing, and is a sentence
+the product says about itself. It carries no instance value for the same
+reason: it names the software, its author, its licence and the absence of a
+warranty, and it says the same words in every instance ever derived from here.
+Two readers, one per side of the language boundary (D-14), and no third
+spelling of the sentence anywhere.
 
 ## Rejected
 
@@ -126,10 +129,19 @@ and a recipient would be entitled to strip the condition anyway. Paragraph e
 of section 7 is what keeps the same intention lawful and leaves the licence
 whole.
 
-**Registering the mark now.** An EU trade mark costs about €850 to file, and
-this project's first constraint is that running it costs nothing. Registration
-stays available later; `TRADEMARK.md` states what would erode that possibility
-in the meantime rather than leaving it as a comfortable assumption.
+**Registering the mark now.** An EU trade mark filed electronically at the
+EUIPO in a single class costs about €850, and this project's first constraint
+is that running it costs nothing. What that leaves is narrow: an action for
+passing off in the United Kingdom, national unfair-competition rules across
+the European Union, and no EU-wide unregistered right at all — each of them
+turning on proof that the public already associates the name with this work,
+established case by case, after the harm, at a cost this project has even
+less of. Registration stays available later, and two things would end that
+quietly: somebody else registering the same or a similar name for similar
+goods first, and the word sliding into being the ordinary term for this kind
+of software, which `convener` — the person who convenes a meeting — already
+is in ordinary English. So the decision is reversible, and it is worth less
+every year it is deferred.
 
 **A footer line that only says who wrote this.** It has no effect on anybody
 downstream. Section 5 carries a notice forward only if that notice is an
@@ -164,9 +176,9 @@ anyway.
 little goodwill, and the thing it buys — a reader always knowing whose
 software they are running — is invisible when it works.
 
-**The trade-mark position is weak, and stays weak.** Nothing here binds
-somebody who does not care, and the honest document that says so is also an
-invitation to whoever reads it that way.
+**The trade-mark position is weak, and stays weak.** An unregistered name
+constrains nobody in advance, so what `TRADEMARK.md` asks of a fork acting in
+good faith is the whole of what this arrangement gets from one that is not.
 
 **Every page of both interfaces now carries three lines of legal text**, and
 every fork inherits the obligation to keep carrying them. That is the

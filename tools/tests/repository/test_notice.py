@@ -6,8 +6,8 @@ D-29 is that they are three and not one:
 * ``LICENSE`` -- the GNU Affero General Public License, version 3, in the
   Free Software Foundation's own words, plus one added term at its head
   declining the name under section 7's paragraph e.
-* ``TRADEMARK.md`` -- what that term covers, what a fork renames, and how
-  little an unregistered mark is worth.
+* ``TRADEMARK.md`` -- what that term covers, what a fork renames, what it
+  keeps, and that all of it is asked in good faith.
 * ``NOTICE.json`` -- the Appropriate Legal Notice both interfaces print in
   their footer, in the sense section 0 of the licence defines the phrase.
 
@@ -170,7 +170,7 @@ def test_the_added_term_is_stated_as_one_section_7_permits() -> None:
         ("trademark law", "the words section 7's paragraph e uses"),
         ("Convener", "the name the term is about"),
         ("assets/brand/convener/", "where the marks it is about actually are"),
-        ("TRADEMARK.md", "where a reader is sent for what it is worth"),
+        ("TRADEMARK.md", "where a reader is sent for what the term covers"),
         ("further restriction", "the thing it has to say it is not"),
     ):
         assert expected in head, (
@@ -198,29 +198,34 @@ def test_the_added_term_sits_above_the_licence_it_supplements() -> None:
 # -------------------------------------------------------------------------- #
 
 
-def test_the_trade_mark_document_states_the_limit_of_its_own_claim() -> None:
-    """A document claiming more protection than it has is worse than none.
+def test_the_trade_mark_document_says_what_it_covers_and_what_it_asks() -> None:
+    """Four statements, and the file is not doing its job without all four.
 
-    So the honest half is checked as strictly as the claim: that the name
-    is held back is easy to write and easy to believe, and it is the
-    sentences admitting that the mark is unregistered, that registration
-    costs money this project does not spend, and that none of it binds
-    somebody who does not care, that a later edit would quietly drop
-    first.
+    It has one reader -- somebody about to take this code and make their
+    own product of it -- and one job: tell them what the licence does not
+    hand over, what to rename, what to keep, and that the rest is asked
+    rather than enforced. Each of those is one heading and a short list,
+    and each is the kind of sentence a later edit drops without leaving a
+    hole a reader would notice.
+
+    The file used to close on several hundred words about how little an
+    unregistered mark is worth in law, and the sentences below are what
+    replaced it: `docs/engineering/content-rules.md` section 7 refuses a
+    page that argues against a conversation the reader has not had, and
+    the passage also ended by telling somebody acting in bad faith that
+    none of what preceded it reaches them.
     """
     text = TRADE_MARKS.read_text(encoding="utf-8")
     for expected, why in (
-        ("unregistered", "what the mark actually is"),
-        ("registration", "the only thing that would constrain anybody"),
-        ("EUIPO", "who would register it, and for what fee"),
-        ("passing off", "the only route an unregistered mark has"),
+        ("**not** covered by", "what the grant does not hand over"),
         ("rename", "what is actually being asked of a fork"),
-        ("does not care", "who this stops, which is nobody"),
+        ("What is not covered", "the half that keeps this from overreaching"),
+        ("good faith", "that all of it is asked rather than enforced"),
     ):
         assert expected in text, (
             f"{TRADE_MARKS.name} no longer says anything about "
-            f"{expected!r} -- {why}. This file's whole value is that it "
-            "does not overstate what an unlicensed name is worth."
+            f"{expected!r} -- {why}. This file is one reader's whole "
+            "answer on the name, and half an answer reads as the whole one."
         )
 
 
