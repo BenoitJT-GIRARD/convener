@@ -130,10 +130,11 @@ What this module cannot see, stated rather than left to be found
 
   `tools/visuals/references/*.png` used to be a second, and are not any more.
   They pin what `visual.py` renders, and that render points at
-  `examples/the-example-collective/`: the palette, the motif, the strapline,
-  the wordmark and the address inside the registration QR are the
-  example's now, so those three images carry nothing a duplicate would
-  have to replace. The blind spot has not moved -- nothing here can read a
+  `examples/the-example-collective/`: the strapline, the wordmark and the
+  address inside the registration QR are the example's, and the palette
+  and the motif are the ones the example names, which are the product's
+  own (`assets/brand/convener/`). So those three images carry nothing a
+  duplicate would have to replace. The blind spot has not moved -- nothing here can read a
   PNG, and nothing here could have told you what those three held -- what
   changed is that there is no longer anything in them to read. Proven
   where it can be, on the pages they are rendered from, by

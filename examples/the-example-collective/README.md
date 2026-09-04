@@ -92,10 +92,13 @@ refuses to run in a repository that has been configured, so they cannot be
 taken from the instance that runs this one. While this directory carried a
 charter of its own, the product's front page showed a dark green
 application under a navy and coral mark. The shop window and the mark
-agree only if this instance is drawn in the mark's own charter. The
-mechanism that stopped being demonstrated here is demonstrated by
-`instance/data/brand.json` one directory up, which is a charter an
-instance wrote for itself.
+agree only if this instance is drawn in the mark's own charter. What
+stopped being demonstrated here is still stated and still held:
+`tools/convener_ops/publication/brand.py::source` gives the three answers
+an instance may make about its design — it writes one, it names one of
+the product's, or it makes neither answer — and refuses the fourth, and
+`tools/tests/publication/test_brand.py` builds a repository for each of
+them.
 
 ## What it deliberately does not hold
 

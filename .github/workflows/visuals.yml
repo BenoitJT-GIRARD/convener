@@ -50,7 +50,8 @@ name: Visuals
 #   photograph of whichever instance ran this repository -- its palette,
 #   its ribbon, its strapline, its wordmark, and its published address
 #   inside the QR code -- sitting in `tools/visuals/`, which is the product's.
-#   They are the example's now, and two things follow. The images carry no
+#   They are the example's names on the product's own charter now, and two
+#   things follow. The images carry no
 #   real instance's identity, which is the byte-level half of a charter
 #   staying with its instance; and this job stops going red for a
 #   duplicate that has done nothing but choose its own colours, which it
