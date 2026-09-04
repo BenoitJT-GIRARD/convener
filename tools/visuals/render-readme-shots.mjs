@@ -29,8 +29,8 @@
  * fetched -- `app/vite.config.ts` carries `identity` into the bundle
  * through Vite's own `define`, `site/.eleventy.js` composes the same
  * values into every showcase page -- so a picture taken here would be a
- * picture of whichever series happens to run this repository, in four
- * files `assets/screenshots/` hands to the derived public repository verbatim.
+ * picture of whichever series happens to run this repository, in every
+ * file `assets/screenshots/` hands to the derived public repository.
  * Nothing downstream could catch it:
  * `convener_ops.derivation.derivation_guard` cannot read a raster and
  * says so in every report it writes, and
@@ -51,7 +51,7 @@
  * `tools/scripts/render_readme_shots.py` is what provides such a
  * repository: it lays `examples/the-example-collective/` into a scratch copy of this
  * one, builds it, runs *that tree's own copy of this file*, and brings the
- * four pictures back. Run this script here instead and it refuses, naming
+ * pictures back. Run this script here instead and it refuses, naming
  * every value it finds configured. That is the same answer
  * `convener-render-visual-fixtures` already gives for the reference
  * renders in `references/`: render as the example, and there is nothing
@@ -62,15 +62,16 @@
  * reason theirs are duplicates of each other: small enough that anyone
  * auditing this file on its own reads the whole thing.
  *
- * The four subjects, and what each is allowed to show
- * ==================================================
+ * The subjects, and what each is allowed to show
+ * ==============================================
+ * Three groups, because `README.md` shows them as three: what a visitor
+ * sees, what the team sees, and what a duplicate chooses.
+ *
  * - **The banner**, the charter's own mark on the charter's own ground.
  *   Product-owned on both sides, and `stageTheBanner` below gives the
  *   whole of why it is a raster at all.
- * - **The cockpit**, at `?demo=1`. That is the product's own
- *   demonstration mode -- no account, no repository, the example instance
- *   under `examples/the-example-collective/` compiled into the bundle. Nothing here
- *   invents data for it.
+ * - **The showcase**, the front page a series publishes about itself, at
+ *   the path prefix its own declaration names.
  * - **A public event page**, from `site/src/_data/events.json`, which the
  *   build this runs against has already refreshed from the example
  *   instance's own public projection the way `publish-showcase.yml`
@@ -89,22 +90,36 @@
  *   reader nothing. The screenshot is the page doing its actual work on
  *   this project's own test certificate, which is what it would do on a
  *   real one.
+ * - **Three screens of the cockpit**, all at `?demo=1`. That is the
+ *   product's own demonstration mode -- no account, no repository, the
+ *   example instance under `examples/the-example-collective/` compiled
+ *   into the bundle. Nothing here invents data for any of them. The inbox
+ *   is what is waiting, the pipeline is where every live record stands,
+ *   and the diversity screen is what the programme adds up to.
+ * - **One poster per charter**, and the same poster four times. What is
+ *   being shown is that the palette is chosen, so four different subjects
+ *   would mix two messages and carry neither. These are the only shots
+ *   this script does not render itself: `visual.render_announcement` is
+ *   Python and composes the page, `tools/scripts/render_readme_shots.py`
+ *   writes one per charter into a directory named by `--charters`, and
+ *   this screenshots them. That is D-14's own shape, the same seam
+ *   `render-and-compare.mjs` reads its own fixtures across -- the
+ *   *fixture* is the boundary, never the code that produces a page.
  *
- * The day all four are photographed on
+ * The day they are all photographed on
  * ====================================
  * One day, fixed, and it is the day the certificate above was earned.
  *
- * The cockpit is the one of the four that reads a clock:
+ * The cockpit's three screens are the ones that read a clock:
  * `app/src/state/sla.ts::lateness` counts calendar days between a step's
  * deadline and today, and the inbox prints the count -- "Forum summary is
  * 277 days overdue". That number goes up by one every night, so the
  * committed raster changes overnight for a reason that has nothing to do
- * with the software, and nobody can refresh one of these four pictures
+ * with the software, and nobody can refresh one of these pictures
  * without a diff appearing on the cockpit as well. Measured both ways
  * before this was written: with the clock free, two runs on the same day
- * leave all four byte-identical; with the clock fixed, moving it by a
- * single day changes `cockpit.png` and leaves the other three
- * byte-identical.
+ * leave every file byte-identical; with the clock fixed, moving it by a
+ * single day changes `cockpit.png` and leaves the rest byte-identical.
  *
  * So each page is handed a fixed `Date` before anything in it runs, and
  * the instant comes off `FIXTURE`'s own payload -- the day the one signed
@@ -112,15 +127,15 @@
  * committed fixture rather than written out here, for the reason
  * `visual.FIXTURE_ANNOUNCEMENT` is a fixture rather than a date somebody
  * retypes; and that day rather than another because the verification shot
- * already prints it on screen, so the four pictures are one moment in the
- * example instance's life instead of four.
+ * already prints it on screen, so the pictures are one moment in the
+ * example instance's life instead of one moment each.
  *
  * Midnight *UTC* on that day, because Europe/Paris is never behind UTC:
  * 00:00Z is the same calendar day in Paris at either offset, and the Paris
  * day is what the app computes (`app/src/state/derived.ts::parisToday`).
  * The browser's own zone is left as it is, having been measured and found
  * not to matter -- with the instant fixed, a run under `TZ=UTC` and a run
- * under Europe/Paris produce four byte-identical files, because every day
+ * under Europe/Paris produce byte-identical files, because every day
  * this app computes it computes through `Intl` with `Europe/Paris` named
  * outright.
  *
@@ -133,7 +148,7 @@
  * what `README.md`'s own caption for it promises.
  *
  * D-25's trap, the same one `render-production.mjs` names: a run that
- * quietly wrote three of four images still leaves a non-empty directory.
+ * quietly wrote six of seven images still leaves a non-empty directory.
  * `SHOTS` is what was promised and the count is checked against it.
  */
 
@@ -216,14 +231,15 @@ async function pathPrefix() {
 /** What this run promises to write. A subject added here and not rendered
  *  fails the count at the end.
  *
- *  **The three pages share one width, and that is what the width is for.**
- *  `README.md` shows them as plain Markdown images, so a reader's browser
- *  scales each one to the column it has: a page rendered 1440 wide and a
- *  page rendered 1200 wide arrive at the same column width, and the wider
- *  one's type lands smaller. The cockpit was the wide one and its labels
- *  were the smallest text on the front page for it. Rendering all three
- *  at 1200 makes one scale factor serve all three, so the size a word is
- *  set at in the application is the size it is read at on the page.
+ *  **The six pages share one frame, and that is what the frame is for.**
+ *  `README.md` lays them out as two rows of three thumbnails, each one
+ *  scaled to the same width, so a page rendered 1440 wide and a page
+ *  rendered 1200 wide would arrive at the same column and the wider one's
+ *  type would land smaller. One width makes one scale factor serve all
+ *  six, so the size a word is set at in the application is the size it is
+ *  read at on the page -- and one *height* as well, now that they stand
+ *  beside each other: six thumbnails of six shapes is a row that reads as
+ *  a mistake before it reads as anything else.
  *
  *  Equal width rather than an equal scale factor, because the cockpit's
  *  layout holds at 1200 -- measured, not assumed: it lays out 1200 CSS
@@ -233,9 +249,27 @@ async function pathPrefix() {
  *  every run rather than once: a page that stops fitting its frame is a
  *  layout question, and this refuses rather than photographing the crop.
  *
- *  The banner is not one of the three. It is a rendering of one SVG on a
+ *  **`deviceScaleFactor` is 1, and used to be 2.** At two it wrote four
+ *  times the pixels of a picture `README.md` now shows 260 CSS pixels
+ *  wide -- 1200 source pixels is already better than four times what any
+ *  display asks of that column -- and this repository carries every one
+ *  of them for ever. Measured rather than assumed: the three pages this
+ *  set started with weighed 279k, 364k and 285k at two.
+ *
+ *  The banner is not one of the six. It is a rendering of one SVG on a
  *  ground, at the proportion the mark is drawn to, and it shares no type
- *  with anything. */
+ *  with anything; the four charter posters are not either, and
+ *  `CHARTER_FRAME` below says what frames them. */
+const PAGE_FRAME = { width: 1200, height: 1340 };
+
+/** What one charter's poster is photographed at. Square, because
+ *  `formats.SQUARE` is the canvas the composition was built for and
+ *  reviewed at, and small: `README.md` shows four of these in one row, the
+ *  subject is the colour rather than the layout, and a 1200-pixel poster
+ *  four times over would weigh more than every other picture in this
+ *  repository put together. */
+const CHARTER_FRAME = { width: 640, height: 640 };
+
 const SHOTS = [
   {
     name: 'banner',
@@ -245,17 +279,12 @@ const SHOTS = [
     ready: 'svg',
   },
   {
-    name: 'cockpit',
-    // The demonstration mode README points a visitor at, so the picture
-    // and the link show the same thing.
-    url: 'app/?demo=1',
-    // 1200, the width the other two are rendered at -- see the table's own
-    // comment for why one width and for the measurement that says this
-    // application takes it.
-    width: 1200,
-    height: 1120,
-    // The board's own inbox has rendered once the demonstration's speakers
-    // are on screen; `networkidle0` alone only says the bundle arrived.
+    name: 'showcase',
+    // The front page, at the prefix the declaration names -- `base`
+    // already carries it, so the empty string is the index of the
+    // published tree rather than of a bare root (D-26).
+    url: '',
+    ...PAGE_FRAME,
     ready: 'main',
   },
   {
@@ -264,16 +293,40 @@ const SHOTS = [
     // page carries its abstract and its registration form rather than an
     // archive entry; read below by `scheduledEvent`.
     url: null,
-    width: 1200,
-    height: 1340,
+    ...PAGE_FRAME,
     ready: 'main',
   },
   {
     name: 'verification',
     url: null, // built below from the fixture's own verification path
-    width: 1200,
-    height: 1340,
+    ...PAGE_FRAME,
     ready: '.verify',
+  },
+  {
+    name: 'cockpit',
+    // The demonstration mode README points a visitor at, so the picture
+    // and the link show the same thing. The inbox is what it opens on.
+    url: 'app/?demo=1',
+    ...PAGE_FRAME,
+    // The board's own inbox has rendered once the demonstration's speakers
+    // are on screen; `networkidle0` alone only says the bundle arrived.
+    ready: 'main',
+  },
+  {
+    name: 'pipeline',
+    // The working board, one column per status that still asks for work.
+    // The route is the cockpit's own (`app/src/App.tsx`), reached through
+    // the hash so that no server has to know it.
+    url: 'app/?demo=1#/pipeline',
+    ...PAGE_FRAME,
+    ready: 'main',
+  },
+  {
+    name: 'diversity',
+    // What the programme adds up to, applicants beside those selected.
+    url: 'app/?demo=1#/diversity',
+    ...PAGE_FRAME,
+    ready: 'main',
   },
 ];
 
@@ -371,7 +424,7 @@ async function stageTheTestCertificate(served) {
   );
   return {
     path: example.verification_url_path,
-    // The day the module comment fixes all four pictures to, taken from
+    // The day the module comment fixes every picture to, taken from
     // the payload the verification shot itself prints on screen.
     photographedAt: `${example.payload_decoded.date}T00:00:00Z`,
   };
@@ -465,6 +518,40 @@ async function fixTheClock(page, iso) {
   }, iso);
 }
 
+/** The four charter posters, as shots, from the directory Python wrote
+ *  them into. Copied under the served prefix rather than read off disk by
+ *  the browser: a page opened from the filesystem is an opaque origin and
+ *  Chrome refuses its own `@font-face` request there, which would
+ *  photograph four posters set in the system stack -- a picture of the
+ *  typography lying, which is the one thing a design shot must not do.
+ *
+ *  Absent when `--charters` is not passed, and that is not a silent skip:
+ *  the count at the end is taken against what this function returned, so a
+ *  run without it writes seven pictures and says seven. */
+async function stageTheCharters(served, from) {
+  if (!from) return [];
+  const manifest = JSON.parse(await readFile(path.join(from, 'manifest.json'), 'utf8'));
+  const into = path.join(served, 'charters');
+  await cp(from, into, { recursive: true });
+  return manifest.map((entry) => ({
+    name: `charter-${entry.charter}`,
+    url: `charters/${entry.file}`,
+    ...CHARTER_FRAME,
+    // The composition's own outermost element. `main` is the showcase's
+    // and the cockpit's; a poster is one page and has neither.
+    ready: '.poster',
+  }));
+}
+
+/** The value of a `--name value` argument, or `null`. Two arguments and no
+ *  parser: `render-and-compare.mjs` beside this file reads its own two the
+ *  same way, and a dependency to read two flags would be a dependency the
+ *  one job that renders has to install. */
+function argument(name) {
+  const at = process.argv.indexOf(`--${name}`);
+  return at === -1 ? null : process.argv[at + 1];
+}
+
 async function main() {
   await refuseUnlessTheExampleDeclares();
   const prefix = await pathPrefix();
@@ -472,7 +559,9 @@ async function main() {
   const certificate = await stageTheTestCertificate(served);
   const bannerPath = await stageTheBanner(served);
   const eventPath = await scheduledEvent();
-  for (const shot of SHOTS) {
+  const charters = await stageTheCharters(served, argument('charters'));
+  const shots = [...SHOTS, ...charters];
+  for (const shot of shots) {
     if (shot.name === 'verification') shot.url = certificate.path;
     if (shot.name === 'banner') shot.url = bannerPath;
     if (shot.name === 'event-page') shot.url = eventPath;
@@ -494,13 +583,15 @@ async function main() {
     // dependency in the way of the one check that costs nothing.
     const { default: puppeteer } = await import('puppeteer');
     browser = await puppeteer.launch({ headless: true });
-    for (const shot of SHOTS) {
+    for (const shot of shots) {
       const page = await browser.newPage();
       try {
         await page.setViewport({
           width: shot.width,
           height: shot.height,
-          deviceScaleFactor: 2,
+          // One device pixel per CSS pixel -- see the SHOTS table for the
+          // measurement that says two was four times what the page needs.
+          deviceScaleFactor: 1,
         });
         await fixTheClock(page, certificate.photographedAt);
         await page.goto(`${base}${shot.url}`, {
@@ -536,9 +627,9 @@ async function main() {
     await rm(STAGE, { recursive: true, force: true });
   }
 
-  if (written !== SHOTS.length) {
+  if (written !== shots.length) {
     console.log(
-      `::error::expected ${SHOTS.length} screenshot(s), actually wrote ${written} ` +
+      `::error::expected ${shots.length} screenshot(s), actually wrote ${written} ` +
         '-- refusing to report success'
     );
     process.exitCode = 1;

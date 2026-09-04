@@ -48,7 +48,7 @@ The day it is read against, and the one place it is ever overridden
 -------------------------------------------------------------------
 The real day, from the clock, everywhere but one: `CONVENER_EXAMPLE_TODAY`.
 `tools/scripts/render_readme_shots.py` sets it to the day it also pins the
-browser's clock to, so that the four pictures in `README.md` are one moment in
+browser's clock to, so that the pictures in `README.md` are one moment in
 the example instance's life and stay byte-identical between two runs on
 different days. Nothing else sets it, and nothing about a real instance passes
 through here at all: a repository's own `instance/data/` is never read by this

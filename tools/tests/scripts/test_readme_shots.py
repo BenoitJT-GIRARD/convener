@@ -1,10 +1,9 @@
-"""What holds the README's four pictures to a build nobody's identity
-reaches.
+"""What holds the README's pictures to a build nobody's identity reaches.
 
-`assets/screenshots/` is the product's, so its four rasters travel into the
+`assets/screenshots/` is the product's, so its rasters travel into the
 derived public repository exactly as committed. They used to be taken
 from a build of *this* instance, which put one series' name and one
-series' editions into four files no later check could read:
+series' editions into files no later check could read:
 `convener_ops.derivation.derivation_guard` says in every report it writes
 that it did not read the non-text blobs, and `test_second_instance.py`'s
 sweep skips a `.png` for the same reason. `docs/assets/zoom-background.png`
@@ -27,14 +26,15 @@ running it: it refuses here, and it gets past the refusal in a tree whose
 declaration is the example's -- a refusal that fired unconditionally
 would satisfy the first test and fail the second.
 
-**The set of pictures is.** Every tracked raster under `assets/screenshots/` has
-to be one `SHOTS` promises, so a fifth image cannot arrive beside the four
-without the renderer being taught to produce it.
+**The set of pictures is.** Every tracked raster under `assets/screenshots/`
+has to be one a full run writes -- a subject in the renderer's own `SHOTS`
+table, or one poster per charter under `assets/brand/` -- so an image cannot
+arrive beside them without the renderer being taught to produce it.
 
 **And the day they are taken on is.** The cockpit prints a count of days
 (`app/src/state/sla.ts::lateness`), so an unfixed clock made
 `assets/screenshots/cockpit.png` a file that changed overnight -- which meant
-refreshing any one of the four produced a diff on the cockpit as well.
+refreshing any one of them produced a diff on the cockpit as well.
 The renderer hands every page a fixed `Date` now, read off the committed
 certificate fixture. What is checkable here is that the fix is wired in
 the one order that works and takes its day from that file; that the
@@ -57,6 +57,7 @@ from helpers import instance_identity, toolchain
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand
 
 ROOT = repo_root()
 
@@ -189,10 +190,23 @@ def test_the_refusal_lifts_where_the_example_is_what_declares(
 
 
 def _promised() -> set[str]:
+    """Every picture a full run writes, from the two places that decide it.
+
+    The pages are the renderer's own `SHOTS` table. The charter posters are
+    not in it and cannot be: there is one per directory under
+    `assets/brand/`, `render_readme_shots.py` composes them and hands them
+    over with `--charters`, and the renderer turns the manifest it finds
+    into shots at run time. Read off `brand.shipped` here for the same
+    reason that script reads it -- a fifth charter is photographed on the
+    commit that adds it, with no list to edit in either file or in this
+    one.
+    """
     text = (ROOT / RENDERER).read_text(encoding="utf-8")
     names = set(_SHOT_NAME.findall(text))
     assert names, f"no `name:` entries found in {RENDERER.as_posix()}'s SHOTS table"
-    return names
+    charters = {f"charter-{rel.parent.name}" for rel in brand.shipped(ROOT)}
+    assert charters, "no charter under assets/brand/ to photograph"
+    return names | charters
 
 
 def _tracked() -> set[str]:
@@ -207,13 +221,26 @@ def _tracked() -> set[str]:
 
 
 def test_every_tracked_raster_is_one_the_renderer_promises() -> None:
-    """A fifth picture cannot appear beside the four by any other route.
+    """A picture cannot appear beside them by any other route.
 
     Both directions: a raster nothing renders is one somebody drew or
     pasted, and a subject the renderer promises with no file to show for
-    it is a run that reported success on three of four.
+    it is a run that reported success on six of seven.
     """
     assert _tracked() == _promised()
+
+
+def test_one_poster_is_promised_for_every_charter_a_duplicate_may_name() -> None:
+    """The row `README.md` shows to say the palette is chosen.
+
+    It says it by repeating one poster, so what a reader is asked to see is
+    the single variable. A charter with no picture would make that row an
+    incomplete list of what this product ships, which is worse than no row
+    at all.
+    """
+    tracked = _tracked()
+    for rel in brand.shipped(ROOT):
+        assert f"charter-{rel.parent.name}" in tracked, rel.as_posix()
 
 
 @pytest.mark.parametrize("name", sorted(_promised()))

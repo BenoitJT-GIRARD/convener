@@ -86,7 +86,7 @@ its own design. It cannot see that here any more. What it can see instead
 is one line in a declaration, which is the other of the two answers and
 the one a duplicate is far more likely to give.
 
-**Why the loss was taken.** `README.md` shows three screenshots of a
+**Why the loss was taken.** `README.md` shows six screenshots of a
 running build, and those screenshots render this instance: the renderer
 refuses to run in a repository that has been configured, so they cannot be
 taken from the instance that runs this one. While this directory carried a
