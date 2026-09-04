@@ -367,8 +367,16 @@ def _fixture_root(
 def _template_fixture_root(
     scratch: Path, root: Path, charter: Path, declaration: Path, family: str
 ) -> Path:
-    """One entry of the cross product, in a scratch directory named for
-    the charter and the family it holds."""
+    """One entry of the cross product, in a scratch directory inside
+    `scratch`.
+
+    The name carries the family and the charter file's own stem, which is
+    `brand` for every charter there is -- so two charters at one family
+    are laid out at the same path, one after the other. Each is written
+    and then read before the next is laid out, which is what makes that
+    safe; a name that told the six apart would be telling apart something
+    no caller keeps.
+    """
     return _fixture_root(
         scratch / f"{charter.stem}-{family}", root, charter, declaration, family
     )
