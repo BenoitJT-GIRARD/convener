@@ -11,8 +11,8 @@ opened — the speaker's own recorded permission and the board's own
 approval, the same two permissions
 [Video online](emails/video-online.md) checks for the private e-mail. If
 the video address below still shows as missing, the gate has not opened
-yet and there is nothing here to post — see "Publishing the recording" on
-this speaker's own page in the workspace.*
+yet and there is nothing here to post — the event's own page says under
+"How this event closed" what became of the recording and why.*
 
 ---
 
@@ -34,10 +34,10 @@ The questions asked before the talk, and the discussion that followed, are on th
 
 ## Notes for the volunteer posting this
 
-- Check the recorded answer before you post: the workspace shows the
-  speaker's own permission and the board's approval on this speaker's page,
-  under "Publishing the recording". If either has not gone through yet,
-  this is not the message to send.
+- Check the recorded answer before you post: the event's own page in the
+  workspace reports what was decided about the recording, under "How this
+  event closed". If it does not say the recording is published, this is not
+  the message to send.
 - Post it in every place the seminar was originally announced — the forum
   thread, as a reply; the LinkedIn post, as a comment or a fresh post
   linking back to it; and the next mailing list or newsletter round, as a
