@@ -161,7 +161,7 @@ the event's own page, with a link straight to the workflow — that line is
 where an Event Host meets them, and the promotion lines below it point back
 to it.
 
-Three of the six are one of the templates in this kit, already filled in:
+Three of the six are templates from this kit, already filled in:
 `forum.md`, `network.md` and `mailing-list.md` are
 [forum-post-announce](forum-post-announce.md), [linkedin-post](linkedin-post.md)
 and [mailing-list-announce](mailing-list-announce.md) rendered from the
