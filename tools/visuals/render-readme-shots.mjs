@@ -214,7 +214,28 @@ async function pathPrefix() {
 }
 
 /** What this run promises to write. A subject added here and not rendered
- *  fails the count at the end. */
+ *  fails the count at the end.
+ *
+ *  **The three pages share one width, and that is what the width is for.**
+ *  `README.md` shows them as plain Markdown images, so a reader's browser
+ *  scales each one to the column it has: a page rendered 1440 wide and a
+ *  page rendered 1200 wide arrive at the same column width, and the wider
+ *  one's type lands smaller. The cockpit was the wide one and its labels
+ *  were the smallest text on the front page for it. Rendering all three
+ *  at 1200 makes one scale factor serve all three, so the size a word is
+ *  set at in the application is the size it is read at on the page.
+ *
+ *  Equal width rather than an equal scale factor, because the cockpit's
+ *  layout holds at 1200 -- measured, not assumed: it lays out 1200 CSS
+ *  pixels wide with nothing overflowing, and its own document is 1319
+ *  pixels tall at 1200 exactly as it is at 1440, so nothing reflowed and
+ *  nothing was squeezed. `laidOut` below is that measurement made on
+ *  every run rather than once: a page that stops fitting its frame is a
+ *  layout question, and this refuses rather than photographing the crop.
+ *
+ *  The banner is not one of the three. It is a rendering of one SVG on a
+ *  ground, at the proportion the mark is drawn to, and it shares no type
+ *  with anything. */
 const SHOTS = [
   {
     name: 'banner',
@@ -228,7 +249,10 @@ const SHOTS = [
     // The demonstration mode README points a visitor at, so the picture
     // and the link show the same thing.
     url: 'app/?demo=1',
-    width: 1440,
+    // 1200, the width the other two are rendered at -- see the table's own
+    // comment for why one width and for the measurement that says this
+    // application takes it.
+    width: 1200,
     height: 1120,
     // The board's own inbox has rendered once the demonstration's speakers
     // are on screen; `networkidle0` alone only says the bundle arrived.
@@ -485,6 +509,18 @@ async function main() {
         });
         await page.waitForSelector(shot.ready, { timeout: 30_000 });
         await page.evaluate(() => document.fonts.ready);
+        const laidOut = await page.evaluate(
+          () => document.documentElement.scrollWidth
+        );
+        if (laidOut > shot.width) {
+          throw new Error(
+            `${shot.name} lays out ${laidOut} CSS pixels wide in a ${shot.width}` +
+              ' frame, so this picture is of a page cut down its right-hand ' +
+              'side. The three pages below share one width so that README.md ' +
+              'scales all three by the same factor; a page that does not fit ' +
+              'it is a layout question and never a crop to accept quietly.'
+          );
+        }
         const png = await page.screenshot({ type: 'png' });
         await writeFile(path.join(OUT, `${shot.name}.png`), png);
         written += 1;
