@@ -516,9 +516,10 @@ async function main() {
           throw new Error(
             `${shot.name} lays out ${laidOut} CSS pixels wide in a ${shot.width}` +
               ' frame, so this picture is of a page cut down its right-hand ' +
-              'side. The three pages below share one width so that README.md ' +
-              'scales all three by the same factor; a page that does not fit ' +
-              'it is a layout question and never a crop to accept quietly.'
+              'side. The three application pages are framed at one width so ' +
+              'that README.md scales all three by the same factor; a page ' +
+              'that stops fitting the frame it is taken in is a layout ' +
+              'question and never a crop to accept quietly.'
           );
         }
         const png = await page.screenshot({ type: 'png' });
