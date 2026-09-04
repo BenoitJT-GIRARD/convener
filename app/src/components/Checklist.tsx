@@ -12,7 +12,10 @@ import {
 } from '../state/phases';
 import { itemAssignee } from '../state/assignment';
 import { parisToday } from '../state/derived';
+import { whereabouts } from '../state/artefacts';
+import type { Whereabouts } from '../state/artefacts';
 import { InlineContent } from '../content/InlineContent';
+import { isSafeHref } from '../content/fetch';
 
 interface Props {
   speaker: Speaker;
@@ -84,6 +87,7 @@ export function Checklist({
             <Row
               item={item}
               speaker={speaker}
+              config={config ?? null}
               inWindow={item.window === undefined || daysUntil === null || daysUntil <= item.window}
               disabled={disabled}
               onToggle={onToggle}
@@ -108,13 +112,14 @@ export function Checklist({
 interface RowProps {
   item: RunbookItem;
   speaker: Speaker;
+  config: Config | null;
   inWindow: boolean;
   disabled?: boolean;
   onToggle: (key: string, value: boolean) => void;
   onField: (field: FieldKey, value: string) => void;
 }
 
-function Row({ item, speaker, inWindow, disabled, onToggle, onField }: RowProps) {
+function Row({ item, speaker, config, inWindow, disabled, onToggle, onField }: RowProps) {
   switch (item.form) {
     case 'content':
       return <ContentRow item={item} speaker={speaker} />;
@@ -125,6 +130,7 @@ function Row({ item, speaker, inWindow, disabled, onToggle, onField }: RowProps)
         <CheckboxRow
           item={item}
           speaker={speaker}
+          config={config}
           inWindow={inWindow}
           disabled={disabled}
           onToggle={onToggle}
@@ -295,15 +301,73 @@ function StarNote() {
   );
 }
 
+/**
+ * Where the thing this line asks for actually is.
+ *
+ * Paths and one link, never a paragraph: a screen carries state and the
+ * handbook carries the explanation (`docs/engineering/content-rules.md`
+ * §2). The line used to ask an operator to confirm an artefact and say
+ * nothing at all about where to find it, which turned a ten-second
+ * confirmation into a search of the Actions tab.
+ *
+ * A room link is rendered here and reaches no public page: the cockpit is
+ * the operators' own, and `publish-showcase.yml` refuses to publish a built
+ * site carrying one.
+ */
+function WhereItIs({ found }: { found: Whereabouts }) {
+  return (
+    <div className="mt-1 text-xs text-ink-muted">
+      <p>
+        <span className="font-display font-bold uppercase tracking-widest mr-1">Where it is</span>
+        {found.from && (
+          <a
+            href={found.from.href}
+            target="_blank"
+            rel="noreferrer"
+            className="text-field-text underline"
+          >
+            {found.from.label}
+          </a>
+        )}
+      </p>
+      {found.pending !== null && <p className="mt-1">{found.pending}</p>}
+      {found.found.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {found.found.map(one => (
+            <li key={one.where}>
+              {one.href !== undefined && isSafeHref(one.href) ? (
+                <a
+                  href={one.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-field-text underline break-all"
+                >
+                  {one.where}
+                </a>
+              ) : (
+                <span className="font-mono break-all">{one.where}</span>
+              )}
+              {' — '}
+              {one.what}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function CheckboxRow({
   item,
   speaker,
+  config,
   inWindow,
   disabled,
   onToggle,
 }: {
   item: RunbookItem;
   speaker: Speaker;
+  config: Config | null;
   inWindow: boolean;
   disabled?: boolean;
   onToggle: (key: string, value: boolean) => void;
@@ -317,6 +381,7 @@ function CheckboxRow({
   const previous = stepBefore(speaker, item);
   const held = previous !== undefined && !released;
   const label = item.window !== undefined ? `${item.label} (T-${item.window})` : item.label;
+  const found = whereabouts(item, speaker, config);
   const today = parisToday();
   return (
     <div className={`border border-border rounded p-2 ${inWindow ? '' : 'bg-paper-soft'}`}>
@@ -334,6 +399,7 @@ function CheckboxRow({
             {outstanding(speaker, item) && <span className="text-danger ml-1">*</span>}
           </p>
           {item.note && <p className="text-xs text-ink-muted mt-1">{item.note}</p>}
+          {found !== null && <WhereItIs found={found} />}
           {previous !== undefined && (
             <div className="mt-1">
               <p className="text-xs text-ink-muted">Comes after “{previous.label}”.</p>

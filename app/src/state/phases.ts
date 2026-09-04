@@ -249,7 +249,22 @@ export const PHASES: PhaseDef[] = [
     // from `instance/data/config.yml`; only their position in the journey is here.
     channelsAfter: 'scheduled/T-14/speaker_registered',
     items: [
-      { key: 'scheduled/T-30/visuals', form: 'checkbox', label: 'Visuals + flyer made', window: 30 },
+      {
+        // The one line of the journey whose whole subject is a set of files
+        // this repository generates and this app never said a word about.
+        // `visuals-production.yml` renders a scheduled edition's three
+        // images and three drafted texts on every change to the records and
+        // uploads them as one artefact; confirming this line meant knowing
+        // to open the Actions tab, find the run and download it, which
+        // nothing told anybody. `state/artefacts.ts` is what puts the paths
+        // on the line, and the page handed over here is what to do with
+        // them once they are in hand.
+        key: 'scheduled/T-30/visuals',
+        form: 'checkbox',
+        label: 'Visuals + flyer made',
+        window: 30,
+        contentKey: 'fragments/visual-kit-generated',
+      },
       {
         // The speaker hears that the series is about to start talking about
         // them *before* it does. The announcement carries their name, their

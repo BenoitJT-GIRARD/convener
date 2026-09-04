@@ -25,6 +25,7 @@ import { InlineContent } from '../../src/content/InlineContent';
 import { invalidateContent } from '../../src/content/fetch';
 import { CONTENT_REGISTRY, PUBLIC_ASSETS } from '../../src/content/registry';
 import { handbookUrl } from '../../src/content/fetch';
+import { sectionOf } from '../../src/content/transclude';
 import { substitute } from '../../src/content/render';
 import { speaker as double } from '../helpers/data-doubles';
 // The generic doc-tree rule (extension + skip-dir), unrelated to the
@@ -84,8 +85,28 @@ describe('the kit is reachable', () => {
 
   it('links only to files that exist', () => {
     for (const href of localLinks()) {
-      const path = resolve(DOCS, 'handbook', 'toolkit', href.split('#')[0]);
+      const file = href.split('#')[0];
+      // A link with no path is this page's own heading, which is a
+      // different claim and is checked below. Resolving it would land on
+      // the directory and read as a missing file.
+      if (file === '') continue;
+      const path = resolve(DOCS, 'handbook', 'toolkit', file);
       expect(statSync(path).isFile(), `${href} is missing`).toBe(true);
+    }
+  });
+
+  it('sends a link to its own page at a heading it actually has', () => {
+    // The kit points at its own "where the generated files are" section from
+    // the top, and the workspace's own T-30 line reaches that same section
+    // through the registry. A renamed heading breaks both at once, silently:
+    // a fragment nobody answers scrolls nowhere and renders "missing
+    // section" beside the tick.
+    const ownAnchors = localLinks()
+      .filter(href => href.startsWith('#'))
+      .map(href => href.slice(1));
+    expect(ownAnchors.length).toBeGreaterThan(0);
+    for (const anchor of ownAnchors) {
+      expect(sectionOf(kit(), anchor), `#${anchor} answers to no heading`).not.toBeNull();
     }
   });
 

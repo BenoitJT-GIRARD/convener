@@ -49,8 +49,13 @@ import type { RunbookItem } from './phases';
  *  It names what the line is about and not when it is done: where the
  *  promotion phase sits in the calendar is a placement decision, and a key
  *  that encoded it would have to be rewritten -- on every stored record --
- *  the day the placement moved. */
-const CHANNEL_ITEM_PREFIX = 'promotion/';
+ *  the day the placement moved.
+ *
+ *  Exported because it is also how a promotion line is recognised without
+ *  knowing what any one instance announces through: `state/artefacts.ts`
+ *  reads it to answer "where is the thing this line posts?" for a channel
+ *  list the product never sees. */
+export const CHANNEL_ITEM_PREFIX = 'promotion/';
 
 /**
  * The channels, read from the config and from nowhere else.

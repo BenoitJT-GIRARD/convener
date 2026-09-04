@@ -228,6 +228,14 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'handbook/workflow/4-after.md',
     anchor: 'retrieve-the-recording-before-the-platform-copy-is-deleted',
   },
+  // The T-30 line asks somebody to confirm the images and the flyer are
+  // made. `state/artefacts.ts` prints where each file is; this is what to
+  // do with them, written once on the page the kit already lives on rather
+  // than a second telling of it beside the tick.
+  'fragments/visual-kit-generated': {
+    file: 'handbook/toolkit/visual-kit.md',
+    anchor: 'where-the-generated-files-are',
+  },
   'fragments/roles-host-pair': { file: 'handbook/roles.md', anchor: 'two-event-hosts-per-webinar' },
   'fragments/roles-no-ladder': { file: 'handbook/roles.md', anchor: 'no-ladder-to-climb' },
 };

@@ -18,24 +18,24 @@ coming along.
 
 ### T-30 days
 
-- [ ] Visuals + flyer made — from the [visual kit](../toolkit/visual-kit.md)
+- [ ] Visuals + flyer made — generated for every scheduled edition and downloaded from one place: [where the generated files are](../toolkit/visual-kit.md#where-the-generated-files-are). The workspace prints the same paths on this line
 
 ### T-21 days
 
 - [ ] Speaker told the promotion is starting — before anything is posted
-- [ ] LinkedIn post published
-- [ ] Mailing list / newsletter message sent — to every mailing-list and newsletter channel on the speaker's own promotion lines (the Board's list, in `instance/data/config.yml`)
+- [ ] LinkedIn post published — the workspace names the drafted post for this edition beside the tick
+- [ ] Mailing list / newsletter message sent — to every mailing-list and newsletter channel on the speaker's own promotion lines (the Board's list, in `instance/data/config.yml`); its drafted text is named on the line as well
 
 ### T-14 days
 
-- [ ] Meeting link in hand, recording arranged
+- [ ] Meeting link in hand, recording arranged — the workspace shows the room link on this line once the record carries one, and it goes nowhere else but the confirmation e-mail
 - [ ] LinkedIn access in place
 - [ ] **Checked that the speaker has a forum account and is signed up to their own talk**
 - [ ] One line per promotion channel — as many as there are entries in `channels` in `instance/data/config.yml`, so what you see is what the Board has set
 
 ### T-7 days
 
-- [ ] Forum announcement seeded
+- [ ] Forum announcement seeded — the drafted announcement is named on the line, filled in from the record
 - [ ] Seeded a question on the forum
 - [ ] Waiting room switched on, and both hosts given co-host rights
 - [ ] Meeting platform access token renewed, if it is close to a month old — see `docs/operating/operations.md` for the short browser step

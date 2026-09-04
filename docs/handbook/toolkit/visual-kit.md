@@ -10,6 +10,11 @@ design tool: whoever held that account was the only one who could change a date,
 and everyone else queued behind them. A file in the repository has no owner to
 wait for.
 
+A scheduled edition's images and announcement drafts are also made for it from
+its own record — [where the generated files are](#where-the-generated-files-are)
+says where they come out. Open the templates below for the cases that download
+does not cover.
+
 ## The files
 
 | File | Format | What it is |
@@ -128,10 +133,51 @@ the one the next person starts from.
 - **Video-call background** — applied by both hosts at the technical check,
   fifteen minutes before the session starts.
 
-## A note on where this is going
+## Where the generated files are
 
-The direction of travel is for the announcement image and the flyer to be
-**generated from the event's own data**, so that a changed date or a changed
-registration link means a regenerated image rather than an evening of manual
-work. This kit is the fallback that keeps working whatever happens to that:
-whoever prefers to work by hand takes these files and owns the result.
+A scheduled edition also has its images and its announcement drafts made for
+it, from the event's own record. *Visuals production* runs on every change to
+`instance/data/speakers.yml` and uploads one artefact, `announcement-visuals`,
+carrying a directory per edition. GitHub keeps that download for 90 days.
+
+The directory is named after the event id, which is the edition code
+lower-cased: edition `MRG-4` is `mrg-4`.
+
+| File | What it is |
+| --- | --- |
+| `<event id>/square.png` | 1200 × 1200 — the forum post and the network post |
+| `<event id>/print.png` | A4 at 300 dpi — the one to print and put up |
+| `<event id>/banner.png` | 1200 × 630 — what a link preview shows |
+| `<event id>/forum.md` | The forum announcement, filled in |
+| `<event id>/network.md` | The professional-network post, filled in |
+| `<event id>/mailing-list.md` | The mailing-list and newsletter message, filled in |
+
+One of the six is also committed: `site/src/banners/<event id>.png` is the
+same banner at a stable address, because a link-preview bot fetches an image
+on its own and cannot sign in to download an artefact.
+
+The workspace prints each of these paths on the *Visuals + flyer made* line of
+the event's own page, with a link straight to the workflow — that line is
+where an Event Host meets them, and the promotion lines below it point back
+to it.
+
+Three of the six are one of the templates in this kit, already filled in:
+`forum.md`, `network.md` and `mailing-list.md` are
+[forum-post-announce](forum-post-announce.md), [linkedin-post](linkedin-post.md)
+and [mailing-list-announce](mailing-list-announce.md) rendered from the
+record. Each of those three runbook lines names its own text, so copying the
+page and filling it in by hand is the fallback rather than the first move.
+
+## When to use the templates above instead
+
+The generated files cover a scheduled edition and nothing else. Open the
+templates when you need something they do not give you:
+
+- a poster for an event whose date is not locked yet, which has no event id
+  and therefore no directory in the download;
+- a variant somebody asked for — a lab's own noticeboard, a different
+  language, a size the three formats do not include;
+- a correction you need in the next ten minutes rather than at the end of the
+  next run;
+- the video-call background and the presentation template, which are the same
+  for every event and are not rendered per edition at all.
