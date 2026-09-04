@@ -64,17 +64,16 @@ CANVASES: Final[tuple[tuple[float, float], ...]] = (
 #: The heaviest weight a charter here may draw a motif at, and the
 #: figure both `_EDGE_GUTTER` and `_PITCH_RISES` are bounded by: a charter
 #: committed at a heavier stroke bleeds this drawing off its own edge and
-#: closes the ground between one chevron and the next. A ceiling rather
-#: than
-#: what this figure was drawn to clear. It stopped being a reading of the
-#: charters on the day the example instance named one of the product's
-#: charters instead of writing one: the example's was the only charter
-#: here at 0.03, and the heaviest now committed is 0.024. Lowering the
-#: bound to follow it would tighten a drawing nobody asked to have
-#: tightened, so the figure stays where it was measured and the charters
-#: are held to it instead. A charter committed above it is what this
-#: refuses, which is the direction that puts paint where it does not
-#: belong.
+#: closes the ground between one chevron and the next. A ceiling the
+#: charters are held under, rather than a
+#: reading of what they happen to draw at. It stopped being a reading on
+#: the day the example instance named one of the product's charters
+#: instead of writing one: the example's was the only charter here at
+#: 0.03, and the heaviest now committed is 0.024. Lowering the bound to
+#: follow it would tighten a drawing nobody asked to have tightened, so
+#: the figure stays where it was measured and the charters are held to it
+#: instead. A charter committed above it is what this refuses, which is
+#: the direction that puts paint where it does not belong.
 HEAVIEST_RATIO: Final = 0.03
 
 
@@ -110,7 +109,7 @@ def _charters() -> tuple[Path, ...]:
 # ---------------------------------------------------------------------------
 
 
-def test_the_heaviest_stroke_is_the_one_a_charter_here_actually_draws() -> None:
+def test_no_charter_here_draws_heavier_than_this_figure_clears() -> None:
     """The bound two of this family's figures are set against, held
     against the charters rather than asserted. A charter committed at a
     heavier weight moves this figure, and the drawing has to be

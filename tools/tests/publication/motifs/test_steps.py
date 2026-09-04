@@ -57,16 +57,15 @@ CANVASES: Final[tuple[tuple[float, float], ...]] = (
 #: The heaviest weight a charter here may draw a motif at, and what
 #: `_OVERHANG` has to clear: the joining span carries half a stroke, and a
 #: span nearer the page than that puts paint on a page it is not drawn on.
-#: A ceiling rather than
-#: what this figure was drawn to clear. It stopped being a reading of the
-#: charters on the day the example instance named one of the product's
-#: charters instead of writing one: the example's was the only charter
-#: here at 0.03, and the heaviest now committed is 0.024. Lowering the
-#: bound to follow it would tighten a drawing nobody asked to have
-#: tightened, so the figure stays where it was measured and the charters
-#: are held to it instead. A charter committed above it is what this
-#: refuses, which is the direction that puts paint where it does not
-#: belong.
+#: A ceiling the charters are held under, rather than a
+#: reading of what they happen to draw at. It stopped being a reading on
+#: the day the example instance named one of the product's charters
+#: instead of writing one: the example's was the only charter here at
+#: 0.03, and the heaviest now committed is 0.024. Lowering the bound to
+#: follow it would tighten a drawing nobody asked to have tightened, so
+#: the figure stays where it was measured and the charters are held to it
+#: instead. A charter committed above it is what this refuses, which is
+#: the direction that puts paint where it does not belong.
 HEAVIEST_RATIO: Final = 0.03
 
 
@@ -95,7 +94,7 @@ def _segments(width: float, height: float) -> list[tuple[tuple[float, float], ..
 # ---------------------------------------------------------------------------
 
 
-def test_the_heaviest_stroke_is_the_one_a_charter_here_actually_draws() -> None:
+def test_no_charter_here_draws_heavier_than_this_figure_clears() -> None:
     """The bound `_OVERHANG` is set against, held against the charters
     rather than asserted. A charter committed at a heavier weight moves
     this figure, and the drawing has to be re-measured against it rather
