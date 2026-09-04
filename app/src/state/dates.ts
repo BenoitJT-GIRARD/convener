@@ -35,6 +35,7 @@
  */
 import type { CandidateDate, DateAnswer, Speaker } from '../data/types';
 import { findOverlaps } from './agenda';
+import { dateTimeLine } from './derived';
 
 declare const acceptedBrand: unique symbol;
 
@@ -279,4 +280,53 @@ export function lockDate(current: Speaker, accepted: AcceptedDate, editionCode: 
     time: slot.time,
     edition_code: editionCode,
   };
+}
+
+/**
+ * The evenings on offer, written the way a message names them.
+ *
+ * This is what makes a draft invitation follow the negotiation. The template
+ * used to name `{{ speaker.date }}`, a field that is empty until the date is
+ * locked three statuses later -- so the one message whose whole purpose is
+ * to ask "would one of these suit you?" reached the volunteer with a missing
+ * marker where the dates should be, and never changed however many evenings
+ * were added.
+ *
+ * `''` when nothing has been offered, so a draft read before any date exists
+ * shows the ordinary missing marker rather than an empty sentence inviting a
+ * researcher to nothing.
+ *
+ * Every evening carries its own hour, from the slot: the series' standing
+ * 12:30 is a convention this negotiation is free to depart from, and it does
+ * -- the example instance offers 18:00.
+ */
+export function offeredDatesLine(speaker: Speaker): string {
+  const lines = speaker.candidate_dates
+    .map(c => dateTimeLine(c.date, c.time))
+    .filter(line => line !== '');
+  if (lines.length === 0) return '';
+  if (lines.length === 1) return lines[0];
+  // "A, B or C" -- en-GB, no serial comma, matching the prose rules the rest
+  // of this repository is held to.
+  return `${lines.slice(0, -1).join(', ')} or ${lines[lines.length - 1]}`;
+}
+
+/**
+ * The evening the speaker agreed to, as the record holds it.
+ *
+ * The accepted slot first, because that is where the agreement lives from
+ * the moment it is recorded -- a whole status before `date` is written. Once
+ * the date is locked the two say the same thing, and `lockDate` is what makes
+ * them: it copies the accepted slot's own day and hour onto the record.
+ *
+ * `null` when nothing has been agreed, which is every record up to and
+ * including an invitation still out.
+ */
+export function agreedSlot(speaker: Speaker): CandidateDate | null {
+  const accepted = speaker.candidate_dates.find(c => c.answer === 'accepted');
+  if (accepted) return accepted;
+  if (speaker.date && speaker.time) {
+    return { date: speaker.date, time: speaker.time, answer: 'accepted' };
+  }
+  return null;
 }

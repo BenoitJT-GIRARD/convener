@@ -32,7 +32,8 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { CONTENT_REGISTRY } from '../../src/content/registry';
 import { substitute } from '../../src/content/render';
 import { PHASES, itemByKey } from '../../src/state/phases';
-import { filledSpeaker as invented } from '../helpers/data-doubles';
+import { filledSpeaker as invented, speaker as double } from '../helpers/data-doubles';
+import type { Speaker } from '../../src/data/types';
 // The rule the build actually applies, so the sweep below covers exactly the
 // pages a volunteer can open and no more.
 import { walk } from '../../scripts/handbook-files.mjs';
@@ -217,5 +218,78 @@ describe('the discussion summary is written from notes, not from a tool', () => 
     expect(procedure).not.toMatch(/\bAI\b|assistant|prompt/i);
     expect(optional).toMatch(/no account|nothing here needs an account/i);
     expect(optional).toMatch(/complete without this section/i);
+  });
+});
+
+describe('the drafts that name an evening follow the negotiation', () => {
+  const INVITATION_KEY = 'toolkit/emails/invitation';
+  const DETAILS_KEY = 'toolkit/emails/talk-details';
+
+  /** A record part-way through the negotiation: approved, with whatever has
+   *  been put to the speaker so far and nothing else. */
+  function offering(candidate_dates: Speaker['candidate_dates']): Speaker {
+    return double({
+      status: 'approved',
+      title: 'A talk',
+      date: '',
+      time: '',
+      edition_code: '',
+      candidate_dates,
+    });
+  }
+
+  it('reads as unfinished while no evening has been offered', () => {
+    // Which is what it is: the invitation's whole question is "would one of
+    // these suit you", and there is nothing yet to ask about.
+    const out = substitute(source(INVITATION_KEY), { speaker: offering([]) });
+    expect(out).toContain('«missing: speaker.dates_offered»');
+  });
+
+  it('names the evening as soon as one is offered, hour and zone included', () => {
+    const out = substitute(
+      source(INVITATION_KEY),
+      { speaker: offering([{ date: '2026-11-05', time: '18:00', answer: '' }]) },
+    );
+    expect(out).toContain('Thursday, 5 November 2026 at 18:00 CET');
+  });
+
+  it('grows with the offer, one evening at a time', () => {
+    // The defect R34 records: the placeholders never moved, whatever was
+    // added. Each of the three renders is the draft a volunteer would copy
+    // at that moment.
+    const one = [{ date: '2026-11-05', time: '18:00', answer: '' as const }];
+    const two = [...one, { date: '2026-11-12', time: '18:00', answer: '' as const }];
+    const three = [...two, { date: '2026-11-19', time: '18:00', answer: '' as const }];
+    const draft = (dates: Speaker['candidate_dates']) =>
+      substitute(source(INVITATION_KEY), { speaker: offering(dates) });
+
+    expect(draft(one)).toContain('**Thursday, 5 November 2026 at 18:00 CET**?');
+    expect(draft(two)).toContain(
+      'Thursday, 5 November 2026 at 18:00 CET or Thursday, 12 November 2026 at 18:00 CET',
+    );
+    expect(draft(three)).toContain(
+      'Thursday, 5 November 2026 at 18:00 CET, Thursday, 12 November 2026 at 18:00 CET or ' +
+        'Thursday, 19 November 2026 at 18:00 CET',
+    );
+  });
+
+  it('writes the talk-details message from the evening that was agreed', () => {
+    // A confirmed record has no `date` yet -- that is written when the date
+    // is locked, a status later -- so this message named a missing field at
+    // exactly the moment it is sent.
+    const agreed = double({
+      status: 'confirmed',
+      date: '',
+      time: '',
+      host_1: 'ada',
+      candidate_dates: [
+        { date: '2026-11-05', time: '18:00', answer: 'declined' },
+        { date: '2026-11-12', time: '18:00', answer: 'accepted' },
+      ],
+    });
+    const out = substitute(source(DETAILS_KEY), { speaker: agreed });
+    expect(out).toContain('talk on 2026-11-12');
+    expect(out).toContain('Thursday, 12 November 2026 at 18:00 CET');
+    expect(out).not.toContain('«missing');
   });
 });

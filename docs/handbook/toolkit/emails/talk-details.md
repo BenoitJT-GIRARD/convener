@@ -4,11 +4,11 @@
 
 ---
 
-**Subject:** Your {{ instance.short_name }} talk on {{ speaker.date }} — a few details
+**Subject:** Your {{ instance.short_name }} talk on {{ speaker.date_agreed }} — a few details
 
 Dear {{ speaker.first_name }},
 
-Wonderful — we are very glad you will join us on **{{ speaker.date }}**!
+Wonderful — we are very glad you will join us on **{{ speaker.when_agreed }}**!
 
 To prepare the announcement, could you please send us:
 

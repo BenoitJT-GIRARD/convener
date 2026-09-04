@@ -5,7 +5,8 @@ import {
   toPublicFields,
   type PublicSpeakerFields,
 } from '../state/consent';
-import { dateLine } from '../state/derived';
+import { dateLine, dateTimeLine } from '../state/derived';
+import { agreedSlot, offeredDatesLine } from '../state/dates';
 import type { Speaker } from '../data/types';
 // `docs/handbook/toolkit/`'s templates used to write the
 // organisation's name, the series' title, its forum and its contact
@@ -174,6 +175,18 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       // poster's own defect, hard-typing the zone regardless of season, was
       // wrong for three of this project's own five fixture editions.
       when: dateLine(s.date),
+      // The negotiation, as a message names it. These two are what make a
+      // draft follow the dates rather than a field that is empty until three
+      // statuses later: the invitation asks about the evenings on offer, and
+      // the talk-details message is written the moment one of them is
+      // agreed -- both before `date` exists. They are read on every render,
+      // so a date added on the screen changes the draft beside it.
+      dates_offered: offeredDatesLine(s),
+      date_agreed: agreedSlot(s)?.date ?? '',
+      when_agreed: (() => {
+        const slot = agreedSlot(s);
+        return slot ? dateTimeLine(slot.date, slot.time) : '';
+      })(),
       // The one wrap-up number a message quotes back to the speaker. It is
       // recorded on the delivered checklist above the thank-you that reads
       // it, so an empty one is a line not yet filled in rather than a value

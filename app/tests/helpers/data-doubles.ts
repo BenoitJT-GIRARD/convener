@@ -147,6 +147,13 @@ export function filledSpeaker(): Speaker {
     edition_code: 'MRG-999',
     date: '2026-11-12',
     time: '12:30',
+    // The negotiation this record came through, because a filled record has
+    // one: `speaker.dates_offered` and `speaker.when_agreed` are read off it
+    // by every draft that names an evening.
+    candidate_dates: [
+      { date: '2026-11-05', time: '12:30', answer: 'declined' },
+      { date: '2026-11-12', time: '12:30', answer: 'accepted' },
+    ],
     zoom_link: 'https://zoom.example.org/j/999',
     youtube_url: 'https://youtu.be/invented',
     forum_thread: 'https://forum.example.org/t/999',

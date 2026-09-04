@@ -143,15 +143,34 @@ export function parisStandingStart(isoDate: string): { offset: string; abbreviat
  * rather than a thrown error surfacing as a broken screen.
  */
 export function dateLine(isoDate: string): string {
+  return dateTimeLine(isoDate, STANDING_START_LOCAL);
+}
+
+/**
+ * The same sentence for an hour that is not the standing one.
+ *
+ * The negotiation offers evenings with their own start times -- a slot is a
+ * day *and* an hour, and `state/dates.ts` says so -- so a draft invitation
+ * naming three of them cannot use `dateLine`, which would print the standing
+ * 12:30 against every one of them. That is the reference poster's own defect
+ * in a second place: a time written from a convention rather than from the
+ * record.
+ *
+ * `parisStandingStart` is still what answers for the zone, and still probed
+ * at midday UTC: Europe/Paris changes its clocks in the small hours, so the
+ * offset in force at midday is the offset in force at any hour an evening
+ * seminar can be offered at.
+ */
+export function dateTimeLine(isoDate: string, time: string): string {
   const parsed = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!parsed) return '';
-  const [, y, m, d] = parsed;
+  if (!parsed || !time) return '';
+  const [, , m, d] = parsed;
   const asUtc = new Date(`${isoDate}T00:00:00Z`);
   if (Number.isNaN(asUtc.getTime())) return '';
   const { abbreviation } = parisStandingStart(isoDate);
   const weekday = _WEEKDAYS[asUtc.getUTCDay()];
   const month = _MONTHS[Number(m) - 1];
-  return `${weekday}, ${Number(d)} ${month} ${y} at ${STANDING_START_LOCAL} ${abbreviation}`;
+  return `${weekday}, ${Number(d)} ${month} ${parsed[1]} at ${time} ${abbreviation}`;
 }
 
 export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
