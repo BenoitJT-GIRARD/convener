@@ -40,7 +40,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | What a contributor certifies, and what an issue can expect | `CONTRIBUTING.md` |
 | The behaviour expected of anybody taking part, and what enforcement here actually is | `CODE_OF_CONDUCT.md` |
 | What each published state changed, and what a merge asks of a duplicate | `CHANGELOG.md`, whose list of the paths a duplicate owns is generated from `declarations/boundary.yml` by `tools/scripts/generate_changelog.py` |
-| How to cite this software | `CITATION.cff` |
+| How to cite this software | `CITATION.cff`, whose author, title and licence the line `README.md` offers a reader with no *Cite this repository* button is held to by `tools/tests/repository/test_public_repository.py` |
 | The notice both interfaces display in their footer | `NOTICE.json`, read by `site/scripts/notice.cjs` and `app/scripts/notice.mjs` |
 
 ## 2 · Doctrine in the handbook, state in the app

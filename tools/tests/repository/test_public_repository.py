@@ -28,7 +28,14 @@ each is pinned against a declaration rather than against a transcription.
    does not draw the button. `REQUIRED_CFF_KEYS` and `CFF_KEYS` are the
    1.2.0 schema's own, and the file is checked against the licence this
    repository actually ships rather than against a string somebody typed
-   twice.
+   twice. **And the citation line `README.md` gives is read out of the
+   same file.** The button is GitHub's and exists nowhere else, so a
+   clone, a mirror and anybody reading the raw page get one line to copy
+   instead -- which is the citation written a second time, in a second
+   file, unless something holds the two together. That is
+   `test_the_citation_line_on_the_front_page_names_what_the_file_names`,
+   and it is the same arrangement the copyright holder's name already has
+   across `CITATION.cff` and `NOTICE.json`.
 
 3. **`SECURITY.md` keeps a private channel.** Without one, whoever finds a
    hole publishes it or gives up. The check is not that the file exists --
@@ -393,6 +400,55 @@ def test_the_citation_declares_the_licence_this_repository_ships() -> None:
         "LICENSE is the GNU Affero General Public License version 3 and "
         "NOTICE.json says 'version 3 or later'"
     )
+
+
+#: The heading the front page's citation line sits under, and the fence it
+#: is given in. Named once so that renaming the section fails here rather
+#: than silently emptying the sweep below.
+CITATION_HEADING: Final = "## Citing this"
+
+
+def _citation_line() -> str:
+    """The one line `README.md` offers a reader who has no button.
+
+    The first fenced block under `CITATION_HEADING`, joined into one
+    string. A section that carries no block at all reads as an empty
+    line and fails the assertions below by name.
+    """
+    text = README.read_text(encoding="utf-8")
+    assert CITATION_HEADING in text, (
+        f"{README.name} no longer carries a {CITATION_HEADING!r} section. "
+        "GitHub's button is GitHub's; a clone, a mirror and the raw file "
+        "have this section and nothing else."
+    )
+    after = text.split(CITATION_HEADING, 1)[1]
+    block = re.search(r"```[a-z]*\n(.*?)```", after, re.S)
+    return " ".join(block.group(1).split()) if block else ""
+
+
+def test_the_citation_line_on_the_front_page_names_what_the_file_names() -> None:
+    """The line to copy, read out of the file it is a rendering of.
+
+    Every field of it comes from `CITATION.cff`: the author as that file
+    spells them, the title, and the licence identifier. Written by hand
+    and left alone, this is the citation kept in two places -- and the
+    half nobody would think to correct is the front page, because the
+    file is the one a tool reads.
+    """
+    line = _citation_line()
+    data = _citation()
+    author = data["authors"][0]
+    for expected, why in (
+        (author["family-names"], "the author's family name, as the file spells it"),
+        (author["given-names"], "the author's given names, as the file spells them"),
+        (data["title"], "the title the citation is of"),
+        (data["license"], "the terms the work is offered under"),
+    ):
+        assert expected in line, (
+            f"{README.name}'s citation line reads {line!r} and does not "
+            f"carry {expected!r} -- {why}. It and {CITATION.name} are one "
+            "citation, and the page is the copy that goes stale."
+        )
 
 
 # ------------------------------------------------------------------ #

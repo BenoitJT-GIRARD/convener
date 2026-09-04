@@ -1,3 +1,7 @@
+<div align="center">
+
+<img src="assets/screenshots/banner.png" alt="Convener" width="520">
+
 # Convener
 
 **Convener runs a scholarly seminar series end to end — proposals, an
@@ -6,7 +10,11 @@ certificates, and the destruction of participants' personal data on a
 deadline — for the volunteer-run societies, reading groups and departmental
 seminars that have nobody to pay and nothing to pay them with.**
 
-![Convener](assets/screenshots/banner.png)
+[![Licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-012765)](LICENSE)
+[![Cost to run: €0](https://img.shields.io/badge/cost%20to%20run-%E2%82%AC0-012765)](docs/engineering/architecture.md)
+[![Sign-off: DCO](https://img.shields.io/badge/sign--off-DCO-012765)](CONTRIBUTING.md)
+
+</div>
 
 ## What it looks like
 
@@ -28,9 +36,6 @@ itself.
 
 ![The verification page, showing a Certificate Verified panel with the holder, the event, the date and the identifier](assets/screenshots/verification.png)
 
-[![Licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-012765)](LICENSE)
-[![Cost to run: zero](https://img.shields.io/badge/cost%20to%20run-%E2%82%AC0-012765)](docs/engineering/architecture.md)
-
 ## Seeing it run
 
 The demonstration is this product built as the invented series it ships as
@@ -40,11 +45,12 @@ and the cockpit — the same five surfaces a deployed instance has, with the
 same navigation between them.
 
 `.github/workflows/demonstration.yml` builds it and publishes it to this
-repository's own GitHub Pages. It builds on every push and rebuilds every
-Thursday, and it publishes nothing until the repository variable
-`CONVENER_DEMONSTRATION_PAGES` is set to `true` and Pages is pointed at the
-`gh-pages` branch — two settings no workflow can make for itself, so until
-somebody makes them there is no link here to click.
+repository's own GitHub Pages. It runs on every push that reaches what it
+publishes and rebuilds every Thursday, and it publishes nothing until the
+repository variable `CONVENER_DEMONSTRATION_PAGES` is set to `true` and
+Pages is pointed at the `gh-pages` branch — two settings no workflow can
+make for itself, so until somebody makes them there is no link here to
+click.
 
 Build it and serve it yourself, from a real build, with no account and no
 data of anybody's:
@@ -73,8 +79,13 @@ that served it and writes nothing at all.
 > [!WARNING]
 > **Do not fork this repository — duplicate it.**
 >
-> GitHub offers *Fork* as the obvious action, and it is the wrong one here.
-> An instance holds
+> The word carries two meanings and only one of them is refused here.
+> Taking this code and making your own product of it — *fork* in the
+> free-software sense — is what the licence exists to allow, and
+> [`TRADEMARK.md`](TRADEMARK.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md)
+> are written for whoever does that. What is refused is GitHub's *Fork*
+> button, which is a mechanism rather than a permission, and the wrong
+> mechanism for anybody running a series. An instance holds
 > participants' names, addresses and affiliations, so the repository
 > holding it has to be private — and:
 >
@@ -165,6 +176,17 @@ escrow; and it comes with no warranty of any kind.
 person, with a day job. [`CONTRIBUTING.md`](CONTRIBUTING.md) says what a
 pull request certifies and which gates it has to leave green;
 [`SECURITY.md`](SECURITY.md) has a private channel for a vulnerability, and
-says what it does and does not promise; [`CITATION.cff`](CITATION.cff) is
-behind GitHub's *Cite this repository* button, which for the audience this
-is written for is worth more than any clause of the licence.
+says what it does and does not promise.
+
+## Citing this
+
+For the audience this is written for, a citation is worth more than any
+clause of the licence, and it is asked for rather than required.
+[`CITATION.cff`](CITATION.cff) is the file GitHub reads to draw its *Cite
+this repository* button, which renders APA and BibTeX from it. Where there
+is no button — a clone, a mirror, somebody reading the raw file — this is
+the line:
+
+```text
+GIRARD, Benoît J. T. Convener [computer software]. AGPL-3.0-or-later.
+```

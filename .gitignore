@@ -94,6 +94,16 @@ actions-usage-input.jsonl
 # defence in depth, not because its content still needs it.
 unmatched-attendance.md
 
+# The demonstration this repository builds of itself, assembled by
+# `tools/scripts/demonstration_build.py` into the directory it is handed --
+# and `README.md` and `docs/operating/publishing-the-product.md` both hand
+# it this one, from `tools/`. It is the showcase's build and the cockpit's
+# build laid into the tree the workflow publishes, so it is output twice
+# over and belongs in no history; a reader who followed the recipe on the
+# front page would otherwise have a whole site and a whole bundle sitting
+# in `git status`, one careless `git add` away from being committed.
+demonstration/
+
 # Python
 __pycache__/
 *.pyc
