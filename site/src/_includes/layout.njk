@@ -105,7 +105,7 @@
   cannot say what is wrong sends its reader through a file instead of to
   a line.
 #}
-{% if site.unconfigured.length %}
+{% if site.unconfigured.length and not site.demo %}
 <div class="unconfigured">
   <div class="container unconfigured__inner">
     <p class="unconfigured__eyebrow">Not configured</p>
@@ -124,29 +124,35 @@
 {#
   The demonstration says so, on every page, before anything else on it.
 
-  Above the masthead and below the "not configured" band, for the reason
-  that band is where it is: the masthead names whoever the declaration
-  says runs this series, and in a demonstration that is the invented
-  collective the product ships as its worked example. A visitor reading a
-  seminar programme is owed the sentence that says none of these people
-  exist -- and the reader who needs it is the visitor, not the operator.
+  Where the "not configured" band goes, and *instead* of it. The masthead
+  names whoever the declaration says runs this series, and in a
+  demonstration that is the invented collective the product ships as its
+  worked example -- which is exactly the state that band warns about, so
+  both would fire at once. They do not say the same thing to the same
+  person: that one tells whoever deployed this to go and fill in a file,
+  which is advice nobody reading a demonstration can act on, and this one
+  tells a visitor that none of the people on the page exist. One band, and
+  it is the one addressed to the reader who is actually there.
 
   One band and one link, and the link is the one the masthead beside it
   already carries. A demonstration that grew navigation of its own would
   stop being the thing it demonstrates, which is why
   `tools/tests/repository/test_navigation.py` compares the two builds link
-  for link rather than trusting this comment.
+  for link rather than trusting this comment. The band the demonstration
+  replaces carries no link at all, so replacing it moves nothing that
+  sweep can see -- and that is a property of this markup rather than a
+  coincidence: a band with somewhere to go would have to appear in both.
 #}
 {% if site.demo %}
 <div class="demonstration">
   <div class="container demonstration__inner">
     <p class="demonstration__eyebrow">Demonstration</p>
     <p>
-      This is the software running as an invented series &mdash; the worked
-      example it ships with. Nobody named here exists and no address here
-      resolves. Every page, every form and
-      <a href="{{ '/app/' | url }}{{ site.cockpitQuery }}">the organisers&rsquo; own cockpit</a>
-      are the ones a real instance publishes.
+      This is the software itself, running as the invented series it ships as
+      its worked example &mdash; so nobody named here exists and no address
+      here resolves. Every page, every form and
+      <a href="{{ '/app/' | url }}{{ site.cockpitQuery }}">the organisers&rsquo; cockpit</a>
+      are the ones a deployed instance publishes; none of it is a mock-up.
     </p>
   </div>
 </div>
