@@ -9,7 +9,13 @@ import type {
 import { BallotRejected, castBallot, withdrawBallot } from './ballots';
 import { activeBoard, isBoardMember } from './board';
 import { DateRejected, acceptedDates, answerDate, lockDate } from './dates';
-import { PublicationBlocked, canArchive, decide, standingObjections } from './governance';
+import {
+  PublicationBlocked,
+  canArchive,
+  decide,
+  publicationRefused,
+  standingObjections,
+} from './governance';
 import { deliveryRecordable } from './derived';
 
 export type Role = 'board' | 'organizer';
@@ -26,6 +32,7 @@ export type Transition =
   | 'lock-date'
   | 'mark-delivered'
   | 'finalize-archive'
+  | 'archive-unpublished'
   | 'consent-set'
   | 'publication-approve'
   | 'publication-object'
@@ -154,6 +161,11 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       // back through this one gated transition rather than through a second
       // path that could publish on its own authority.
       return s.status === 'delivered' || (s.status === 'archived' && s.publication.outcome !== 'published');
+    case 'archive-unpublished':
+      // Only where somebody has actually said no. A record still waiting on
+      // an answer has a gate that will open; this is the door for the one
+      // that will not.
+      return s.status === 'delivered' && publicationRefused(s.publication);
     case 'consent-set':
       // Recordable from the moment there is a recording to talk about, and
       // never closed: a speaker may withdraw permission at any time (G-06).
@@ -306,6 +318,24 @@ export function applyTransition(
         status: 'archived',
         publication: { ...s.publication, outcome: 'published' },
       };
+    }
+    case 'archive-unpublished': {
+      // Closing a record whose recording is not going online. It writes the
+      // status and nothing else -- `publication` is carried through
+      // untouched, so this transition cannot produce `outcome: 'published'`
+      // and cannot clear a refusal on its way past one.
+      //
+      // A record whose permissions are merely unanswered has no route here:
+      // that is a wait, and turning a wait into a closed record is exactly
+      // what the consent gate exists to stop.
+      if (!publicationRefused(s.publication)) {
+        throw new PublicationBlocked(
+          'Nobody has refused publication of this recording, so there is nothing to ' +
+            'archive around. Record the answer you have — the speaker’s, or the ' +
+            'board’s — and the gate above will say what is left.',
+        );
+      }
+      return { ...s, status: 'archived', publication: s.publication };
     }
     case 'consent-set': {
       const p = payload as ConsentPayload;

@@ -118,6 +118,7 @@ export function PublicationGate({ speaker, role }: { speaker: Speaker; role: Rol
         reason={gate.reason}
         allowed={gate.allowed}
         onArchive={() => fire('finalize-archive')}
+        onArchiveOnly={() => fire('archive-unpublished')}
       />
 
       {published && (
@@ -365,11 +366,30 @@ function BoardBlock({
 }
 
 /**
- * The one control that publishes.
+ * Closing the record -- with the recording, or without it.
  *
- * Disabled with the reason beside it whenever the gate is shut, or whenever
- * the delivered-phase checklist is still incomplete -- a volunteer meets both
- * rules as a sentence to read, never as a failed save.
+ * **Publishing and archiving are two things** (R43). They used to be one
+ * button, which meant a recording nobody may publish was a record nobody
+ * could close: a speaker who says no, or a board that resolves to withhold,
+ * left the event sitting in `delivered` for ever with a disabled button and
+ * a sentence explaining why it would stay disabled. Everything else about
+ * the wrap-up was finished and there was nothing left to do but wait for a
+ * permission that was never coming.
+ *
+ * So the control is one of two, and which one is not a choice a volunteer
+ * makes -- it is a fact about the record:
+ *
+ * - somebody has *refused* (`publicationRefused`): the button archives, and
+ *   says only that. It cannot publish; `applyTransition` refuses to write a
+ *   published outcome on this path at all.
+ * - otherwise: the button is the one that publishes, exactly as before,
+ *   behind the gate. An unanswered consent and an objection window still
+ *   running are waits, not refusals, and a wait must not offer a way to
+ *   close the record around it.
+ *
+ * Both are disabled with the reason beside them whenever the delivered-phase
+ * checklist is still incomplete -- the wrap-up is owed either way -- so a
+ * volunteer meets that rule as a sentence to read, never as a failed save.
  */
 function ArchiveBlock({
   speaker,
@@ -378,6 +398,7 @@ function ArchiveBlock({
   allowed,
   reason,
   onArchive,
+  onArchiveOnly,
 }: {
   speaker: Speaker;
   role: Role;
@@ -385,28 +406,41 @@ function ArchiveBlock({
   allowed: boolean;
   reason: string;
   onArchive: () => void;
+  onArchiveOnly: () => void;
 }) {
-  if (!canTransition(speaker, 'finalize-archive', role)) return null;
+  const refused = canTransition(speaker, 'archive-unpublished', role);
+  if (!refused && !canTransition(speaker, 'finalize-archive', role)) return null;
   // Naming what is in the way, rather than pointing at the checklist above:
   // one of the things that can be in the way is not in the checklist above.
   // The registration check sits two weeks before the talk, and a volunteer
   // told to fill in the delivered fields would have gone looking for a field
   // that is already filled in.
   const outstanding = speaker.status === 'delivered' ? blockers(speaker) : [];
-  const blocked = !allowed || outstanding.length > 0;
-  const message = !allowed ? reason : outstanding.map(b => b.why).join(' ');
+  const wrapUp = outstanding.map(b => b.why).join(' ');
+  const blocked = refused ? outstanding.length > 0 : !allowed || outstanding.length > 0;
+  const message = refused ? wrapUp : !allowed ? reason : wrapUp;
+
+  const label = refused
+    ? 'Archive without publishing'
+    : speaker.publication.outcome === 'published'
+      ? 'Publish the recording again'
+      : 'Publish the recording and archive';
 
   return (
     <div className="border-t border-border pt-4 space-y-2">
+      {refused && (
+        <p className="text-sm text-ink-muted">
+          {reason} The rest of the record is still worth closing, so this archives it and
+          publishes nothing.
+        </p>
+      )}
       <button
         type="button"
         disabled={disabled || blocked}
-        onClick={onArchive}
+        onClick={refused ? onArchiveOnly : onArchive}
         className="font-display font-bold tracking-widest uppercase text-sm bg-dominant text-white border-2 border-dominant px-5 py-3 hover:bg-dominant-hover disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {speaker.publication.outcome === 'published'
-          ? 'Publish the recording again'
-          : 'Publish the recording and archive'}
+        {label}
       </button>
       {blocked && <p className="text-sm text-danger">{message}</p>}
     </div>

@@ -374,6 +374,7 @@ describe('transitions v2', () => {
       'invited-decline',
       'lock-date',
       'mark-delivered',
+      'archive-unpublished',
       'consent-set',
       'publication-approve',
       'publication-object',
@@ -456,6 +457,44 @@ describe('transitions v2', () => {
   it('lock-date is only allowed from confirmed', () => {
     expect(canTransition({ ...base, status: 'confirmed' }, 'lock-date', 'organizer')).toBe(true);
     expect(canTransition(base, 'lock-date', 'organizer')).toBe(false);
+  });
+
+  it('closes a record whose recording nobody may publish, and publishes nothing', () => {
+    // R43: publishing and archiving were one button, so a speaker who said
+    // no left the event sitting in `delivered` for ever behind a control
+    // that would never enable.
+    const refused: Speaker = {
+      ...base,
+      status: 'delivered',
+      publication: { ...base.publication, consent: 'refused' },
+    };
+    expect(canTransition(refused, 'archive-unpublished', 'organizer')).toBe(true);
+    const next = applyTransition(refused, 'archive-unpublished', 'a', cfg, '2026-05-23');
+    expect(next.status).toBe('archived');
+    expect(next.publication).toEqual(refused.publication);
+    expect(next.publication.outcome).not.toBe('published');
+  });
+
+  it('closes one the board resolved to withhold the same way', () => {
+    const withheld: Speaker = {
+      ...base,
+      status: 'delivered',
+      publication: { ...base.publication, consent: 'granted', outcome: 'withheld' },
+    };
+    expect(canTransition(withheld, 'archive-unpublished', 'organizer')).toBe(true);
+    expect(applyTransition(withheld, 'archive-unpublished', 'a', cfg, '2026-05-23').status).toBe(
+      'archived',
+    );
+  });
+
+  it('refuses to close a record nobody has answered about', () => {
+    // A consent still pending is a wait, and turning a wait into a closed
+    // record is what the consent gate exists to stop.
+    const waiting: Speaker = { ...base, status: 'delivered' };
+    expect(canTransition(waiting, 'archive-unpublished', 'organizer')).toBe(false);
+    expect(() => applyTransition(waiting, 'archive-unpublished', 'a', cfg, '2026-05-23')).toThrow(
+      /Nobody has refused publication/,
+    );
   });
 
   it('refuses to re-archive a recording that is already published', () => {

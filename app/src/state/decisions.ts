@@ -110,6 +110,7 @@ export type PlainDecisionKind =
   | 'publication-approve'
   | 'publication-object'
   | 'finalize-archive'
+  | 'archive-unpublished'
   | 'nomination-open'
   | 'nomination-object'
   | 'nomination-withdraw-objection'
@@ -195,6 +196,7 @@ export const ACTS: Record<DecisionKind, string> = {
   'publication-object': 'record an objection to publishing',
   'publication-resolve': 'resolve the objections on',
   'finalize-archive': 'publish the recording of',
+  'archive-unpublished': 'archive without publishing the recording of',
   'nomination-open': 'open a nomination for',
   'nomination-object': 'record an objection to the nomination of',
   'nomination-withdraw-objection': 'withdraw an objection to the nomination of',

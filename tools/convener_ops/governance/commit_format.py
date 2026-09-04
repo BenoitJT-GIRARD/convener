@@ -74,6 +74,10 @@ ACTS: Final[dict[str, str]] = {
     "publication-object": "record an objection to publishing",
     "publication-resolve": "resolve the objections on",
     "finalize-archive": "publish the recording of",
+    # Its other half. Publishing and archiving are two things: a recording
+    # the speaker or the board has refused still leaves a record worth
+    # closing, and closing it writes no published outcome.
+    "archive-unpublished": "archive without publishing the recording of",
     # Who sits on the board (G-04), and who is available to vote (G-13).
     #
     # `availability-set` is a decision like the rest and not a diary

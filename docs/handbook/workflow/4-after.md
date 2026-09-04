@@ -47,6 +47,14 @@ Whichever platform hosted the session has limited storage, and a scheduled job f
 
 Once cleared, publish the recording on the series' own video channel and announce it on the forum. There is nobody outside the team to send it to — see [Contacts](../contacts.md).
 
+**If the answer is no, the record still closes.** A speaker may refuse, and the
+Board may resolve to withhold — either way there will never be a recording to
+publish, and everything else about the event is finished. The control at the
+foot of the event's page then says **Archive without publishing**, and it does
+exactly that: the event is closed, nothing goes online, and the refusal stays
+on the record as the reason. Waiting on a permission that is not coming is not
+a step of this phase.
+
 ## Thank the speaker
 
 Send a short, warm thank-you — [template](../toolkit/emails/thank-you.md). Mention the engagement and the audience numbers; speakers value it.

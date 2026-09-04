@@ -160,6 +160,7 @@ describe('the grammar of decision commits', () => {
       'lock-date',
       'mark-delivered',
       'finalize-archive',
+      'archive-unpublished',
       'consent-set',
       'publication-approve',
       'publication-object',

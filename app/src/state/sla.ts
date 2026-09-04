@@ -65,6 +65,14 @@
  * but nothing renders its result directly.
  */
 import type { Config, Speaker } from '../data/types';
+// The one thing this module asks of the publication gate: whether somebody
+// has *refused*. It is asked rather than restated because a second reading of
+// "refused" is a second answer to when a wrap-up clock stops, and it reaches
+// the daily digest as well as this screen. Importing `state/governance.ts`
+// does not weaken the working-day discipline above: what must never happen
+// here is a *conversion* between the two units, and no working-day function
+// is named anywhere in this file.
+import { publicationRefused } from './governance';
 
 /** The four steps the series sets a turnaround time for.
  *
@@ -204,6 +212,16 @@ export const SUMMARY_ITEM = 'delivered/forum-summary';
  *   `youtube_url` is empty. Once either is in, its deadline stops existing
  *   rather than becoming a satisfied one.
  *
+ * **And the recording's clock stops when somebody refuses publication.** A
+ * talk whose speaker said no, or whose board resolved to withhold it, will
+ * never carry a `youtube_url` -- not because anybody is late, but *by
+ * definition*. Left as it was, that record reported "Recording is 214 days
+ * overdue" for ever, on a screen whose whole purpose is to show what is
+ * genuinely waiting. A deadline nothing can ever close is worse than no
+ * deadline: it teaches a volunteer to read past the list. An answer nobody
+ * has given yet is a different fact and keeps its clock -- that one closes
+ * when somebody goes and asks.
+ *
  * A delivered speaker can be waiting on both. The earlier due date wins, so a
  * record has exactly one deadline at a time and the screen never stacks two
  * counts against the same card.
@@ -239,9 +257,10 @@ export function dueDate(s: Speaker, config: Config): Deadline | null {
       ? null
       : deadline('summary_after_delivery', s.date, sla.summary_after_delivery);
     if (summary) open.push(summary);
-    const recording = s.youtube_url
-      ? null
-      : deadline('recording_after_delivery', s.date, sla.recording_after_delivery);
+    const recording =
+      s.youtube_url || publicationRefused(s.publication)
+        ? null
+        : deadline('recording_after_delivery', s.date, sla.recording_after_delivery);
     if (recording) open.push(recording);
     if (open.length === 0) return null;
     return open.reduce((soonest, d) => (d.due < soonest.due ? d : soonest));

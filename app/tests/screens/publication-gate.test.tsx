@@ -611,6 +611,55 @@ describe('PublicationGate on the speaker page', () => {
     expect(backend.current()[0].publication.outcome).toBe('');
   });
 
+  it('offers the archive alone when the speaker has refused, and publishes nothing', async () => {
+    // R43: the two used to be one button, so a recording nobody may publish
+    // was a record nobody could close. The rest of the wrap-up is done and
+    // still worth closing.
+    const backend = makeBackend(config(), [
+      speaker({ publication: publication({ consent: 'refused' }) }),
+    ]);
+    renderSpeaker(backend);
+
+    const button = await screen.findByRole('button', { name: 'Archive without publishing' });
+    expect(screen.queryByRole('button', { name: PUBLISH })).toBeNull();
+    await waitFor(() => expect(button).not.toBeDisabled());
+    fireEvent.click(button);
+
+    await waitFor(() => expect(backend.current()[0].status).toBe('archived'));
+    expect(backend.current()[0].publication.outcome).toBe('');
+    expect(backend.current()[0].publication.consent).toBe('refused');
+  });
+
+  it('offers the archive alone when the board has resolved to withhold', async () => {
+    const backend = makeBackend(config(), [
+      speaker({
+        publication: publication({
+          consent: 'granted',
+          approved_by: 'alice',
+          approved_on: LONG_AGO,
+          outcome: 'withheld',
+        }),
+      }),
+    ]);
+    renderSpeaker(backend);
+    expect(
+      await screen.findByRole('button', { name: 'Archive without publishing' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers no archive-alone while an answer is merely awaited', async () => {
+    // A pending consent is a wait, not a refusal, and a wait must not offer
+    // a way to close the record around it.
+    const backend = makeBackend(config(), [
+      speaker({
+        publication: publication({ consent: 'pending', approved_by: 'alice', approved_on: LONG_AGO }),
+      }),
+    ]);
+    renderSpeaker(backend);
+    expect(await screen.findByRole('button', { name: PUBLISH })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Archive without publishing' })).toBeNull();
+  });
+
   it('offers no control for recording a silence', async () => {
     // There is a radio for "they agreed" and one for "they refused", and
     // deliberately none for "no answer yet": leaving the field alone is what

@@ -1663,6 +1663,14 @@
       "message": "data: publish the recording of spk-009 by ada"
     },
     {
+      "name": "closing a record whose recording nobody may publish, which is the other half of the same button",
+      "kind": "archive-unpublished",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: archive without publishing the recording of spk-009 by ada"
+    },
+    {
       "name": "a nomination is opened over its sponsor's name",
       "kind": "nomination-open",
       "entity": "curie",
@@ -2162,6 +2170,108 @@
       },
       "today": "2026-02-01",
       "state": "none"
+    },
+    {
+      "name": "a speaker who refused publication closes the recording clock, because youtube_url stays empty by definition",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "publication": {
+          "consent": "refused",
+          "approved_by": "",
+          "approved_on": "",
+          "objections": [],
+          "outcome": ""
+        },
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-08-01",
+      "state": "none"
+    },
+    {
+      "name": "a board that resolved to withhold closes it the same way",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "publication": {
+          "consent": "granted",
+          "approved_by": "ada",
+          "approved_on": "2026-01-12",
+          "objections": [],
+          "outcome": "withheld"
+        },
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-08-01",
+      "state": "none"
+    },
+    {
+      "name": "a consent nobody has answered is a wait, not a refusal, and its clock keeps running",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "publication": {
+          "consent": "pending",
+          "approved_by": "",
+          "approved_on": "",
+          "objections": [],
+          "outcome": ""
+        },
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-02-01",
+      "state": "overdue",
+      "step": "Recording",
+      "due": "2026-01-24",
+      "since": "2026-01-10",
+      "days": 8,
+      "overdue_text": "Recording is 8 days overdue",
+      "waiting_since": "waiting since 2026-01-10"
     },
     {
       "name": "a confirmed record is waiting on no policy deadline",

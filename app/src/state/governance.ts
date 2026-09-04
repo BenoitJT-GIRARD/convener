@@ -142,6 +142,24 @@ export function objectionWindowCloses(p: Publication, config: Config): string {
 }
 
 /**
+ * Whether somebody who could refuse publication has refused it.
+ *
+ * The two refusals the model can express, and only those: the speaker's own
+ * `refused`, and the board's resolution to `withhold`. Neither is a silence
+ * and neither is a delay -- a consent nobody has answered is `pending`, and
+ * an objection window still running is a clock, not a decision. That
+ * distinction is the whole of what this function is for: publishing and
+ * archiving are two things (R43), and archiving alone is on offer exactly
+ * when somebody has *decided* the recording is not going online. Offering it
+ * while an answer is still awaited would turn "we have not heard back" into a
+ * closed record, which is the failure `consentBlocker` below is built
+ * against.
+ */
+export function publicationRefused(p: Publication): boolean {
+  return p.consent === 'refused' || p.outcome === 'withheld';
+}
+
+/**
  * Why the *speaker* has not permitted publication, as a sentence -- or `''`
  * when they have.
  *

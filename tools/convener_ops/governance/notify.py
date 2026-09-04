@@ -208,6 +208,35 @@ def _maybe(step: str, since: Any, config: Any) -> Deadline | None:
     )
 
 
+def _publication_refused(speaker: Mapping[str, Any]) -> bool:
+    """Whether somebody who could refuse publication has refused it.
+
+    The twin of `app/src/state/governance.ts::publicationRefused`, and pinned
+    to it by `lateness_cases` in
+    `tools/tests/fixtures/governance-cases.json` -- it is read by `due_date`
+    below, which is itself the twin of `sla.ts::dueDate`, so a change on one
+    side that missed the other would put a deadline in the daily digest that
+    the screens no longer show, or the reverse.
+
+    Two refusals and only two: the speaker's own `refused`, and the board's
+    resolution to `withhold`. A `pending` consent and an objection window
+    still running are *waits* -- somebody can still say yes -- so they are
+    not refusals, and the clock they carry is exactly the nudge to go and
+    ask.
+
+    Deliberately not `public_data.recording_withheld`, which answers a
+    different question ("must this stay offline?") and answers it in the
+    affirmative: an unanswered consent is withheld there and is not a
+    refusal here.
+    """
+    publication = speaker.get("publication")
+    publication = publication if isinstance(publication, Mapping) else {}
+    return (
+        publication.get("consent") == "refused"
+        or publication.get("outcome") == "withheld"
+    )
+
+
 def due_date(speaker: Any, config: Any) -> Deadline | None:
     """The step this record is currently waiting on, and the day it was due.
 
@@ -220,7 +249,10 @@ def due_date(speaker: Any, config: Any) -> Deadline | None:
       day, so a nudge can only ever come early -- the prudent direction.
     * **Forum summary** and **Recording** from `date`, and only while the
       artefact is still missing. Once either is in, its deadline stops
-      existing rather than becoming a satisfied one.
+      existing rather than becoming a satisfied one. The recording's also
+      stops when somebody has refused publication: `youtube_url` then stays
+      empty by definition, and a deadline nothing can ever close is worse
+      than no deadline.
 
     A delivered record can be waiting on both wrap-up steps; the earlier due
     day wins, so a record has exactly one deadline at a time.
@@ -245,7 +277,7 @@ def due_date(speaker: Any, config: Any) -> Deadline | None:
             summary = _maybe("summary_after_delivery", speaker.get("date"), config)
             if summary is not None:
                 open_steps.append(summary)
-        if not speaker.get("youtube_url"):
+        if not speaker.get("youtube_url") and not _publication_refused(speaker):
             recording = _maybe("recording_after_delivery", speaker.get("date"), config)
             if recording is not None:
                 open_steps.append(recording)

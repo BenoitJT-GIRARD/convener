@@ -55,6 +55,10 @@ interface LatenessCase {
     selection: { opened_on: string; decided_on: string };
     date: string;
     youtube_url: string;
+    /** Present only on the cases that are about it -- a refusal is what
+     *  closes the recording clock, and every other case leaves the record
+     *  where a delivered talk starts. */
+    publication?: Speaker['publication'];
     runbook_progress: Record<string, boolean>;
   };
   config: { vote_window_days: number; sla_days: Config['sla_days'] };
@@ -97,7 +101,7 @@ function speakerFor(c: LatenessCase): Speaker {
     links: [], host_1: '', host_2: '',
     status: c.speaker.status as SpeakerStatus,
     selection: { ballots: [], ...c.speaker.selection },
-    publication: {
+    publication: c.speaker.publication ?? {
       consent: 'pending', approved_by: '', approved_on: '', objections: [], outcome: '',
     },
     edition_code: '', date: c.speaker.date, time: '', zoom_link: '',
