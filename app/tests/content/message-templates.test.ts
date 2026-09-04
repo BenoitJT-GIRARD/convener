@@ -125,22 +125,71 @@ describe('the three missing messages', () => {
 });
 
 describe('the acknowledgement is the first thing an outside person receives', () => {
-  it('is addressed to whoever sent the proposal, not to the speaker', () => {
-    expect(source(PROPOSAL_KEY)).toContain('{{ proposed_by.name }}');
-  });
-
-  it('says what happens next and roughly when, and that an answer comes either way', () => {
+  it('greets whoever sent the proposal generically, because the record rarely names them', () => {
+    // `{{ proposed_by.name }}` stood here and put a *login* in front of a
+    // stranger on every record a board member had entered by hand -- "Dear
+    // example-alba". The form asks for the speaker's details and not the
+    // sender's, so there is often no name at all, and a salutation a
+    // volunteer can overwrite in a second beats a placeholder that reads as
+    // a fault.
     const text = source(PROPOSAL_KEY);
-    expect(text).toMatch(/what happens next/i);
-    expect(text).toMatch(/two to three weeks/i);
-    expect(text).toMatch(/either way/i);
+    expect(text).toContain('Dear colleague,');
+    expect(text).not.toContain('{{ proposed_by.name }}');
+    // Still about the proposal that was sent in, and not addressed to the
+    // speaker.
+    expect(text).toContain('Thank you for proposing {{ speaker.name }}');
+    expect(text).not.toContain('{{ speaker.first_name }}');
   });
 
-  it('promises a window rather than a date, so a change of configuration cannot make it a lie', () => {
+  it('signs for the series, because no host is named this early', () => {
+    // Hosts are chosen once the board has approved a speaker, a whole status
+    // later, so `{{ host_1.name }}` here rendered as a visible missing
+    // marker above the organisation's own name.
+    const text = source(PROPOSAL_KEY);
+    expect(text).toContain('The {{ instance.organisation }} team');
+    expect(text).not.toContain('{{ host_1.name }}');
+  });
+
+  it('says what happens next, and promises nothing it cannot keep', () => {
+    // The message itself, not the notes below it: the notes name the promise
+    // that was removed, so that the next person to reword this does not put
+    // it back.
+    const text = source(PROPOSAL_KEY).split('## Notes for the volunteer')[0];
+    expect(text).toMatch(/what happens next/i);
+    // The three promises that went: an answer either way, a turnaround, and
+    // an invitation to chase for one.
+    expect(text).not.toMatch(/either way/i);
+    expect(text).not.toMatch(/two to three weeks/i);
+    expect(text).not.toMatch(/chase us/i);
+    // And the policy that replaced them.
+    expect(text).toMatch(/more good proposals/i);
+    expect(text).toMatch(/than we have slots/i);
+    expect(text).toMatch(/it is the speaker we approach/i);
+    expect(text).toMatch(/propose again/i);
+  });
+
+  it('names no date, so a change of configuration cannot make it a lie', () => {
     // The board's target lives in `vote_window_days`, which is
     // configuration and can be edited. A message naming a day would be a
     // promise the record never made.
     expect(source(PROPOSAL_KEY)).not.toMatch(/\bwithin 14 days\b/i);
+  });
+
+  it('is a step the journey offers where it is possible, never a duty on every record', () => {
+    // The form gives the sender no address on most records, and the line
+    // used to be worded as though one always existed.
+    const item = itemByKey('lead/acknowledge-proposal')!;
+    expect(item.required).toBeUndefined();
+    expect(item.label).toMatch(/where the record gives an address/i);
+  });
+
+  it('says the same thing on the page a volunteer plans from', () => {
+    // The manual and the message are one policy. A page still promising an
+    // answer either way would describe a series this one is not.
+    const page = readFileSync(resolve(DOCS, 'handbook/workflow/1-sourcing-selection.md'), 'utf-8');
+    expect(page).not.toMatch(/Every candidate gets an answer/);
+    expect(page).toMatch(/hears nothing further/i);
+    expect(page).toMatch(/proposal-received\.md/);
   });
 });
 

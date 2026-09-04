@@ -132,9 +132,16 @@ export const PHASES: PhaseDef[] = [
         // from a series is not read as "still thinking", it is read as
         // "defunct". So the acknowledgement is a line somebody can be put
         // down for and tick, on the day the proposal arrives.
+        //
+        // The label carries its own condition, because the condition is the
+        // ordinary case: the proposal form asks for the *speaker's* details
+        // and not the sender's, so most records carry no address anybody
+        // could write to. The line stops nothing -- it is not `required` and
+        // never was -- and the wording used to read as a duty on every
+        // record all the same.
         key: 'lead/acknowledge-proposal',
         form: 'checkbox',
-        label: 'Proposal acknowledged to whoever sent it',
+        label: 'Proposal acknowledged, where the record gives an address to write to',
         contentKey: 'toolkit/emails/proposal-received',
       },
       { key: 'lead/board-vote', form: 'button-group', label: 'The board’s ballot' },

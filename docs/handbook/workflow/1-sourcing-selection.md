@@ -27,10 +27,14 @@ A Lead moves forward only when the **Editorial Board** validates it:
 - **What the Board weighs:** quality, diversity, a preference for early-career researchers, and any conflicts of interest. See [how we validate speakers](../governance/selection-criteria.md).
 - **How the vote is counted** — who is in the count, how the bar moves, what happens when the window runs out: [the Board's rules](../governance/board-rules.md).
 
-## Every candidate gets an answer
+## Who hears from us, and when
 
-- **When they apply** — an automatic acknowledgement.
-- **When the Board decides** — a short, kind message: [declined](../toolkit/emails/decision-declined.md) or [parked](../toolkit/emails/decision-parked.md).
+There are far more proposals than there are slots, and the series says only
+what it can keep.
+
+- **Whoever sent the proposal in** gets an [acknowledgement](../toolkit/emails/proposal-received.md) on the day it arrives — when the record gives an address to write to. The public form asks for the speaker's details and not the sender's, so frequently there is nobody to write to, and the step is skipped. That message acknowledges receipt, promises no answer, and invites them to propose again another season.
+- **The speaker** is the person the Board's decision reaches: an [invitation](../toolkit/emails/invitation.md) if they are taken up, and — where the speaker is also the person who proposed them — a short, kind [declined](../toolkit/emails/decision-declined.md) or [parked](../toolkit/emails/decision-parked.md).
+- **By default, a third party who proposed somebody else hears nothing further.** Silence is not a verdict on the researcher or the work, and the acknowledgement says so in as many words.
 
 ## Once validated
 
