@@ -134,9 +134,10 @@ What this module cannot see, stated rather than left to be found
   address inside the registration QR are the example's, and the palette
   and the motif are the ones the example names, which are the product's
   own (`assets/brand/convener/`). So those three images carry nothing a
-  duplicate would have to replace. The blind spot has not moved -- nothing here can read a
-  PNG, and nothing here could have told you what those three held -- what
-  changed is that there is no longer anything in them to read. Proven
+  duplicate would have to replace. The blind spot has not moved -- nothing
+  here can read a PNG, and nothing here could have told you what those
+  three held -- what changed is that there is no longer anything in them
+  to read. Proven
   where it can be, on the pages they are rendered from, by
   `test_publication_visual_fixtures.py::
   test_no_value_of_the_instance_running_this_repository_reaches_the_page`.
