@@ -128,7 +128,7 @@ export function Board() {
       }),
     );
 
-  // One commit per nomination, not one for the batch. G-12 makes board entry
+  // One commit per nomination, not one for the batch. G-09 makes board entry
   // a registrable decision, and a single row saying "the nominations were
   // applied" records that something happened to the board without recording
   // who joined it. Each call re-reads `current`, so the seat counting still

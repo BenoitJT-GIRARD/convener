@@ -1915,12 +1915,12 @@ repository still needs to know they exist and where they live.
   here because it is the same kind of CI-only, cross-account credential as
   the other two.
 
-## Inactivity (G-09)
+## Inactivity (G-13)
 
 A Board member who has cast no ballot for `inactivity_months` stops counting
 toward the vote threshold. Nothing about this happens on its own.
 
-The window is **twelve months** (decision G-09), set in `instance/data/config.yml`.
+The window is **twelve months** (decision G-13), set in `instance/data/config.yml`.
 The series runs roughly monthly, so six months of silence is an ordinary
 heavy year, a sabbatical or a period of leave; twelve is long enough that a
 proposal cannot be triggered by accident, which matters because every line
@@ -1936,7 +1936,7 @@ delivered` and vote-window lines and whether or not those changed anything
 (each proposal is one line; it is wrapped here to fit the page):
 
 ```
-Board inactivity (G-09) - proposed, not applied; a human decides:
+Board inactivity (G-13) - proposed, not applied; a human decides:
   - <login>: no ballot since <date>; proposed inactive so the threshold stops
     counting the seat - the seat is kept, the annual meeting decides, and one
     word in config.yml undoes it
@@ -2019,7 +2019,7 @@ Three things the rule will not do:
   members go, and `board_min` is a target rather than a rule (see
   *The Board's target size* below).
 
-## The Board's target size (G-07)
+## The Board's target size (G-14)
 
 `board_min` is a **target**, not a rule. No code refuses anything because the
 Board is short of it: a nomination may be opened
@@ -2309,5 +2309,5 @@ these in from guesswork: a date nobody confirmed would start a silence the
 member never had.
 
 Once the dates are in, run `uv run convener-sweep` from `tools/` and read
-what it prints under `Board inactivity (G-09)`. Nothing there is applied;
+what it prints under `Board inactivity (G-13)`. Nothing there is applied;
 it is the list the meeting discusses.

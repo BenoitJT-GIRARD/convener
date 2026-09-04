@@ -168,8 +168,8 @@ One mapping, with the keys below.
 | `board_min` | number | Fewest members the board may hold. |
 | `board_max` | number | Most members the board may hold. |
 | `vote_window_days` | number | How long a vote stays open, in days, counted from `selection.opened_on`. |
-| `objection_window_working_days` | number | How long an objection window runs, in working days rather than calendar days (G-10). |
-| `inactivity_months` | number | How many months without a ballot make a member inactive (G-09). |
+| `objection_window_working_days` | number | How long an objection window runs, in working days rather than calendar days (G-07). |
+| `inactivity_months` | number | How many months without a ballot make a member inactive (G-13). |
 | `balance_window_months` | number | How far back the programme balance report looks, in months. |
 | `view_count_window_days` | number | How long after a talk its view count is read off, in days. |
 | `instructions` | string | How to join the permanent room beyond the link itself -- a dial-in number, an access code, anything the room needs that the URL alone does not say. `''` is a legal answer: nothing more to add. |

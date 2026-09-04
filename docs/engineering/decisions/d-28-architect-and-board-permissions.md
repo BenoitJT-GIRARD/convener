@@ -4,13 +4,13 @@
 
 ## Context
 
-G-11 already commits this project to a shape: every account and secret
+G-15 already commits this project to a shape: every account and secret
 belongs to the organisation, no personal account is ever used, the
 handover procedure is documented, and the role that sets a system like
 this up is explicitly transferable (D-11 is the account-and-vault
 mechanism behind that promise). None of that says what "transferable"
 means in GitHub's own permission model. Without a mapping onto a real
-organisation role and a real repository role, G-11 is an intention a
+organisation role and a real repository role, G-15 is an intention a
 reader has to trust, not a setting anyone can check.
 
 A security review found that this gap has a sharp edge. **The property that
@@ -38,7 +38,7 @@ the same discipline D-24 already asks of every operator command:
   casting a ballot included — goes through the GitHub API under the
   signed-in person's own token, so a member who cannot genuinely write to
   the repository cannot use the tool the Board relies on.
-- **Handover is manual and deliberate, exactly as G-11 provides for:**
+- **Handover is manual and deliberate, exactly as G-15 provides for:**
   promote the successor to owner, verify the promotion took, then step
   down. No step is combined with another, and no step is skipped because
   the previous one looked like it worked.
@@ -75,7 +75,7 @@ it is.
 
 ## Rejected
 
-**Leaving G-11 as governance prose, with no permission mapping.** A
+**Leaving G-15 as governance prose, with no permission mapping.** A
 promise that the role is "transferable" means nothing to a reader who
 cannot see what, concretely, a successor is handed — or what a departing
 Board member still holds the day after they leave.
@@ -108,7 +108,7 @@ from locking everyone out.
 
 Nothing enforces the `Write`-only boundary automatically once someone
 joins the Board, and nothing revokes it automatically once they leave.
-`docs/operating/operations.md`'s own *Inactivity (G-09)* section already
+`docs/operating/operations.md`'s own *Inactivity (G-13)* section already
 describes the manual checklist a departure requires; this decision is
 what names who runs it — the architect, the only account with the
 organisation-owner permission the checklist actually needs — rather than

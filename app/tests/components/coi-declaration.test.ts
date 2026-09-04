@@ -1,7 +1,7 @@
 /**
  * The conflict declared to the audience, and the run of show that surrounds it.
  *
- * **Three boxes, not one.** G-16 names three facts -- a slide of its own, said
+ * **Three boxes, not one.** G-12 names three facts -- a slide of its own, said
  * out loud, written into the video description -- and the reason it names three
  * is a problem the series has watched happen: a slide flashed up for two
  * seconds while nobody says anything, which a single "conflicts declared" tick
@@ -87,7 +87,7 @@ function row(label: string): HTMLElement {
 }
 
 describe('the declaration is three checks, not one', () => {
-  it('carries a line of its own for each of the three facts G-16 names', () => {
+  it('carries a line of its own for each of the three facts G-12 names', () => {
     const keys = phaseItems(phaseOf('delivered')!, config()).map(i => i.key);
     for (const key of THREE) expect(keys).toContain(key);
     // Three distinct lines, and not one line counted three times.

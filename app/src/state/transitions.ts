@@ -65,7 +65,7 @@ export interface HiddenCoiPayload {
 }
 
 /**
- * Relaying what the speaker actually answered about their recording (G-15).
+ * Relaying what the speaker actually answered about their recording (G-06).
  *
  * `ConsentDecision` is `granted | refused` and nothing else. `pending` is a
  * legal stored value but is absent from the vocabulary a transition can
@@ -77,7 +77,7 @@ export interface ConsentPayload {
   consent: ConsentDecision;
 }
 
-/** One board member's objection to publishing a recording (G-10). The reason
+/** One board member's objection to publishing a recording (G-07). The reason
  *  is required for the same reason a recusal's is: it stops publication of a
  *  named researcher's talk, so the register has to say why. */
 export interface ObjectionPayload {
@@ -144,7 +144,7 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       return s.status === 'delivered' || (s.status === 'archived' && s.publication.outcome !== 'published');
     case 'consent-set':
       // Recordable from the moment there is a recording to talk about, and
-      // never closed: a speaker may withdraw permission at any time (G-15).
+      // never closed: a speaker may withdraw permission at any time (G-06).
       return s.status === 'delivered' || s.status === 'archived';
     case 'publication-approve':
       return s.status === 'delivered' || s.status === 'archived';
@@ -267,7 +267,7 @@ export function applyTransition(
     }
     case 'consent-set': {
       const p = payload as ConsentPayload;
-      // A refusal is not only a block, it is a takedown (G-15): it
+      // A refusal is not only a block, it is a takedown (G-06): it
       // *un-publishes* on the spot, so the pair (refused, published) cannot
       // exist even for an instant, on any ordering of events.
       //

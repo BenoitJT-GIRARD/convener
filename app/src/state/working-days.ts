@@ -3,10 +3,10 @@
  *
  * Several deadlines the board is held to are counted in working days rather
  * than calendar days -- `config.objection_window_working_days`, the
- * publication objection gate (G-10) -- because the people bound by them are
+ * publication objection gate (G-07) -- because the people bound by them are
  * unpaid volunteers with day jobs: a window that burns through a weekend is a
  * window that has silently shortened itself. Not every window is: the
- * nomination window (`board.ts::NOMINATION_WINDOW_DAYS`, G-08) and
+ * nomination window (`board.ts::NOMINATION_WINDOW_DAYS`, G-04) and
  * `config.vote_window_days` are calendar days by rule, and nothing here should
  * be applied to them -- converting one unit into the other would move a real
  * decision by a real day.

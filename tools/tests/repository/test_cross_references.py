@@ -30,9 +30,9 @@ Four vocabularies, each read from the repository at run time:
   because two instances in this repository say those prefixes are theirs.
 * **`G-NN`** -- a governance rule. Derived from the pages under `docs/`
   that state the rules, each of which *titles* the rule with its number:
-  `## Inactivity (G-09)` in `docs/operating/operations.md`, `### The bar
+  `## Inactivity (G-13)` in `docs/operating/operations.md`, `### The bar
   (G-01)` in `docs/handbook/governance/board-rules.md`, `**Declaring an absence
-  (G-04)**` opening its own paragraph on that same page. Writing a new
+  (G-05)**` opening its own paragraph on that same page. Writing a new
   rule and titling it is what makes its number citable; there is nothing
   here to edit.
 
@@ -170,16 +170,16 @@ JOURNEY = Path("app") / "src" / "state" / "phases.ts"
 PUBLIC_STANDARDS = frozenset({"UTF", "SHA", "AES", "RFC", "P"})
 
 #: A published page titling one of its sections with a governance rule's
-#: number: `## Inactivity (G-09)`. The number sits at the very end of the
+#: number: `## Inactivity (G-13)`. The number sits at the very end of the
 #: heading, which is what separates naming a rule from mentioning one --
-#: `**Handover is manual and deliberate, exactly as G-11 provides for:**`
+#: `**Handover is manual and deliberate, exactly as G-15 provides for:**`
 #: in `docs/engineering/decisions/d-28-architect-and-board-permissions.md` cites the
 #: rule, it does not state it.
 RULE_HEADING = re.compile(r"^#{1,6}[ \t]+[^\n]*?\((G-\d{2})\)[ \t]*$", re.MULTILINE)
 
 #: The same act on a page whose rules are paragraphs rather than sections:
-#: `**Declaring an absence (G-04)** is something you do for yourself.`, and
-#: `- **Diversity (G-13).** A deliberate aim, not an afterthought`. The bold
+#: `**Declaring an absence (G-05)** is something you do for yourself.`, and
+#: `- **Diversity (G-10).** A deliberate aim, not an afterthought`. The bold
 #: run opens the line -- after a list marker, if there is one -- and closes
 #: on the number, so it is a title in everything but markup.
 RULE_LEAD = re.compile(
@@ -594,13 +594,13 @@ def test_the_rules_this_module_admits_are_the_ones_the_pages_state() -> None:
 #: has to be a shape and not a directory: if a citation counted, quoting a
 #: comment's own `G-99` in a handbook page would make `G-99` resolve.
 DECLARATION_CASES: tuple[tuple[str, set[str]], ...] = (
-    ("## Inactivity (G-09)", {"G-09"}),
-    ("**Inactivity (G-09)** is the other half.", {"G-09"}),
-    ("- **Diversity (G-13).** A deliberate aim, not an afterthought", {"G-13"}),
-    ("| `inactivity_months` | number | ... inactive (G-09). |", set()),
-    ("G-11 says the role is transferable; it does not say what a", set()),
-    ("- **Handover is manual, exactly as G-11 provides for:** promote", set()),
-    ("The second gate (G-10, G-15): what has to be true before a", set()),
+    ("## Inactivity (G-13)", {"G-13"}),
+    ("**Inactivity (G-13)** is the other half.", {"G-13"}),
+    ("- **Diversity (G-10).** A deliberate aim, not an afterthought", {"G-10"}),
+    ("| `inactivity_months` | number | ... inactive (G-13). |", set()),
+    ("G-15 says the role is transferable; it does not say what a", set()),
+    ("- **Handover is manual, exactly as G-15 provides for:** promote", set()),
+    ("The second gate (G-06, G-07): what has to be true before a", set()),
 )
 
 

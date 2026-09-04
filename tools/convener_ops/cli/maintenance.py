@@ -96,7 +96,7 @@ BUDGET_BODY: Final = "budget-body.md"
 def _report_inactivity(
     cfg: dict[str, Any], speakers: list[dict[str, Any]], now: datetime
 ) -> None:
-    """Print the board-inactivity proposals (G-09) and discard them.
+    """Print the board-inactivity proposals (G-13) and discard them.
 
     Detection is what the scheduled task operates; applying a proposal stays a
     human act on the Board screen. So the config `sweep_inactive_members`
@@ -119,7 +119,7 @@ def _report_inactivity(
     if not prompts:
         return
     print("")
-    print("Board inactivity (G-09) - proposed, not applied; a human decides:")
+    print("Board inactivity (G-13) - proposed, not applied; a human decides:")
     for prompt in prompts:
         print(f"  - {prompt}")
 

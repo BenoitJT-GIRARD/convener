@@ -109,7 +109,7 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
 }
 
 /* ------------------------------------------------------------------ *
- * Nominations (G-08)
+ * Nominations (G-04)
  *
  * How the board renews itself: a Contributor who has co-hosted at least
  * two webinars is sponsored by a board member, and joins unless someone
@@ -130,9 +130,9 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
  * freshly-read config after a concurrent write.
  * ------------------------------------------------------------------ */
 
-/** Days of silence after which a nomination carries (G-08). Calendar days,
+/** Days of silence after which a nomination carries (G-04). Calendar days,
  *  not working days: `objection_window_working_days` is the *publication*
- *  gate (G-10), a different window with a different unit. So `windowHasRun`
+ *  gate (G-07), a different window with a different unit. So `windowHasRun`
  *  below deliberately does *not* go through `state/working-days.ts`: that
  *  module counts the working-day windows, and routing this one through it
  *  would lengthen a seven-day window to nine or eleven calendar days -- a
@@ -287,7 +287,7 @@ export function nominationBlocker(
  *
  * Eligibility is computed here, from `speakers`, rather than taken as a
  * number from the caller -- passing a count would be declaring eligibility,
- * which is precisely what G-08 forbids. That is why this takes the speaker
+ * which is precisely what G-04 forbids. That is why this takes the speaker
  * list even though it writes only to `config.yml`: the two files are read
  * in the same load cycle, and co-hosting history changes far more slowly
  * than the config being transformed.
@@ -324,7 +324,7 @@ export function openNomination(
  * Which nomination an objection to `candidate` lands on: the most recent
  * one that is not already accepted, or `-1` when there is none. An accepted
  * nomination is closed to objections -- the seat is taken, and re-opening it
- * is a departure (G-09), not an objection. A *deferred* one still takes
+ * is a departure (G-13), not an objection. A *deferred* one still takes
  * them: the annual meeting arbitrates on the whole record, so a second
  * member's reason must be recordable next to the first. Most recent, not
  * every match, because a deferred nomination can be brought back (see
@@ -495,7 +495,7 @@ export function withdrawObjection(
  * `joined_on` it has always had:
  *
  * - `joined_on` is the day the person joined the board, not the day of the
- *   most recent nomination. It is also what the inactivity rule (G-09) reads
+ *   most recent nomination. It is also what the inactivity rule (G-13) reads
  *   as the start of its silence window, so rewriting it restarts that clock
  *   for someone who has been on the board for years.
  * - `unavailable_until` is an absence that member declared about themselves
@@ -550,7 +550,7 @@ export function resolveNominations(config: Config, today: string, only?: string)
     // `only` settles one candidate's nomination and leaves the rest for a
     // later call. `Board.tsx` uses it to write one commit per nomination, so
     // the decision register records who joined the board rather than only
-    // that some nominations were applied (G-12). Omitted, every due
+    // that some nominations were applied (G-09). Omitted, every due
     // nomination is settled at once, which is what the seat counting below
     // is written for.
     if (only !== undefined && n.candidate !== only) return n;

@@ -116,11 +116,11 @@ def expire_votes(
 
 
 # ------------------------------------------------------------------ #
-# Inactivity (G-09)
+# Inactivity (G-13)
 #
 # A member who has cast no ballot for `inactivity_months` stops counting
 # toward `N`, so a board of five that has really been four for a year stops
-# needing four voices to agree. G-09 sets that window at twelve months and
+# needing four voices to agree. G-13 sets that window at twelve months and
 # the code reads whatever `config.yml` declares: the series runs roughly
 # monthly, so half a year of silence is a heavy teaching year, a sabbatical
 # or a leave, and the rule has to be impossible to trigger by accident
@@ -130,10 +130,10 @@ def expire_votes(
 # is also why the rule is not a departure: the entry stays in `config.yml`
 # with its `login` and `joined_on` intact, `board.ts::seat` reactivates that
 # same entry rather than adding a second one, and the annual meeting is what
-# settles the question (G-09). Coming back costs one word in one field.
+# settles the question (G-13). Coming back costs one word in one field.
 #
 # `sweep_inactive_members` is a pure function. `cli._report_inactivity` calls
-# it -- detection is what the scheduled task operates (G-09) -- and prints the
+# it -- detection is what the scheduled task operates (G-13) -- and prints the
 # lines only: the config it returns is dropped there and reaches no writer.
 # That split is the design, not an oversight, and it has the same shape as the
 # nomination vocabulary having no `rejected` value: a scheduled job with

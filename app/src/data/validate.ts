@@ -502,7 +502,7 @@ function readBoardMember(at: Cursor, entry: unknown): BoardMember {
 /** A nomination objection is `{member, reason, date}` -- no `resolved_on`.
  *  It is never resolved: it defers the candidate to the annual meeting, and
  *  the only thing that ends it is its author withdrawing it, which removes
- *  the entry (G-08, `state/board.ts::withdrawObjection`). */
+ *  the entry (G-04, `state/board.ts::withdrawObjection`). */
 function readObjection(at: Cursor, entry: unknown): Objection {
   const raw = object(at, entry);
   keys(at, raw, ['member', 'reason', 'date']);

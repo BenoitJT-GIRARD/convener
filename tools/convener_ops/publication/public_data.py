@@ -184,7 +184,7 @@ PUBLIC_FIELDS = frozenset(
 def recording_withheld(entry: dict[str, Any]) -> bool:
     """Whether this speaker's recording must not appear in the public feed.
 
-    The takedown half of the second gate (G-10, G-15). The app decides
+    The takedown half of the second gate (G-06, G-07). The app decides
     whether a recording may be published in the first place
     (`app/src/state/governance.ts::canArchive`); this decides whether one
     already in the feed has to come out of it, which is the half an
@@ -197,7 +197,7 @@ def recording_withheld(entry: dict[str, Any]) -> bool:
     A recording appears only when two things are recorded, and each is asked
     for in the affirmative:
 
-    - the speaker's consent is `granted` (G-15). Not "did they refuse" but
+    - the speaker's consent is `granted` (G-06). Not "did they refuse" but
       "did they agree": `pending`, `''` and any value nobody recognises are
       silence, and silence is never a permission. This is the only path on
       which anything leaves the repository, so it is the last place an

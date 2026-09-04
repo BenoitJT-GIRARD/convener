@@ -789,7 +789,7 @@ def validate_config(cfg: Any) -> list[str]:
     # board reaching the target. It is reported instead, by
     # `board_target_report`, which is what a target is owed.
     #
-    # *Active* members, not entries, on both counts. G-07's ceiling is about
+    # *Active* members, not entries, on both counts. G-14's ceiling is about
     # who can vote: an `inactive` entry is out of the denominator
     # (`governance.active_board`), stays in the file with its `login` and
     # `joined_on` intact so coming back costs one word, and must not occupy a
@@ -853,7 +853,7 @@ def validate_config(cfg: Any) -> list[str]:
             # board smaller than the record says it is.
             #
             # A seat, not an *active* seat: the nomination attests that the
-            # board granted one, which stays true after G-09 moves the member
+            # board granted one, which stays true after G-13 moves the member
             # to `inactive`. Requiring `active` here would make the inactivity
             # rule (tools/convener_ops/maintenance/sweep.py::sweep_inactive_members)
             # unable to touch anyone the board itself admitted, and would push toward
@@ -870,7 +870,7 @@ def validate_config(cfg: Any) -> list[str]:
                         f"board seat"
                     )
 
-        # G-08's deferral rule, as a backstop for a hand-edited file. A
+        # G-04's deferral rule, as a backstop for a hand-edited file. A
         # nomination the board has not finished with -- still pending, or
         # carrying an objection that defers it to the annual meeting -- is the
         # only one open for that candidate: `board.ts::nominationBlocker`

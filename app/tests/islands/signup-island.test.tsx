@@ -193,7 +193,7 @@ describe('SignupForm -- what it collects, and nothing else', () => {
     expect(email).toBeRequired();
     expect(institution).not.toBeRequired();
 
-    // G-18: unticked by default. Nothing loads it as `true`.
+    // G-11: unticked by default. Nothing loads it as `true`.
     expect(optIn).not.toBeChecked();
   });
 

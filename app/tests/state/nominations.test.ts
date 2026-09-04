@@ -519,7 +519,7 @@ describe('resolveNominations', () => {
     const next = resolveNominations(cfg, '2026-03-09');
     // One entry, now active -- and it keeps the day dan actually joined the
     // board. `joined_on` is not the day of the most recent nomination, and
-    // the inactivity rule (G-09) reads it as the start of its window, so
+    // the inactivity rule (G-13) reads it as the start of its window, so
     // rewriting it would restart that clock for someone who has been here
     // since 2019.
     expect(next.board.filter(m => m.login === 'dan')).toEqual([

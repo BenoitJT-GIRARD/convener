@@ -1,5 +1,5 @@
 /**
- * How the programme is composed, over a sliding window (G-13).
+ * How the programme is composed, over a sliding window (G-10).
  *
  * The series states a preference for early-career speakers and a target of a
  * balanced programme. This module is how the board checks whether it is

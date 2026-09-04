@@ -51,7 +51,7 @@ beforeAll(async () => {
 
 describe('slugify follows the anchors the handbook already links to', () => {
   it('drops punctuation rather than replacing it, and lowercases the rest', () => {
-    expect(slugify('Inactivity (G-09)')).toBe('inactivity-g-09');
+    expect(slugify('Inactivity (G-13)')).toBe('inactivity-g-13');
     expect(slugify("The speaker's — which must be present")).toBe(
       'the-speakers--which-must-be-present',
     );

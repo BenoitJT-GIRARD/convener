@@ -56,7 +56,7 @@ const TOO_DEEP = (key: string) => `«include too deep: ${key}»`;
  * Lower-cased, punctuation dropped rather than replaced, spaces to hyphens.
  * It matters that this is GitHub's rule and not one of our own: the anchors
  * declared in the registry are the same anchors the handbook already links to
- * in prose (`operations.md#inactivity-g-09`), and a second slug algorithm
+ * in prose (`operations.md#inactivity-g-13`), and a second slug algorithm
  * would mean a heading could be reachable from a link and unreachable from an
  * include, or the reverse.
  */

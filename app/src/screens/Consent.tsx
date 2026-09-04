@@ -1,5 +1,5 @@
 /**
- * Asking the speakers whose recordings are still unpublished (G-15).
+ * Asking the speakers whose recordings are still unpublished (G-06).
  *
  * This project built a gate that cannot publish a recording without a recorded
  * `granted`, and left thirty-one real researchers on the other side of it,

@@ -210,7 +210,7 @@ def test_accepted_nomination_with_open_objections_is_rejected() -> None:
 
 
 def test_a_deferred_nomination_and_a_fresh_one_cannot_stand_together() -> None:
-    # G-08's deferral rule. The app refuses the second nomination
+    # G-04's deferral rule. The app refuses the second nomination
     # (app/src/state/board.ts::nominationBlocker), so this pair can only be
     # typed in by hand - and left there it routes straight around the
     # objection the deferral records.
@@ -272,7 +272,7 @@ def test_accepted_nomination_of_a_seated_member_is_accepted() -> None:
 
 
 def test_accepted_nomination_of_an_inactive_member_is_accepted() -> None:
-    # G-09 moves a silent member to `inactive` without taking their seat away
+    # G-13 moves a silent member to `inactive` without taking their seat away
     # (tools/convener_ops/maintenance/sweep.py::sweep_inactive_members). The nomination
     # records that the board granted the seat, which stays true; requiring the member
     # to be active here would make that rule unable to touch anyone the board

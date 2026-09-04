@@ -944,7 +944,7 @@
     ],
     "_malformed_comment": "Malformed input, pinned deliberately. app/src/data/validate.ts narrows every field's type and checks no date's shape, so a hand-edited 'soon' reaches these functions from the file. add_working_days answers '' and working_days_elapsed answers 0 -- an unparsable date reads as 'no deadline' and 'no time has passed', which leaves a window standing open rather than closing it on a value nothing could make sense of. JavaScript's Date accepts 2026-02-30 and year zero where date.fromisoformat raises, so those two are here by name."
   },
-  "_board_headcount_comment": "board_min and board_max count *active* members, on both sides. app/src/state/board.ts::resolveNominations counts them before seating and tools/convener_ops/governance/validate.py::validate_config checks the same number, so the app cannot write a config its own validator rejects. G-07's floor and ceiling are about who can vote, and an inactive entry is out of the denominator.",
+  "_board_headcount_comment": "board_min and board_max count *active* members, on both sides. app/src/state/board.ts::resolveNominations counts them before seating and tools/convener_ops/governance/validate.py::validate_config checks the same number, so the app cannot write a config its own validator rejects. G-14's floor and ceiling are about who can vote, and an inactive entry is out of the denominator.",
   "board_headcount_cases": [
     {
       "name": "a board of three active members sits on its floor",

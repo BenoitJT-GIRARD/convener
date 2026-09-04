@@ -64,13 +64,13 @@ ACTS: Final[dict[str, str]] = {
     "date-propose": "propose a date for",
     "date-answer": "record a date reply for",
     "lock-date": "lock the date of",
-    # Publishing a recording (G-10, G-15).
+    # Publishing a recording (G-06, G-07).
     "consent-set": "record the recording consent of",
     "publication-approve": "approve publication of",
     "publication-object": "record an objection to publishing",
     "publication-resolve": "resolve the objections on",
     "finalize-archive": "publish the recording of",
-    # Who sits on the board (G-08), and who is available to vote (G-09).
+    # Who sits on the board (G-04), and who is available to vote (G-13).
     #
     # `availability-set` is a decision like the rest and not a diary
     # entry: `unavailable_until` is read by `activeBoard`, so declaring

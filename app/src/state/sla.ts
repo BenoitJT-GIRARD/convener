@@ -24,7 +24,7 @@
  * **Calendar days, not working days.** `config.sla_days` is counted in
  * calendar days. This repository holds windows in two units on purpose --
  * `config.objection_window_working_days` says its unit in its own name and is
- * counted with `state/working-days.ts` (G-10), while the nomination window and
+ * counted with `state/working-days.ts` (G-07), while the nomination window and
  * `config.vote_window_days` are calendar days by rule -- so the unit is a
  * decision to make explicitly, not a default to fall into. Three reasons for
  * calendar here:

@@ -331,7 +331,7 @@ describe('Board screen', () => {
   });
 
   it('records who joined the board, one register row per nomination', async () => {
-    // G-12 makes board entry a registrable decision. A single row saying the
+    // G-09 makes board entry a registrable decision. A single row saying the
     // nominations were applied records that the board changed without
     // recording who joined it, and a commit subject is the only place that
     // survives.

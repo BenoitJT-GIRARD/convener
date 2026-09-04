@@ -272,7 +272,7 @@ export interface Objection {
  * hand-written objection that omits the key reads as standing, which is the
  * safe direction.
  *
- * Nomination objections (G-08) use the plain `Objection`: an objection there
+ * Nomination objections (G-04) use the plain `Objection`: an objection there
  * is never resolved, it defers the candidate to the annual meeting.
  */
 export interface PublicationObjection extends Objection {
@@ -534,9 +534,9 @@ export interface Config {
    *  deadline let a file say the board was on time that very morning. */
   vote_window_days: number;
   /** How long an objection window runs, in working days rather than calendar
-   *  days (G-10). */
+   *  days (G-07). */
   objection_window_working_days: number;
-  /** How many months without a ballot make a member inactive (G-09). */
+  /** How many months without a ballot make a member inactive (G-13). */
   inactivity_months: number;
   /** How far back the programme balance report looks, in months. */
   balance_window_months: number;

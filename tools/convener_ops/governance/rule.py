@@ -101,7 +101,7 @@ def active_board(config: dict[str, Any], on: str) -> tuple[list[str], list[str]]
     member is still a member, only out of `N`. Inactive is not a departure and
     not a verdict: the entry, its `login` and its `joined_on` all stay in the
     file, `board.ts::seat` reactivates that same entry rather than adding a
-    second one, and the annual meeting is what settles the question (G-09).
+    second one, and the annual meeting is what settles the question (G-13).
     Reading it as "gone for good" here would be wrong in both directions -- it
     would invite deleting the record, and it would make a return look like a
     new arrival.
@@ -223,9 +223,9 @@ def decide(
 #
 # Some governance windows are counted in working days rather than calendar
 # days -- `config.objection_window_working_days`, the publication objection
-# gate (G-10) -- because the people bound by them are unpaid volunteers with
+# gate (G-07) -- because the people bound by them are unpaid volunteers with
 # day jobs, and a window that burns through a weekend has silently shortened
-# itself. Others are calendar days by rule: the nomination window (G-08) and
+# itself. Others are calendar days by rule: the nomination window (G-04) and
 # `config.vote_window_days`. Nothing here may be applied to those; converting
 # one unit into the other would move a real decision by a real day.
 #

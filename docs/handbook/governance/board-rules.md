@@ -4,7 +4,7 @@ You have just joined the Editorial Board. This page is the whole of what binds y
 
 It describes the rules **as the application actually applies them**. Where a number appears here, it is the number the code computes; where a rule says "never", nothing in the repository can produce the case.
 
-**Why some rules carry a number.** *(G-01)*, *(G-08)*: these are the series' governance rules, numbered so that a commit message, a comment in the code, or another page can name a rule instead of paraphrasing it. The number is a handle; the rule is the prose beside it. Not every rule here has one, and a few of the numbered rules are written on other pages — the Board's size, the declaration a speaker makes in the room, the handover of the architect's own role — and carry their number there.
+**Why some rules carry a number.** *(G-01)*, *(G-04)*: these are the series' governance rules, numbered so that a commit message, a comment in the code, or another page can name a rule instead of paraphrasing it. The number is a handle; the rule is the prose beside it. Not every rule here has one, and a few of the numbered rules are written on other pages — the Board's size, the declaration a speaker makes in the room, the handover of the architect's own role — and carry their number there.
 
 **What this page is not.** It holds no name and no count. Every rule below is written against *the Board*, whoever that is: the members, their joining days and their absences are in `instance/data/config.yml`, edited from the cockpit's own Board screen, and a series run by somebody else has a different Board and the same rules. That separation is the point — a rule that named a member would have to be rewritten every time one joined, and a page that carried a headcount would be wrong the day after the yearly meeting. Where the current Board's own composition is unusual enough to change how a rule *feels*, that is said on [The Editorial Board](editorial-board.md), next to the composition itself.
 
@@ -52,7 +52,7 @@ The floor of three matters: without it, three recusals on a Board of six would q
 
 You cast one ballot per speaker. Changing your mind replaces your ballot; it never adds a second one.
 
-## The vote window, and what parking means (G-06)
+## The vote window, and what parking means (G-02)
 
 The window is **14 calendar days** from the day the Board was asked. Weekends count.
 
@@ -90,7 +90,7 @@ It cannot be recorded against a talk that has already been given, or against a s
 
 Nothing about the incident is written to anyone outside. The register records that the vote was reopened and by whom; the reason stays with the record, visible to the Board.
 
-## Joining the Board (G-08)
+## Joining the Board (G-04)
 
 ### Who may be nominated
 
@@ -123,9 +123,9 @@ The yearly meeting acts through that same door: a member whose objection the mee
 
 ## Stepping back: absence, and inactivity
 
-**Declaring an absence (G-04)** is something you do for yourself. You give the last day you are away — that day included — and you are out of every count until it passes. You come back on your own: there is nothing to write, and nothing to remember. There is no proxy and no vote by delegation.
+**Declaring an absence (G-05)** is something you do for yourself. You give the last day you are away — that day included — and you are out of every count until it passes. You come back on your own: there is nothing to write, and nothing to remember. There is no proxy and no vote by delegation.
 
-**Inactivity (G-09)** is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
+**Inactivity** (G-13) is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
 
 Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in `docs/operating/operations.md` ("Inactivity").
 
@@ -145,7 +145,7 @@ Two roles, on two separate GitHub scopes: the **architect** is the organisation'
 
 A recording goes online only when **two separate permissions** are in hand, from two separate parties. Neither can be read off the other.
 
-### The speaker's — which must be present (G-15)
+### The speaker's — which must be present (G-06)
 
 Ask them, in writing, and record the answer. Only two answers can be recorded: **granted** or **refused**.
 
@@ -153,7 +153,7 @@ Ask them, in writing, and record the answer. Only two answers can be recorded: *
 - A **refusal takes the recording down** on the spot if it was already online, and it can be given at any time. A speaker may change their mind after publication.
 - A record with no answer yet is exactly as blocking as one with no answer ever.
 
-### The Board's — which must be absent (G-10)
+### The Board's — which must be absent (G-07)
 
 Here it is the **objection** that has to turn up, and silence does clear the way.
 
@@ -182,7 +182,7 @@ Reading a calendar window as working days would stretch fourteen days into twent
 
 Every date in the system is a **Paris calendar day**, everywhere, so a member reading the app late at night in another time zone sees the same day as the nightly job.
 
-### The turnaround targets (G-14)
+### The turnaround targets (G-08)
 
 Four steps have a target time: a decision on a suggested speaker (14 days), a follow-up on an invitation with no answer (30), a forum summary after the talk (7), the recording after the talk (14).
 
