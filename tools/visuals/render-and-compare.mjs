@@ -106,10 +106,13 @@
  * was passes every gate this repository has.** Measured, not supposed --
  * `assets/brand/lattice/`'s dominant moved from #5C1E0F to #1700AE, a colour 159
  * levels away on its worst channel and matched in relative luminance to
- * two parts in a million, and `generate_brand_css.py --check` (all twelve
- * contrasts and all 327 cockpit pairings, at every charter),
- * `generate_motif.py --check`, 4528 tests, this comparison and both
- * sweeps all stayed green.
+ * two parts in a million, and `generate_brand_css.py --check` (every
+ * recorded contrast and every pairing the cockpit's chrome sets, at every
+ * charter -- fourteen and 354 of them the day this was written, both
+ * counted at the run rather than written down here for the same reason
+ * this sentence no longer carries them),
+ * `generate_motif.py --check`, the whole test suite, this comparison and
+ * both sweeps all stayed green.
  *
  * A reference series per charter would catch that, and it is still the
  * wrong instrument for it. The change is one line of a committed JSON
@@ -168,7 +171,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  `render_visual_fixtures` renders as the example instance, and the
  *  example names one of the product's charters rather than writing one,
  *  so the charter this number has to clear is the product's own -- navy
- *  #012765, coral #FEBCB1, band #F4F0F1, ink #522F3C, muted ink #794658,
+ *  #012765, coral #FECAC1, band #F4F0F1, ink #522F3C, muted ink #794658,
  *  rule #D0BBC3, white and black. Which file that is, is
  *  `brand.source`'s answer and not a path anybody may write down here:
  *  this comment named this repository's own charter until the fixture

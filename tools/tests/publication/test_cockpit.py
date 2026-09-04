@@ -369,7 +369,12 @@ def test_a_ground_opacity_is_composited_over_the_page(tmp_path: Path) -> None:
     (pairing,) = found
     assert pairing.ground_alpha == 0.10
     tokens = _tokens(brand.DEFAULT_PATH)
-    assert round(cockpit.measure(pairing, tokens), 2) == 5.82
+    # 5.90 at the product's charter, and 5.82 before its ground was
+    # lightened: a tenth of the field composited over white is nearer white
+    # the lighter the field is, so `field-text` on it reads a little
+    # further. Every pairing the field takes part in moved the same way and
+    # none moved down.
+    assert round(cockpit.measure(pairing, tokens), 2) == 5.90
 
 
 def test_a_string_table_is_swept_as_well_as_markup(tmp_path: Path) -> None:

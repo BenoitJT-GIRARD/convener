@@ -76,7 +76,10 @@ from convener_ops.publication import (
     visual,
 )
 from convener_ops.publication.brand import (
+    GROUND_PAIRS,
+    GROUND_SEPARATION_FLOOR,
     contrast_ratio,
+    ground_problems,
     hex_to_rgb,
     relative_luminance,
     rgb_triplet,
@@ -223,6 +226,56 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
     # name, where the ink that pill used to take failed AA at two of them
     # against a ground no table here had ever measured it on.
     assert checked == 14
+
+
+def test_every_charter_keeps_its_grounds_far_enough_apart_to_be_told_apart() -> None:
+    """The bound R61 turned on, over every charter a duplicate may choose.
+
+    Not a contrast obligation and not checkable as one: none of these pairs
+    is text, every pairing `contrast` records has a text colour on one
+    side, and WCAG's own floor for a graphical object is about a control's
+    boundary rather than about one flat area lying on another. So the floor
+    is this product's, and it is measured -- `assets/brand/chevrons/`
+    already ships the tightest of them.
+    """
+    charters = [(brand.INSTANCE_PATH, _charter(brand.INSTANCE_PATH))] + [
+        (rel, _charter(rel)) for rel in brand.shipped(ROOT)
+    ]
+    assert len(charters) == 5, "a charter added under assets/brand/ is swept here too"
+    for rel, values in charters:
+        assert ground_problems(values, named=rel.as_posix()) == []
+
+
+def test_the_ground_floor_refuses_a_field_lightened_past_it() -> None:
+    """The control, broken deliberately. A floor nothing recomputes is a
+    marker, and this project has already paid for one of those: the whole
+    of `layout._grounds` would be a sentence a reader could lighten a
+    ground straight past.
+    """
+    values = _charter(brand.DEFAULT_PATH)
+    values["colour"]["field"] = values["derived"]["field_tint"]
+    problems = ground_problems(values, named="a charter with no ground left")
+    assert problems, "a field lightened onto its own tint has to be refused"
+    assert "field_tint on field" in problems[0]
+    assert str(GROUND_SEPARATION_FLOOR) in problems[0]
+
+
+def test_the_pair_that_binds_is_the_pill_and_not_the_bands() -> None:
+    """Written down because the review that asked for the lighter ground
+    named the wrong bound. `band_on_field` is the separation the charters
+    quote and it is the *looser* of the two: the archive pill reaches the
+    floor first, so a reader who lightens the field while watching only the
+    bands takes the pill down with them.
+    """
+    values = _charter(brand.DEFAULT_PATH)
+    palette = brand.colours(values)
+    measured = {
+        (nearer, further): contrast_ratio(palette[nearer], palette[further])
+        for nearer, further in GROUND_PAIRS
+    }
+    assert measured[("field_tint", "field")] < measured[("band", "field")]
+    assert measured[("field_tint", "field")] == pytest.approx(1.12, abs=0.005)
+    assert measured[("band", "field")] == pytest.approx(1.29, abs=0.005)
 
 
 def test_the_dominant_on_the_field_is_the_measurement_d16_turned_on() -> None:

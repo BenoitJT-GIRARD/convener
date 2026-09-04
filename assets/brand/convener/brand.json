@@ -7,7 +7,7 @@
 
   "colour": {
     "dominant": "#012765",
-    "field": "#febcb1",
+    "field": "#fecac1",
     "band": "#f4f0f1",
     "ink": "#522f3c",
     "ink_muted": "#794658",
@@ -17,7 +17,7 @@
 
     "_roles": {
       "dominant": "Headlines, motif, wordmark. The dominant colour, not an accent. Navy, measured off the mark: 14.19 on white, AAA with room.",
-      "field": "A ground. Never a text colour on white or on a band -- 1.61 on white, exactly as unusable there as the other palette's own field. The product's coral, lightened to the field's luminance.",
+      "field": "A ground, and the only role in this palette whose lightness is not matched to the reference charter's. The product's coral, mixed toward white until the composition's own grounds are as close together as they may come -- see `layout._grounds`, which measures the three separations and writes the floor. Never a text colour on white or on a band: 1.46 there, further below AA than the reference field's own 1.61, and lightening the ground is what moved it.",
       "band": "Full-width horizontal bands laid across the field. Text sits inside them.",
       "ink": "Primary text. Warm, not black -- it carries the palette's own hue rather than being a neutral grey borrowed from nowhere.",
       "ink_muted": "Secondary text. Clears AA on the field and on the bands, which is what decides how light it may be.",
@@ -29,7 +29,7 @@
 
   "derived": {
     "_comment": "Values no measurement supplies, needed because the web has states and links that a mark does not. Each clears AA on the ground it can appear on.",
-    "_derivation": "One rule, applied to every value here and to four in `colour` above, so that none of them is a taste: **the product's own hues, at the lightness the system measures each role at.** The two measured colours give three axes -- navy for the dominant, coral for the field, and the two in equal parts for the neutrals (they sit near enough to opposite each other that their blend is this palette's own grey, #7f495c). Each token is then its axis mixed toward white or toward black until its WCAG relative luminance matches the luminance that role carries in the charter the system's contrast obligations were written against. That is why nine of the twelve pairings below land within 0.03 of the figure the same pairing gives there; the other three are the ones the navy simply wins (dominant_on_field and field_on_dominant at +0.89, dominant_on_band at +1.30, white_on_dominant at +1.45). A contrast ratio is a function of two luminances, and the luminances were matched on purpose. `dominant_hover` is the one exception and says so.",
+    "_derivation": "One rule, applied to every value here and to four in `colour` above, so that none of them is a taste: **the product's own hues, at the lightness the system measures each role at.** The two measured colours give three axes -- navy for the dominant, coral for the field, and the two in equal parts for the neutrals (they sit near enough to opposite each other that their blend is this palette's own grey, #7f495c). Each token is then its axis mixed toward white or toward black until its WCAG relative luminance matches the luminance that role carries in the charter the system's contrast obligations were written against. That is why five of the fourteen pairings below land within 0.03 of the figure the same pairing gives there. **`colour.field` is the one role that is no longer set that way**, and the exception is deliberate: matching a luminance across two hues does not match what the eye is asked to sit in front of, and a coral at the reference field's own luminance filled the page harder than the turquoise it was matched to. It is the same coral, mixed further toward white -- from 0.55 of the way to 0.64 -- and what stops it there is not taste either: `layout._grounds` measures the three separations the composition sets between one ground and another and writes the floor they may not cross. Lightening the ground raises every one of the pairings the field takes part in, which is why five of the fourteen moved up and none moved down. `dominant_hover` is the second exception and says so below.",
     "ink_faint": "#8a596b",
     "field_text": "#a24535",
     "field_tint": "#fedad4",
@@ -42,21 +42,21 @@
 
   "contrast": {
     "_comment": "Measured, WCAG 2.1 relative luminance. AA normal text = 4.5, AAA = 7. Recomputed from the colours above by `tools/scripts/generate_brand_css.py` on every run, `--check` or not: a pairing that no longer recomputes, or one that recomputes below 4.5, stops the build rather than being trusted. The fourteen pairings are the same fourteen the system holds every palette to -- the composition creates them, not this palette. It was twelve until the showcase's own archive pill was built at each of these charters for the first time and two of them failed AA on a pairing no table here named; site/src/style.css::.archive__action carries that measurement.",
-    "dominant_on_field": 8.82,
-    "black_on_field": 13.04,
-    "ink_on_field": 7.12,
+    "dominant_on_field": 9.76,
+    "black_on_field": 14.43,
+    "ink_on_field": 7.88,
     "dominant_on_band": 12.56,
     "ink_on_band": 10.15,
-    "ink_muted_on_field": 4.61,
+    "ink_muted_on_field": 5.1,
     "ink_faint_on_band": 4.99,
     "field_text_on_white": 6.11,
     "white_on_dominant": 14.19,
     "field_text_on_band": 5.4,
     "ink_muted_on_band": 6.57,
-    "field_on_dominant": 8.82,
+    "field_on_dominant": 9.76,
     "dominant_on_field_tint": 10.95,
     "dominant_on_dominant_tint": 10.42,
-    "_forbidden": "the field as text on white (1.61); rule as text on any ground (1.81 on white); white as text on the field (1.61) -- which is why a primary button fills with the dominant."
+    "_forbidden": "the field as text on white (1.46); rule as text on any ground (1.81 on white); white as text on the field (1.46) -- which is why a primary button fills with the dominant. Both figures fell when the ground was lightened: a lighter field is further from white, not nearer, and neither pairing was ever near passing."
   },
 
   "typography": {
@@ -78,12 +78,13 @@
     "width_ratio": 0.0204,
     "logo_dots": "#fd6b52",
     "_stroke": "`colour.dominant`, which `_roles` above already names as the motif's own colour: the dominant ink draws the headlines, the wordmark and the brackets standing either side of the field. 8.82 on the field and 12.56 on the bands, so it reads wherever the composition puts it.",
-    "_logo_dots": "The measured coral, raw, in the one place its 2.84 on white does not disqualify it: the dot the lock-up beside the wordmark closes on, which WCAG exempts from the non-text contrast rule as a logotype. It is the colour of the dot in `convener-mark.svg`, and both templates set the wordmark inside a band, where it measures 2.51 -- weak for text, which it is not, and stronger than the field would give it (1.76).",
+    "_logo_dots": "The measured coral, raw, in the one place its 2.84 on white does not disqualify it: the dot the lock-up beside the wordmark closes on, which WCAG exempts from the non-text contrast rule as a logotype. It is the colour of the dot in `convener-mark.svg`, and both templates set the wordmark inside a band, where it measures 2.51 -- weak for text, which it is not, and stronger than the field would give it (1.95, up from 1.76 when the ground was lightened).",
     "_width_ratio": "Not a measurement of a poster -- the product has none to measure -- but the mark's own arc, at the size the brackets draw it. `convener-mark.svg`'s outer arc is 68.69 wide on a radius of 205.66, that is 0.334 of its own radius; `motifs/bracket.py` stands the left bracket in the box that arc's circle sits in, at a half-width of 0.061 of the composition's shorter side. 0.334 of that half-width is 0.0204, so a bracket is drawn at the weight the mark's own arc is drawn at, whatever the size and whatever the aspect ratio. The right-hand bracket is 0.6405 of the left and takes the same weight, because a motif carries one. The *outer* arc here and not the inner, which is 0.196 of its radius: the outer arc is the mark's mass, what keeps it legible at 16 px, and a bracket standing in a page's margin is the mark's own shape, where the ribbon crossing a page is a line and takes the thinner of the two."
   },
 
   "layout": {
     "_ground": "The field fills the page. White is not the ground.",
-    "_bands": "The bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18."
+    "_bands": "The bands run the full width, horizontally, across the field. Text sits inside them. They are what give the composition its rhythm -- D-18.",
+    "_grounds": "How close two grounds may come, which is the bound that decides how far the field may be lightened. Three separations, and the composition sets all three: the bands crossing the field (`band` on `field`), the archive pill sitting on it (`field_tint` on `field`, `site/src/style.css`'s .archive__action), and that same pill on a hovered row (`field_tint` on `band`). A contrast ratio is the only measure of them this project has, and none of them is text, so AA says nothing here. **The floor is 1.10**, and it is not a taste: `assets/brand/chevrons/` already ships 1.1050 on the third of the three, and clears `check-a11y`, `check-templates` and `check-posters` at it. A band crossing the whole page is a far larger area than that pill, so a floor taken from the pill is conservative for the band. `convener_ops.publication.brand.GROUND_SEPARATION_FLOOR` is the number, checked at every charter on every run of `generate_brand_css.py` -- a floor nothing measures is a marker, and this project has paid for one of those already. **The pair that binds is the pill, not the bands.** At this charter the bands measure 1.29 off the field and the pill 1.12, so the pill reaches the floor first; the bands were never what stopped the ground from lightening further, and a reader who checks only them will lighten the field until the pill disappears into it."
   }
 }

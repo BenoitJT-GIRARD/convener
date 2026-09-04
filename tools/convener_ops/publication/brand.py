@@ -209,6 +209,43 @@ SUPERSEDED_MOTIF_FIELDS: Final = {
 #: AAA, because the charter records pairings that are legitimately AA.
 AA_NORMAL_TEXT: Final = 4.5
 
+#: How close two *grounds* may come, as a contrast ratio.
+#:
+#: WCAG has no floor for this and cannot have one: none of these pairs is
+#: text, and the rule for a graphical object is about a control's own
+#: boundary rather than about one flat area lying on another. So the
+#: number is this product's, and it is measured rather than chosen:
+#: `assets/brand/chevrons/` already ships 1.1050 between its `field_tint`
+#: and its `band` -- the archive pill on a hovered row -- and clears
+#: `check-a11y`, `check-templates` and `check-posters` at it. A pill is a
+#: far smaller area than a band crossing the whole page, so a floor taken
+#: from the pill is conservative for the band.
+#:
+#: It exists because the alternative is a marker. `assets/brand/convener/
+#: brand.json`'s own `layout._grounds` argues for the figure and names the
+#: pair that binds; without something recomputing it at every charter on
+#: every run, the next person to lighten a ground would be reading a
+#: sentence rather than meeting a refusal -- which is the shape D-16's
+#: drift already had once.
+GROUND_SEPARATION_FLOOR: Final = 1.10
+
+#: The pairs of grounds the composition sets against each other, as
+#: (nearer, further) colour names. Not text pairings and never checked as
+#: such: `contrast` above records what a reader has to read, and this
+#: records what a reader has to *tell apart*.
+#:
+#: The three the composition actually draws. `band` on `field` is the
+#: bands crossing the page (D-18); `field_tint` on `field` is the archive
+#: pill sitting on the page's own ground, and on `band` is that same pill
+#: on a hovered row (`site/src/style.css`'s `.archive__action` and
+#: `.archive__row:hover`). A pair added to the composition is added here,
+#: and is then measured at every charter this repository holds.
+GROUND_PAIRS: Final = (
+    ("band", "field"),
+    ("field_tint", "field"),
+    ("field_tint", "band"),
+)
+
 #: The two sections that hold colours. Everything else in the file is
 #: commentary, measurement or typography.
 _COLOUR_SECTIONS: Final = ("colour", "derived")
@@ -761,6 +798,38 @@ def contrast_ratio(a: str, b: str) -> float:
     la, lb = relative_luminance(a), relative_luminance(b)
     lighter, darker = max(la, lb), min(la, lb)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def ground_problems(brand: dict[str, Any], *, named: str) -> list[str]:
+    """Every pair of grounds this charter brings closer than the floor.
+
+    The other half of `contrast_problems` below, and a different question
+    from it: that one asks whether a reader can *read* a colour on a
+    ground, this one whether a reader can *tell two grounds apart*. Nothing
+    in `contrast` covers it -- every pairing recorded there has a text
+    colour on one side -- so before this existed a charter could lighten
+    its field until the bands stopped reading as bands and pass every gate
+    this repository has.
+
+    Recomputed from the colours rather than compared against a recorded
+    figure, because there is no recorded figure to drift: the separations
+    are a consequence of the palette, and what a charter states about them
+    is prose (`layout._grounds`) with the number here behind it.
+    """
+    named_colours = colours(brand)
+    problems: list[str] = []
+    for nearer, further in GROUND_PAIRS:
+        if nearer not in named_colours or further not in named_colours:
+            problems.append(f"{named}: no {nearer} or no {further} to measure")
+            continue
+        ratio = round(contrast_ratio(named_colours[nearer], named_colours[further]), 4)
+        if ratio < GROUND_SEPARATION_FLOOR:
+            problems.append(
+                f"{named}: {nearer} on {further} is {ratio}, closer than the "
+                f"{GROUND_SEPARATION_FLOOR} two grounds of this composition may come "
+                f"({named_colours[nearer]} on {named_colours[further]})"
+            )
+    return problems
 
 
 def contrast_problems(brand: dict[str, Any], *, named: str) -> list[str]:

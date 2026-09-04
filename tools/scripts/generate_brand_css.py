@@ -470,7 +470,16 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     for shown, values in [(named, charter), *others]:
         contrast = brand.contrast_problems(values, named=shown)
-        # The palette's own twelve pairings, and then every pairing the
+        # And how close this palette brings two *grounds*. A different
+        # question from every line above it, which is why it took a
+        # lightened field to find it: `contrast` records what a reader has
+        # to read, and every pairing in it has a text colour on one side.
+        # What the bands crossing the page and the archive pill sitting on
+        # it need is to be *told apart* from the ground under them, WCAG
+        # says nothing about that, and before this a charter could bring
+        # them together until they vanished with every gate green.
+        contrast += brand.ground_problems(values, named=shown)
+        # The palette's own fourteen pairings, and then every pairing the
         # cockpit's chrome sets at this palette. The second is not a
         # property of the charter and could not be recorded in it: it is
         # what `app/src` does with the charter, and until it was measured
@@ -487,7 +496,9 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"every measured contrast in {shown} recomputes and clears "
                 f"AA, and so does every one of the {len(chrome)} pairings "
-                "the cockpit's chrome sets at it"
+                "the cockpit's chrome sets at it; its "
+                f"{len(brand.GROUND_PAIRS)} grounds stay "
+                f"{brand.GROUND_SEPARATION_FLOOR} apart or further"
             )
             continue
         failed = True
@@ -495,8 +506,9 @@ def main(argv: list[str] | None = None) -> int:
             print(problem, file=sys.stderr)
     if failed:
         print(
-            "A palette that does not clear AA does not build. Fix the "
-            "colours in the charter named above, or the ratio beside them.",
+            "A palette that does not clear AA does not build, and neither "
+            "does one whose grounds cannot be told apart. Fix the colours "
+            "in the charter named above, or the ratio beside them.",
             file=sys.stderr,
         )
         return 1

@@ -76,6 +76,17 @@ system measures each role at.** The neutrals come from navy and coral in equal
 parts, which are near enough to opposite that their blend is this palette's own
 grey.
 
+**`colour.field` is the one role that rule no longer sets**, and the exception
+is worth knowing before anybody retouches it. Matching a luminance across two
+hues does not match what the eye is asked to sit in front of: the coral at the
+luminance the rule copies filled a whole page harder than the colour it was
+matched to. It is the same coral, mixed further toward white, and what stops it
+there is a bound rather than a preference — `layout._grounds` in that file
+measures the three separations the composition sets between one ground and
+another and states the floor, and
+`convener_ops.publication.brand.GROUND_SEPARATION_FLOOR` is what refuses a
+charter that crosses it.
+
 Two things follow:
 
 - **The token names are the system's**, and each names a position in the
