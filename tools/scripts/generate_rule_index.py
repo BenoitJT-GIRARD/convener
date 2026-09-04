@@ -127,9 +127,9 @@ _END: Final = (
 )
 
 #: A published page titling one of its sections with a governance rule's
-#: number: `## Inactivity (G-13)`. The number sits at the very end of the
+#: number: `## Inactivity (G-14)`. The number sits at the very end of the
 #: heading, which is what separates naming a rule from mentioning one --
-#: `**Handover is manual and deliberate, exactly as G-15 provides for:**` in
+#: `**Handover is manual and deliberate, exactly as G-16 provides for:**` in
 #: `docs/engineering/decisions/d-28-architect-and-board-permissions.md`
 #: cites the rule, it does not state it.
 RULE_HEADING: Final = re.compile(
@@ -137,8 +137,8 @@ RULE_HEADING: Final = re.compile(
 )
 
 #: The same act on a page whose rules are paragraphs rather than sections:
-#: `**Declaring an absence (G-05)** is something you do for yourself.`, and
-#: `- **Diversity (G-10).** A deliberate aim, not an afterthought`. The bold
+#: `**Declaring an absence (G-06)** is something you do for yourself.`, and
+#: `- **Diversity (G-11).** A deliberate aim, across career stage`. The bold
 #: run opens the line -- after a list marker, if there is one -- and closes
 #: on the number, so it is a title in everything but markup.
 RULE_LEAD: Final = re.compile(
@@ -211,7 +211,7 @@ def tree_order(text: str) -> tuple[str, ...]:
 def title_of(match: str) -> str:
     """A page's own name for a rule, with the markup and the number off.
 
-    `### The bar (G-01)` and `- **Diversity (G-10).**` both reduce to what a
+    `### The bar (G-01)` and `- **Diversity (G-11).**` both reduce to what a
     reader would call the rule out loud.
     """
     text = re.sub(r"^[ \t]*[#>]+[ \t]*", "", match.strip())
