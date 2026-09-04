@@ -163,14 +163,25 @@ def render_visual_fixtures() -> int:
 
     - **the images carry no real instance's identity.** They pin what
       `visual.py` *renders* -- the geometry, the glyph shapes, the QR
-      modules, the motif's stroke against its ground -- and an invented
-      charter pins all of that exactly as well as a real one. The
-      designer of this instance's charter declined to have it ship with
-      the product; this is the byte-level half of honouring that.
+      modules, the motif's stroke against its ground. The names and the
+      address are the example's, invented and reserved, and the palette
+      is the one the example names: `assets/brand/convener/brand.json`,
+      the product's own, which is nobody's instance. The designer of this
+      instance's charter declined to have it ship with the product; this
+      is the byte-level half of honouring that.
     - **the check stops failing for every duplicate.** `visuals.yml` fires
       on the charter's own path, so before this change a duplicate that
       chose its own colours rendered them against images of somebody
       else's and went red on its first push, with nothing wrong.
+
+    `_fixture_root` is what gives `render_announcement` the root it asks
+    for. `examples/the-example-collective/` is not one: it holds one file
+    per instance path and no `assets/`, so a declaration there naming one
+    of the product's charters addresses a directory that is only ever
+    above it. The two files that root holds are the example's declaration
+    and the charter the example names, which is the same pair a duplicate
+    builds from and the same pair `render_poster_fixtures` already lays
+    out for every charter it renders.
 
     The fonts still come from `root / "assets" / "fonts"`: they are the product's,
     self-hosted and served by it (D-17), and `examples/the-example-collective/` holds no
@@ -180,30 +191,38 @@ def render_visual_fixtures() -> int:
         print("usage: convener-render-visual-fixtures OUTPUT_DIR", file=sys.stderr)
         return 1
     root = repo_root()
-    # The charter and the declaration the fixture is rendered from -- the
-    # example instance's, never this repository's own. See the docstring.
-    charter = root / published.EXAMPLE_INSTANCE_ROOT
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
 
     manifest: list[dict[str, Any]] = []
-    for fmt in formats.FORMATS:
-        html = visual.render_announcement(
-            visual.FIXTURE_ANNOUNCEMENT,
-            width=fmt.width,
-            height=fmt.height,
-            root=charter,
+    with tempfile.TemporaryDirectory() as scratch:
+        # The declaration and the charter the fixture is rendered from --
+        # the example instance's, never this repository's own. See the
+        # docstring.
+        made = _fixture_root(
+            Path(scratch) / "example",
+            root,
+            brand.source(root, published.EXAMPLE_INSTANCE_ROOT),
+            published.EXAMPLE_INSTANCE_PATH,
+            None,
         )
-        filename = f"{fmt.name}.html"
-        (out / filename).write_text(html, encoding="utf-8")
-        manifest.append(
-            {
-                "name": fmt.name,
-                "width": fmt.width,
-                "height": fmt.height,
-                "file": filename,
-            }
-        )
+        for fmt in formats.FORMATS:
+            html = visual.render_announcement(
+                visual.FIXTURE_ANNOUNCEMENT,
+                width=fmt.width,
+                height=fmt.height,
+                root=made,
+            )
+            filename = f"{fmt.name}.html"
+            (out / filename).write_text(html, encoding="utf-8")
+            manifest.append(
+                {
+                    "name": fmt.name,
+                    "width": fmt.width,
+                    "height": fmt.height,
+                    "file": filename,
+                }
+            )
 
     fonts_dest = out / "fonts"
     if fonts_dest.exists():
@@ -217,23 +236,27 @@ def render_visual_fixtures() -> int:
     return 0
 
 
-#: The two charters an *instance* holds, under the name their fixtures are
-#: written with, and the declaration whose names and address the templates
-#: are rendered from beside each:
+#: The two *instances* this repository holds, under the name their
+#: fixtures are written with: the directory each one's own files sit in,
+#: and the declaration whose names and address its templates are rendered
+#: from.
 #:
-#: - `instance` -- this instance's own charter and its own declaration.
-#: - `example` -- `examples/the-example-collective/`, the worked example a duplicate
-#:   copies, charter and declaration both.
+#: - `instance` -- the instance that happens to run this repository, whose
+#:   files are at the root.
+#: - `example` -- `examples/the-example-collective/`, the worked example a
+#:   duplicate copies, which holds one file for each of the same paths.
 #:
-#: The charters the *product* ships are not here. They are read off
-#: `assets/brand/` by `_template_charters` below, because a palette a duplicate
-#: may choose is swept the moment it is committed rather than the moment
-#: somebody remembers to name it.
-_INSTANCE_CHARTERS: Final = (
-    ("instance", brand.INSTANCE_PATH, published.INSTANCE_PATH),
+#: The charter each is drawn with is not written here. It is
+#: `brand.source` below, per instance, because an instance has three ways
+#: to answer that question and only one of them is a file of its own: this
+#: one writes a charter, the example names one of the product's, and a
+#: fresh duplicate does neither. A pair of paths written out here would
+#: have been the first answer nailed down as though it were the only one.
+_INSTANCES: Final = (
+    ("instance", None, published.INSTANCE_PATH),
     (
         "example",
-        published.EXAMPLE_INSTANCE_ROOT / brand.INSTANCE_PATH,
+        published.EXAMPLE_INSTANCE_ROOT,
         published.EXAMPLE_INSTANCE_PATH,
     ),
 )
@@ -243,13 +266,19 @@ def _template_charters(root: Path) -> tuple[tuple[str, Path, Path], ...]:
     """Every charter this repository holds, and the declaration each is
     rendered against.
 
-    The two above, then one per directory under `assets/brand/`, named for that
-    directory: `assets/brand/convener/` is the charter a duplicate that has
-    written none of its own is drawn with, and every other one is a
-    palette it may choose instead. None of them has a declaration of its
-    own, because a charter is not an identity -- each is rendered against
-    this instance's names, which is what a duplicate actually gets the
-    first time it builds.
+    The charter in force for each instance above, then one per directory
+    under `assets/brand/`, named for that directory: `assets/brand/convener/` is
+    the charter a duplicate that has written none of its own is drawn
+    with, and every other one is a palette it may choose instead. None of
+    the latter has a declaration of its own, because a charter is not an
+    identity -- each is rendered against this instance's names, which is
+    what a duplicate actually gets the first time it builds.
+
+    An instance that names one of the product's charters therefore appears
+    twice, at the same file and against two declarations, and that is the
+    sweep working rather than a duplicate entry: what a template has to
+    clear is a stroke against a *word*, and the two declarations set
+    different words.
 
     Read off the directory rather than listed, the way `motifs.FAMILIES`
     is read off the directory beside it: a charter added here is measured
@@ -257,7 +286,10 @@ def _template_charters(root: Path) -> tuple[tuple[str, Path, Path], ...]:
     make in this file, in `templates.yml`'s filter or anywhere else.
     """
     return (
-        *_INSTANCE_CHARTERS,
+        *(
+            (label, brand.source(root, instance), declaration)
+            for label, instance, declaration in _INSTANCES
+        ),
         *(
             (rel.parent.name, rel, published.INSTANCE_PATH)
             for rel in brand.shipped(root)
@@ -293,28 +325,53 @@ _TEMPLATE_FILES: Final = (
 )
 
 
-def _template_fixture_root(
-    scratch: Path, root: Path, charter: Path, declaration: Path, family: str
+def _fixture_root(
+    made: Path, root: Path, charter: Path, declaration: Path, family: str | None
 ) -> Path:
     """A repository root holding one charter, drawn with one family.
 
-    Two files and nothing else, because that is all the three templates
-    read: a declaration (the names, the address, the forum the code points
-    at) and a charter (the palette and the motif). The charter is copied
-    with its `motif.family` replaced, which is how the sweep asks a
+    Two files and nothing else, because that is all a template and a
+    poster read: a declaration (the names, the address, the forum the code
+    points at) and a charter (the palette and the motif). The charter is
+    copied with its `motif.family` replaced, which is how a sweep asks a
     question no committed file asks -- what this charter's own colours and
     this instance's own name look like drawn with *that* family -- without
-    inventing a charter and committing it.
+    inventing a charter and committing it. `None` leaves the family the
+    charter itself names, for the caller that renders what is committed
+    rather than a cross product.
+
+    **The charter arrives as a file here whichever way the instance it
+    came from answers for it**, so a declaration that *names* one has that
+    key taken out on the way in. Both together is what `brand.source`
+    refuses, and it is right to: in a repository the two would be one
+    notion in two files, free to disagree. Here they would be the same
+    charter said twice, and the copy is the half that can carry the family
+    this fixture is asking about.
     """
-    made = scratch / f"{charter.stem}-{family}"
     (made / brand.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
-    (made / published.INSTANCE_PATH).write_bytes((root / declaration).read_bytes())
+    declared = json.loads((root / declaration).read_text(encoding="utf-8"))
+    raw = (root / declaration).read_bytes()
+    if published.CHARTER_KEY in declared:
+        del declared[published.CHARTER_KEY]
+        raw = (json.dumps(declared, indent=2) + "\n").encode("utf-8")
+    (made / published.INSTANCE_PATH).write_bytes(raw)
     values = json.loads((root / charter).read_text(encoding="utf-8"))
-    values["motif"][brand.MOTIF_FAMILY] = family
+    if family is not None:
+        values["motif"][brand.MOTIF_FAMILY] = family
     (made / brand.INSTANCE_PATH).write_text(
         json.dumps(values, indent=2) + "\n", encoding="utf-8"
     )
     return made
+
+
+def _template_fixture_root(
+    scratch: Path, root: Path, charter: Path, declaration: Path, family: str
+) -> Path:
+    """One entry of the cross product, in a scratch directory named for
+    the charter and the family it holds."""
+    return _fixture_root(
+        scratch / f"{charter.stem}-{family}", root, charter, declaration, family
+    )
 
 
 def render_template_fixtures() -> int:

@@ -64,26 +64,21 @@ name: Visuals
 #   registration QR encodes. Its modules are pixels this job compares like
 #   any others, and they are the one part of the composition no text sweep
 #   anywhere in this repository can read.
-# - `examples/the-example-collective/instance/data/brand.json` -- the charter the fixture is
-#   rendered from, reached through `tools/convener_ops/publication/brand.py` by
-#   `visual.py`'s `_load_colours` and `brand.py`'s `motif`. The
-#   example's, for the reason two entries up.
 # - `tools/convener_ops/publication/brand.py` -- the reader itself: which charter is in
 #   force, and which `motif` is drawn when that charter declares none.
 # - `assets/brand/*/brand.json` -- every charter the product ships, as a glob and
 #   not a list, for the reason `templates.yml`'s own filter is one. The
-#   fixture reads none of them today: the example writes a complete
-#   charter of its own, so `brand.py` answers with that and never reaches
-#   `assets/brand/`. It reads one the moment the example's charter file goes away
-#   or the example's declaration names a charter instead of writing one
-#   (`published.CHARTER_KEY`, which exists since 2026-08-31). Both of
-#   those files are already in this filter, so the commit that moves the
-#   answer does run this job -- and then every later commit to the charter
-#   it had begun rendering would not have, which is a real regression
-#   shipping green off a filter that reads correct. A glob costs an
-#   occasional run against a warm cache instead, and covers a charter
-#   added under `assets/brand/` on the commit that adds it, with no entry to make
-#   here.
+#   fixture reads one of them, and which one is a line in the declaration
+#   above: the example names `convener`, so `brand.py` answers with
+#   `assets/brand/convener/brand.json` and the palette this job compares is the
+#   product's own. A glob rather than that one path, because the example's
+#   own charter file was an entry in this list until the day the example
+#   stopped writing one -- a list naming the file that is read today goes
+#   stale on the commit that moves the answer, and a filter that reads
+#   correct while filtering nothing is the failure this repository has
+#   already paid for twice. A glob costs an occasional run against a warm
+#   cache instead, and covers a charter added under `assets/brand/` on the commit
+#   that adds it, with no entry to make here.
 #
 # Deliberately absent, and a decision rather than an omission:
 # `instance/config.json` and `instance/data/brand.json`, this instance's own
@@ -163,7 +158,6 @@ on:
       - 'examples/the-example-collective/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'examples/the-example-collective/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
       - 'assets/brand/*/brand.json'
       - 'assets/fonts/**'
@@ -186,7 +180,6 @@ on:
       - 'examples/the-example-collective/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'examples/the-example-collective/instance/data/brand.json'
       - 'tools/convener_ops/publication/brand.py'
       - 'assets/brand/*/brand.json'
       - 'assets/fonts/**'

@@ -376,24 +376,26 @@ records is exactly what this file is supposed to hold.
 
 **Who:** an agent, or a person.
 
-Decide what your instance looks like. It arrives holding
-`instance/data/brand.json`, the worked example's own charter — one palette,
-two typefaces and one motif — and there are two ways to make that yours. If
-your series has somebody to design for it, write your own values into that
-file. If it has not, delete the file and add one line to
-`instance/config.json` instead: `"charter": "steps"`, naming any of the
-directories under `assets/brand/`. The whole charter is then read from
+Decide what your instance looks like. It arrives with no
+`instance/data/brand.json` at all and one line in `instance/config.json`
+instead — `"charter": "convener"`, naming the product's own charter, which is
+why a fresh duplicate is navy and coral before anybody has designed anything.
+There are two ways to make that yours. If your series has nobody to design for
+it, change that one word to name any other directory under `assets/brand/`:
+`"charter": "steps"`. The whole charter is then read from
 `assets/brand/<name>/brand.json` where upstream maintains it, so a contrast
 measured again or a token renamed there reaches you as an ordinary merge,
 where a copied directory would reach you as a conflict on a file you now own.
-Naming a charter no directory under `assets/brand/` carries stops the build
-and lists the ones that are there, and so does keeping the file while naming a
-charter — nothing can say which of the two is then the design in force.
-Whichever way you go, run `scripts/generate_brand_css.py` and
-`scripts/generate_motif.py` from `tools/` afterwards and commit what they
-write: both interfaces' stylesheets, the three templates a collaborator
-downloads and the motif every page draws are all derived from the charter in
-force.
+If your series does have a designer, delete that line and write your own
+palette, typefaces and motif into `instance/data/brand.json`, which is yours
+and which upstream never touches. Naming a charter no directory under
+`assets/brand/` carries stops the build and lists the ones that are there, and
+so does writing the file while naming a charter — nothing can say which of the
+two is then the design in force. Whichever way you go, run
+`scripts/generate_brand_css.py` and `scripts/generate_motif.py` from `tools/`
+afterwards and commit what they write: both interfaces' stylesheets, the three
+templates a collaborator downloads and the motif every page draws are all
+derived from the charter in force.
 
 **Proves it is done.** The command below exits 0, which is what says every
 generated file in the repository is the one the charter in force derives.

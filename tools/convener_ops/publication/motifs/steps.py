@@ -95,11 +95,14 @@ repository already measures:
   x=0 twice.
 - **`_OVERHANG`, how far above the top edge the joining span runs.** One
   riser, which is the drawing's own unit again. What it has to clear is
-  the paint it carries: at the heaviest charter this repository holds the
-  stroke is 0.03 of the shorter side, so half of it is 0.015 of the
-  shorter side, and one riser of the height is never shorter than that at
-  any canvas this product renders. A span nearer than that would put
-  paint on a page it is not drawn on.
+  the paint it carries: at the heaviest stroke a charter here may draw the
+  ratio is 0.03 of the shorter side, so half of it is 0.015 of the shorter
+  side, and one riser of the height is never shorter than that at any
+  canvas this product renders. A span nearer than that would put paint on
+  a page it is not drawn on.
+  `tests/publication/motifs/test_steps.py::HEAVIEST_RATIO` is the ceiling
+  and holds every committed charter under it; the heaviest draws at
+  0.024.
 
 `_CONTENT_TOP` below is the fifth figure and it is not the line's: it is
 where a generated poster's `.content` band begins, and it decides how many

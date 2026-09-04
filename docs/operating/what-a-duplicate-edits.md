@@ -27,12 +27,16 @@ and refusing any trace of the first instance in the output.
 Everything else the declaration hands over needs no edit before a first
 run, and why is worth knowing:
 
-- **`instance/data/brand.json` is not on the list.** The product ships a palette
-  *and* a motif of its own, and one reader takes them whenever an instance
-  has written nothing — so a duplicate builds a finished-looking site
-  without providing a single design file. Whole file or whole file, never a
-  merge of the two, and a palette measuring below AA does not build, yours
-  or ours. [D-16](../engineering/decisions/d-16-brand-source-of-truth.md) is the
+- **`instance/data/brand.json` is not on the list, and a duplicate arrives
+  without one.** The product ships a palette *and* a motif of its own, and
+  `instance/config.json` arrives naming them (`"charter": "convener"`) — so a
+  duplicate builds a finished-looking site in the product's navy and coral
+  without providing a single design file. Change that one word to name
+  another directory under `assets/brand/`, or delete the line and write your
+  own values into `instance/data/brand.json`. Whole file or whole file,
+  never a merge of the two, and a palette measuring below AA does not
+  build, yours or ours.
+  [D-16](../engineering/decisions/d-16-brand-source-of-truth.md) is the
   argument.
 - **`instance/actions-budget.yml`, `instance/queue-drain.yml` and
   `instance/registration-lanes.yml`** carry numbers rather than identity: an

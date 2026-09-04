@@ -24,6 +24,7 @@ from typing import Final
 
 import pytest
 
+from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand, brand_templates, formats, motifs
 from convener_ops.publication.motifs import bracket
@@ -57,10 +58,19 @@ CANVASES: Final[tuple[tuple[float, float], ...]] = (
     (brand_templates.BACKGROUND_WIDTH, brand_templates.BACKGROUND_HEIGHT),
 )
 
-#: The heaviest weight any charter this repository holds draws a motif at.
-#: Read off the charters rather than typed, because it is the figure
+#: The heaviest weight a charter here may draw a motif at, and the figure
 #: `_STEP` is bounded from below by: a charter committed at a heavier
-#: stroke closes this field's own gaps, and this is what says so.
+#: stroke closes this field's own gaps, and this is what says so. A
+#: ceiling rather than
+#: what this figure was drawn to clear. It stopped being a reading of the
+#: charters on the day the example instance named one of the product's
+#: charters instead of writing one: the example's was the only charter
+#: here at 0.03, and the heaviest now committed is 0.024. Lowering the
+#: bound to follow it would tighten a drawing nobody asked to have
+#: tightened, so the figure stays where it was measured and the charters
+#: are held to it instead. A charter committed above it is what this
+#: refuses, which is the direction that puts paint where it does not
+#: belong.
 HEAVIEST_RATIO: Final = 0.03
 
 
@@ -82,28 +92,32 @@ def _points(text: str) -> list[Point]:
 
 
 def _charters() -> tuple[Path, ...]:
-    """Every charter this repository holds: the two an instance owns, and
-    every one the product ships. The same set `cli._template_charters`
-    renders, read the same way rather than listed here."""
+    """Every charter this repository holds: the one in force for each
+    instance it holds, and every one the product ships. The same set
+    `cli._template_charters` renders, read the same way rather than listed
+    here -- an instance that names one of the product's charters rather
+    than writing one answers with that file, so the set is a set of
+    charters and not of instances.
+    """
     return (
-        brand.INSTANCE_PATH,
-        Path("examples") / "the-example-collective" / brand.INSTANCE_PATH,
+        brand.source(ROOT),
+        brand.source(ROOT, published.EXAMPLE_INSTANCE_ROOT),
         *brand.shipped(ROOT),
     )
 
 
 def test_the_heaviest_stroke_is_the_one_a_charter_here_actually_draws() -> None:
-    """The bound `_STEP` is set against, read off the charters rather than
-    asserted. A charter committed at a heavier weight moves this figure,
-    and the field has to be re-measured against it rather than the figure
-    being edited to agree."""
+    """The bound `_STEP` is set against, held against the charters rather
+    than asserted. A charter committed at a heavier weight moves this
+    figure, and the field has to be re-measured against it rather than the
+    figure being edited to agree."""
     weights = {
         rel.as_posix(): float(
             json.loads((ROOT / rel).read_text(encoding="utf-8"))["motif"]["width_ratio"]
         )
         for rel in _charters()
     }
-    assert max(weights.values()) == HEAVIEST_RATIO, (
+    assert max(weights.values()) <= HEAVIEST_RATIO, (
         f"the charters here draw at {weights}, and this family's own step "
         f"is measured against {HEAVIEST_RATIO}"
     )

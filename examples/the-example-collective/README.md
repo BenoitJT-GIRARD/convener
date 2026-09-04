@@ -7,8 +7,9 @@ today.
 `declarations/boundary.yml` names the paths an instance owns. This directory
 holds one file for each of them, at the same relative path — so
 `examples/the-example-collective/instance/config.json` is what
-`instance/config.json` would be, and `examples/the-example-collective/instance/data/brand.json`
-is what `instance/data/brand.json` would be. Nothing here is read at run time by
+`instance/config.json` would be, and
+`examples/the-example-collective/instance/data/speakers.yml` is what
+`instance/data/speakers.yml` would be. Nothing here is read at run time by
 anything: a build that uses these files is a build in which they have
 been copied into the places the boundary names.
 
@@ -67,6 +68,35 @@ the declaration untested by the very build that exists to test it. So it
 is `example-instance.github.io`, a name nobody is asked to register and
 that nothing here resolves.
 
+## The charter it names, and what naming one costs
+
+This instance is drawn in the product's own charter. Its declaration says
+so in one line — `"charter": "convener"` — and it holds no
+`instance/data/brand.json` of its own. That line is the whole of what a
+duplicate with nobody to design for it writes, and
+`assets/brand/convener/brand.json` stays where upstream maintains it, so a
+contrast measured again reaches such a duplicate as an ordinary merge
+rather than as a conflict on a file it now owns.
+
+**What it costs, because it is a real loss rather than a free choice.**
+This example carried a charter of its own until 2026-09-04 — a dark green
+and an ochre, with a motif and twelve measured contrasts — and a reader
+opening the directory could see, in one file, that an instance may carry
+its own design. It cannot see that here any more. What it can see instead
+is one line in a declaration, which is the other of the two answers and
+the one a duplicate is far more likely to give.
+
+**Why the loss was taken.** `README.md` shows three screenshots of a
+running build, and those screenshots render this instance: the renderer
+refuses to run in a repository that has been configured, so they cannot be
+taken from the instance that runs this one. While this directory carried a
+charter of its own, the product's front page showed a dark green
+application under a navy and coral mark. The shop window and the mark
+agree only if this instance is drawn in the mark's own charter. The
+mechanism that stopped being demonstrated here is demonstrated by
+`instance/data/brand.json` one directory up, which is a charter an
+instance wrote for itself.
+
 ## What it deliberately does not hold
 
 Three of the paths the boundary hands to an instance have no counterpart
@@ -84,6 +114,11 @@ reason:
   means a scheduled job rewrites it in full on both sides of any merge. A
   duplicate inherits upstream's copy and its own next push replaces it, so
   an authored one here would be an authored copy of a generated file.
+
+`instance/data/brand.json` is not in that register and is not an absence
+of the same kind: `instance/data/` has a counterpart here, so the boundary
+is answered, and the charter this instance is drawn in is named in the
+section above rather than missing.
 
 ## What it numbers its own editions
 

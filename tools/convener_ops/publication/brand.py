@@ -145,6 +145,7 @@ __all__ = [
     "rgba",
     "shipped",
     "source",
+    "under",
 ]
 
 #: The instance's own values, relative to a repository root. Optional: a
@@ -319,7 +320,23 @@ def names(root: Path) -> str:
     return ", ".join(rel.parent.name for rel in shipped(root))
 
 
-def declared(root: Path) -> str | None:
+def under(instance: Path | None) -> Path:
+    """Where one instance's own files sit, root-relative.
+
+    `None` is the ordinary answer and means the repository root itself:
+    an instance's files sit at the paths `declarations/boundary.yml`
+    names, and those are root-relative. The product's own worked example
+    is the other answer -- `examples/the-example-collective/` holds one
+    file for each of those paths, at the same relative path, and holds no
+    `assets/` at all. So *which* charters exist is a property of the
+    repository and *which one is in force* is a property of the instance,
+    and the two questions are answered from different directories the
+    moment an instance names one instead of writing one.
+    """
+    return Path() if instance is None else instance
+
+
+def declared(root: Path, instance: Path | None = None) -> str | None:
     """The name `instance/config.json` writes under `charter`, or `None`.
 
     Absence answered twice, and neither is a fall back. A declaration that
@@ -333,10 +350,14 @@ def declared(root: Path) -> str | None:
     a tree missing this declaration is refused by every other reader of it
     (`published.load`, `load_identity`, `load_edition_prefix`), each for
     its own reason.
+
+    `instance` is `under` above: the directory this instance's own files
+    sit in, `None` for a whole repository.
     """
-    if not (root / published.INSTANCE_PATH).is_file():
+    here = root / under(instance)
+    if not (here / published.INSTANCE_PATH).is_file():
         return None
-    return published.load_charter(root)
+    return published.load_charter(here)
 
 
 def chosen(root: Path) -> Path | None:
@@ -355,9 +376,14 @@ def chosen(root: Path) -> Path | None:
     return _shipped_as(root, name)
 
 
-def _shipped_as(root: Path, name: str) -> Path:
+def _shipped_as(root: Path, name: str, here: Path = Path()) -> Path:
     """`assets/brand/<name>/brand.json`, or a refusal naming the charters there
-    are -- `motifs.family`'s own shape, one layer up."""
+    are -- `motifs.family`'s own shape, one layer up.
+
+    `here` is the instance whose declaration wrote the name, so that the
+    refusal names the file somebody has to open rather than the path an
+    instance's declaration takes at a root.
+    """
     for rel in shipped(root):
         if rel.parent.name == name:
             return rel
@@ -369,14 +395,14 @@ def _shipped_as(root: Path, name: str) -> Path:
         "broken rather than this declaration being wrong."
     )
     raise UnknownCharterError(
-        f"{published.INSTANCE_PATH.as_posix()}: {published.CHARTER_KEY} names "
-        f"{name!r}, which is not a charter this product ships. {listed} "
-        f"Delete the key to be drawn with the product's own "
-        f"({DEFAULT_PATH.as_posix()})."
+        f"{(here / published.INSTANCE_PATH).as_posix()}: "
+        f"{published.CHARTER_KEY} names {name!r}, which is not a charter this "
+        f"product ships. {listed} Delete the key to be drawn with the "
+        f"product's own ({DEFAULT_PATH.as_posix()})."
     )
 
 
-def source(root: Path) -> Path:
+def source(root: Path, instance: Path | None = None) -> Path:
     """Which charter `load` will read, root-relative.
 
     Three answers, in the order this asks for them.
@@ -407,25 +433,33 @@ def source(root: Path) -> Path:
     actually came from: a contrast that no longer recomputes and a
     `motif` left half-written are both reported against the file somebody
     has to open.
+
+    `instance` is `under` above. Answers 2 and 3 are files of the
+    instance's own and are relative to it; answer 1 is one of the
+    product's and is relative to the repository. That is the whole
+    difference a named charter makes, and the reason the directory an
+    instance sits in and the directory the charters sit in are two
+    arguments.
     """
-    name = declared(root)
-    wrote_one = (root / INSTANCE_PATH).is_file()
+    here = under(instance)
+    name = declared(root, instance)
+    wrote_one = (root / here / INSTANCE_PATH).is_file()
     if name is None:
-        return INSTANCE_PATH if wrote_one else DEFAULT_PATH
+        return here / INSTANCE_PATH if wrote_one else DEFAULT_PATH
     if wrote_one:
         raise AmbiguousCharterError(
-            f"{published.INSTANCE_PATH.as_posix()} names the {name!r} charter "
-            f"and {INSTANCE_PATH.as_posix()} is a charter this instance wrote "
-            "itself. One of the two is the design in force and nothing here "
-            f"chooses between them. Delete the {published.CHARTER_KEY!r} key "
-            f"to be drawn with the file, or delete "
-            f"{INSTANCE_PATH.as_posix()} to be drawn with the charter that "
-            "key names."
+            f"{(here / published.INSTANCE_PATH).as_posix()} names the {name!r} "
+            f"charter and {(here / INSTANCE_PATH).as_posix()} is a charter "
+            "this instance wrote itself. One of the two is the design in "
+            "force and nothing here chooses between them. Delete the "
+            f"{published.CHARTER_KEY!r} key to be drawn with the file, or "
+            f"delete {(here / INSTANCE_PATH).as_posix()} to be drawn with the "
+            "charter that key names."
         )
-    return _shipped_as(root, name)
+    return _shipped_as(root, name, here)
 
 
-def load(root: Path) -> dict[str, Any]:
+def load(root: Path, instance: Path | None = None) -> dict[str, Any]:
     """The charter in force: the instance's values if it has any, the
     product's default otherwise.
 
@@ -434,8 +468,11 @@ def load(root: Path) -> dict[str, Any]:
     half-merged charter would be a third set of values nobody chose --
     an instance that overrode two colours and inherited six would be
     measured against a palette that exists in no file.
+
+    `instance` is `under` above: which instance's charter, `None` for the
+    one whose files sit at the repository root.
     """
-    return _checked(root, source(root))
+    return _checked(root, source(root, instance))
 
 
 def charter(root: Path, rel: Path) -> dict[str, Any]:
@@ -561,7 +598,7 @@ def colours(brand: dict[str, Any]) -> dict[str, str]:
     return merged
 
 
-def motif(root: Path) -> dict[str, Any]:
+def motif(root: Path, instance: Path | None = None) -> dict[str, Any]:
     """`motif`, from the charter in force or from the product's own.
 
     Three answers, and the middle one is the correction of 2026-08-26.
@@ -584,8 +621,10 @@ def motif(root: Path) -> dict[str, Any]:
     the charter in force, so this stays whole-section-or-whole-section: an
     instance gets its own section or the product's, never one field of
     each.
+
+    `instance` is `under` above.
     """
-    named = source(root)
+    named = source(root, instance)
     section = _checked(root, named).get(MOTIF_KEY)
     if section is None and named != DEFAULT_PATH:
         named = DEFAULT_PATH
@@ -651,22 +690,22 @@ def _how_to_write_one(wanted: tuple[str, ...]) -> str:
     return f"{', '.join(wanted)}, and what that family draws with ({declared})"
 
 
-def motif_family(root: Path) -> str:
+def motif_family(root: Path, instance: Path | None = None) -> str:
     """Which drawing the charter in force asks for.
 
     Hand this to `publication/motifs/` to get the geometry; nothing outside
     that package may import a family by name, which is the whole of what
     naming the family in the charter bought.
     """
-    return str(motif(root)[MOTIF_FAMILY])
+    return str(motif(root, instance)[MOTIF_FAMILY])
 
 
-def motif_stroke(root: Path) -> str:
+def motif_stroke(root: Path, instance: Path | None = None) -> str:
     """The one colour the motif is ever drawn in -- never hand-typed."""
-    return str(motif(root)["stroke"])
+    return str(motif(root, instance)["stroke"])
 
 
-def motif_width_ratio(root: Path) -> float:
+def motif_width_ratio(root: Path, instance: Path | None = None) -> float:
     """Stroke width as a fraction of the canvas's shorter side.
 
     Each charter says where its own figure comes from, and the two do not
@@ -675,7 +714,7 @@ def motif_width_ratio(root: Path) -> float:
     the product's is carried over from the proportion its own mark's inner
     arc is drawn at (`assets/brand/convener/brand.json`).
     """
-    return float(motif(root)["width_ratio"])
+    return float(motif(root, instance)["width_ratio"])
 
 
 # --------------------------------------------------------------------------

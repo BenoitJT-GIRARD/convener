@@ -52,10 +52,14 @@ series.
 
 **Your downloaded copy is yours: change anything in it.** What the paragraph
 above is about is the file *in the repository*, and that one is not edited by
-hand at all any more. It is generated from the visual identity
-(`instance/data/brand.json`) and from this series' own declaration
-(`instance/config.json`), so every colour in it is the charter's and every name
-in it is this series'. To change one, change one of those two files and run
+hand at all any more. It is generated from the charter in force — the
+palette, the typefaces and the motif this series is drawn with — and from
+this series' own declaration (`instance/config.json`), so every colour in it is
+the charter's and every name in it is this series'. The charter is
+`instance/data/brand.json` if your series wrote one and the directory under
+`assets/brand/` that `instance/config.json` names if it did not; [standing an
+instance up](../../operating/standing-up.md) has the step that chooses. To
+change one, change the charter or the declaration and run
 `uv run python scripts/generate_brand_css.py` from `tools/`; the same
 command's `--check` fails the build if a template stops agreeing with them.
 
@@ -109,7 +113,7 @@ hinting and anti-aliasing differ. A committed PNG could then only be checked
 loosely, or checked strictly and fail on somebody else's laptop for a reason
 that is not a mistake; and either way nothing in this repository could read
 what it said. The SVG is checked exactly, character for character, against
-`instance/data/brand.json` and `instance/config.json`. The cost of that is this one
+the charter in force and `instance/config.json`. The cost of that is this one
 export, and it is a cost worth naming rather than hiding.
 
 Export a copy; **do not overwrite the template**. The file in the repository is

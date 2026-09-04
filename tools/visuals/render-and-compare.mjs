@@ -72,9 +72,11 @@
  *
  * One series, at one charter, and the gap that leaves
  * ------------------------------------------------------
- * `assets/brand/` holds four charters a duplicate may choose, `examples/the-example-collective/`
- * and `instance/` hold one each, and `motifs/` draws five families. This
- * script pins three images, at one of those six charters. What a series
+ * `assets/brand/` holds four charters a duplicate may choose, `instance/` holds
+ * one of its own, and `motifs/` draws five families. This script pins
+ * three images, at one of those five charters -- the one
+ * `examples/the-example-collective/` names, which is the product's own.
+ * What a series
  * per charter would add was measured rather than argued, over the pages
  * `convener-render-poster-fixtures` writes for every charter crossed with
  * every family crossed with every canvas:
@@ -126,11 +128,11 @@
  * recomputes -- rather than a photograph of a poster.
  *
  * Nor would a series per charter have caught what `check-posters.mjs` was
- * written for. That collision is at the example's own charter drawn with
- * the `ribbon` family, and a reference series renders each charter at the
- * one family its own `motif` names. Covering the cross product in
- * pictures is ninety references, not six -- which is what the geometric
- * sweeps do instead, at no raster weight at all.
+ * written for. That collision was found at a charter drawn with the
+ * `ribbon` family rather than with the one its own `motif` named, and a
+ * reference series renders each charter at the family it names. Covering
+ * the cross product in pictures is ninety references, not five -- which
+ * is what the geometric sweeps do instead, at no raster weight at all.
  *
  * The engine is pinned once, by this package's lockfile, and rendering a
  * second charter through it pins it no further (D-27).
@@ -154,7 +156,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  shift by a level or two between two runs that agree on every design
  *  decision -- the self-hosted webfont fixes *which* glyph outlines are
  *  used, not how a rasteriser blends one partially-
- *  covered edge pixel against its background. 24 is comfortably above
+ *  covered edge pixel against its background. 12 is comfortably above
  *  that kind of single-digit blending noise (confirmed empirically: two
  *  renders of this exact fixture on this machine, nothing changed between
  *  them, differ by exactly 0 pixels at any threshold, and the three PNGs
@@ -162,36 +164,40 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  references), and below the smallest gap between any two colours this
  *  composition actually paints next to each other.
  *
- *  **That palette is `examples/the-example-collective/instance/data/brand.json`'s.**
- *  `render_visual_fixtures` renders as the example instance, so the
- *  charter this number has to clear is the example's -- dark green
- *  #0A4A2A, gold #E8CA6F, cream #F7F2E4, ink #2F3A34, muted ink #4A5A52,
- *  rule #CBC3AC, white and black -- and not this repository's own, which
- *  this comment named while the fixture was still rendered from it.
+ *  **That palette is `assets/brand/convener/brand.json`'s.**
+ *  `render_visual_fixtures` renders as the example instance, and the
+ *  example names one of the product's charters rather than writing one,
+ *  so the charter this number has to clear is the product's own -- navy
+ *  #012765, coral #FEBCB1, band #F4F0F1, ink #522F3C, muted ink #794658,
+ *  rule #D0BBC3, white and black. Which file that is, is
+ *  `brand.source`'s answer and not a path anybody may write down here:
+ *  this comment named this repository's own charter until the fixture
+ *  stopped being rendered from it, and the example's own until the
+ *  example stopped writing one.
  *
  *  The margin is three levels, measured over all 28 distinct pairs of
- *  that palette: the closest is the cream band against white at 27 on the
- *  worst channel, the next is ink against muted ink at 32, and the rest
- *  run to 255. No pair of the example's falls below 24, so a real colour
- *  swap, a moved element revealing a different background underneath it,
- *  or a moved element's own edge crossing into new territory clears this
- *  threshold -- proven against a real five-pixel translation, not
- *  assumed. The one pairing it clears narrowly is named here rather than
- *  left to be found.
+ *  that palette: the closest is the band against white at 15 on the worst
+ *  channel, the next is ink against muted ink at 39, and the rest run to
+ *  255. No pair of it falls below 12, so a real colour swap, a moved
+ *  element revealing a different background underneath it, or a moved
+ *  element's own edge crossing into new territory clears this threshold
+ *  -- proven against a real five-pixel translation, not assumed. The one
+ *  pairing it clears narrowly is named here rather than left to be found.
  *
- *  The example's is the only charter of the six this repository holds
- *  whose colours all clear 24. `assets/brand/convener/`'s band against white
- *  differs by 15, `assets/brand/chevrons/`'s ink against its muted ink by 15,
- *  `assets/brand/lattice/`'s band against white by 16, `assets/brand/steps/`'s by 23,
- *  and this instance's own by 20 -- each a pair a comparison at this
- *  threshold could not see change into the other at all. That is a
+ *  Every charter this repository holds clears 12, which is what moving
+ *  the number down bought and is worth having written down. The five
+ *  closest pairs are 15 here and in `assets/brand/chevrons/` (ink against
+ *  its muted ink), 16 in `assets/brand/lattice/`, 20 in this instance's own and
+ *  23 in `assets/brand/steps/`, all of them band against white but one. At 24
+ *  -- the number this constant carried while the fixture was rendered at
+ *  a charter whose closest pair was 27 -- four of those five held a pair
+ *  a comparison could not see change into the other at all. That is a
  *  measurement about those charters rather than about this constant, and
  *  it belongs here because it is the first thing a reader proposing a
- *  reference series per charter needs: three of the four new series would
- *  carry a colour change this threshold is blind to. The module comment
- *  above has the rest of that argument.
+ *  reference series per charter needs. The module comment above has the
+ *  rest of that argument.
  */
-const PER_CHANNEL_THRESHOLD = 24;
+const PER_CHANNEL_THRESHOLD = 12;
 
 /** The fraction of a canvas's total pixels that may exceed
  *  PER_CHANNEL_THRESHOLD before this script calls the format a regression.

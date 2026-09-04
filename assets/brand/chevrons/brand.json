@@ -67,7 +67,7 @@
     "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
     "licence": "SIL Open Font License 1.1",
     "self_hosted": true,
-    "_faces": "The two faces the product itself ships, in `assets/fonts/`, and serves from its own origin. A charter naming a face nobody ships builds a page that falls back to whatever the reader's machine happens to have, so this one names the shipped pair -- the same reason `examples/the-example-collective/instance/data/brand.json` gives.",
+    "_faces": "The two faces the product itself ships, in `assets/fonts/`, and serves from its own origin. A charter naming a face nobody ships builds a page that falls back to whatever the reader's machine happens to have, so this one names the shipped pair -- the same reason `assets/brand/convener/brand.json` gives.",
     "_weights": "The two weights the product's own measurement covers. `tools/convener_ops/publication/typeface.py` carries an advance table at 400 and at 900 and interpolates between them, and `tools/visuals/check-templates.mjs` re-measures both against the committed font file; a charter naming a weight outside that pair would be sized in Python against an estimate nothing re-measures.",
     "_self_hosted": "Not negotiable, and not a preference of this palette's. A webfont request to a third party discloses every visitor's address -- D-17."
   },

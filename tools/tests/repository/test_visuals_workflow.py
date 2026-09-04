@@ -23,6 +23,7 @@ from pathlib import PurePosixPath
 import yaml
 from conftest import workflow_triggers
 
+from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand
 
@@ -171,7 +172,6 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "examples/the-example-collective/instance/config.json",
         "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/journey/registration.py",
-        "examples/the-example-collective/instance/data/brand.json",
         "tools/convener_ops/publication/brand.py",
         "assets/brand/*/brand.json",
         "assets/fonts/**",
@@ -192,14 +192,12 @@ def test_the_path_filter_covers_every_charter_the_product_ships() -> None:
     charters that exist today is a second list to keep, and an incomplete
     list is the defect it would be guarding against.
 
-    The fixture reads none of these files while the example writes a
-    complete charter of its own, so this looks like a filter reacting to
-    what it cannot render. It reads one the moment that file goes away, or
-    the moment the example's declaration names a charter instead of
-    writing one (`published.CHARTER_KEY`). Both of those files are in the
-    filter, so the job does run on the commit that moves the answer -- and
-    every commit after it, to the charter the fixture had begun rendering,
-    is what a list of one example path would have let through green."""
+    The fixture reads exactly one of these files -- the one the example's
+    declaration names -- and a filter naming that one path would go stale
+    on the commit that moves the answer. The example's own charter file
+    was such an entry until the example stopped writing one, and every
+    commit after that to the charter the fixture had begun rendering is
+    what it would have let through green."""
     paths = _TRIGGERS["push"]["paths"]
     charters = brand.shipped(_ROOT)
     assert charters, "assets/brand/ ships no charter, so this sweep proves nothing"
@@ -233,16 +231,15 @@ def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
     against a committed image of somebody else's poster.
 
     Checked against the *parsed* path list rather than a substring, for
-    the reason the test above gives: the two entries that are here name
-    the same two files under `examples/the-example-collective/`, and a bare `in` check
-    would match those and pass for the wrong reason. `visuals-production.
+    the reason the test above gives: the entry that is here names the same
+    file under `examples/the-example-collective/`, and a bare `in` check
+    would match it and pass for the wrong reason. `visuals-production.
     yml` carries the real pair and must -- that job renders real editions,
     as this instance (`test_visuals_production_workflow.py`)."""
     paths = _TRIGGERS["push"]["paths"]
     assert "instance/config.json" not in paths
     assert "instance/data/brand.json" not in paths
     assert "examples/the-example-collective/instance/config.json" in paths
-    assert "examples/the-example-collective/instance/data/brand.json" in paths
 
 
 def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
@@ -349,7 +346,7 @@ def test_per_pixel_threshold_is_a_named_justified_constant() -> None:
     it: a window measured in characters passes or fails on how long the
     justification happens to be, which is the one property this test has
     no opinion about."""
-    assert "const PER_CHANNEL_THRESHOLD = 24;" in _SCRIPT
+    assert "const PER_CHANNEL_THRESHOLD = 12;" in _SCRIPT
     assert "const MAX_DIFF_PIXEL_FRACTION = 0.001;" in _SCRIPT
     comment = _SCRIPT.split("const PER_CHANNEL_THRESHOLD")[0].rsplit("/**", 1)[1]
     assert "anti-aliasing" in comment.lower()
@@ -358,33 +355,30 @@ def test_per_pixel_threshold_is_a_named_justified_constant() -> None:
 
 def test_the_threshold_is_justified_against_the_palette_actually_rendered() -> None:
     """The fixture is rendered as the example instance, so the colours
-    this threshold has to sit below are the example's charter's. This
-    comment justified the number against `instance/data/brand.json` --
-    named, with its hexes -- for as long as it took to notice that the
-    fixture had stopped being rendered from it, and a threshold argued
-    from the wrong palette is a threshold with no argument.
+    this threshold has to sit below are the ones the example is drawn
+    with. This comment justified the number against
+    `instance/data/brand.json` -- named, with its hexes -- for as long as
+    it took to notice that the fixture had stopped being rendered from it,
+    and a threshold argued from the wrong palette is a threshold with no
+    argument.
 
-    Pinned both ways: the example's charter is named, and this
+    Which file that is, is a question for `brand.source` and never for a
+    path written here: the example wrote its own charter once and names
+    one of the product's now, and both answers are ordinary. Pinned both
+    ways -- the charter in force for the example is named, and this
     repository's own is not. Read from the constant's doc block alone, so
     the module comment above it (which names `instance/` for other
     reasons) cannot satisfy this by accident."""
     comment = _SCRIPT.split("const PER_CHANNEL_THRESHOLD")[0].rsplit("/**", 1)[1]
-    assert "examples/the-example-collective/instance/data/brand.json" in comment
-    assert "instance/data/brand.json" not in comment.replace(
-        "examples/the-example-collective/instance/data/brand.json", ""
+    rendered = brand.source(_ROOT, published.EXAMPLE_INSTANCE_ROOT)
+    assert rendered.as_posix() in comment
+    assert brand.INSTANCE_PATH.as_posix() not in comment.replace(
+        rendered.as_posix(), ""
     )
-    example = (
-        _ROOT
-        / "examples"
-        / "the-example-collective"
-        / "instance"
-        / "data"
-        / "brand.json"
-    )
-    charter = json.loads(example.read_text(encoding="utf-8"))
+    charter = brand.charter(_ROOT, rendered)
     for name in ("dominant", "field", "band"):
         assert charter["colour"][name].upper() in comment, (
-            f"the example charter's {name} is not the colour this threshold "
+            f"the rendered charter's {name} is not the colour this threshold "
             "is argued against"
         )
 

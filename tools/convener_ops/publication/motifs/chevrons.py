@@ -47,11 +47,13 @@ repository already measures:
   so the angle in this drawing is the angle in the product's artwork
   rather than one chosen beside it.
 - **`_EDGE_GUTTER`, how far a chevron's arm-ends stand off the edge.** The
-  heaviest stroke any charter this repository holds draws a motif at is
-  0.03 of the shorter side (`examples/the-example-collective/`). At a gutter of exactly
-  that, the paint at an arm's end stops half a stroke short of the edge at
-  the heaviest charter and further at every other, so no column bleeds off
-  the page it is drawn on.
+  heaviest stroke a charter here may draw a motif at is 0.03 of the
+  shorter side; the heaviest one committed draws at 0.024, and
+  `tests/publication/motifs/test_chevrons.py::HEAVIEST_RATIO` is what
+  holds every charter under the figure this was measured against. At a
+  gutter of exactly that, the paint at an arm's end stops half a stroke
+  short of the edge at a charter drawn at the ceiling and further at every
+  one committed, so no column bleeds off the page it is drawn on.
 - **`_SPAN`, how wide a chevron is.** Bounded from above by the ground a
   page can spare, and taken at that bound: the deepest drawing this
   product already ships is the bracket, whose left arm reaches 0.1403 of
@@ -64,9 +66,9 @@ repository already measures:
   chevron's arm-ends would begin on the tip above, so two is the smallest
   count that leaves ground between them. What that ground measures once
   the drawing is inked is the second half of the figure -- at two it is
-  0.0657 of the shorter side against a stroke of 0.03 at the heaviest
-  charter here, so a column stays a column of separate chevrons rather
-  than closing into a zigzag.
+  0.0657 of the shorter side against a stroke of 0.03 at the ceiling
+  above, so a column stays a column of separate chevrons rather than
+  closing into a zigzag.
 - **`_BOTTOM` and `_RIGHT_BOTTOM`, the rows each column stops at.** Two
   bands of a page fix them, and both are stated at the constants
   themselves.

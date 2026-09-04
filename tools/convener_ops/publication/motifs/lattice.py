@@ -46,12 +46,14 @@ Nothing here is a shape somebody liked. Four figures decide the field, and
 each is fixed by a measurement this repository already holds:
 
 - **`_STEP`, the field's own unit.** Bounded from below by the heaviest
-  stroke any charter here draws -- `examples/the-example-collective/` sets
-  `motif.width_ratio` to 0.03 of the shorter side -- because a mark one
-  step long, painted at that weight with a round cap at each end, would
-  close the gap to the next mark down its column and the field would
-  become a rule. At 0.045 that gap is a third of the mark's own length, so
-  the field stays a field at every charter this repository holds.
+  stroke a charter here may draw -- 0.03 of the shorter side, the ceiling
+  `tests/publication/motifs/test_lattice.py::HEAVIEST_RATIO` holds every
+  `motif.width_ratio` under -- because a mark one step long, painted at
+  that weight with a round cap at each end, would close the gap to the
+  next mark down its column and the field would become a rule. At 0.045
+  that gap is a third of the mark's own length, so the field stays a field
+  at every charter this repository holds, the heaviest of which draws at
+  0.024.
 - **`_COLUMNS`, how many columns stand in each panel.** Bounded from above
   by the ground a page can spare: the deepest drawing this product already
   ships is the bracket, whose left arm reaches 0.1403 of the shorter side

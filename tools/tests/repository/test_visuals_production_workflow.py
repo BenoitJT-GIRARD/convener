@@ -129,10 +129,13 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     its own colours and had them diffed against a committed image of
     somebody else's poster.
 
-    `assets/brand/convener/brand.json`, the product's default charter, stays here
-    and only here: a duplicate that has written no `instance/data/brand.json` falls
-    back to it for a real render, while the example always declares one of
-    its own."""
+    `assets/brand/convener/brand.json`, the product's default charter, is named
+    here as a path of its own: a duplicate that has written no
+    `instance/data/brand.json` falls back to it for a real render.
+    `visuals.yml` reaches the same file through `assets/brand/*/brand.json`,
+    because the example names it rather than writing a charter -- a glob
+    over the charters and a named path to one of them are two different
+    filters, and this test holds the named one to this job."""
     mine = set(_TRIGGERS["push"]["paths"])
     production_only = (
         "instance/config.json",
@@ -142,13 +145,11 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     for path in production_only:
         assert path in mine, f"{path} is missing from this job's own filter"
         assert f"'{path}'" not in _VISUALS_WORKFLOW, (
-            f"{path} is back in visuals.yml, which renders the example "
-            "instance and cannot be affected by it"
+            f"{path} is back in visuals.yml as a path of its own, which "
+            "renders the example instance and cannot be affected by this "
+            "instance's own two files"
         )
-    for path in (
-        "examples/the-example-collective/instance/config.json",
-        "examples/the-example-collective/instance/data/brand.json",
-    ):
+    for path in ("examples/the-example-collective/instance/config.json",):
         assert f"'{path}'" in _VISUALS_WORKFLOW, (
             f"{path} is missing from visuals.yml, which renders from it"
         )

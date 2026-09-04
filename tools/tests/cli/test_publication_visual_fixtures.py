@@ -24,6 +24,12 @@ from convener_ops.publication.visual import FIXTURE_ANNOUNCEMENT
 ROOT = repo_root()
 EXAMPLE = ROOT / published.EXAMPLE_INSTANCE_ROOT
 
+#: The example's own files sit under `examples/the-example-collective/`
+#: and the charters it may name sit under `assets/brand/`, so the two
+#: halves of "which charter is the example drawn with" are read from two
+#: directories -- `brand.under` carries the whole of why.
+THEIRS = published.EXAMPLE_INSTANCE_ROOT
+
 
 def _run(out: Path, monkeypatch: pytest.MonkeyPatch) -> int:
     monkeypatch.setattr(sys, "argv", ["convener-render-visual-fixtures", str(out)])
@@ -133,9 +139,9 @@ def test_the_fixture_is_rendered_as_the_example_instance(
     assert theirs.forum_host in page
     assert signup_url(FIXTURE_ANNOUNCEMENT.event_id, root=EXAMPLE) in page
 
-    colours = brand.colours(brand.load(EXAMPLE))
+    colours = brand.colours(brand.load(ROOT, THEIRS))
     assert colours["dominant"] in page
-    assert brand.motif(EXAMPLE)["stroke"] in page
+    assert brand.motif(ROOT, THEIRS)["stroke"] in page
 
 
 @pytest.mark.skipif(
@@ -179,7 +185,7 @@ def test_the_two_charters_this_test_compares_are_actually_different() -> None:
     mean anything -- the second would be asserting the absence of a string
     the first had just found."""
     assert (
-        brand.colours(brand.load(EXAMPLE))["dominant"]
+        brand.colours(brand.load(ROOT, THEIRS))["dominant"]
         != brand.colours(brand.load(ROOT))["dominant"]
     )
     assert published.load_identity(EXAMPLE).forum_host != (

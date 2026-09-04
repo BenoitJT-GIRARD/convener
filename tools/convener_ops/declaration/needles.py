@@ -32,13 +32,21 @@ from . import published
 _WORD_BOUNDED = re.compile(r"^[A-Za-z0-9]{1,5}$")
 
 
-def needles(root: Path) -> dict[str, str]:
+def needles(root: Path, instance: Path | None = None) -> dict[str, str]:
     """Every writable form of what one instance declares about itself.
 
     Derived, never typed: the address and the identity from
     `instance/config.json` through the reader that owns them, the palette
     from the charter in force through `brand.source`. A needle nobody can
     derive is a needle that goes stale the day the declaration moves.
+
+    `instance` is `brand.under`: the directory this instance's own files
+    sit in, `None` for the one whose files sit at `root` itself. Both
+    readers below take it, and they take it for different halves of the
+    same question -- the declaration is always a file of the instance's,
+    and the charter is one only while the instance writes its own. The
+    product's worked example names one instead, and the file that names
+    is under the instance while the file it names is under the product.
 
     Both derived forms of a declared value are here as well as the value
     itself, because a copy does not have to be a copy of the whole thing
@@ -77,9 +85,10 @@ def needles(root: Path) -> dict[str, str]:
       that are nobody's identity, and that appear in every stylesheet ever
       written.
     """
-    address = published.load(root)
-    identity = published.load_identity(root)
-    editions = published.load_edition_prefix(root)
+    here = root / brand.under(instance)
+    address = published.load(here)
+    identity = published.load_identity(here)
+    editions = published.load_edition_prefix(here)
     found = {
         "published_url": address.url,
         "origin": address.origin,
@@ -117,7 +126,7 @@ def needles(root: Path) -> dict[str, str]:
             "repository_name": identity.repository.partition("/")[2],
         }
     )
-    for name, value in brand.colours(brand.load(root)).items():
+    for name, value in brand.colours(brand.load(root, instance)).items():
         if value in ("#ffffff", "#000000"):
             continue
         found[f"colour.{name}"] = value

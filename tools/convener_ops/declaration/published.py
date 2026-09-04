@@ -125,19 +125,26 @@ EXAMPLE_INSTANCE_PATH: Final = (
     Path("examples") / "the-example-collective" / INSTANCE_PATH
 )
 
-#: The example instance's own root -- the tree the declaration above and
-#: `examples/the-example-collective/instance/data/brand.json` both sit
-#: under, at the same relative paths a real instance uses. Derived from the
-#: path above
+#: The example instance's own root -- the tree the declaration above
+#: sits under, at the same relative path a real instance uses. Derived
+#: from the path above
 #: rather than spelled a second time: one of them moving has to move
 #: the other.
 #:
-#: Anything that has to render *as* the example -- rather than merely
-#: read one of its files -- takes this as its `root`. The reference
-#: images are why it exists: `cli.render_visual_fixtures` renders the poster
-#: the committed reference images pin, and rendering it from this
-#: repository's own root made those images a frozen photograph of one
-#: real instance's charter, in a product-side directory.
+#: Anything that has to read the example *as an instance* -- rather than
+#: merely open one of its files -- takes this as the directory that
+#: instance's own files sit in. The reference images are why it exists:
+#: `cli.render_visual_fixtures` renders the poster the committed reference
+#: images pin, and rendering it from this repository's own root made those
+#: images a frozen photograph of one real instance's charter, in a
+#: product-side directory.
+#:
+#: It is a directory of a repository and never a repository of its own.
+#: It holds one file for each path the boundary hands to the instance and
+#: no `assets/`, so a declaration here that names one of the product's
+#: charters names a file that is only ever above it --
+#: `publication/brand.py::under` is where the two directories are told
+#: apart.
 EXAMPLE_INSTANCE_ROOT: Final = EXAMPLE_INSTANCE_PATH.parent.parent
 
 

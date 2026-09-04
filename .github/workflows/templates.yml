@@ -69,9 +69,10 @@ name: Templates
 #   path filter has no finer grain than a file.
 # - `instance/config.json`, `instance/data/brand.json` -- this instance's
 #   declaration and charter, one of those swept.
-# - `examples/the-example-collective/instance/config.json`,
-#   `examples/the-example-collective/instance/data/brand.json` -- the example's,
-#   another.
+# - `examples/the-example-collective/instance/config.json` -- the example's
+#   declaration, which is the other one swept and is where the example
+#   says which charter it is drawn with. It writes none of its own, so the
+#   glob below is what carries the charter it names.
 # - `assets/brand/*/brand.json` -- every charter the product itself ships: its
 #   own default, which a duplicate that has written none is drawn with,
 #   and each palette a duplicate may choose instead. A glob and not a
@@ -123,7 +124,6 @@ on:
       - 'instance/config.json'
       - 'instance/data/brand.json'
       - 'examples/the-example-collective/instance/config.json'
-      - 'examples/the-example-collective/instance/data/brand.json'
       - 'assets/brand/*/brand.json'
       - 'assets/fonts/**'
       - 'tools/uv.lock'
@@ -148,7 +148,6 @@ on:
       - 'instance/config.json'
       - 'instance/data/brand.json'
       - 'examples/the-example-collective/instance/config.json'
-      - 'examples/the-example-collective/instance/data/brand.json'
       - 'assets/brand/*/brand.json'
       - 'assets/fonts/**'
       - 'tools/uv.lock'
