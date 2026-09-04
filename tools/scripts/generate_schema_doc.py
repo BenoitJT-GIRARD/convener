@@ -567,6 +567,13 @@ checklist:
 A line with no entry is nobody's in particular and stays the hosts'. Naming an
 owner has never been asked of anybody and is not asked for here either: the app
 raises no warning and no reminder over an empty checklist.
+
+**Only a line somebody *does* carries a name.** A page to read (`Selection
+criteria`) and a field whose content already names whoever is doing the thing
+(`Host 1`, `Host 2`) are not work anybody owes, so the app draws no control
+beside them and `app/src/state/assignment.ts` refuses a name written under one.
+An entry left under such a key by an earlier edit stays in the file and is read
+by nothing.
 """
 
 _CONFIG: Final = """## `instance/data/config.yml`

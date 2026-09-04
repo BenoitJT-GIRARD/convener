@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { AuthProvider } from '../../src/auth/AuthContext';
 import { Checklist } from '../../src/components/Checklist';
 import { deriveInbox } from '../../src/state/inbox';
 import { speaker, config } from '../helpers/data-doubles';
@@ -36,14 +37,39 @@ function renderChecklist(
 }
 
 describe('the owner of a journey line', () => {
-  it('reads as nobody in particular until somebody is named', () => {
+  it('reads as the standing arrangement until somebody is named', () => {
     renderChecklist();
     const owners = screen.getAllByRole('combobox');
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
       expect((owner as HTMLSelectElement).value).toBe('');
     }
-    expect(screen.getAllByText('Nobody in particular (hosts)').length).toBe(owners.length);
+    expect(screen.getAllByText('the hosts, unless someone else takes it').length).toBe(
+      owners.length,
+    );
+  });
+
+  it.each([
+    // `approved` holds one of each: two fields that already name whoever
+    // does the thing, and one template somebody sends.
+    ['approved' as const, 1],
+    // `lead` holds the acknowledgement, which is a task, beside *Selection
+    // criteria*, which is a page the board reads to make up its mind.
+    ['lead' as const, 1],
+  ])('draws the control on the tasks of %s, and on nothing else', (status, expected) => {
+    render(
+      <AuthProvider>
+        <Checklist
+          speaker={speaker({ status })}
+          onToggle={() => {}}
+          onField={() => {}}
+          onAssign={() => {}}
+          people={['ada']}
+          today="2026-08-20"
+        />
+      </AuthProvider>,
+    );
+    expect(screen.getAllByRole('combobox')).toHaveLength(expected);
   });
 
   it('says nothing judgemental about a line nobody has taken', () => {

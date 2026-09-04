@@ -128,15 +128,15 @@ describe('what the record screen writes down', () => {
     const b = backend([delivered()]);
     vi.stubGlobal('fetch', b.fetchMock);
     show(delivered());
-    // Found by its own label -- see the test above for why position alone
-    // no longer picks out "Registrations" now that the wrap-up phase opens
-    // with a different line.
-    const label = await screen.findByText('Registrations');
-    const owner = label.closest('label')!.parentElement!.querySelector('select');
+    // Found by its own label, and the label is a *task*: the control is
+    // drawn against work somebody does, never against a field like
+    // "Registrations", whose content is already the answer.
+    const label = await screen.findByText(/Forum summary posted/);
+    const owner = label.closest('div.border')!.parentElement!.querySelector('select');
     if (!(owner instanceof HTMLSelectElement)) throw new Error('no owner select found');
     fireEvent.change(owner, { target: { value: 'alice' } });
     await waitFor(() => expect(b.messages).toHaveLength(1));
-    expect(b.messages[0]).toBe('data: spk-001 owner for delivered/registrations');
+    expect(b.messages[0]).toBe('data: spk-001 owner for delivered/forum-summary');
     expect(b.messages[0]).not.toContain('alice');
   });
 });

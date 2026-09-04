@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Config, Speaker } from '../data/types';
 import {
+  canCarryOwner,
   phaseOf,
   phaseItems,
   fieldValue,
@@ -66,7 +67,7 @@ export function Checklist({
             onToggle={onToggle}
             onField={onField}
           />
-          {onAssign && (
+          {onAssign && canCarryOwner(item) && (
             <Owner
               item={item}
               speaker={speaker}
@@ -112,14 +113,20 @@ function Row({ item, speaker, inWindow, disabled, onToggle, onField }: RowProps)
 }
 
 /**
- * Who owes this line.
+ * Who does this line.
  *
- * Nobody is the default and reads as a plain statement of fact -- "Nobody in
- * particular (hosts)" -- in the same muted type as every other label on the
- * row. There is no warning colour, no asterisk and no count of unassigned
- * lines anywhere: not naming an owner is what the series has always done, and
- * a tool that scolds volunteers over a field they never asked for is a tool
- * they stop using.
+ * Drawn only against a task (`phases.ts::canCarryOwner`), which is the whole
+ * of what the control is for: a page to read and a field that already names
+ * its own owner used to carry one too, and a control offered where it means
+ * nothing is a control people learn to skip everywhere.
+ *
+ * Nobody is the default and reads as the arrangement it is -- "the hosts,
+ * unless someone else takes it" -- in the same muted type as every other
+ * label on the row. It replaced "Nobody in particular (hosts)", which stated
+ * the same arrangement in a shape a reader had to decode. There is no warning
+ * colour, no asterisk and no count of unclaimed lines anywhere: not naming
+ * somebody is what the series has always done, and a tool that scolds
+ * volunteers over a field they never asked for is a tool they stop using.
  *
  * The wording is about the work and the arrangement, never about a person's
  * standing. `state/sla.ts` keeps the same discipline for lateness, and there
@@ -145,14 +152,14 @@ function Owner({
   const options = people.includes(current) || current === '' ? people : [current, ...people];
   return (
     <label className="flex items-baseline gap-2 px-2 pt-1 pb-2 text-xs text-ink-muted">
-      <span className="font-display font-bold uppercase tracking-widest">Owner</span>
+      <span className="font-display font-bold uppercase tracking-widest">Who does this</span>
       <select
         value={current}
         disabled={disabled}
         onChange={e => onAssign(item.key, e.target.value)}
         className="text-xs bg-transparent border-b border-border"
       >
-        <option value="">Nobody in particular (hosts)</option>
+        <option value="">the hosts, unless someone else takes it</option>
         {options.map(login => (
           <option key={login} value={login}>
             {login}

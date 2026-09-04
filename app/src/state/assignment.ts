@@ -22,6 +22,14 @@
  * red test, which is a stronger guarantee than a test that only checks the one
  * case somebody thought of.
  *
+ * **The field belongs to a task.** Not to a fact, and not to a reference: a
+ * page the board reads to make up its mind, and a `Host 1` field whose whole
+ * content is the name of whoever is doing it, are neither work nor anybody's
+ * to take. `phases.ts::canCarryOwner` is the one reading of that, asked here
+ * before a name is written and asked by the checklist before a control is
+ * drawn, so a screen that offers the field and a writer that accepts it
+ * cannot come to describe different journeys.
+ *
  * **No owner is the normal state, not an unfinished one.** An item nobody is
  * named on is the hosts', which is what every line has always meant. `''`
  * produces no warning, no lateness row and no nag: `itemsWaitingFor` refuses an
@@ -41,10 +49,11 @@
  * `mutate` transformation replayed against freshly-read data.
  */
 import type { Config, Speaker } from '../data/types';
-import { PHASES, isItemDone, phaseItems, phaseOf, type RunbookItem } from './phases';
+import { PHASES, canCarryOwner, isItemDone, phaseItems, phaseOf, type RunbookItem } from './phases';
 
-/** Every key the journey has, so a line that is not in it cannot be written
- *  against.
+/** Every line the journey has, so a key that is not one of them cannot be
+ *  written against -- and so the guard below can say *which* of the two
+ *  refusals applies.
  *
  *  Built rather than listed, and built through `phaseItems`, so an item added
  *  to `PHASES` is assignable the same day -- and so is a promotion channel
@@ -53,8 +62,8 @@ import { PHASES, isItemDone, phaseItems, phaseOf, type RunbookItem } from './pha
  *  guard that only knew the static table would have refused every one of them
  *  with "is not a step of the journey", leaving the series a list of places to
  *  announce in that nobody could be put down for. */
-function journeyItemKeys(config: Config | null): ReadonlySet<string> {
-  return new Set(PHASES.flatMap(phase => phaseItems(phase, config).map(item => item.key)));
+function journeyItems(config: Config | null): RunbookItem[] {
+  return PHASES.flatMap(phase => phaseItems(phase, config));
 }
 
 /** Who a line may be owned by: a GitHub login, the same rule
@@ -131,9 +140,22 @@ export function assignItem(
         'A line is owned by an account, never by a person written out by name.',
     );
   }
-  if (!journeyItemKeys(config).has(itemKey)) {
+  const item = journeyItems(config).find(line => line.key === itemKey);
+  if (item === undefined) {
     throw new AssignmentRejected(
       `"${itemKey}" is not a step of the journey, so nobody can be put down for it.`,
+    );
+  }
+  // The rule this module's header states, made unwritable rather than merely
+  // undrawn: the field belongs to a task, and a page to read or a fact the
+  // record already states is neither work nor anybody's. Without this, a
+  // screen that stopped offering the control would still leave the writer
+  // able to file a line under somebody who owes nothing.
+  if (!canCarryOwner(item)) {
+    throw new AssignmentRejected(
+      `"${item.label}" is not a task, so nobody can be put down for it. ` +
+        'Only a line somebody does carries a name; a page to read and a fact ' +
+        'the record already states carry none.',
     );
   }
   return withChecklist(current, speakerId, checklist => ({
@@ -204,6 +226,9 @@ export function itemsWaitingFor(
     const phase = phaseOf(speaker.status);
     if (!phase) continue;
     for (const item of phaseItems(phase, config)) {
+      // A line nobody can be put down for waits on nobody, whatever a name
+      // written under its key before this rule existed says.
+      if (!canCarryOwner(item)) continue;
       if (itemAssignee(speaker, item.key) !== login) continue;
       if (isItemDone(speaker, item)) continue;
       waiting.push({ speaker, item });

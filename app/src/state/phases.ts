@@ -3,6 +3,26 @@ import { channelItem, channelsOf } from './channels';
 
 export type ItemForm = 'content' | 'field' | 'checkbox' | 'button-group';
 
+/**
+ * What a line *is*, which is the one question "can somebody be put down for
+ * it?" turns on.
+ *
+ * The owner control used to sit under every line of every phase, which put it
+ * under *How we validate speakers* -- a page to read, owned by the board by
+ * definition -- and under *Host 1* and *Host 2*, two fields whose whole
+ * content is the name of whoever is doing it. A control offered against a
+ * reference and against a fact that already names its own owner is not a
+ * feature with a few odd cases; it is a control the reader has to learn to
+ * ignore, which is how they learn to ignore it on the lines that matter.
+ *
+ * So the three are named and only one of them carries the field:
+ *
+ * - **task** -- a person does this, and which person is an open question.
+ * - **fact** -- the record states it, and the statement is the answer.
+ * - **reference** -- something to read. Nobody owes it.
+ */
+export type ItemKind = 'task' | 'fact' | 'reference';
+
 /** The line whose wording carries the view-counting window. */
 export const VIEW_COUNT_KEY = 'delivered/youtube-views-30d';
 
@@ -47,6 +67,12 @@ export interface RunbookItem {
   key: string;
   form: ItemForm;
   label: string;
+  /** What this line is, when it is not what its form suggests. The default
+   *  per form is in `itemKind` below: a `field` states a fact, a `checkbox`
+   *  is a task, and a `content` line is a reference. The exception this
+   *  exists for is the e-mail templates, which are `content` lines somebody
+   *  *sends* -- work, with an open question about who does it. */
+  kind?: ItemKind;
   /** Must be done before the phase it sits in is finished. On the delivered
    *  phase that is the same thing as blocking the archive, which is why
    *  `blockers` reads it there and `state/inbox.ts` reads it to raise the
@@ -122,6 +148,10 @@ export const PHASES: PhaseDef[] = [
       {
         key: 'approved/invitation-email',
         form: 'content',
+        // A template somebody sends, not a page somebody reads, so it is a
+        // task and carries an owner. The three e-mail templates of this
+        // journey are the whole of the exception `kind` exists for.
+        kind: 'task',
         label: 'Invitation email',
         contentKey: 'toolkit/emails/invitation',
       },
@@ -134,6 +164,7 @@ export const PHASES: PhaseDef[] = [
       {
         key: 'invited/follow-up-template',
         form: 'content',
+        kind: 'task',
         label: 'Follow-up template',
         contentKey: 'toolkit/emails/invitation',
       },
@@ -148,6 +179,7 @@ export const PHASES: PhaseDef[] = [
       {
         key: 'confirmed/talk-details-template',
         form: 'content',
+        kind: 'task',
         label: 'Talk details email',
         contentKey: 'toolkit/emails/talk-details',
       },
@@ -509,6 +541,29 @@ export const PHASES: PhaseDef[] = [
 
 export function phaseOf(status: SpeakerStatus): PhaseDef | undefined {
   return PHASES.find(p => p.status === status);
+}
+
+/**
+ * What one line is, read once so no screen has to work it out again.
+ *
+ * The default is the form's: a `field` states a fact, a `checkbox` is a task,
+ * and everything else is a reference. A line whose `kind` is written down
+ * overrides that, which is how a template somebody sends is a task while
+ * sitting in the same `content` form as a page somebody reads.
+ */
+export function itemKind(item: RunbookItem): ItemKind {
+  if (item.kind !== undefined) return item.kind;
+  if (item.form === 'field') return 'fact';
+  if (item.form === 'checkbox') return 'task';
+  return 'reference';
+}
+
+/** Whether anybody can be put down for this line. One reading of the rule:
+ *  `state/assignment.ts` refuses a name against anything else, and the
+ *  checklist draws no control there, so the screen and the writer cannot
+ *  disagree about which lines are somebody's to do. */
+export function canCarryOwner(item: RunbookItem): boolean {
+  return itemKind(item) === 'task';
 }
 
 /**

@@ -181,6 +181,29 @@ describe('writing an owner', () => {
     );
   });
 
+  it('refuses to put a name on a fact the record already states', () => {
+    // `Host 1` is a field whose content is the name of whoever is doing it.
+    // Offering an owner beside it asked the same question twice and let the
+    // two answers differ.
+    expect(() => assignItem([speaker()], 'spk-001', 'approved/host_1', 'bob', null)).toThrow(
+      /is not a task/,
+    );
+  });
+
+  it('refuses to put a name on a page somebody reads', () => {
+    expect(() =>
+      assignItem([speaker()], 'spk-001', 'lead/selection-criteria', 'bob', null),
+    ).toThrow(/is not a task/);
+  });
+
+  it('accepts a name on a template somebody sends', () => {
+    // The one `content` line of each phase that is work rather than reading:
+    // the e-mail goes out, and which of the two hosts sends it is an open
+    // question the record should be able to answer.
+    const [after] = assignItem([speaker()], 'spk-001', 'approved/invitation-email', 'bob', null);
+    expect(itemAssignee(after, 'approved/invitation-email')).toBe('bob');
+  });
+
   it('clears a line the journey no longer has, which is the only way back', () => {
     // Drop a channel from `instance/data/config.yml` and the entries already written
     // under `promotion/<key>` stay in `speakers.yml`, on a line that no
@@ -221,21 +244,41 @@ describe('what is waiting for me', () => {
     expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
   });
 
-  it('reads a required field as done once it carries a value', () => {
+  it('waits on nobody for a line that is not a task', () => {
+    // A name written under a field before the rule existed stays in the file
+    // and stops meaning anything: `delivered/registrations` is a fact the
+    // record states, so it is not work waiting on a person, however the
+    // record was edited.
     const base = {
       status: 'delivered' as const,
       date: '2026-05-01',
       checklist: { 'delivered/registrations': { assignee: 'bob' } },
     };
-    const empty = speaker(base);
-    const filled = speaker({
-      ...base,
-      metrics: { registrations: 40, live_peak: null, youtube_views_30d: null, forum_replies: null },
+    expect(itemsWaitingFor([speaker(base)], 'bob', null)).toEqual([]);
+  });
+
+  it('still waits on the wrap-up ticks somebody is down for', () => {
+    const s = speaker({
+      status: 'delivered',
+      date: '2026-05-01',
+      checklist: { [SUMMARY]: { assignee: 'bob' } },
     });
-    expect(itemsWaitingFor([empty], 'bob', null).map(w => w.item.key)).toEqual([
-      'delivered/registrations',
-    ]);
-    expect(itemsWaitingFor([filled], 'bob', null)).toEqual([]);
+    expect(itemsWaitingFor([s], 'bob', null).map(w => w.item.key)).toEqual([SUMMARY]);
+    const posted = speaker({ ...s, runbook_progress: { [SUMMARY]: true } });
+    expect(itemsWaitingFor([posted], 'bob', null)).toEqual([]);
+  });
+
+  it('never nags about a template, which has no tick to be waiting for', () => {
+    // A template is a task -- somebody sends it -- so it carries a name. It
+    // is also nothing the record can observe: there is no box, so `isItemDone`
+    // reports nothing outstanding and the inbox stays quiet. Recording who
+    // owes the e-mail and nagging about it are different features, and only
+    // the first is on offer here.
+    const s = speaker({
+      status: 'approved',
+      checklist: { 'approved/invitation-email': { assignee: 'bob' } },
+    });
+    expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
   });
 
   it('leaves behind a name on a line the event has already moved past', () => {
