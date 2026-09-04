@@ -17,15 +17,38 @@
  * repository's own, because they are the product's and a duplicate does not
  * have its own copy of them.
  *
- * Read as bytes, never parsed here -- exactly as `example-instance.mjs`
+ * Read as bytes -- exactly as `example-instance.mjs`
  * reads the example's data. `src/settings/declaration.ts` parses them, the
  * very reader the signed-in path parses the real files with, so the
  * demonstration exercises the code the cockpit actually runs rather than a
  * shape somebody laid out to look like it.
  *
- * The one exception is the drain's schedule, and the exception is
- * deliberate. `.github/workflows/sweep-and-notify.yml` is fifty-four
- * kilobytes and carries every step of the daily job; what the bounds need
+ * What travels, and what only answers a question
+ * ----------------------------------------------
+ * A file's text travels when the screen reads its text. That is three
+ * things and no more: the boundary (the list of what the instance owns),
+ * the integrations (one row each), and the files the instance owns (their
+ * numbers are the form, and their own headers are how the screen knows
+ * they are the instance's). Every other configuration file contributes one
+ * fact -- the `owner:` in its own header -- and the screen drops every
+ * answer to that which is not `instance`.
+ *
+ * So the owner is read here, at build time, and the text is left behind.
+ * `declarations/standing-up.yml` is the case that made the difference
+ * measurable: sixty-nine kilobytes of a sequence the settings screen filters
+ * out and never draws, carried into every cockpit bundle and, since the
+ * demonstration is hosted, downloaded by strangers. Moving that file
+ * somewhere else would have hidden it rather than fixed it -- the next
+ * declaration written beside it would cost the same again. What is fixed is
+ * the derivation: the build carries what the screen will show.
+ *
+ * A file whose header answers nothing stops this build rather than being
+ * quietly left out, which is the same refusal `declaration.ts::configOwner`
+ * makes in the browser. An omission and a silence must not look alike.
+ *
+ * The drain's schedule is read the same way and for the same reason.
+ * `.github/workflows/sweep-and-notify.yml` is fifty-four kilobytes and
+ * carries every step of the daily job; what the bounds need
  * out of it is its `on:` block. This module converts that one subtree from
  * YAML to JSON and carries it -- a change of format, not a reading of
  * meaning. Which cron shapes may be put a number on, and what number, stays
@@ -85,6 +108,17 @@ const INSTANCE_FILES = [
 
 const DRAIN_WORKFLOW = '.github/workflows/sweep-and-notify.yml';
 
+/** The two files the screen reads whole whoever owns them: the boundary it
+ *  lists the instance's paths from, and the integrations it reports one row
+ *  per. Mirrors `BOUNDARY_PATH` and `INTEGRATIONS_PATH` in
+ *  `src/settings/declaration.ts`, and `app/tests/settings/example-settings.
+ *  test.ts` drives the screen's own reader over what this module carries so
+ *  that a third file the screen starts parsing cannot be left behind here. */
+const READ_WHOLE = ['declarations/boundary.yml', 'declarations/integrations.yml'];
+
+/** The answer the screen filters on -- `boundary.OWNERS`' own `instance`. */
+const INSTANCE = 'instance';
+
 function read(relative, named) {
   const text = readFileSync(new URL(relative, ROOT), 'utf8');
   if (text.trim() === '') {
@@ -93,19 +127,56 @@ function read(relative, named) {
   return text;
 }
 
+/** What one configuration file says it is, from its own header -- the same
+ *  question `declaration.ts::configOwner` asks in the browser, asked here
+ *  because the answer decides whether the file's text is worth carrying. */
+function ownerOf(name, text) {
+  const loaded = name.endsWith('.json') ? JSON.parse(text) : yaml.load(text);
+  const declared = loaded === null || typeof loaded !== 'object' ? undefined : loaded.owner;
+  if (typeof declared !== 'string' || declared === '') {
+    throw new Error(
+      `${name} declares no owner, so this build cannot tell whether the ` +
+        'settings screen would show it. Add `owner:` to its header.',
+    );
+  }
+  return declared;
+}
+
+/**
+ * Which of a set of configuration files already in hand travel whole.
+ *
+ * The two the screen parses whatever their owner, plus every file that
+ * declares itself the instance's. Everything else answered its one
+ * question -- `owner:` -- and the answer is not one the screen draws.
+ *
+ * Exported for the reason `published.js::unconfiguredFrom` is: a module
+ * transformed by the test runner has no `file:` `import.meta.url`, so the
+ * reading half above cannot run where the question is asked. One definition
+ * of what the demonstration carries, two ways of getting the files to it.
+ */
+export function carriedFrom(files) {
+  const carried = {};
+  for (const [name, text] of Object.entries(files)) {
+    if (READ_WHOLE.includes(name) || ownerOf(name, text) === INSTANCE) carried[name] = text;
+  }
+  return carried;
+}
+
 /**
  * The whole of what the demonstration's settings screen reads, as text.
  *
- * Every file, always, and in one call: they are one repository's answer
- * to one question, and a build that carried the boundary of one and the
- * thresholds of another would be describing an instance nobody has.
+ * One call, because they are one repository's answer to one question: a
+ * build carrying the boundary of one instance and the thresholds of another
+ * would be describing an instance nobody has.
  */
 export function exampleSettings() {
-  const files = {};
-  for (const name of productFiles()) files[name] = read(name, name);
+  const onDisk = {};
+  for (const name of productFiles()) onDisk[name] = read(name, name);
   for (const name of INSTANCE_FILES) {
-    files[name] = read(`examples/the-example-collective/${name}`, `examples/the-example-collective/${name}`);
+    const where = `examples/the-example-collective/${name}`;
+    onDisk[name] = read(where, where);
   }
+  const files = carriedFrom(onDisk);
 
   const workflow = yaml.load(read(DRAIN_WORKFLOW, DRAIN_WORKFLOW));
   // `on:` resolves to the string key under this reader and to the boolean

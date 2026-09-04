@@ -2,7 +2,7 @@
  * both import it typed. The script itself stays plain ESM -- see
  * handbook-files.d.mts for why. */
 
-/** The six declarations the demonstration's settings screen reads, as text,
+/** The declarations the demonstration's settings screen reads, as text,
  * plus the drain workflow's own `on:` block converted from YAML to JSON.
  *
  * Text and not a parsed shape, for the reason `example-instance.d.mts`
@@ -19,3 +19,13 @@ export declare function exampleSettings(): {
   files: Record<string, string>;
   drainTriggers: unknown;
 };
+
+/** Which of a set of configuration files already in hand travel whole,
+ * given the files rather than reading them. Separate from the call above
+ * for the reason `published.d.mts::unconfiguredFrom` is separate from
+ * `unconfigured`: a module transformed by the test runner has no `file:`
+ * `import.meta.url`, so the reading half cannot run where the question is
+ * asked. */
+export declare function carriedFrom(
+  files: Record<string, string>,
+): Record<string, string>;

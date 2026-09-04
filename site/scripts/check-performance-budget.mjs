@@ -7,8 +7,8 @@
  * direction that flatters this check), against the real built output --
  * never a source directory, never an unminified intermediate.
  *
- * Two different problems, two budgets
- * -------------------------------------
+ * Three different problems, three budgets
+ * ---------------------------------------
  * A static page (the home page, an archive, a past event) and a page
  * carrying a client-side island (the one event page currently accepting
  * registrations, the certificate-verification page) are not the same
@@ -25,6 +25,16 @@
  * event page that starts (or stops) accepting registrations reclassifies
  * itself the next time this runs, rather than silently being checked
  * against the wrong budget forever.
+ *
+ * The third is the operators' cockpit, `app/index.html` and what it loads.
+ * It is not one of the pages above and is deliberately left out of their
+ * walk (see `discoverHtmlPages`): it is an application rather than a
+ * document, it is signed into rather than read, and one number covering
+ * both would be a number that means nothing about either. It has a budget
+ * all the same, and the reason it now needs one is that it is published:
+ * the hosted demonstration serves this exact bundle to anybody with the
+ * link (`.github/workflows/demonstration.yml`), so its weight is a
+ * stranger's download and not only a volunteer's.
  *
  * Fonts are accounted for, not folded in
  * -----------------------------------------
@@ -114,6 +124,42 @@ const STATIC_PAGE_BUDGET_GZIP_BYTES = 40 * 1024;
  *  not a few hundred bytes of copy.
  */
 const ISLAND_PAGE_BUDGET_GZIP_BYTES = 110 * 1024;
+
+/** The operators' cockpit -- `app/index.html` plus the one stylesheet and
+ *  the one script it loads, gzip. See this file's own module comment for
+ *  why it is a third budget rather than a third kind of page.
+ *
+ *  Measured on the real built output, 2026-09-04: 220,012 B gzip (1,172 B
+ *  HTML + 6,774 B CSS + 212,066 B for the application itself). This budget
+ *  leaves 9,364 B of headroom, roughly 4%, and is deliberately tighter than
+ *  either budget above.
+ *
+ *  **Why that tight, and how the number was chosen.** The regression this
+ *  exists to catch is one that had already happened here and had gone
+ *  unnoticed: `app/vite.config.ts` substitutes whole configuration files
+ *  into the bundle through `define`, and one of them --
+ *  `declarations/standing-up.yml`, sixty-nine kilobytes of a sequence the
+ *  settings screen filters out and never draws -- was compiled into every
+ *  build. Since the demonstration is hosted, every stranger following the
+ *  link downloaded it. Deriving what the build carries from what the screen
+ *  reads (`app/scripts/example-settings.mjs::carriedFrom`) is what took it
+ *  out, and on the same tree it was worth 19,297 B gzip: the same build
+ *  with that module's previous version comes out at 239,309 B.
+ *
+ *  So the number is set below the weight of the bundle that carried the
+ *  defect. The cockpit measured 236,454 B gzip at the commit before this
+ *  budget existed; this budget is 7,078 B under that, which is the whole
+ *  claim -- had this check existed then, it would have been red, and a
+ *  budget that would have passed a bundle carrying sixty-nine kilobytes of
+ *  a file nothing draws is not a budget. What the remaining headroom still
+ *  admits is ordinary work: a dependency bump, a screen, a component.
+ *
+ *  If this fails, the question is what the build started carrying -- a new
+ *  `define`, a library pulled in for one screen -- not whether the budget
+ *  should go up. Raising it is a decision somebody makes deliberately, with
+ *  a new measurement and a new argument written here.
+ */
+const COCKPIT_BUDGET_GZIP_BYTES = 224 * 1024;
 
 /** The self-hosted font payload -- see this file's own module comment for
  *  why this is separate from the two page budgets above, and why "drop
@@ -266,6 +312,54 @@ function resolveLocalHref(href, prefix, scratch) {
   return path.join(scratch, relative);
 }
 
+/**
+ * The cockpit's own transfer weight: its document plus every same-origin
+ * resource that document asks for, measured exactly the way a page above is
+ * and against its own budget.
+ *
+ * Refuses a missing document rather than reporting nothing: a run that
+ * silently skipped the one bundle a stranger downloads would report success
+ * for the wrong reason (D-25).
+ */
+async function measureCockpit(scratch, prefix) {
+  const document = path.join(scratch, 'app', 'index.html');
+  let htmlBuffer;
+  try {
+    htmlBuffer = await readFile(document);
+  } catch {
+    throw new Error(
+      'app/index.html is not in the tree handed to --app-dir, so the ' +
+        'cockpit could not be weighed at all -- refusing to treat that as a ' +
+        'passing run (D-25)'
+    );
+  }
+  const hrefs = localResourceHrefs(htmlBuffer.toString('utf8'));
+  if (hrefs.length === 0) {
+    throw new Error(
+      'app/index.html loads no stylesheet and no script, which is not a ' +
+        'built cockpit -- refusing to weigh an empty document'
+    );
+  }
+  let totalGzip = gzipSize(htmlBuffer);
+  for (const href of hrefs) {
+    totalGzip += gzipSize(await readFile(resolveLocalHref(href, prefix, scratch)));
+  }
+  const withinBudget = totalGzip <= COCKPIT_BUDGET_GZIP_BYTES;
+  const line =
+    `check-performance-budget: app/index.html (cockpit) -- ${totalGzip} B ` +
+    `gzip / ${COCKPIT_BUDGET_GZIP_BYTES} B budget`;
+  if (withinBudget) {
+    console.log(line);
+  } else {
+    console.log(
+      `::error::${line} -- OVER BUDGET (look at what the build started ` +
+        'carrying -- a new define in app/vite.config.ts, a library pulled in ' +
+        'for one screen -- before considering the number)'
+    );
+  }
+  return withinBudget;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const prefix = publishedAddress().pathPrefix;
@@ -321,6 +415,11 @@ async function main() {
       console.log(withinBudget ? line : `::error::${line} -- OVER BUDGET`);
     }
 
+    // The cockpit, weighed on its own and against its own budget -- see
+    // this file's own module comment for why it is neither of the two page
+    // classes above.
+    if (!(await measureCockpit(scratch, prefix))) failed = true;
+
     // Font payload: a bloat guard, not a per-page cost -- see this file's
     // own module comment for why it is reported and judged separately.
     const fontsDir = path.join(scratch, 'fonts');
@@ -351,8 +450,8 @@ async function main() {
     process.exitCode = 1;
   } else {
     console.log(
-      `check-performance-budget: all ${results.length} page(s) and the font ` +
-        'payload are within budget'
+      `check-performance-budget: all ${results.length} page(s), the cockpit ` +
+        'and the font payload are within budget'
     );
   }
 }
