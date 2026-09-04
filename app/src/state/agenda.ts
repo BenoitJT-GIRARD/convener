@@ -1,4 +1,4 @@
-import type { Speaker } from '../data/types';
+import type { Speaker, SpeakerStatus } from '../data/types';
 import { isDemoMode } from '../data/demo';
 import { editionPrefix } from '../instance';
 import { exampleEditionPrefix } from '../settings/example';
@@ -9,6 +9,91 @@ export interface OverlapHit {
 }
 
 const PUBLIC_STATUSES = new Set(['scheduled', 'delivered', 'archived']);
+
+/**
+ * The boundary between the two screens a record ends up on.
+ *
+ * > The agenda holds what still owes you something. The archive holds what
+ * > is closed.
+ *
+ * They used to share `delivered`, and the agenda additionally carried
+ * `archived` -- so the one screen a volunteer opens to see what is coming
+ * grew by one line for every event the series had ever run, and a talk that
+ * was over but not wrapped up appeared on both. The consequence of the rule
+ * is the point of it: **the agenda empties as the work is done**. It is a
+ * horizon, not a journal.
+ *
+ * A `delivered` event is not finished -- the attendance, the recording and
+ * the certificates are all still owed -- so it stays on the agenda until
+ * somebody archives it. `archived` is the one gesture that says there is
+ * nothing left, and it is what moves a record across.
+ *
+ * The two lists are here, together, rather than one in each screen: the rule
+ * is that they share nothing, and a rule about two lists cannot be stated
+ * where only one of them is. `agenda.test.ts` holds it over every status the
+ * model has, so the next status somebody adds has to be placed on one side
+ * or neither, and cannot quietly land on both.
+ */
+export const AGENDA_STATUSES: readonly SpeakerStatus[] = ['scheduled', 'delivered'];
+
+/** One group of the archive screen: what it is called, what it holds, and
+ *  which way round it reads. Here rather than in the screen because the
+ *  other half of the boundary is here, and a rule about two lists cannot be
+ *  stated where only one of them is. */
+export interface ArchiveGroup {
+  key: 'past' | 'parked' | 'declined-board' | 'declined-speaker';
+  num: string;
+  label: string;
+  hint: string;
+  statuses: SpeakerStatus[];
+  /** Past webinars read newest first; the rest read by name, because a
+   *  parked lead's date says nothing about when anybody looked at it. */
+  sortDesc: boolean;
+}
+
+export const ARCHIVE_GROUPS: ArchiveGroup[] = [
+  {
+    key: 'past',
+    num: '01',
+    label: 'Past webinars',
+    // `delivered` used to be here as well as on the agenda, so a talk that
+    // was over but not wrapped up was on both screens at once. A boundary
+    // that a status sits on both sides of is not a boundary.
+    hint: 'Closed: wrapped up and nothing outstanding',
+    statuses: ['archived'],
+    sortDesc: true,
+  },
+  {
+    key: 'parked',
+    num: '02',
+    label: 'Parked',
+    hint: 'Set aside by the board — can be reactivated',
+    statuses: ['parked'],
+    sortDesc: false,
+  },
+  {
+    key: 'declined-board',
+    num: '03',
+    label: 'Declined (board)',
+    hint: 'The board chose not to invite',
+    statuses: ['decline-board'],
+    sortDesc: false,
+  },
+  {
+    key: 'declined-speaker',
+    num: '04',
+    label: 'Declined (speaker)',
+    hint: 'Speaker turned down the invitation',
+    statuses: ['decline-speaker'],
+    sortDesc: false,
+  },
+];
+
+/** The other side of the same boundary, derived from the groups rather than
+ *  written twice: a group added to the screen is on this side of the rule the
+ *  same day, and cannot be added to the agenda's side as well without
+ *  `agenda.test.ts` going red. */
+export const ARCHIVE_STATUSES: readonly SpeakerStatus[] = ARCHIVE_GROUPS.flatMap(g => g.statuses);
 
 export function findOverlaps(
   candidateDate: string,
@@ -69,4 +154,17 @@ export function nextEditionCode(speakers: Speaker[], counter: number): string {
   let n = counter;
   while (used.has(`${prefix}${n}`)) n++;
   return `${prefix}${n}`;
+}
+
+/**
+ * The event id of an edition, which is its code lower-cased and nothing else.
+ *
+ * The rule `tools/convener_ops/journey/platform.py::find_speaker` states,
+ * read here rather than spelled again wherever a path or an address needs
+ * it: `content/render.ts` composes the public sign-up address from it and
+ * `paths.ts` composes the sign-up file's own path, and a second spelling of
+ * "lower-cased" would be a second answer to where an event's files live.
+ */
+export function eventIdOf(editionCode: string): string {
+  return editionCode.toLowerCase();
 }

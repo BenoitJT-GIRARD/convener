@@ -282,7 +282,13 @@ function vocabulary<T extends string>(members: Record<T, true>): readonly T[] {
   return Object.keys(members) as T[];
 }
 
-const STATUSES = vocabulary<Speaker['status']>({
+/** Every status the model has, exhaustive by construction rather than by
+ *  care: `vocabulary` takes a record keyed by the union, so a status added
+ *  to `data/types.ts` and forgotten here stops the file compiling. Exported
+ *  because the same exhaustiveness is what lets `state/agenda.ts` state the
+ *  boundary between the agenda and the archive as a rule over *every*
+ *  status, including the next one somebody adds. */
+export const SPEAKER_STATUSES = vocabulary<Speaker['status']>({
   lead: true, approved: true, invited: true, confirmed: true, scheduled: true,
   delivered: true, archived: true, parked: true,
   'decline-board': true, 'decline-speaker': true,
@@ -448,7 +454,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     links: textList(here, raw, 'links'),
     host_1: text(here, raw, 'host_1'),
     host_2: text(here, raw, 'host_2'),
-    status: oneOf(here, raw, 'status', STATUSES),
+    status: oneOf(here, raw, 'status', SPEAKER_STATUSES),
     selection: readSelection(here, raw.selection),
     publication: readPublication(here, raw.publication),
     edition_code: text(here, raw, 'edition_code'),

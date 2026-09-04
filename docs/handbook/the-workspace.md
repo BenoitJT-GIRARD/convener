@@ -17,13 +17,17 @@ present or absent, never as an error after you press something.
 |---|---|
 | **Inbox** | What is waiting, mine first. Votes the Board owes, work an event owes, and the lines somebody has put their name against. Rows are ordered by how late they are against the turnaround times the series sets — `vote_window_days` for a Board decision, `sla_days` for the rest. |
 | **Pipeline** | Where every live speaker stands, one column per status from lead to scheduled. This is also where a new speaker is added by hand. |
-| **Agenda** | The dated webinars, month by month, and the gap the overlap window keeps between them. |
-| **Archive** | What is finished or set aside: past webinars, parked leads, and the two kinds of decline. The wrap-up numbers can still be filled in here weeks later. |
+| **Agenda** | What still owes you something, month by month: booked webinars, and ones that have happened but are not wrapped up. It shows the gap the overlap window keeps between them, and it empties as the work is done — an empty Agenda is a clear horizon, not a screen that failed. |
+| **Archive** | What is closed: archived webinars, parked leads, and the two kinds of decline. An event moves here the moment somebody archives it, and not before. The wrap-up numbers can still be filled in here weeks later. |
 | **Board** | Membership and its rules in one place — who is active, who has declared an absence, nominations open and what they are due to become. |
 | **Diversity** | How the programme is composed, one dimension at a time, applicants beside those selected. |
 | **Consent** | Which speakers have not yet been asked whether their recording may be published, and the message that asks them. |
 | **Handbook** | This handbook, rendered from the same files that are in the repository. |
 | **Templates** | Every message and script, filled in from a record when you open one from an event, blank when you browse them here. |
+
+The two lists never hold the same event. **The Agenda holds what still owes you
+something; the Archive holds what is closed**, and archiving is the gesture
+that moves a record from one to the other.
 
 An event has a page of its own, reached from any of those lists. It carries the
 record, the journey for the status it is in, and the two gates.

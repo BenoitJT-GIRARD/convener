@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
+import { AGENDA_STATUSES } from '../state/agenda';
 import { effectiveStatus } from '../state/derived';
 import type { Speaker } from '../data/types';
 import { LoadError } from '../components/LoadError';
@@ -7,7 +8,6 @@ import { LoadError } from '../components/LoadError';
 const STATUS_COLOR: Record<string, string> = {
   scheduled: 'bg-field/20 border-field text-ink',
   delivered: 'bg-dominant/20 border-dominant text-ink',
-  archived: 'bg-paper border-border text-ink-faint',
 };
 
 export function Agenda() {
@@ -16,8 +16,11 @@ export function Agenda() {
   if (error) return <LoadError message={error} />;
   const now = new Date();
 
+  // What still owes something, and only that. An archived event is closed
+  // and lives on the Archive screen -- see `state/agenda.ts` for the rule,
+  // and for why the intended consequence is that this list empties.
   const dated = speakers
-    .filter(s => s.date && ['scheduled', 'delivered', 'archived'].includes(s.status))
+    .filter(s => s.date && AGENDA_STATUSES.includes(s.status))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const groups: Record<string, Speaker[]> = {};
@@ -30,10 +33,15 @@ export function Agenda() {
     <div>
       <h1 className="font-serif text-3xl mb-2">Agenda</h1>
       <p className="text-ink-muted text-sm mb-6">
+        What still owes something: booked, and delivered but not yet wrapped up. Archived
+        events are on <Link to="/archive" className="text-field-text underline">Archive</Link>.
         No two webinars within {config?.overlap_window_days ?? 7} days of each other.
       </p>
       {Object.keys(groups).length === 0 ? (
-        <p className="text-ink-muted">No dated webinars yet.</p>
+        <p className="text-ink-muted">
+          Nothing booked and nothing outstanding. An empty agenda is the work being finished,
+          not a screen that has failed to load.
+        </p>
       ) : (
         Object.entries(groups).map(([month, items]) => (
           <section key={month} className="mb-6">

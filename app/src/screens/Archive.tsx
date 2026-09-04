@@ -1,60 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
+import { ARCHIVE_GROUPS, type ArchiveGroup } from '../state/agenda';
 import { effectiveStatus } from '../state/derived';
 import { viewCountLabel } from '../state/phases';
 import { dataEdit, identifier } from '../state/decisions';
 import { LoadError } from '../components/LoadError';
-import type { Config, Speaker, SpeakerStatus } from '../data/types';
-
-type Category = {
-  key: 'past' | 'parked' | 'declined-board' | 'declined-speaker';
-  num: string;
-  label: string;
-  hint: string;
-  statuses: SpeakerStatus[];
-  sortDesc: boolean;
-};
-
-const CATEGORIES: Category[] = [
-  {
-    key: 'past',
-    num: '01',
-    label: 'Past webinars',
-    hint: 'Archived events',
-    statuses: ['archived', 'delivered'],
-    sortDesc: true,
-  },
-  {
-    key: 'parked',
-    num: '02',
-    label: 'Parked',
-    hint: 'Set aside by the board — can be reactivated',
-    statuses: ['parked'],
-    sortDesc: false,
-  },
-  {
-    key: 'declined-board',
-    num: '03',
-    label: 'Declined (board)',
-    hint: 'The board chose not to invite',
-    statuses: ['decline-board'],
-    sortDesc: false,
-  },
-  {
-    key: 'declined-speaker',
-    num: '04',
-    label: 'Declined (speaker)',
-    hint: 'Speaker turned down the invitation',
-    statuses: ['decline-speaker'],
-    sortDesc: false,
-  },
-];
+import type { Config, Speaker } from '../data/types';
 
 export function Archive() {
   const { speakers, loading, error, config } = useData();
   const [q, setQ] = useState('');
-  const [active, setActive] = useState<Category['key'] | 'all'>('all');
+  const [active, setActive] = useState<ArchiveGroup['key'] | 'all'>('all');
 
   const grouped = useMemo(() => {
     const matches = (s: Speaker) => {
@@ -62,21 +19,21 @@ export function Archive() {
       const hay = (s.name + ' ' + s.title + ' ' + s.affiliation + ' ' + s.country).toLowerCase();
       return hay.includes(q.toLowerCase());
     };
-    const result: Record<Category['key'], Speaker[]> = {
+    const result: Record<ArchiveGroup['key'], Speaker[]> = {
       past: [],
       parked: [],
       'declined-board': [],
       'declined-speaker': [],
     };
     for (const s of speakers) {
-      for (const c of CATEGORIES) {
+      for (const c of ARCHIVE_GROUPS) {
         if (c.statuses.includes(s.status) && matches(s)) {
           result[c.key].push(s);
           break;
         }
       }
     }
-    for (const c of CATEGORIES) {
+    for (const c of ARCHIVE_GROUPS) {
       result[c.key].sort((a, b) =>
         c.sortDesc ? b.date.localeCompare(a.date) : a.name.localeCompare(b.name),
       );
@@ -87,7 +44,7 @@ export function Archive() {
   if (loading) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
   if (error) return <LoadError message={error} />;
 
-  const visible = active === 'all' ? CATEGORIES : CATEGORIES.filter(c => c.key === active);
+  const visible = active === 'all' ? ARCHIVE_GROUPS : ARCHIVE_GROUPS.filter(c => c.key === active);
   const total = visible.reduce((n, c) => n + grouped[c.key].length, 0);
 
   return (
@@ -98,6 +55,10 @@ export function Archive() {
           History
         </p>
         <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">Archive</h1>
+        <p className="text-ink-muted text-sm mt-3">
+          What is closed. Anything still owing something — booked, or delivered and not yet
+          wrapped up — is on the Agenda until it is archived.
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-8 pb-6 border-b border-border">
@@ -112,7 +73,7 @@ export function Archive() {
           <FilterChip active={active === 'all'} onClick={() => setActive('all')}>
             All
           </FilterChip>
-          {CATEGORIES.map(c => (
+          {ARCHIVE_GROUPS.map(c => (
             <FilterChip
               key={c.key}
               active={active === c.key}
@@ -162,7 +123,7 @@ function CategorySection({
   speakers,
   config,
 }: {
-  category: Category;
+  category: ArchiveGroup;
   speakers: Speaker[];
   config: Config | null;
 }) {
@@ -198,7 +159,7 @@ function ArchiveRow({
   config,
 }: {
   speaker: Speaker;
-  category: Category;
+  category: ArchiveGroup;
   config: Config | null;
 }) {
   const [editing, setEditing] = useState(false);
