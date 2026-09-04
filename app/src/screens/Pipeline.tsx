@@ -1,18 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { SpeakerCard } from '../components/Card';
+import { BOARD_COLUMNS } from '../state/agenda';
 import { effectiveStatus, parisToday } from '../state/derived';
 import { byUrgency, lateness } from '../state/sla';
 import { LoadError } from '../components/LoadError';
-import type { SpeakerStatus } from '../data/types';
-
-const ACTIVE_COLUMNS: { key: SpeakerStatus; label: string }[] = [
-  { key: 'lead', label: 'Leads' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'invited', label: 'Invited' },
-  { key: 'confirmed', label: 'Confirmed' },
-  { key: 'scheduled', label: 'Scheduled' },
-];
 
 export function Pipeline() {
   const { speakers, loading, error, config } = useData();
@@ -41,7 +33,7 @@ export function Pipeline() {
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {ACTIVE_COLUMNS.map(col => {
+        {BOARD_COLUMNS.map(col => {
           // Each column is ordered by how long its step has been waiting:
           // longest first, and records whose step has no applicable turnaround
           // time -- or no recorded day to count one from -- last, so they can
@@ -51,7 +43,16 @@ export function Pipeline() {
             .map(s => ({ s, late: config ? lateness(s, config, today) : ({ state: 'none' } as const) }))
             .sort((a, b) => byUrgency(a.late, b.late));
           return (
-            <div key={col.key} className="min-w-[240px] flex-1">
+            // 168 and not 240, which is what five columns could afford.
+            // `--container-content` caps this bundle at 1180 CSS pixels and
+            // `Layout` spends 48 of them on its own padding, so the board
+            // has 1132 whatever screen it is on: six columns at 240 need
+            // 1520 and scroll on every one of them. A lane you have to
+            // scroll to is a lane that gets forgotten, which is the whole
+            // of how `delivered` came to have no home. At 168 the six fit
+            // with room to spare, and `flex-1` still spreads them to fill
+            // the width they actually have.
+            <div key={col.key} className="min-w-[168px] flex-1">
               <div className="flex items-baseline gap-2 mb-3 pb-2 border-b-2 border-ink">
                 <span className="font-display font-extrabold text-xs uppercase tracking-[0.14em]">
                   {col.label}

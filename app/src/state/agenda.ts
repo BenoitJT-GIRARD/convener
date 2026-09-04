@@ -11,6 +11,41 @@ export interface OverlapHit {
 const PUBLIC_STATUSES = new Set(['scheduled', 'delivered', 'archived']);
 
 /**
+ * The working board: one column per status that still asks somebody for
+ * work, in the order the work happens.
+ *
+ * **Here, beside the other two lists, and that is the correction.** The
+ * boundary below was written over the agenda and the archive and applied to
+ * those two screens alone, while the columns lived in `screens/Pipeline.tsx`
+ * as a table of their own. So `delivered` -- the status with the most work
+ * left in it: the attendance, the recording, the certificates -- was placed
+ * on the agenda, taken off the archive, and never looked for on the board.
+ * It ended up on a calendar and on no work surface at all.
+ *
+ * Three lists, one home, one rule over all three, and `agenda.test.ts` holds
+ * it over every status the model has rather than over the ones somebody
+ * happened to be looking at.
+ *
+ * The two overlaps with the agenda are deliberate and are not a boundary
+ * being broken: a booked talk and a talk that has been given are both work
+ * in hand *and* a date in the diary. What may not overlap is the board with
+ * the archive, and the agenda with the archive -- a record cannot be both
+ * open and closed.
+ */
+export const BOARD_COLUMNS: readonly { key: SpeakerStatus; label: string }[] = [
+  { key: 'lead', label: 'Leads' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'invited', label: 'Invited' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'scheduled', label: 'Scheduled' },
+  { key: 'delivered', label: 'Delivered' },
+];
+
+/** The board's side of the rule, derived from the columns the screen
+ *  actually draws rather than written a second time. */
+export const BOARD_STATUSES: readonly SpeakerStatus[] = BOARD_COLUMNS.map(c => c.key);
+
+/**
  * The boundary between the two screens a record ends up on.
  *
  * > The agenda holds what still owes you something. The archive holds what

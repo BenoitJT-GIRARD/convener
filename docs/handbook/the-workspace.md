@@ -16,7 +16,7 @@ present or absent, never as an error after you press something.
 | Tab | What it answers |
 |---|---|
 | **Inbox** | What is waiting, mine first. Votes the Board owes, work an event owes, and the lines somebody has put their name against. Rows are ordered by how late they are against the turnaround times the series sets — `vote_window_days` for a Board decision, `sla_days` for the rest. |
-| **Pipeline** | Where every live speaker stands, one column per status from lead to scheduled. This is also where a new speaker is added by hand. |
+| **Pipeline** | Where every live speaker stands, one column per status that still asks for work — from a suggested name to a talk that has been given and not yet wrapped up. This is also where a new speaker is added by hand. |
 | **Agenda** | What still owes you something, month by month: booked webinars, and ones that have happened but are not wrapped up. It shows the gap the overlap window keeps between them, and it empties as the work is done — an empty Agenda is a clear horizon, not a screen that failed. |
 | **Archive** | What is closed: archived webinars, parked leads, and the two kinds of decline. An event moves here the moment somebody archives it, and not before. The wrap-up numbers can still be filled in here weeks later. |
 | **Board** | Membership and its rules in one place — who is active, who has declared an absence, nominations open and what they are due to become. |
