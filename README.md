@@ -14,7 +14,7 @@ seminars that have nobody to pay and nothing to pay them with.**
 demonstration mode: no account, no repository, the example instance's own
 invented records.
 
-![The cockpit inbox: one lead to vote on, six webinars needing an action, each with its person and institution](assets/screenshots/cockpit.png)
+![The cockpit inbox: two leads to vote on, five webinars needing an action and two lines waiting on the person signed in, each with its speaker and institution](assets/screenshots/cockpit.png)
 
 **A public event page.** One per edition, generated — nobody writes these.
 The registration form on it encrypts what a participant types before it
@@ -33,18 +33,37 @@ itself.
 
 ## Seeing it run
 
-There is nothing hosted to click. The product repository publishes no site
-of its own, deliberately, so the demonstration runs on your own machine —
-from a real build, with no account and no data of anybody's:
+The demonstration is this product built as the invented series it ships as
+its worked example, and it is the whole of one: the showcase, an event page
+with its registration form, the certificate verifier, the post-event survey
+and the cockpit — the same five surfaces a deployed instance has, with the
+same navigation between them.
+
+`.github/workflows/demonstration.yml` builds it and publishes it to this
+repository's own GitHub Pages. It builds on every push and rebuilds every
+Thursday, and it publishes nothing until the repository variable
+`CONVENER_DEMONSTRATION_PAGES` is set to `true` and Pages is pointed at the
+`gh-pages` branch — two settings no workflow can make for itself, so until
+somebody makes them there is no link here to click.
+
+Build it and serve it yourself, from a real build, with no account and no
+data of anybody's:
 
 ```bash
-cd app
-npm install
-npm run dev
+cd site && npm install && cd ../app && npm install && cd ../tools
+uv run python scripts/demonstration_build.py ../demonstration
+cd ../demonstration && python -m http.server 8731
 ```
 
-Open the address it prints, with `?demo=1` on the end. The records are the
-example instance's, edits stay in the tab, and nothing is ever saved.
+Then open <http://localhost:8731/example-showcase/> — the address the
+example instance declares, prefix and all, because a build served at a bare
+root is a different topology from the deployed one
+([D-26](docs/engineering/decisions/d-26-verify-deployed-shape.md)).
+
+The records are the example instance's. What you do to them stays in the
+tab you did it in, for as long as that tab is open, and is never sent
+anywhere: the cockpit in demonstration mode reads only from the address
+that served it and writes nothing at all.
 
 > [!WARNING]
 > **Do not fork this repository — duplicate it.**

@@ -29,6 +29,20 @@ skips a `.png` for the same reason. Both scripts' own comments carry the rest of
 that reasoning, and `tools/tests/scripts/test_readme_shots.py` runs the refusal rather
 than reading it.
 
+**One day, twice pinned.** The renderer hands each page a fixed `Date`
+before anything in it runs, and this script fixes the day the example
+instance's own records are dated against
+(`tools/scripts/example_dates.py`) to the same one. Both are needed and
+they hold different halves: without the first, a day count printed on a
+screen goes up every night; without the second, the records themselves
+move by a week every seventh night, because they follow the week they are
+read in. Measured: with the day free, two runs a fortnight apart produce a
+different `event-page.png`; with it pinned, two runs produce four
+byte-identical files. The day is the one the certificate on the
+verification shot says its holder attended, read off
+`tools/tests/fixtures/certificate-verification.json` rather than written
+down anywhere.
+
 **Refresh them whenever either interface changes.** A screenshot in a README is
 a claim about what the software does, and a stale one is a false claim nothing
 else in this repository would catch.
