@@ -34,7 +34,12 @@ Four vocabularies, each read from the repository at run time:
   (G-01)` in `docs/handbook/governance/board-rules.md`, `**Declaring an absence
   (G-05)**` opening its own paragraph on that same page. Writing a new
   rule and titling it is what makes its number citable; there is nothing
-  here to edit.
+  here to edit. The two shapes live in
+  `tools/scripts/generate_rule_index.py`, which publishes the index of the
+  rules from the same reading, and this module imports
+  `declared_rule_ids` from it: the sweep that refuses a citation nothing
+  publishes and the index that lists what is published have to agree
+  about what publishing a rule looks like.
 
 And one category that is not this project's at all: a **public standard**
 (`UTF-8`, `SHA-256`, `AES-256`, `P-256`, `RFC-822`). Naming one is not a
@@ -76,9 +81,10 @@ miss one.
 file, per key or per notation: the rules are stated in prose, several of
 them on the same page. So the derivation reads the shape a
 page uses to *name* a rule -- a heading, or the bold lead that opens a
-paragraph or a list item -- ending in `(G-NN)`. An identifier anywhere
-else on a published page, in running prose or in a table cell, is a
-citation of a rule stated somewhere else, and a citation cannot
+paragraph or a list item -- ending in `(G-NN)`, in
+`generate_rule_index.RULE_HEADING` and `generate_rule_index.RULE_LEAD`.
+An identifier anywhere else on a published page, in running prose or in a
+table cell, is a citation of a rule stated somewhere else, and a citation cannot
 authorise itself: without that distinction, a comment's own `G-99` would
 become resolvable the moment somebody quoted it in a handbook page.
 
@@ -151,6 +157,8 @@ from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 
+from generate_rule_index import declared_rule_ids
+
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.published import INSTANCE_PATH
 
@@ -168,23 +176,6 @@ JOURNEY = Path("app") / "src" / "state" / "phases.ts"
 #: RFC. See the module docstring for why this is a category rather than an
 #: allowlist.
 PUBLIC_STANDARDS = frozenset({"UTF", "SHA", "AES", "RFC", "P"})
-
-#: A published page titling one of its sections with a governance rule's
-#: number: `## Inactivity (G-13)`. The number sits at the very end of the
-#: heading, which is what separates naming a rule from mentioning one --
-#: `**Handover is manual and deliberate, exactly as G-15 provides for:**`
-#: in `docs/engineering/decisions/d-28-architect-and-board-permissions.md` cites the
-#: rule, it does not state it.
-RULE_HEADING = re.compile(r"^#{1,6}[ \t]+[^\n]*?\((G-\d{2})\)[ \t]*$", re.MULTILINE)
-
-#: The same act on a page whose rules are paragraphs rather than sections:
-#: `**Declaring an absence (G-05)** is something you do for yourself.`, and
-#: `- **Diversity (G-10).** A deliberate aim, not an afterthought`. The bold
-#: run opens the line -- after a list marker, if there is one -- and closes
-#: on the number, so it is a title in everything but markup.
-RULE_LEAD = re.compile(
-    r"^[ \t]*(?:[-*+][ \t]+)?\*\*[^*\n]*?\((G-\d{2})\)[.,]?\*\*", re.MULTILINE
-)
 
 #: An identifier-shaped citation: one to three capitals, a hyphen, a number.
 #: The shape every family this project ever used is written in -- `D-19`,
@@ -444,17 +435,6 @@ def _published_pages() -> list[tuple[str, str]]:
         (path.relative_to(ROOT).as_posix(), path.read_text(encoding="utf-8"))
         for path in sorted((ROOT / "docs").rglob("*.md"))
     ]
-
-
-def declared_rule_ids(text: str) -> set[str]:
-    """Every governance rule one page states as its own.
-
-    Titling, not mentioning: see `RULE_HEADING` and `RULE_LEAD`. The
-    distinction is the whole of the derivation's honesty -- a page is free
-    to cite a rule stated elsewhere, and doing so must not make the number
-    resolve on the strength of the citation alone.
-    """
-    return set(RULE_HEADING.findall(text)) | set(RULE_LEAD.findall(text))
 
 
 @cache

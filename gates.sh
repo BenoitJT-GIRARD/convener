@@ -56,6 +56,7 @@
 #   Brand tokens and templates -> generated
 #   Chrome motif -> generated
 #   Directory map -> generated
+#   Rule index -> generated
 #   Changelog -> generated
 #   Dependency audit (production) -> audit
 #   Dependency audit (development tooling, informational) -> none
@@ -155,6 +156,7 @@ case "${1:-all}" in
                && uv run --frozen python scripts/generate_brand_css.py --check \
                && uv run --frozen python scripts/generate_motif.py --check \
                && uv run --frozen python scripts/generate_directory_map.py --check \
+               && uv run --frozen python scripts/generate_rule_index.py --check \
                && uv run --frozen python scripts/generate_changelog.py --check ;;
   app)       cd app && npm run lint && npm run typecheck && npm run test:cov && npm run build ;;
   site)      cd site && npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/published.cjs scripts/print-published.cjs && npm run build ;;

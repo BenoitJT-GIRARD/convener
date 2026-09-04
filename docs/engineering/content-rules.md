@@ -19,6 +19,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Editorial line | `docs/handbook/governance/editorial-line.md` |
 | Roles | `docs/handbook/roles.md` |
 | The two gates (mechanics) | `docs/handbook/governance/board-rules.md` |
+| Which governance rules carry a number, and where each one is stated | `docs/handbook/governance/board-rules.md`, whose index of them is generated from the pages that state the rules by `tools/scripts/generate_rule_index.py` |
 | What the Board is, and its yearly meeting | `docs/handbook/governance/editorial-board.md` |
 | Selection criteria | `docs/handbook/governance/selection-criteria.md` |
 | Conflict-of-interest policy | `docs/handbook/governance/conflict-of-interest.md` |

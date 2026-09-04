@@ -342,6 +342,24 @@ jobs:
         # this needs no history at all; it runs in this job because this is
         # the job that has `uv`.
         run: uv run python scripts/generate_directory_map.py --check
+      - name: Rule index
+        working-directory: tools
+        # Fifteen governance rules carry a number and no page listed them.
+        # `docs/handbook/governance/board-rules.md` said "a few of the
+        # numbered rules are written on other pages" and named none of the
+        # seven that are, and `G-02` and `G-05` were numbers no page stated,
+        # no file cited and no declaration retired. The index is
+        # generated now -- the rules read out of the pages that title them,
+        # in the order `docs/README.md` walks the three trees -- and it
+        # names the page each rule is stated on.
+        #
+        # It also holds the numbering itself: the rules have to carry
+        # `G-01` upwards with nothing missing but the numbers `RETIRED`
+        # declares, so a rule written, moved or withdrawn without the
+        # sequence being closed up fails here. Assertion-only, like the
+        # seven above: writes nothing, and reads the pages rather than the
+        # index, so an index that agreed with a holed sequence still fails.
+        run: uv run python scripts/generate_rule_index.py --check
       - name: Changelog
         working-directory: tools
         # Two halves, and the second is what this step is really for.

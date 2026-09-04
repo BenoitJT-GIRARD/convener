@@ -4,7 +4,7 @@ You have just joined the Editorial Board. This page is the whole of what binds y
 
 It describes the rules **as the application actually applies them**. Where a number appears here, it is the number the code computes; where a rule says "never", nothing in the repository can produce the case.
 
-**Why some rules carry a number.** *(G-01)*, *(G-04)*: these are the series' governance rules, numbered so that a commit message, a comment in the code, or another page can name a rule instead of paraphrasing it. The number is a handle; the rule is the prose beside it. Not every rule here has one, and a few of the numbered rules are written on other pages — the Board's size, the declaration a speaker makes in the room, the handover of the architect's own role — and carry their number there.
+**Why some rules carry a number.** *(G-01)*, *(G-04)*: these are the series' governance rules, numbered so that a commit message, a comment in the code, or another page can name a rule instead of paraphrasing it. The number is a handle; the rule is the prose beside it. Not every rule here has one, and some of the numbered rules are written on other pages and carry their number there. The table at the foot of this page names every one of them and the page it is stated on.
 
 **What this page is not.** It holds no name and no count. Every rule below is written against *the Board*, whoever that is: the members, their joining days and their absences are in `instance/data/config.yml`, edited from the cockpit's own Board screen, and a series run by somebody else has a different Board and the same rules. That separation is the point — a rule that named a member would have to be rewritten every time one joined, and a page that carried a headcount would be wrong the day after the yearly meeting. Where the current Board's own composition is unusual enough to change how a rule *feels*, that is said on [The Editorial Board](editorial-board.md), next to the composition itself.
 
@@ -189,3 +189,37 @@ Four steps have a target time: a decision on a suggested speaker (14 days), a fo
 **Nothing happens when one passes.** It produces a line of text and a place in a sort order. It parks nothing, refuses nothing and writes nothing. And the sentence is always about the piece of work — *"Board decision is 3 days overdue"* — never about a person: there is no room in the wording for a name, so none can appear there.
 
 Where the record does not hold the day a clock would start from, **there is no deadline** rather than a guessed one, and those items sort last instead of first.
+
+## The numbered rules, and where each one is stated
+
+**What a number is.** A rule's number is its place in one walk of the documentation: the three trees in the order `docs/README.md` lists them, the pages of a tree in path order, and the rules of a page in the order they are written. A number says where a rule is written and nothing about how much it binds you, which is why the first row below is the two-thirds bar and the last is the handover of an account.
+
+**A rule written between two others takes the number of its place**, and the rules after it move up one. Nothing outside this repository cites these numbers, and `tools/tests/repository/test_cross_references.py` fails on any citation a move leaves behind.
+
+**A rule that is withdrawn keeps its number.** It comes off its page, the number is declared retired in `tools/scripts/generate_rule_index.py`, and no later rule takes it. Those numbers are listed under the table, so a citation of one still leads somewhere.
+
+<!-- BEGIN GENERATED RULE INDEX -- tools/scripts/generate_rule_index.py -->
+*The table below is generated from the pages themselves: every rule that
+carries a number, what its own page calls it, and where it is stated. Do not
+edit this block — run*
+`uv run python scripts/generate_rule_index.py`
+*from `tools/` and commit what it writes.*
+
+| Rule | What it is | Stated in |
+|---|---|---|
+| G-01 | The bar | `docs/handbook/governance/board-rules.md` |
+| G-02 | The vote window, and what parking means | `docs/handbook/governance/board-rules.md` |
+| G-03 | Standing aside: recusal | `docs/handbook/governance/board-rules.md` |
+| G-04 | Joining the Board | `docs/handbook/governance/board-rules.md` |
+| G-05 | Declaring an absence | `docs/handbook/governance/board-rules.md` |
+| G-06 | The speaker's — which must be present | `docs/handbook/governance/board-rules.md` |
+| G-07 | The Board's — which must be absent | `docs/handbook/governance/board-rules.md` |
+| G-08 | The turnaround targets | `docs/handbook/governance/board-rules.md` |
+| G-09 | This log, and the register next to it | `docs/handbook/governance/decisions.md` |
+| G-10 | Diversity | `docs/handbook/governance/selection-criteria.md` |
+| G-11 | Registration | `docs/handbook/governance/traitement-donnees.md` |
+| G-12 | The conflict-of-interest slide | `docs/handbook/toolkit/run-of-show.md` |
+| G-13 | Inactivity | `docs/operating/operations.md` |
+| G-14 | The Board's target size | `docs/operating/operations.md` |
+| G-15 | Handover | `docs/engineering/architecture.md` |
+<!-- END GENERATED RULE INDEX -- edit tools/scripts/generate_rule_index.py, not this block -->
