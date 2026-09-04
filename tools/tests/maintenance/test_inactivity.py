@@ -1,4 +1,4 @@
-"""Inactivity (G-13): a member who has gone silent stops counting toward `N`.
+"""Inactivity (G-14): a member who has gone silent stops counting toward `N`.
 
 Every test here is about a named, unpaid volunteer, so the shape of the rule
 matters as much as its arithmetic: it proposes, it never decides; it moves one
@@ -84,7 +84,7 @@ def test_a_member_silent_past_the_threshold_is_proposed_inactive() -> None:
 
 def test_the_proposed_inactive_line_names_the_repository_access_question() -> None:
     """Marking a member inactive here only ever changes `config.yml`'s
-    voting eligibility (G-13) -- it does nothing to their GitHub repository
+    voting eligibility (G-14) -- it does nothing to their GitHub repository
     write access, and a former board member who keeps that access keeps the
     ability to reach every secret this repository holds. The report a human
     reads to act on that member has to say so at the point they are already
@@ -340,7 +340,7 @@ def _speaking_case() -> tuple[dict[str, Any], list[dict[str, Any]]]:
 def test_the_scheduled_job_reports_the_proposal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # G-13 says the rule is operated by the scheduled task. Detection is the
+    # G-14 says the rule is operated by the scheduled task. Detection is the
     # half it operates: `convener-sweep` prints the lines.
     cfg, speakers = _speaking_case()
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(_repo(tmp_path, cfg, speakers)))

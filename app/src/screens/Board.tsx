@@ -8,10 +8,13 @@ import {
   declareUnavailability,
   isBoardMember,
   nominationBlocker,
+  nominationStanding,
   objectToNomination,
   objectionBlocker,
   openNomination,
   resolveNominations,
+  supportBlocker,
+  supportNomination,
   withdrawObjection,
   withdrawalBlocker,
 } from '../state/board';
@@ -22,7 +25,10 @@ import { formatDecision, identifier, type Subject } from '../state/decisions';
 const OUTCOME_LABEL: Record<Nomination['outcome'], string> = {
   '': 'Open',
   accepted: 'Joined the board',
-  deferred: 'Objected — annual meeting decides',
+  // One label for both ways a nomination is deferred -- an objection, and a
+  // window that ran out below the bar. Naming only the objection would have
+  // read as a member's doing on the many nominations nobody objected to.
+  deferred: 'Not appointed — the meeting decides',
   waiting: 'Waiting for a seat',
 };
 
@@ -128,7 +134,17 @@ export function Board() {
       }),
     );
 
-  // One commit per nomination, not one for the batch. G-09 makes board entry
+  const support = (target: string) =>
+    write(
+      current => supportNomination(current, target, me, today),
+      formatDecision({
+        kind: 'nomination-support',
+        entity: identifier(target),
+        actor: identifier(me),
+      }),
+    );
+
+  // One commit per nomination, not one for the batch. G-10 makes board entry
   // a registrable decision, and a single row saying "the nominations were
   // applied" records that something happened to the board without recording
   // who joined it. Each call re-reads `current`, so the seat counting still
@@ -233,10 +249,12 @@ export function Board() {
           Nominations
         </h2>
         <p className="text-sm text-ink-muted mb-4">
-          A sponsored candidate joins after {NOMINATION_WINDOW_DAYS} days without an objection. An
-          objection does not refuse anyone: it sends the nomination to the annual meeting. While it
-          stands, the nomination cannot be opened again — only the member who wrote it can withdraw
-          it, and the {NOMINATION_WINDOW_DAYS} days then start again.
+          A candidate joins when a majority of the eligible board has supported the nomination
+          inside its {NOMINATION_WINDOW_DAYS} days. Silence counts as refusal: a nomination that
+          runs out of days below the bar is not appointed, and the question goes to the meeting. An
+          objection sends it there at once. While one stands, the nomination cannot be opened again
+          — only the member who wrote it can withdraw it, and the {NOMINATION_WINDOW_DAYS} days
+          then start again.
         </p>
 
         {config.nominations.length === 0 ? (
@@ -254,6 +272,24 @@ export function Board() {
                     {OUTCOME_LABEL[n.outcome]}
                   </span>
                 </div>
+                {n.outcome === '' && (
+                  // The count, the bar and the days, on the line the member
+                  // is deciding on. A screen that showed only the outcome
+                  // would put "silence counts as refusal" in the manual and
+                  // leave the board unable to see how close it was.
+                  <p className="mt-1 text-xs text-ink-muted">
+                    {nominationStanding(config, n, today).supports} of{' '}
+                    {nominationStanding(config, n, today).bar} supports needed ·{' '}
+                    {nominationStanding(config, n, today).eligible} eligible ·{' '}
+                    {nominationStanding(config, n, today).elapsed} of {NOMINATION_WINDOW_DAYS} days
+                    gone
+                  </p>
+                )}
+                {n.supports.length > 0 && (
+                  <p className="mt-1 text-xs text-ink-muted">
+                    supported by {n.supports.map(s => s.member).join(', ')}
+                  </p>
+                )}
                 {n.objections.length > 0 && (
                   <ul className="mt-2 text-xs text-ink-muted">
                     {n.objections.map(o => (
@@ -279,6 +315,15 @@ export function Board() {
                         className="mt-1 w-full px-3 py-2 border border-border rounded-md bg-surface text-sm"
                       />
                     </label>
+                    {supportBlocker(config, n.candidate, me, today) === '' && (
+                      // Offered only where the rule allows it, so the screen
+                      // and `supportNomination` cannot disagree: a member who
+                      // has already said yes, or whose days have run, has no
+                      // control to press.
+                      <Button onClick={() => support(n.candidate)} disabled={busy}>
+                        Support
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       onClick={() => object(n.candidate)}

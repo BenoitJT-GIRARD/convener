@@ -47,10 +47,13 @@ this screen only shows the Board what it has been doing.
 ### Board, and what it will not do for you
 
 Everything the [Board's rules](governance/board-rules.md) describe is
-enacted here — opening a nomination, objecting to one with a reason, declaring
-an absence, recording that a nomination has carried. What it never does is
-close one by itself. It shows which nominations have come due and then waits
-for a member to say so; nobody is seated overnight by a job.
+enacted here — opening a nomination, supporting one, objecting to one with a
+reason, declaring an absence, recording what a nomination came to. Each open
+nomination shows its own count against the bar and how far into its days it
+is, so the Board can see how close it is while it still has time to act. What
+the screen never does is close one by itself. It shows which nominations have
+come due and then waits for a member to say so; nobody is seated overnight by
+a job, and nobody is appointed by a quiet fortnight either.
 
 ## What runs when nobody is looking
 

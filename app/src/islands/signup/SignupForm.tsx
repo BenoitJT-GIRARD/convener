@@ -192,7 +192,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
   const [institution, setInstitution] = useState('');
-  // G-11: the announce-list opt-in. Unticked by default -- nothing in this
+  // G-12: the announce-list opt-in. Unticked by default -- nothing in this
   // component, or in `Registration`'s construction below, ever flips this on
   // behalf of a participant.
   const [membershipOptIn, setMembershipOptIn] = useState(false);

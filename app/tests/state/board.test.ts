@@ -277,6 +277,14 @@ describe('the seat count, pinned to the validator', () => {
           candidate: 'erin',
           sponsor: 'alice',
           opened_on: '2026-01-01',
+          // The whole active board: three eligible members put the bar at
+          // three, so this nomination has carried and the only thing left to
+          // decide is whether there is a seat.
+          supports: [
+            { member: 'alice', date: '2026-01-01' },
+            { member: 'bob', date: '2026-01-02' },
+            { member: 'carol', date: '2026-01-03' },
+          ],
           objections: [],
           outcome: '',
         },
@@ -294,17 +302,23 @@ describe('the seat count, pinned to the validator', () => {
     const board = [
       member({ login: 'alice' }),
       member({ login: 'bob' }),
+      member({ login: 'dave' }),
       member({ login: 'carol', status: 'inactive' }),
     ];
     const cfg: Config = {
       ...config(board),
       board_min: 2,
-      board_max: 3,
+      board_max: 4,
       nominations: [
         {
           candidate: 'carol',
           sponsor: 'alice',
           opened_on: '2026-01-01',
+          supports: [
+            { member: 'alice', date: '2026-01-01' },
+            { member: 'bob', date: '2026-01-02' },
+            { member: 'dave', date: '2026-01-03' },
+          ],
           objections: [],
           outcome: '',
         },
@@ -312,7 +326,7 @@ describe('the seat count, pinned to the validator', () => {
     };
     const next = resolveNominations(cfg, '2026-03-01');
     expect(next.nominations[0].outcome).toBe('accepted');
-    expect(next.board.filter(m => m.status === 'active').length).toBe(3);
-    expect(next.board.length).toBe(3);
+    expect(next.board.filter(m => m.status === 'active').length).toBe(4);
+    expect(next.board.length).toBe(4);
   });
 });

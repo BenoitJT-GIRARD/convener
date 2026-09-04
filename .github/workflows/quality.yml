@@ -347,8 +347,9 @@ jobs:
         # Fifteen governance rules carry a number and no page listed them.
         # `docs/handbook/governance/board-rules.md` said "a few of the
         # numbered rules are written on other pages" and named none of the
-        # seven that are, and `G-02` and `G-05` were numbers no page stated,
-        # no file cited and no declaration retired. The index is
+        # seven that are, and two numbers in the middle of the sequence were
+        # stated by no page, cited by no file and retired by no
+        # declaration. The index is
         # generated now -- the rules read out of the pages that title them,
         # in the order `docs/README.md` walks the three trees -- and it
         # names the page each rule is stated on.

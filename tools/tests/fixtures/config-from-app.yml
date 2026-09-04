@@ -29,6 +29,9 @@ nominations:
 - candidate: frank
   sponsor: alice
   opened_on: '2026-02-01'
+  supports:
+  - member: alice
+    date: '2026-02-01'
   objections:
   - member: bob
     reason: Deux co-animations manquent encore.
@@ -37,11 +40,25 @@ nominations:
 - candidate: grace
   sponsor: carol
   opened_on: '2026-03-01'
+  supports:
+  - member: carol
+    date: '2026-03-01'
+  - member: alice
+    date: '2026-03-02'
+  - member: dave
+    date: '2026-03-05'
   objections: []
   outcome: waiting
 - candidate: dave
   sponsor: alice
   opened_on: '2025-10-20'
+  supports:
+  - member: alice
+    date: '2025-10-20'
+  - member: bob
+    date: '2025-10-21'
+  - member: carol
+    date: '2025-10-27'
   objections: []
   outcome: accepted
 board_min: 3

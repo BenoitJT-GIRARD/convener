@@ -6,6 +6,7 @@ import { DataProvider } from '../../src/data/DataContext';
 import { Board } from '../../src/screens/Board';
 import { parseConfig, serializeConfig } from '../../src/data/yaml';
 import { speaker as double } from '../helpers/data-doubles';
+import { parisToday } from '../../src/state/derived';
 import type { BoardMember, Config, Nomination, Speaker } from '../../src/data/types';
 
 function member(login: string, overrides: Partial<BoardMember> = {}): BoardMember {
@@ -38,6 +39,15 @@ function config(overrides: Partial<Config> = {}): Config {
     ...overrides,
   };
 }
+
+/** The whole board saying yes, inside the window every nomination below
+ *  opens on. Three eligible members put the bar at three, so this is what
+ *  separates a nomination that carries from one the days settle. */
+const BACKING = [
+  { member: 'alice', date: '2020-01-01' },
+  { member: 'bob', date: '2020-01-02' },
+  { member: 'carol', date: '2020-01-03' },
+];
 
 /** A delivered seminar hosted by `host` -- the only two facts this screen
  *  reads off a speaker. Everything else comes from the shared double. */
@@ -245,11 +255,60 @@ describe('Board screen', () => {
     });
   });
 
+  it('records a support, and says how far the nomination is from the bar', async () => {
+    const open: Nomination = {
+      candidate: 'dan',
+      sponsor: 'bob',
+      // Opened today, so the window is open whenever this suite is run:
+      // a fixed day would stop offering the control the moment it aged
+      // past the fortnight.
+      opened_on: parisToday(),
+      supports: [{ member: 'bob', date: parisToday() }],
+      objections: [],
+      outcome: '',
+    };
+    const backend = makeBackend(config({ nominations: [open] }), []);
+    renderBoard(backend);
+
+    // The count is on the line the member is deciding on: a screen showing
+    // only the outcome would leave the board unable to see how close it was.
+    expect(await screen.findByText(/1 of 3 supports needed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Support' }));
+
+    await waitFor(() => expect(backend.current().nominations[0].supports).toHaveLength(2));
+    expect(backend.current().nominations[0].supports[1]).toEqual({
+      member: 'alice',
+      date: expect.any(String),
+    });
+    const subject = backend.fetchMock.mock.calls
+      .filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT')
+      .map(([, opts]) => JSON.parse((opts as RequestInit).body as string).message as string)
+      .at(-1);
+    expect(subject).toBe('data: record support for the nomination of dan by alice');
+  });
+
+  it('offers no support control to a member who has already given one', async () => {
+    const open: Nomination = {
+      candidate: 'dan',
+      sponsor: 'alice',
+      opened_on: parisToday(),
+      supports: [{ member: 'alice', date: parisToday() }],
+      objections: [],
+      outcome: '',
+    };
+    const backend = makeBackend(config({ nominations: [open] }), []);
+    renderBoard(backend);
+
+    await screen.findByText('dan');
+    expect(screen.queryByRole('button', { name: 'Support' })).toBeNull();
+  });
+
   it('records an objection with its reason, and defers the nomination', async () => {
     const open: Nomination = {
       candidate: 'dan',
       sponsor: 'bob',
       opened_on: '2026-03-01',
+      supports: [],
       objections: [],
       outcome: '',
     };
@@ -276,6 +335,7 @@ describe('Board screen', () => {
       candidate: 'dan',
       sponsor: 'carol',
       opened_on: '2026-03-01',
+      supports: [],
       objections: [{ member: 'bob', reason: 'too soon', date: '2026-03-02' }],
       outcome: 'deferred',
     };
@@ -291,6 +351,7 @@ describe('Board screen', () => {
       candidate: 'dan',
       sponsor: 'carol',
       opened_on: '2026-03-01',
+      supports: [],
       objections: [{ member: 'alice', reason: 'too soon', date: '2026-03-02' }],
       outcome: 'deferred',
     };
@@ -310,6 +371,7 @@ describe('Board screen', () => {
       candidate: 'dan',
       sponsor: 'bob',
       opened_on: '2020-01-01',
+      supports: BACKING,
       objections: [],
       outcome: '',
     };
@@ -331,7 +393,7 @@ describe('Board screen', () => {
   });
 
   it('records who joined the board, one register row per nomination', async () => {
-    // G-09 makes board entry a registrable decision. A single row saying the
+    // G-10 makes board entry a registrable decision. A single row saying the
     // nominations were applied records that the board changed without
     // recording who joined it, and a commit subject is the only place that
     // survives.
@@ -339,6 +401,7 @@ describe('Board screen', () => {
       candidate,
       sponsor: 'alice',
       opened_on: '2020-01-01',
+      supports: BACKING,
       objections: [],
       outcome: '',
     });

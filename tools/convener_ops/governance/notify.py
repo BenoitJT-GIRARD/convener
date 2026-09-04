@@ -1,4 +1,4 @@
-"""What reaches a volunteer who is not looking at the app (G-08, D-07).
+"""What reaches a volunteer who is not looking at the app (G-09, D-07).
 
 Everything else this repository does writes to a file a volunteer can read,
 review and revert. A message that has been sent cannot be unsent, so this

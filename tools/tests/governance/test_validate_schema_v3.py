@@ -199,6 +199,86 @@ def test_nomination_objection_member_must_look_like_a_login() -> None:
     assert any("invalid objection member" in e for e in errors)
 
 
+def test_nomination_support_member_must_look_like_a_login() -> None:
+    errors = validate_config(
+        config(
+            nominations=[
+                nomination(supports=[{"member": "not a login!", "date": "2026-01-02"}])
+            ]
+        )
+    )
+    assert any("invalid support member" in e for e in errors)
+
+
+def test_nomination_support_needs_a_day() -> None:
+    # The day is what makes a support count: one recorded after the window
+    # closed is on the record and out of the count
+    # (app/src/state/board.ts::nominationStanding). A support with no day
+    # could not be placed on either side of that line.
+    errors = validate_config(
+        config(nominations=[nomination(supports=[{"member": "ada", "date": ""}])])
+    )
+    assert any("date must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_one_member_cannot_support_the_same_nomination_twice() -> None:
+    # `board.ts::nominationStanding` counts distinct members, so a repeated
+    # entry does not inflate the count in the browser; refusing the pair here
+    # is what stops it reaching the browser at all.
+    errors = validate_config(
+        config(
+            nominations=[
+                nomination(
+                    supports=[
+                        {"member": "ada", "date": "2026-01-02"},
+                        {"member": "ada", "date": "2026-01-03"},
+                    ]
+                )
+            ]
+        )
+    )
+    assert any("supports this nomination twice" in e for e in errors)
+
+
+def test_a_nomination_with_no_supports_key_at_all_is_read_as_none() -> None:
+    # The loader in the browser refuses a missing key outright
+    # (app/src/data/validate.ts::readNomination). Here an absent list reads
+    # as no supports, the same reading `_validate_objections` takes, so an
+    # older file is reported for the state it is in rather than for the key
+    # it lacks.
+    entry = nomination()
+    del entry["supports"]
+    errors = validate_config(config(nominations=[entry]))
+    assert not [e for e in errors if "supports" in e]
+
+
+def test_supports_that_are_not_a_list_are_refused() -> None:
+    errors = validate_config(config(nominations=[nomination(supports="ada")]))
+    assert any("supports: must be a list" in e for e in errors)
+
+
+def test_a_support_that_is_not_a_mapping_is_refused() -> None:
+    errors = validate_config(config(nominations=[nomination(supports=["ada"])]))
+    assert any("supports[0]: not a mapping" in e for e in errors)
+
+
+def test_a_member_cannot_both_support_and_object_to_one_nomination() -> None:
+    # The app cannot write the pair: objecting takes the objector's support
+    # off in the same transformation. Typed in by hand it would show a member
+    # backing a candidate they objected to in writing.
+    errors = validate_config(
+        config(
+            nominations=[
+                nomination(
+                    supports=[{"member": "ada", "date": "2026-01-02"}],
+                    objections=[objection(member="ada")],
+                )
+            ]
+        )
+    )
+    assert any("both supports and objects" in e for e in errors)
+
+
 def test_accepted_nomination_with_open_objections_is_rejected() -> None:
     # Cross-field backstop: outcome and objections can disagree, and no type
     # forbids it. This is the backstop for a hand-edited file, ahead of the
@@ -210,7 +290,7 @@ def test_accepted_nomination_with_open_objections_is_rejected() -> None:
 
 
 def test_a_deferred_nomination_and_a_fresh_one_cannot_stand_together() -> None:
-    # G-04's deferral rule. The app refuses the second nomination
+    # G-05's deferral rule. The app refuses the second nomination
     # (app/src/state/board.ts::nominationBlocker), so this pair can only be
     # typed in by hand - and left there it routes straight around the
     # objection the deferral records.
@@ -272,7 +352,7 @@ def test_accepted_nomination_of_a_seated_member_is_accepted() -> None:
 
 
 def test_accepted_nomination_of_an_inactive_member_is_accepted() -> None:
-    # G-13 moves a silent member to `inactive` without taking their seat away
+    # G-14 moves a silent member to `inactive` without taking their seat away
     # (tools/convener_ops/maintenance/sweep.py::sweep_inactive_members). The nomination
     # records that the board granted the seat, which stays true; requiring the member
     # to be active here would make that rule unable to touch anyone the board

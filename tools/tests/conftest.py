@@ -155,6 +155,7 @@ def nomination(**overrides: Any) -> dict[str, Any]:
         "candidate": "grace",
         "sponsor": "carol",
         "opened_on": "2026-01-01",
+        "supports": [],
         "objections": [],
         "outcome": "",
     }

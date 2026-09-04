@@ -217,7 +217,7 @@ def _published(**publication: Any) -> dict[str, Any]:
 
 
 def test_a_refused_consent_pulls_the_recording_from_the_feed() -> None:
-    # G-06: a speaker may withdraw permission at any time, and the recording
+    # G-07: a speaker may withdraw permission at any time, and the recording
     # has to come out of the public feed when they do. The talk itself stays
     # listed - it happened - but the link to the recording does not.
     out = to_public([_published(consent="refused", outcome="withheld")])
@@ -479,7 +479,7 @@ def test_the_personal_fields_go_out_once_the_gate_has_opened() -> None:
 
 
 def test_a_withdrawn_consent_pulls_the_person_as_well_as_the_recording() -> None:
-    # G-06 is not only about the video. A speaker who withdraws has their
+    # G-07 is not only about the video. A speaker who withdraws has their
     # portrait, biography and questions taken out of the feed too; what stays
     # is the programme of a talk that happened.
     out = to_public([_person({"consent": "refused", "outcome": "withheld"})])[0]

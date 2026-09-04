@@ -229,10 +229,10 @@ its own deletion — makes it unreadable (D-22, D-23); and every public
 address is verified in its actually-published form, not a local
 convenience (D-26).
 
-## Handover (G-15)
+## Handover (G-16)
 
 This project's governance requires that no account or secret ever belongs
-to one person (D-11, G-15): an email address owned by the organisation,
+to one person (D-11, G-16): an email address owned by the organisation,
 never a volunteer's own, is the identity behind every service account;
 a shared password vault kept in the organisation's own Drive — never
 committed to a repository — holds every credential, and its master
@@ -242,7 +242,7 @@ in the same vault. The point is not secrecy: it is that the person who
 set this system up stopping, at any time, changes nothing about anyone
 else's ability to keep running it.
 
-G-15 says the role is transferable; it does not say what a successor is
+G-16 says the role is transferable; it does not say what a successor is
 actually handed. D-28 is that mapping onto GitHub's own permission model:
 the architect is the organisation **owner**, a role independent of Board
 membership, and a Board member holds repository **write**, and nothing

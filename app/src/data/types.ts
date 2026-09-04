@@ -272,7 +272,7 @@ export interface Objection {
  * hand-written objection that omits the key reads as standing, which is the
  * safe direction.
  *
- * Nomination objections (G-04) use the plain `Objection`: an objection there
+ * Nomination objections (G-05) use the plain `Objection`: an objection there
  * is never resolved, it defers the candidate to the annual meeting.
  */
 export interface PublicationObjection extends Objection {
@@ -315,14 +315,33 @@ export interface BoardMember {
   unavailable_until: string;
 }
 
+/**
+ * One member saying yes to a nomination (G-05).
+ *
+ * No reason and no value: a support is the only thing it can be, and a
+ * member who is against says so as an `Objection`, which does carry one.
+ * The day is here because the window is what makes a support count -- one
+ * recorded after the window closed is on the record and out of the count.
+ */
+export interface Support {
+  /** Login of the board member recording it. */
+  member: string;
+  /** YYYY-MM-DD it was recorded. */
+  date: string;
+}
+
 /** One candidate put forward for the board. */
 export interface Nomination {
   /** Login of the candidate. */
   candidate: string;
   /** Login of the member who put them forward. */
   sponsor: string;
-  /** YYYY-MM-DD the objection window opened. */
+  /** YYYY-MM-DD the window opened. */
   opened_on: string;
+  /** Members who have said yes. The sponsor's own is written when the
+   *  nomination is opened; a majority of the eligible board is what carries
+   *  it (G-05), and silence is a refusal rather than a consent. */
+  supports: Support[];
   /** Objections raised during that window. One defers the candidate to the
    *  annual meeting rather than being resolved. */
   objections: Objection[];
@@ -534,9 +553,9 @@ export interface Config {
    *  deadline let a file say the board was on time that very morning. */
   vote_window_days: number;
   /** How long an objection window runs, in working days rather than calendar
-   *  days (G-07). */
+   *  days (G-08). */
   objection_window_working_days: number;
-  /** How many months without a ballot make a member inactive (G-13). */
+  /** How many months without a ballot make a member inactive (G-14). */
   inactivity_months: number;
   /** How far back the programme balance report looks, in months. */
   balance_window_months: number;

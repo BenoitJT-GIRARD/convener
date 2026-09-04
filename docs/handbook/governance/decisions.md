@@ -4,7 +4,7 @@ One line per decision: what, and why. We only add — never rewrite. This is wha
 
 Add a row whenever the Board decides something a future member would otherwise have to guess.
 
-## This log, and the register next to it (G-09)
+## This log, and the register next to it (G-10)
 
 There are two files, and they answer different questions.
 

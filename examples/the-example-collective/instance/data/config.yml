@@ -36,7 +36,37 @@ seminar_duration_minutes: 90
 # the closest float64 below exactly two thirds, and rounding it up refuses
 # somebody present for exactly two thirds of a session.
 eligibility_share: 0.6666666666666666
-nominations: []
+# Two nominations, and between them they walk the whole of G-05 on the
+# anchor day (see `speakers.yml`'s own header for how these days move).
+#
+# `example-fern` was put forward five days ago: the window is open, two of
+# the five eligible members have said yes, and three is what it takes. The
+# Board screen shows the count against the bar and the days gone.
+#
+# `example-gorse` was put forward three weeks ago and nobody but the member
+# who opened it ever said anything. The window has run, so the nomination is
+# due to be recorded as *not appointed* and the question goes to the meeting
+# -- which is the whole of what "silence counts as refusal" looks like from
+# a chair. Both candidates have co-hosted two webinars that happened.
+nominations:
+- candidate: example-fern
+  sponsor: example-alba
+  opened_on: '2026-08-29'
+  supports:
+  - member: example-alba
+    date: '2026-08-29'
+  - member: example-cedar
+    date: '2026-08-31'
+  objections: []
+  outcome: ''
+- candidate: example-gorse
+  sponsor: example-brix
+  opened_on: '2026-08-13'
+  supports:
+  - member: example-brix
+    date: '2026-08-13'
+  objections: []
+  outcome: ''
 board_min: 5
 board_max: 9
 vote_window_days: 14

@@ -45,6 +45,7 @@ import type {
   Speaker,
   SpeakerMetrics,
   SpeakerSelection,
+  Support,
 } from './types';
 import { BALLOT_VALUES, CAREER_STAGES, DATE_ANSWERS, GENDERS, SPEAKER_FIELDS } from './types';
 import { configFile, speakersFile } from '../paths';
@@ -302,7 +303,7 @@ const CONSENTS = vocabulary<Publication['consent']>({
 const PUBLICATION_OUTCOMES = vocabulary<Publication['outcome']>({
   published: true, withheld: true, '': true,
 });
-const NOMINATION_OUTCOMES = vocabulary<Nomination['outcome']>({
+export const NOMINATION_OUTCOMES = vocabulary<Nomination['outcome']>({
   accepted: true, deferred: true, waiting: true, '': true,
 });
 const BOARD_STATUSES = vocabulary<BoardMember['status']>({
@@ -508,7 +509,7 @@ function readBoardMember(at: Cursor, entry: unknown): BoardMember {
 /** A nomination objection is `{member, reason, date}` -- no `resolved_on`.
  *  It is never resolved: it defers the candidate to the annual meeting, and
  *  the only thing that ends it is its author withdrawing it, which removes
- *  the entry (G-04, `state/board.ts::withdrawObjection`). */
+ *  the entry (G-05, `state/board.ts::withdrawObjection`). */
 function readObjection(at: Cursor, entry: unknown): Objection {
   const raw = object(at, entry);
   keys(at, raw, ['member', 'reason', 'date']);
@@ -519,13 +520,26 @@ function readObjection(at: Cursor, entry: unknown): Objection {
   };
 }
 
+/** A support is `{member, date}` and carries nothing else (G-05). A member
+ *  who is against writes an objection, which is the shape with a reason in
+ *  it; there is no field here in which a support could carry a "no". */
+function readSupport(at: Cursor, entry: unknown): Support {
+  const raw = object(at, entry);
+  keys(at, raw, ['member', 'date']);
+  return {
+    member: text(at, raw, 'member'),
+    date: text(at, raw, 'date'),
+  };
+}
+
 function readNomination(at: Cursor, entry: unknown): Nomination {
   const raw = object(at, entry);
-  keys(at, raw, ['candidate', 'sponsor', 'opened_on', 'objections', 'outcome']);
+  keys(at, raw, ['candidate', 'sponsor', 'opened_on', 'supports', 'objections', 'outcome']);
   return {
     candidate: text(at, raw, 'candidate'),
     sponsor: text(at, raw, 'sponsor'),
     opened_on: text(at, raw, 'opened_on'),
+    supports: listOf(at, raw, 'supports', readSupport),
     objections: listOf(at, raw, 'objections', readObjection),
     outcome: oneOf(at, raw, 'outcome', NOMINATION_OUTCOMES),
   };

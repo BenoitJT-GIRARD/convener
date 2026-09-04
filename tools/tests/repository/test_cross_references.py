@@ -30,9 +30,9 @@ Four vocabularies, each read from the repository at run time:
   because two instances in this repository say those prefixes are theirs.
 * **`G-NN`** -- a governance rule. Derived from the pages under `docs/`
   that state the rules, each of which *titles* the rule with its number:
-  `## Inactivity (G-13)` in `docs/operating/operations.md`, `### The bar
+  `## Inactivity (G-14)` in `docs/operating/operations.md`, `### The bar
   (G-01)` in `docs/handbook/governance/board-rules.md`, `**Declaring an absence
-  (G-05)**` opening its own paragraph on that same page. Writing a new
+  (G-06)**` opening its own paragraph on that same page. Writing a new
   rule and titling it is what makes its number citable; there is nothing
   here to edit. The two shapes live in
   `tools/scripts/generate_rule_index.py`, which publishes the index of the
@@ -157,7 +157,7 @@ from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 
-from generate_rule_index import declared_rule_ids
+from generate_rule_index import RETIRED, declared_rule_ids
 
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.published import INSTANCE_PATH
@@ -439,8 +439,22 @@ def _published_pages() -> list[tuple[str, str]]:
 
 @cache
 def published_governance_rules() -> frozenset[str]:
-    """`G-NN` for every rule a published page states."""
-    ids: set[str] = set()
+    """`G-NN` for every rule a citation can lead somewhere from.
+
+    Two sources, and the second one is what makes a withdrawal usable.
+    Every number a published page *states* -- and every number
+    `generate_rule_index.RETIRED` declares, because a withdrawal publishes
+    the number under the index with what the rule was and the day it went.
+    `board-rules.md` says so in as many words: a citation of a retired
+    number still leads somewhere.
+
+    Without the second source the two controls contradicted each other. The
+    withdrawal rule writes `G-NN` onto a published page; this sweep refused
+    every `G-NN` no page stated; so the first commit to retire a rule would
+    have been refused by the sweep for obeying the rule. Measured on the
+    first withdrawal this repository made.
+    """
+    ids: set[str] = set(RETIRED)
     for _, body in _published_pages():
         ids |= declared_rule_ids(body)
     return frozenset(ids)
@@ -574,13 +588,13 @@ def test_the_rules_this_module_admits_are_the_ones_the_pages_state() -> None:
 #: has to be a shape and not a directory: if a citation counted, quoting a
 #: comment's own `G-99` in a handbook page would make `G-99` resolve.
 DECLARATION_CASES: tuple[tuple[str, set[str]], ...] = (
-    ("## Inactivity (G-13)", {"G-13"}),
-    ("**Inactivity (G-13)** is the other half.", {"G-13"}),
-    ("- **Diversity (G-10).** A deliberate aim, not an afterthought", {"G-10"}),
-    ("| `inactivity_months` | number | ... inactive (G-13). |", set()),
-    ("G-15 says the role is transferable; it does not say what a", set()),
-    ("- **Handover is manual, exactly as G-15 provides for:** promote", set()),
-    ("The second gate (G-06, G-07): what has to be true before a", set()),
+    ("## Inactivity (G-14)", {"G-14"}),
+    ("**Inactivity (G-14)** is the other half.", {"G-14"}),
+    ("- **Diversity (G-11).** A deliberate aim across career stage", {"G-11"}),
+    ("| `inactivity_months` | number | ... inactive (G-14). |", set()),
+    ("G-16 says the role is transferable; it does not say what a", set()),
+    ("- **Handover is manual, exactly as G-16 provides for:** promote", set()),
+    ("The second gate (G-07, G-08): what has to be true before a", set()),
 )
 
 
@@ -804,6 +818,36 @@ def test_a_published_governance_rule_is_not_caught(tmp_path: Path) -> None:
     probe.write_text('"""The two-thirds bar (G-01)."""\n', "utf-8")
     body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
     assert unresolvable_identifiers("probe.py", body) == []
+
+
+def test_a_retired_governance_rule_is_not_caught(tmp_path: Path) -> None:
+    """A withdrawn number still leads somewhere, and the sweep says so.
+
+    `board-rules.md` lists the retired numbers under its index with what
+    each rule was and the day it went, so a citation of one reaches a
+    reader. The first withdrawal this repository made would otherwise have
+    been refused here for putting that number on a published page.
+    """
+    retired = sorted(RETIRED)[0]
+    probe = tmp_path / "probe.py"
+    probe.write_text(f'"""The rule this replaced ({retired})."""\n', "utf-8")
+    body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
+    assert unresolvable_identifiers("probe.py", body) == []
+
+
+def test_a_retired_number_is_published_where_a_reader_can_reach_it() -> None:
+    """The other half of the pair above: the sweep resolves the number
+    because a page carries it, and not because this mapping was consulted
+    on its own."""
+    page = (ROOT / "docs/handbook/governance/board-rules.md").read_text(
+        encoding="utf-8"
+    )
+    for number, what in RETIRED.items():
+        assert f"**{number}**" in page, (
+            f"{number} is declared retired and no published page names it, so "
+            "a citation of it leads nowhere -- regenerate the index"
+        )
+        assert what.split(",")[0] in page
 
 
 def test_a_published_decision_record_is_not_caught(tmp_path: Path) -> None:

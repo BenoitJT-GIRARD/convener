@@ -37,7 +37,7 @@ it to travel through.
 
 ## What we hold
 
-- **Registration (G-11)**, per event, encrypted
+- **Registration (G-12)**, per event, encrypted
   (`instance/data/events/<id>/registrations.enc`): first name, surname, email address, an optional institution, and an
   announce-list opt-in — exactly the fields the event page's form asks for,
   and nothing else.

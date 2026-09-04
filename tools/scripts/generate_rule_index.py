@@ -4,9 +4,9 @@ Fifteen rules carry a number, and until this file existed no page listed
 them. `docs/handbook/governance/board-rules.md` said "a few of the numbered
 rules are written on other pages" and named none of them, so the only way to
 find where a rule was stated was to search the repository for its number. The
-numbering had the same shape: `G-02` and `G-05` were stated nowhere, cited
-nowhere and retired nowhere, and nothing could say whether they had ever
-existed.
+numbering had the same shape: two numbers in the middle of the sequence were
+stated nowhere, cited nowhere and retired nowhere, and nothing could say
+whether they had ever existed.
 
 The index is generated for the reason
 `tools/scripts/generate_directory_map.py` gives about the root: a
@@ -153,17 +153,25 @@ _NUMBER: Final = re.compile(r"\(G-\d{2}\)")
 
 
 #: Numbers a rule used to carry and no rule will carry again, each with what
-#: the rule was and the day it went. Empty, and the empty mapping is this
-#: repository's statement that no rule has been withdrawn since the
-#: numbering was made continuous: the two holes it had were holes nobody
-#: could account for rather than withdrawals, which is why they were closed
-#: up instead of being declared here.
+#: the rule was and the day it went. The two holes the numbering had before
+#: it was made continuous are not in here: they were holes nobody could
+#: account for rather than withdrawals, which is why they were closed up.
 #:
 #: An entry is added on the same commit that takes the rule off its page.
 #: `held` reads this mapping and the pages together, so a rule removed
 #: without an entry fails as a hole in the sequence, and an entry for a
-#: number a page still states fails as a contradiction.
-RETIRED: Final[Mapping[str, str]] = {}
+#: number a page still states fails as a contradiction. The other half is in
+#: `tools/tests/repository/test_cross_references.py`, which resolves a
+#: citation of a retired number against this mapping: the page says a
+#: citation of one still leads somewhere, and the sweep that refuses a
+#: number nothing publishes has to agree.
+RETIRED: Final[Mapping[str, str]] = {
+    "G-04": (
+        "Joining the Board, under which a nomination carried on seven "
+        "calendar days of silence. Withdrawn on 2026-09-04, when the "
+        "Board's own agreement became what appoints a member."
+    ),
+}
 
 
 class Rule(NamedTuple):

@@ -76,7 +76,7 @@ export function decide(input: DecideInput): Outcome {
 }
 
 /* ------------------------------------------------------------------ *
- * The publication gate (G-06, G-07)
+ * The publication gate (G-07, G-08)
  *
  * After a seminar, the recording goes online only when two separate
  * permissions are in hand, from two separate parties, and neither may be
@@ -136,7 +136,7 @@ export function standingObjections(p: Publication): PublicationObjection[] {
 }
 
 /** The day the board's objection window closes, counted in working days from
- *  the approval (G-07). Only meaningful once there *is* an approval. */
+ *  the approval (G-08). Only meaningful once there *is* an approval. */
 export function objectionWindowCloses(p: Publication, config: Config): string {
   return addWorkingDays(p.approved_on, config.objection_window_working_days);
 }

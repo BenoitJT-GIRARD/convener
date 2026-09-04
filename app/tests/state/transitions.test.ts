@@ -310,7 +310,7 @@ describe('transitions v2', () => {
 
   it('finalize-archive moves delivered → archived once the publication gate opens', () => {
     // Archiving publishes the recording, so it is no longer a status change
-    // anyone can make on demand -- see the publication gate (G-06, G-07) in
+    // anyone can make on demand -- see the publication gate (G-07, G-08) in
     // state/governance.ts and app/tests/screens/publication-gate.test.tsx.
     const s: Speaker = { ...base, status: 'delivered' };
     expect(canTransition(s, 'finalize-archive', 'organizer')).toBe(true);

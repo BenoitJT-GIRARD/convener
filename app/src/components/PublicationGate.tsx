@@ -18,7 +18,7 @@ import {
 import type { ConsentDecision, ObjectionResolution, Speaker } from '../data/types';
 
 /**
- * The second gate (G-06, G-07): what has to be true before a seminar
+ * The second gate (G-07, G-08): what has to be true before a seminar
  * recording goes online.
  *
  * Two permissions, from two parties, kept visibly apart on the screen
@@ -150,7 +150,7 @@ const CONSENT_CHOICES: { value: ConsentDecision; label: string; help: string }[]
 ];
 
 /**
- * The speaker's permission (G-06).
+ * The speaker's permission (G-07).
  *
  * There is no control here for "no answer yet", and that is deliberate:
  * `pending` is where the record starts, and leaving it alone is exactly what

@@ -63,7 +63,7 @@
  * What a participant supplies, and nothing else: first name,
  * surname, email address; institution is optional, `''` when not given --
  * the same "absent means blank string" idiom `Speaker` uses in
- * `data/types.ts`, not an omitted key. `membership_opt_in` is G-11's
+ * `data/types.ts`, not an omitted key. `membership_opt_in` is G-12's
  * announce-list checkbox. Nothing here defaults it to `true`: the only
  * place that decides its starting value is `SignupForm`'s own state, kept
  * unticked, because a serialisation default is exactly the kind of place a

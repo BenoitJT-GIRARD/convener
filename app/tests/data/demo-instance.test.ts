@@ -25,6 +25,12 @@ import { parseConfig, parseSpeakers } from '../../src/data/yaml';
 import type { SpeakerStatus } from '../../src/data/types';
 import { shifted, today } from '../../scripts/example-dates.mjs';
 import { MIN_REPORTING_BASIS, distribution } from '../../src/state/diversity';
+import {
+  NOMINATION_WINDOW_DAYS,
+  coHostedCount,
+  nominationStanding,
+  resolveNominations,
+} from '../../src/state/board';
 import { parisToday } from '../../src/state/derived';
 import { lateness } from '../../src/state/sla';
 
@@ -130,6 +136,47 @@ describe('the demonstration', () => {
       const late = lateness(one, config, parisToday());
       expect(late.state, `${one.id} is ${JSON.stringify(late)}`).not.toBe('overdue');
     }
+  });
+
+  it('walks the nomination rule: one window open, one run out in silence', () => {
+    // The rule a reader cannot check by reading (G-05). The example carries
+    // one nomination the board is still answering and one it never answered,
+    // so a visitor sees the count against the bar on one and the outcome
+    // silence produces on the other -- and sees them on whichever day the
+    // demonstration is opened, because these days move with the week.
+    const config = demoConfig();
+    const speakers = demoSpeakers();
+    const today = parisToday();
+
+    expect(config.nominations).toHaveLength(2);
+    const [open, elapsed] = config.nominations;
+    expect(open.outcome).toBe('');
+    expect(elapsed.outcome).toBe('');
+
+    // Both candidates could be nominated: the eligibility this rule asks for
+    // is read off the event records, and a demonstration whose candidates
+    // failed it would be showing a nomination nobody could have opened.
+    for (const n of config.nominations) {
+      expect(coHostedCount(speakers, n.candidate), n.candidate).toBeGreaterThanOrEqual(2);
+    }
+
+    const live = nominationStanding(config, open, today);
+    expect(live.elapsed).toBeLessThan(NOMINATION_WINDOW_DAYS);
+    expect(live.supports).toBeGreaterThan(0);
+    expect(live.supports).toBeLessThan(live.bar);
+    expect(live.carried).toBe(false);
+
+    const quiet = nominationStanding(config, elapsed, today);
+    expect(quiet.elapsed).toBeGreaterThanOrEqual(NOMINATION_WINDOW_DAYS);
+    // The member who opened it, and nobody else: this is what silence looks
+    // like on the record.
+    expect(quiet.supports).toBe(1);
+    expect(quiet.carried).toBe(false);
+
+    // What the Board screen offers to record, and what it does to the board.
+    const settled = resolveNominations(config, today);
+    expect(settled.nominations.map(n => n.outcome)).toEqual(['', 'deferred']);
+    expect(settled.board).toEqual(config.board);
   });
 
   it('measures on the Diversity screen instead of saying there is too little', () => {

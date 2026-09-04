@@ -68,8 +68,8 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   // check their connection over a file that needs editing on GitHub.
   if (e instanceof Error && e.name === 'DataShapeError') return e.message;
 
-  // PublicationBlocked (state/governance.ts) is the publication gate (G-06,
-  // G-07) refusing to archive. `PublicationGate` keeps the button disabled
+  // PublicationBlocked (state/governance.ts) is the publication gate (G-07,
+  // G-08) refusing to archive. `PublicationGate` keeps the button disabled
   // and shows the same sentence beforehand, so reaching here means the rule
   // fired inside a `mutate` transformation replayed against freshly-read
   // data -- which is precisely when the volunteer most needs to read "the

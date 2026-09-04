@@ -1,5 +1,5 @@
 /**
- * How the programme is composed (G-10).
+ * How the programme is composed (G-11).
  *
  * This screen is where a careful measure can become a careless impression. A
  * board member reads it for fifteen seconds and leaves with one sentence, so
@@ -38,7 +38,7 @@ import { CAREER_STAGE_LABEL, GENDER_LABEL } from '../data/types';
 import type { CareerStage, Gender } from '../data/types';
 
 /**
- * The two natures of objective, which must never be merged (G-10).
+ * The two natures of objective, which must never be merged (G-11).
  *
  * A stated preference is a deliberate, published bias the board applies on
  * purpose. A balance target is indicative, bounded to the window, and nobody

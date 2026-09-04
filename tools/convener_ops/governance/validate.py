@@ -262,6 +262,63 @@ def _validate_checklist(checklist: Any, where: str) -> list[str]:
     return errors
 
 
+def _members(entries: Any) -> set[str]:
+    """The logins a list of supports or objections names, ignoring the rest.
+
+    Anything unreadable contributes nothing: the entry itself is already
+    reported by the validator that owns its shape, and one malformed record
+    must not turn a cross-field check into a second complaint about it.
+    """
+    if not isinstance(entries, list):
+        return set()
+    return {
+        entry["member"]
+        for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("member"), str)
+    }
+
+
+def _validate_supports(supports: Any, where: str) -> list[str]:
+    """Validate a `Nomination.supports` - the members who have said yes.
+
+    `{member, date}` and nothing else (app/src/data/types.ts). A support
+    carries no reason and no value: the shape with a reason in it is an
+    objection, and there is no field here in which a "no" could be written.
+
+    One entry per member. A file naming the same member twice would inflate
+    the count that seats somebody, and `board.ts::nominationStanding` counts
+    distinct members for that reason; saying so here as well is what stops
+    the pair reaching the browser at all.
+    """
+    errors: list[str] = []
+    if supports is None:
+        return errors
+    if not isinstance(supports, list):
+        errors.append(f"{where}.supports: must be a list")
+        return errors
+
+    seen: set[str] = set()
+    for sindex, support in enumerate(supports):
+        swhere = f"{where}.supports[{sindex}]"
+        if not isinstance(support, dict):
+            errors.append(f"{swhere}: not a mapping")
+            continue
+
+        member = support.get("member")
+        if not isinstance(member, str) or not LOGIN_RE.match(member):
+            errors.append(f"{swhere}: invalid support member {member!r}")
+        elif member in seen:
+            errors.append(f"{swhere}: {member!r} supports this nomination twice")
+        else:
+            seen.add(member)
+
+        date = support.get("date")
+        if not date or not DATE_RE.match(str(date)):
+            errors.append(f"{swhere}: date must be YYYY-MM-DD, got {date!r}")
+
+    return errors
+
+
 def _validate_objections(objections: Any, where: str) -> list[str]:
     """Validate a PublicationObjection[] - shared by Publication and Nomination.
 
@@ -789,7 +846,7 @@ def validate_config(cfg: Any) -> list[str]:
     # board reaching the target. It is reported instead, by
     # `board_target_report`, which is what a target is owed.
     #
-    # *Active* members, not entries, on both counts. G-14's ceiling is about
+    # *Active* members, not entries, on both counts. G-15's ceiling is about
     # who can vote: an `inactive` entry is out of the denominator
     # (`governance.active_board`), stays in the file with its `login` and
     # `joined_on` intact so coming back costs one word, and must not occupy a
@@ -834,8 +891,24 @@ def validate_config(cfg: Any) -> list[str]:
             if outcome not in NOMINATION_OUTCOMES:
                 errors.append(f"{nwhere}: invalid nomination outcome {outcome!r}")
 
+            supports = nomination.get("supports")
+            errors.extend(_validate_supports(supports, nwhere))
+
             objections = nomination.get("objections")
             errors.extend(_validate_objections(objections, nwhere))
+
+            # Nobody is counted on both sides of one question. The app cannot
+            # write the pair -- `board.ts::objectToNomination` takes the
+            # objector's support off in the same transformation that records
+            # the objection -- so a file holding both was typed by hand, and
+            # left there it would show a member supporting a nomination they
+            # objected to in writing.
+            both = _members(supports) & _members(objections)
+            if both:
+                named = ", ".join(sorted(both))
+                errors.append(
+                    f"{nwhere}: {named} both supports and objects to this nomination"
+                )
 
             # Cross-field backstop: outcome and
             # objections can express a contradictory state that no type can
@@ -853,7 +926,7 @@ def validate_config(cfg: Any) -> list[str]:
             # board smaller than the record says it is.
             #
             # A seat, not an *active* seat: the nomination attests that the
-            # board granted one, which stays true after G-13 moves the member
+            # board granted one, which stays true after G-14 moves the member
             # to `inactive`. Requiring `active` here would make the inactivity
             # rule (tools/convener_ops/maintenance/sweep.py::sweep_inactive_members)
             # unable to touch anyone the board itself admitted, and would push toward
@@ -870,7 +943,7 @@ def validate_config(cfg: Any) -> list[str]:
                         f"board seat"
                     )
 
-        # G-04's deferral rule, as a backstop for a hand-edited file. A
+        # G-05's deferral rule, as a backstop for a hand-edited file. A
         # nomination the board has not finished with -- still pending, or
         # carrying an objection that defers it to the annual meeting -- is the
         # only one open for that candidate: `board.ts::nominationBlocker`

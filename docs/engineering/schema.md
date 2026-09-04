@@ -175,8 +175,8 @@ One mapping, with the keys below.
 | `board_min` | number | Fewest members the board may hold. |
 | `board_max` | number | Most members the board may hold. |
 | `vote_window_days` | number | How long a vote stays open, in days, counted from `selection.opened_on`. |
-| `objection_window_working_days` | number | How long an objection window runs, in working days rather than calendar days (G-07). |
-| `inactivity_months` | number | How many months without a ballot make a member inactive (G-13). |
+| `objection_window_working_days` | number | How long an objection window runs, in working days rather than calendar days (G-08). |
+| `inactivity_months` | number | How many months without a ballot make a member inactive (G-14). |
 | `balance_window_months` | number | How far back the programme balance report looks, in months. |
 | `view_count_window_days` | number | How long after a talk its view count is read off, in days. |
 | `instructions` | string | How to join the permanent room beyond the link itself -- a dial-in number, an access code, anything the room needs that the URL alone does not say. `''` is a legal answer: nothing more to add. |
@@ -200,9 +200,17 @@ One mapping, with the keys below.
 |---|---|---|
 | `candidate` | string | Login of the candidate. |
 | `sponsor` | string | Login of the member who put them forward. |
-| `opened_on` | string | YYYY-MM-DD the objection window opened. |
+| `opened_on` | string | YYYY-MM-DD the window opened. |
+| `supports` | list&lt;Support&gt; | Members who have said yes. The sponsor's own is written when the nomination is opened; a majority of the eligible board is what carries it (G-05), and silence is a refusal rather than a consent. |
 | `objections` | list&lt;Objection&gt; | Objections raised during that window. One defers the candidate to the annual meeting rather than being resolved. |
 | `outcome` | enum | Where the nomination ended up. Empty while the window is still open. One of `accepted`, `deferred`, `waiting` or empty. |
+
+### `nominations.supports` entries
+
+| Field | Type | Notes |
+|---|---|---|
+| `member` | string | Login of the board member recording it. |
+| `date` | string | YYYY-MM-DD it was recorded. |
 
 ### `nominations.objections` entries
 

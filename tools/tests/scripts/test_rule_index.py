@@ -3,10 +3,10 @@
 Fifteen rules carried a number and no page listed them.
 `docs/handbook/governance/board-rules.md` said "a few of the numbered rules
 are written on other pages" and named none of them, three of the fifteen were
-stated somewhere else entirely, and `G-02` and `G-05` were numbers nobody
-could account for. `tools/scripts/generate_rule_index.py` derives the
-list that replaces that sentence, and this module holds the halves that make
-it stick.
+stated somewhere else entirely, and two numbers in the middle of the sequence
+were numbers nobody could account for.
+`tools/scripts/generate_rule_index.py` derives the list that replaces that
+sentence, and this module holds the halves that make it stick.
 
 **The sequence is measured here, not read.** Both sides of `--check` come out
 of the same generator, so a generator that saw half the pages would agree
@@ -57,6 +57,14 @@ ROOT = repo_root()
 #: The heading the generated block sits under on the real page.
 HEADING = "## The numbered rules, and where each one is stated"
 
+#: The numbers a four-rule tree carries, given this repository's own
+#: withdrawals, and the number a fifth rule would take. Derived rather than
+#: written out: retiring a rule moves the sequence, and a fixture holding
+#: the numbers it carried before that withdrawal would fail as a
+#: contradiction with `RETIRED` rather than as a defect in the walk.
+FAKE_RULES = sequence_for(4, RETIRED)
+FAKE_NEXT = sequence_for(5, RETIRED)[4]
+
 #: A documentation tree with this repository's shape and none of its
 #: content: a front page naming three trees, and one page per tree stating
 #: rules. Written out rather than read off the real `docs/`, so the tests
@@ -77,11 +85,11 @@ SKELETON = f"""# The Board's rules
 
 Prose the generator never touches.
 
-## The bar (G-01)
+## The bar ({FAKE_RULES[0]})
 
 Two thirds, rounded up.
 
-**Declaring an absence (G-02)** is something you do for yourself.
+**Declaring an absence ({FAKE_RULES[1]})** is something you do for yourself.
 
 {HEADING}
 
@@ -92,17 +100,17 @@ Prose after it, equally untouched.
 """
 
 #: The operator's manual, holding the third rule of the walk.
-OPERATIONS = """# Operations
+OPERATIONS = f"""# Operations
 
-## Inactivity (G-03)
+## Inactivity ({FAKE_RULES[2]})
 
 A member who has cast no ballot for twelve months.
 """
 
 #: The engineering reference, holding the fourth.
-ARCHITECTURE = """# Architecture
+ARCHITECTURE = f"""# Architecture
 
-- **Handover (G-04).** The role is transferable.
+- **Handover ({FAKE_RULES[3]}).** The role is transferable.
 """
 
 
@@ -149,8 +157,9 @@ def test_the_walk_reads_this_repository_and_finds_its_rules() -> None:
 def test_the_rules_this_repository_states_are_a_continuous_ascending_sequence() -> None:
     """The property this numbering did not have, held by measurement.
 
-    `G-02` and `G-05` were numbers no page stated, no file cited and no
-    declaration retired. This reads the pages directly rather than through
+    Two numbers in the middle of the sequence were stated by no page, cited
+    by no file and retired by no declaration. This reads the pages directly
+    rather than through
     the generated block, so an index that agreed with a holed sequence would
     still fail here.
     """
@@ -161,6 +170,22 @@ def test_the_rules_this_repository_states_are_a_continuous_ascending_sequence() 
         "G-01 upwards with the retired numbers skipped"
     )
     assert numbers == sorted(numbers), "the numbers do not ascend along the walk"
+
+
+def test_the_numbers_this_repository_withdrew_are_stated_by_nothing() -> None:
+    """The withdrawal rule, measured on the real pages rather than on a tree
+    written here. A number `RETIRED` declares and a page still titles is a
+    contradiction `held` refuses; this is the same reading taken directly,
+    so it fails on the commit that puts the number back on a page.
+    """
+    stated = {rule.number for rule in rules_in_walk_order(ROOT)}
+
+    for number in RETIRED:
+        assert number not in stated, (
+            f"{number} is declared retired and a page still states it -- "
+            "either the entry goes or the title does"
+        )
+        assert RETIRED[number].strip(), f"{number} is retired with no reason"
 
 
 def test_every_rule_the_index_carries_is_stated_by_one_page() -> None:
@@ -191,30 +216,32 @@ def test_the_index_names_the_pages_outside_the_main_one() -> None:
 
 
 def test_a_heading_and_a_bold_lead_both_state_a_rule() -> None:
-    assert declared_rule_ids("## Inactivity (G-13)") == {"G-13"}
-    assert declared_rule_ids("**Declaring an absence (G-05)** is yours.") == {"G-05"}
-    assert declared_rule_ids("- **Diversity (G-10).** A deliberate aim") == {"G-10"}
+    assert declared_rule_ids("## Inactivity (G-14)") == {"G-14"}
+    assert declared_rule_ids("**Declaring an absence (G-06)** is yours.") == {"G-06"}
+    assert declared_rule_ids("- **Diversity (G-11).** A deliberate aim") == {"G-11"}
 
 
 def test_a_citation_does_not_state_a_rule() -> None:
     """Without this the index would list a rule because a comment quoted
     it."""
-    assert declared_rule_ids("| `inactivity_months` | ... (G-13). |") == set()
-    assert declared_rule_ids("G-15 says the role is transferable") == set()
-    assert declared_rule_ids("The second gate (G-06, G-07): what has to be") == set()
+    assert declared_rule_ids("| `inactivity_months` | ... (G-14). |") == set()
+    assert declared_rule_ids("G-16 says the role is transferable") == set()
+    assert declared_rule_ids("The second gate (G-07, G-08): what has to be") == set()
 
 
 def test_the_title_is_the_page_s_own_name_for_the_rule() -> None:
     assert title_of("### The bar (G-01)") == "The bar"
-    assert title_of("- **Diversity (G-10).**") == "Diversity"
-    assert title_of("**Declaring an absence (G-05)**") == "Declaring an absence"
+    assert title_of("- **Diversity (G-11).**") == "Diversity"
+    assert title_of("**Declaring an absence (G-06)**") == "Declaring an absence"
 
 
 def test_a_page_is_read_in_the_order_it_is_written() -> None:
     offsets = [offset for offset, _, _ in declarations_in(SKELETON)]
 
     assert offsets == sorted(offsets)
-    assert [number for _, number, _ in declarations_in(SKELETON)] == ["G-01", "G-02"]
+    assert [number for _, number, _ in declarations_in(SKELETON)] == list(
+        FAKE_RULES[:2]
+    )
 
 
 # --------------------------------------------------------------------------
@@ -264,7 +291,9 @@ def test_a_rule_stated_outside_the_three_trees_is_refused(fake_docs: Path) -> No
     """The walk has nowhere to put it, so it says so instead of dropping
     it."""
     (fake_docs / "docs" / "README.md").write_text(
-        FRONT_PAGE + "\n## A stray rule (G-05)\n", encoding="utf-8", newline=""
+        FRONT_PAGE + f"\n## A stray rule ({FAKE_NEXT})\n",
+        encoding="utf-8",
+        newline="",
     )
 
     with pytest.raises(ValueError, match=r"docs/README\.md"):
@@ -277,13 +306,15 @@ def test_a_rule_two_pages_state_is_refused(fake_docs: Path) -> None:
     second in its own last sentence."""
     page = fake_docs / "docs" / "engineering" / "architecture.md"
     page.write_text(
-        ARCHITECTURE + "\n## Inactivity (G-03)\n", encoding="utf-8", newline=""
+        ARCHITECTURE + f"\n## Inactivity ({FAKE_RULES[2]})\n",
+        encoding="utf-8",
+        newline="",
     )
 
     with pytest.raises(ValueError) as raised:
         rules_in_walk_order(fake_docs)
 
-    assert "G-03 on docs/operating/operations.md" in str(raised.value)
+    assert f"{FAKE_RULES[2]} on docs/operating/operations.md" in str(raised.value)
 
 
 # --------------------------------------------------------------------------
@@ -436,7 +467,7 @@ def test_a_rule_written_on_another_page_fails_the_check(
     assert main([]) == 0
     page = fake_docs / "docs" / "engineering" / "schema.md"
     page.write_text(
-        "# Schema\n\n- **Diversity (G-05).** A deliberate aim.\n",
+        f"# Schema\n\n- **Diversity ({FAKE_NEXT}).** A deliberate aim.\n",
         encoding="utf-8",
         newline="",
     )
@@ -450,7 +481,7 @@ def test_a_rule_written_on_another_page_fails_the_check(
         .partition(_BEGIN)[2]
         .partition(_END)[0]
     )
-    assert "| G-05 | Diversity | `docs/engineering/schema.md` |" in block
+    assert f"| {FAKE_NEXT} | Diversity | `docs/engineering/schema.md` |" in block
 
 
 def test_a_rule_inserted_in_the_middle_of_the_walk_fails_the_check(
@@ -462,14 +493,15 @@ def test_a_rule_inserted_in_the_middle_of_the_walk_fails_the_check(
     page = fake_docs / DOC_PATH
     page.write_text(
         page.read_text(encoding="utf-8").replace(
-            "## The bar (G-01)", "## A prior rule (G-05)\n\n## The bar (G-01)"
+            f"## The bar ({FAKE_RULES[0]})",
+            f"## A prior rule ({FAKE_NEXT})\n\n## The bar ({FAKE_RULES[0]})",
         ),
         encoding="utf-8",
         newline="",
     )
 
     assert main(["--check"]) == 1
-    assert "rule 1 is G-05" in capsys.readouterr().err
+    assert f"rule 1 is {FAKE_NEXT}" in capsys.readouterr().err
 
 
 def test_a_rule_taken_off_its_page_without_a_retirement_fails_the_check(
@@ -480,13 +512,13 @@ def test_a_rule_taken_off_its_page_without_a_retirement_fails_the_check(
     assert main([]) == 0
     page = fake_docs / "docs" / "operating" / "operations.md"
     page.write_text(
-        page.read_text(encoding="utf-8").replace(" (G-03)", ""),
+        page.read_text(encoding="utf-8").replace(f" ({FAKE_RULES[2]})", ""),
         encoding="utf-8",
         newline="",
     )
 
     assert main(["--check"]) == 1
-    assert "rule 3 is G-04" in capsys.readouterr().err
+    assert f"rule 3 is {FAKE_RULES[3]}" in capsys.readouterr().err
 
 
 def test_a_documentation_tree_with_no_rule_at_all_is_refused(
@@ -501,10 +533,10 @@ def test_a_documentation_tree_with_no_rule_at_all_is_refused(
         page = fake_docs / relative
         page.write_text(
             page.read_text(encoding="utf-8")
-            .replace(" (G-01)", "")
-            .replace(" (G-02)", "")
-            .replace(" (G-03)", "")
-            .replace(" (G-04)", ""),
+            .replace(f" ({FAKE_RULES[0]})", "")
+            .replace(f" ({FAKE_RULES[1]})", "")
+            .replace(f" ({FAKE_RULES[2]})", "")
+            .replace(f" ({FAKE_RULES[3]})", ""),
             encoding="utf-8",
             newline="",
         )

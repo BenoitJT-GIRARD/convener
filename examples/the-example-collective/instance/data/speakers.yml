@@ -59,6 +59,12 @@
 #                recording)  2 archived and published
 #   2 parked (the window closed)  2 declined by the board
 #   1 declined by the speaker
+#
+# Two of the hosts are not on the board: `example-fern` and
+# `example-gorse` have each co-hosted two webinars that happened, which is
+# what makes them nominable (G-05). A fixture whose every past webinar was
+# hosted by a board member would leave the two nominations in `config.yml`
+# standing on nobody, and the rule that admits a member undemonstrable.
 - id: exm-001
   name: Alba Quennell
   gender: F
@@ -82,8 +88,8 @@
   assigned_to: example-brix
   links:
   - https://example.test/reading-group
-  host_1: example-brix
-  host_2: example-cedar
+  host_1: example-fern
+  host_2: example-gorse
   status: archived
   selection:
     ballots:
@@ -160,7 +166,7 @@
   proposed_by: Cedar Halloway
   assigned_to: example-dune
   links: []
-  host_1: example-dune
+  host_1: example-fern
   host_2: example-alba
   status: archived
   selection:
@@ -238,7 +244,7 @@
   assigned_to: example-alba
   links: []
   host_1: example-alba
-  host_2: example-brix
+  host_2: example-gorse
   status: delivered
   selection:
     ballots:

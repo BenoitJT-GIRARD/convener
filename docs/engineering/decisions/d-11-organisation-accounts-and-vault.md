@@ -22,7 +22,7 @@ No service account is ever created with a personal address.
    same vault.
 
 This is the concrete mechanism behind the project's governance succession
-requirement, G-15: the role that sets a system like this up must be able to
+requirement, G-16: the role that sets a system like this up must be able to
 stop, at any time, without changing anyone else's ability to keep running it.
 
 ## Rejected

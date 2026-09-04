@@ -2,16 +2,21 @@ import { describe, expect, it } from 'vitest';
 import cases from '../../../tools/tests/fixtures/governance-cases.json';
 import {
   NOMINATION_MIN_CO_HOSTED,
+  NOMINATION_MINIMUM_SUPPORTS,
   isUnsettled,
   activeBoard,
   declareUnavailability,
   NOMINATION_WINDOW_DAYS,
   NominationRejected,
+  nominationBar,
   nominationBlocker,
+  nominationStanding,
   objectionBlocker,
   objectToNomination,
   openNomination,
   resolveNominations,
+  supportBlocker,
+  supportNomination,
   withdrawObjection,
   withdrawalBlocker,
 } from '../../src/state/board';
@@ -114,6 +119,22 @@ function coHosted(login: string, count: number, status: Speaker['status'] = 'del
 
 const SPEAKERS = coHosted('dan', 2);
 
+/** A nomination the board has carried: opened, then supported by every
+ *  other active member. The board here is three, so the bar is three and
+ *  the sponsor's own support (written by `openNomination`) is one of them. */
+function backed(
+  cfg: Config,
+  candidate: string,
+  sponsor: string,
+  on: string,
+  speakers: Speaker[] = SPEAKERS,
+): Config {
+  const opened = openNomination(speakers, cfg, candidate, sponsor, on);
+  return opened.board
+    .filter(m => m.status === 'active' && m.login !== sponsor)
+    .reduce((carrying, m) => supportNomination(carrying, candidate, m.login, on), opened);
+}
+
 describe('openNomination', () => {
   it('records the candidate, the sponsor and the opening date, with no outcome', () => {
     const next = openNomination(SPEAKERS, config(), 'dan', 'alice', '2026-03-01');
@@ -122,6 +143,9 @@ describe('openNomination', () => {
         candidate: 'dan',
         sponsor: 'alice',
         opened_on: '2026-03-01',
+        // Opening one is saying yes to it: a sponsor among the silent would
+        // be counted against their own candidate.
+        supports: [{ member: 'alice', date: '2026-03-01' }],
         objections: [],
         outcome: '',
       },
@@ -214,6 +238,7 @@ describe('openNomination', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-01-01',
+      supports: [],
       objections: [],
       outcome: 'waiting',
     };
@@ -230,6 +255,7 @@ describe('openNomination', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-01-01',
+      supports: [],
       objections: [{ member: 'bob', reason: 'too soon', date: '2026-01-02' }],
       outcome: 'deferred',
     };
@@ -250,6 +276,7 @@ describe('openNomination', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-01-01',
+      supports: [],
       objections: [
         { member: 'bob', reason: 'too soon', date: '2026-01-02' },
         { member: 'carol', reason: 'conflict', date: '2026-01-03' },
@@ -275,6 +302,7 @@ describe('openNomination', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-01-01',
+      supports: [],
       objections: [],
       outcome: 'deferred',
     };
@@ -299,6 +327,101 @@ describe('openNomination', () => {
   });
 });
 
+describe('supportNomination', () => {
+  const opened = openNomination(SPEAKERS, config(), 'dan', 'alice', '2026-03-01');
+
+  it('records the member and the day, and counts towards the bar', () => {
+    const next = supportNomination(opened, 'dan', 'bob', '2026-03-03');
+    expect(next.nominations[0].supports).toEqual([
+      { member: 'alice', date: '2026-03-01' },
+      { member: 'bob', date: '2026-03-03' },
+    ]);
+    expect(nominationStanding(next, next.nominations[0], '2026-03-03')).toEqual({
+      eligible: 3,
+      bar: 3,
+      supports: 2,
+      elapsed: 2,
+      carried: false,
+    });
+  });
+
+  it('carries the nomination once the bar is reached, and no sooner', () => {
+    const two = supportNomination(opened, 'dan', 'bob', '2026-03-03');
+    expect(nominationStanding(two, two.nominations[0], '2026-03-03').carried).toBe(false);
+    const three = supportNomination(two, 'dan', 'carol', '2026-03-04');
+    expect(nominationStanding(three, three.nominations[0], '2026-03-04').carried).toBe(true);
+  });
+
+  it('refuses a second support from the same member', () => {
+    expect(supportBlocker(opened, 'dan', 'alice', '2026-03-02')).toContain('already supported');
+    expect(() => supportNomination(opened, 'dan', 'alice', '2026-03-02')).toThrow(
+      NominationRejected,
+    );
+  });
+
+  it('refuses a support from someone who is not an active board member', () => {
+    expect(supportBlocker(opened, 'dan', 'erin', '2026-03-02')).toContain('active board member');
+    expect(() => supportNomination(opened, 'dan', 'erin', '2026-03-02')).toThrow(
+      NominationRejected,
+    );
+  });
+
+  it('refuses a support once the window has run', () => {
+    // Silence counts as refusal, so the days have to mean something: a
+    // support recorded on the twentieth day cannot carry a nomination the
+    // board let run out.
+    const blocker = supportBlocker(opened, 'dan', 'bob', '2026-03-21');
+    expect(blocker).toContain(`${NOMINATION_WINDOW_DAYS} days`);
+    expect(blocker).toContain('meeting');
+    expect(() => supportNomination(opened, 'dan', 'bob', '2026-03-21')).toThrow(
+      NominationRejected,
+    );
+  });
+
+  it('refuses a support on a nomination nobody has opened', () => {
+    expect(supportBlocker(config(), 'dan', 'bob', '2026-03-02')).toContain('no open nomination');
+  });
+
+  it('offers nothing on a deferred, waiting or accepted nomination', () => {
+    const deferred = objectToNomination(opened, 'dan', 'bob', 'too soon', '2026-03-02');
+    expect(supportBlocker(deferred, 'dan', 'carol', '2026-03-03')).toContain('no open nomination');
+    const settled = resolveNominations(backed(config(), 'dan', 'alice', '2026-03-01'), '2026-03-02');
+    expect(supportBlocker(settled, 'dan', 'carol', '2026-03-03')).toContain('no open nomination');
+  });
+
+  it('lets a member who is away record one, and counts it when they are back', () => {
+    // Away is out of today's count, never off the board -- the same reading
+    // the two-thirds bar takes of an absence.
+    const away = declareUnavailability(opened, 'bob', '2026-03-10');
+    expect(supportBlocker(away, 'dan', 'bob', '2026-03-05')).toBe('');
+    const next = supportNomination(away, 'dan', 'bob', '2026-03-05');
+    expect(nominationStanding(next, next.nominations[0], '2026-03-05').supports).toBe(1);
+    expect(nominationStanding(next, next.nominations[0], '2026-03-11').supports).toBe(2);
+  });
+
+  it('takes a supporter off the count when they object instead', () => {
+    const supported = supportNomination(opened, 'dan', 'bob', '2026-03-03');
+    const objected = objectToNomination(supported, 'dan', 'bob', 'changed my mind', '2026-03-04');
+    expect(objected.nominations[0].supports).toEqual([{ member: 'alice', date: '2026-03-01' }]);
+  });
+
+  it('never mutates the config it is given', () => {
+    supportNomination(opened, 'dan', 'bob', '2026-03-03');
+    expect(opened.nominations[0].supports).toHaveLength(1);
+  });
+
+  it('shows a refusal as an explanation, not as a raw error', () => {
+    let message = '';
+    try {
+      supportNomination(opened, 'dan', 'erin', '2026-03-02');
+    } catch (e) {
+      message = friendlyError(e, 'save');
+    }
+    expect(message).toContain('active board member');
+    expect(message).not.toContain('GitHub is not responding');
+  });
+});
+
 describe('objectToNomination', () => {
   const opened = openNomination(SPEAKERS, config(), 'dan', 'alice', '2026-03-01');
 
@@ -308,6 +431,7 @@ describe('objectToNomination', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-03-01',
+      supports: [{ member: 'alice', date: '2026-03-01' }],
       objections: [{ member: 'bob', reason: 'conflict of interest', date: '2026-03-02' }],
       outcome: 'deferred',
     });
@@ -345,7 +469,7 @@ describe('objectToNomination', () => {
   });
 
   it('refuses an objection to a nomination that is already resolved', () => {
-    const resolved = resolveNominations(opened, '2026-03-20');
+    const resolved = resolveNominations(backed(config(), 'dan', 'alice', '2026-03-01'), '2026-03-20');
     expect(resolved.nominations[0].outcome).toBe('accepted');
     expect(objectionBlocker(resolved, 'dan', 'bob', 'late', '2026-03-21')).not.toBe('');
     expect(() => objectToNomination(resolved, 'dan', 'bob', 'late', '2026-03-21')).toThrow(
@@ -362,6 +486,7 @@ describe('objectToNomination', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-01-01',
+      supports: [],
       objections: [],
       outcome: 'waiting',
     };
@@ -388,20 +513,39 @@ describe('withdrawObjection', () => {
   const opened = openNomination(SPEAKERS, config(), 'dan', 'alice', '2026-03-01');
   const deferred = objectToNomination(opened, 'dan', 'bob', 'too soon', '2026-03-02');
 
-  it('re-opens the nomination and restarts the seven days from the withdrawal', () => {
+  it('re-opens the nomination and restarts the window from the withdrawal', () => {
     const next = withdrawObjection(deferred, 'dan', 'bob', '2026-04-01');
     expect(next.nominations).toHaveLength(1);
     expect(next.nominations[0]).toEqual({
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-04-01',
+      // Recorded on the day the nomination was first opened, and still
+      // counted: there is no lower bound on the window, so a restart does
+      // not ask a member who has already said yes to say it again.
+      supports: [{ member: 'alice', date: '2026-03-01' }],
       objections: [],
       outcome: '',
     });
-    // The spent original window does not carry it: a board that was told the
-    // nomination was deferred gets a real window on it again.
+    // The spent original window does not settle it: a board that was told the
+    // nomination was deferred gets a real window on it again. On the original
+    // opening this would already have run out.
     expect(resolveNominations(next, '2026-04-05').nominations[0].outcome).toBe('');
-    expect(resolveNominations(next, '2026-04-08').nominations[0].outcome).toBe('accepted');
+    expect(resolveNominations(next, '2026-04-16').nominations[0].outcome).toBe('deferred');
+  });
+
+  it('keeps counting a support recorded before the window restarted', () => {
+    // The other half of the same rule, on a nomination the board actually
+    // carries: two members had said yes before the objection, and the
+    // withdrawal does not send them back to the screen to say it twice.
+    const carrying = backed(config(), 'dan', 'alice', '2026-03-01');
+    const objected = objectToNomination(carrying, 'dan', 'bob', 'too soon', '2026-03-02');
+    const reopened = withdrawObjection(objected, 'dan', 'bob', '2026-04-01');
+
+    expect(reopened.nominations[0].supports.map(s => s.member)).toEqual(['alice', 'carol']);
+    expect(nominationStanding(reopened, reopened.nominations[0], '2026-04-02').supports).toBe(2);
+    // Two of the three it takes, so the withdrawal alone seats nobody.
+    expect(resolveNominations(reopened, '2026-04-02').nominations[0].outcome).toBe('');
   });
 
   it('lets nobody withdraw an objection they did not write', () => {
@@ -443,6 +587,7 @@ describe('withdrawObjection', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-01-01',
+      supports: [],
       objections: [{ member: 'bob', reason: 'typed in by hand', date: '2026-01-02' }],
       outcome: 'accepted',
     };
@@ -470,7 +615,11 @@ describe('withdrawObjection', () => {
 });
 
 describe('resolveNominations', () => {
+  /** One support -- the sponsor's -- on a board of three, so the bar is not
+   *  met and the days are what settle it. */
   const opened = openNomination(SPEAKERS, config(), 'dan', 'alice', '2026-03-01');
+  /** The same nomination with the board behind it. */
+  const carried = backed(config(), 'dan', 'alice', '2026-03-01');
 
   it('leaves a nomination alone before the window closes', () => {
     const next = resolveNominations(opened, '2026-03-07');
@@ -478,16 +627,50 @@ describe('resolveNominations', () => {
     expect(next.nominations[0].outcome).toBe('');
   });
 
-  it('accepts a nomination with no objection once the window has run', () => {
+  it('defers a nomination the board never carried once the window has run', () => {
+    // Silence counts as refusal. Nobody objected, nobody but the sponsor
+    // said yes, and the days running out settles the question instead of
+    // granting it.
     const day = new Date(Date.parse('2026-03-01') + NOMINATION_WINDOW_DAYS * 86400000)
       .toISOString()
       .slice(0, 10);
     const next = resolveNominations(opened, day);
+    expect(next.nominations[0].outcome).toBe('deferred');
+    expect(next.board).toHaveLength(3);
+  });
+
+  it('seats the candidate the moment the supports reach the bar', () => {
+    // No waiting for the window: the arithmetic decides and a member writes
+    // it down, exactly as a speaker's vote closes on the ballot that reaches
+    // the bar.
+    const next = resolveNominations(carried, '2026-03-02');
     expect(next.nominations[0].outcome).toBe('accepted');
+    expect(next.board.some(m => m.login === 'dan' && m.status === 'active')).toBe(true);
+  });
+
+  it('does not count a support recorded after the window closed', () => {
+    // The days are the whole of the chance the board gets. A late click on
+    // the twentieth day would otherwise carry a nomination the board had
+    // already let run out.
+    const late = {
+      ...opened,
+      nominations: [
+        {
+          ...opened.nominations[0],
+          supports: [
+            ...opened.nominations[0].supports,
+            { member: 'bob', date: '2026-03-25' },
+            { member: 'carol', date: '2026-03-26' },
+          ],
+        },
+      ],
+    };
+    expect(nominationStanding(late, late.nominations[0], '2026-03-26').supports).toBe(1);
+    expect(resolveNominations(late, '2026-03-26').nominations[0].outcome).toBe('deferred');
   });
 
   it('adds the accepted member to the board with joined_on at the resolution date', () => {
-    const next = resolveNominations(opened, '2026-03-09');
+    const next = resolveNominations(carried, '2026-03-09');
     expect(next.board).toHaveLength(4);
     expect(next.board[3]).toEqual({
       login: 'dan',
@@ -498,7 +681,7 @@ describe('resolveNominations', () => {
   });
 
   it('never records an acceptance without seating the member', () => {
-    const next = resolveNominations(opened, '2026-03-09');
+    const next = resolveNominations(carried, '2026-03-09');
     for (const n of next.nominations) {
       if (n.outcome === 'accepted') {
         expect(next.board.some(m => m.login === n.candidate && m.status === 'active')).toBe(true);
@@ -514,12 +697,12 @@ describe('resolveNominations', () => {
         member('carol'),
         member('dan', { status: 'inactive', joined_on: '2019-04-02' }),
       ],
-      nominations: opened.nominations,
+      nominations: carried.nominations,
     });
     const next = resolveNominations(cfg, '2026-03-09');
     // One entry, now active -- and it keeps the day dan actually joined the
     // board. `joined_on` is not the day of the most recent nomination, and
-    // the inactivity rule (G-13) reads it as the start of its window, so
+    // the inactivity rule (G-14) reads it as the start of its window, so
     // rewriting it would restart that clock for someone who has been here
     // since 2019.
     expect(next.board.filter(m => m.login === 'dan')).toEqual([
@@ -536,9 +719,10 @@ describe('resolveNominations', () => {
       board: [
         member('alice'),
         member('bob'),
+        member('carol'),
         member('dan', { joined_on: '2019-04-02', unavailable_until: '2026-06-30' }),
       ],
-      nominations: opened.nominations,
+      nominations: carried.nominations,
     });
     const next = resolveNominations(cfg, '2026-03-09');
     expect(next.nominations[0].outcome).toBe('accepted');
@@ -559,7 +743,7 @@ describe('resolveNominations', () => {
           unavailable_until: '2026-06-30',
         }),
       ],
-      nominations: opened.nominations,
+      nominations: carried.nominations,
     });
     const next = resolveNominations(cfg, '2026-03-09');
     expect(next.board.filter(m => m.login === 'dan')).toEqual([
@@ -568,20 +752,20 @@ describe('resolveNominations', () => {
   });
 
   it('holds the nomination as waiting when the board is already at board_max', () => {
-    const cfg = config({ board_max: 3, nominations: opened.nominations });
+    const cfg = config({ board_max: 3, nominations: carried.nominations });
     const next = resolveNominations(cfg, '2026-03-09');
     expect(next.nominations[0].outcome).toBe('waiting');
     expect(next.board).toHaveLength(3);
   });
 
   it('leaves a waiting nomination waiting while the board stays full', () => {
-    const cfg = config({ board_max: 3, nominations: opened.nominations });
+    const cfg = config({ board_max: 3, nominations: carried.nominations });
     const waiting = resolveNominations(cfg, '2026-03-09');
     expect(resolveNominations(waiting, '2027-01-01')).toEqual(waiting);
   });
 
   it('seats a waiting nomination as soon as a seat frees up', () => {
-    const cfg = config({ board_max: 3, nominations: opened.nominations });
+    const cfg = config({ board_max: 3, nominations: carried.nominations });
     const waiting = resolveNominations(cfg, '2026-03-09');
     const shrunk = {
       ...waiting,
@@ -595,8 +779,8 @@ describe('resolveNominations', () => {
   it('fills the last free seat once and holds the rest', () => {
     const speakers = [...coHosted('dan', 2), ...coHosted('erin', 2)];
     let cfg = config({ board_max: 4 });
-    cfg = openNomination(speakers, cfg, 'dan', 'alice', '2026-03-01');
-    cfg = openNomination(speakers, cfg, 'erin', 'alice', '2026-03-01');
+    cfg = backed(cfg, 'dan', 'alice', '2026-03-01', speakers);
+    cfg = backed(cfg, 'erin', 'alice', '2026-03-01', speakers);
     const next = resolveNominations(cfg, '2026-03-09');
     expect(next.nominations.map(n => n.outcome)).toEqual(['accepted', 'waiting']);
     expect(next.board).toHaveLength(4);
@@ -614,6 +798,7 @@ describe('resolveNominations', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '2026-03-01',
+      supports: [],
       objections: [{ member: 'bob', reason: 'hand-edited', date: '2026-03-02' }],
       outcome: '',
     };
@@ -622,18 +807,36 @@ describe('resolveNominations', () => {
   });
 
   it('never revisits an accepted nomination', () => {
-    const accepted = resolveNominations(opened, '2026-03-09');
+    const accepted = resolveNominations(carried, '2026-03-09');
     const again = resolveNominations(accepted, '2026-04-09');
     expect(again).toEqual(accepted);
     expect(again.board.filter(m => m.login === 'dan')).toHaveLength(1);
   });
 
-  it('never produces a refusal, whatever the date', () => {
+  it('never seats anybody on the clock alone, whatever the date', () => {
+    // The clock can settle a nomination and it can never grant one. On a
+    // nomination the board has not carried, every date this reaches produces
+    // an open question or a deferral, and the board is the size it was.
     const outcomes = new Set<string>();
     for (const day of ['2026-03-02', '2026-03-09', '2027-01-01']) {
-      for (const n of resolveNominations(opened, day).nominations) outcomes.add(n.outcome);
+      const next = resolveNominations(opened, day);
+      for (const n of next.nominations) outcomes.add(n.outcome);
+      expect(next.board).toHaveLength(3);
     }
-    expect([...outcomes].every(o => o === '' || o === 'accepted' || o === 'waiting')).toBe(true);
+    expect([...outcomes].every(o => o === '' || o === 'deferred')).toBe(true);
+  });
+
+  it('produces no refusal, because the vocabulary has none', () => {
+    // A deferral is a question moved to another room. Nothing anywhere can
+    // write an outcome that closes against the candidate, and this is the
+    // clause that says the vocabulary is still those three.
+    const seen = new Set<string>();
+    for (const source of [opened, carried, objectToNomination(opened, 'dan', 'bob', 'x', '2026-03-02')]) {
+      for (const day of ['2026-03-02', '2027-01-01']) {
+        for (const n of resolveNominations(source, day).nominations) seen.add(n.outcome);
+      }
+    }
+    expect([...seen].every(o => o === '' || o === 'accepted' || o === 'deferred' || o === 'waiting')).toBe(true);
   });
 
   it('does not accept a nomination whose opening date is unusable', () => {
@@ -641,6 +844,7 @@ describe('resolveNominations', () => {
       candidate: 'dan',
       sponsor: 'alice',
       opened_on: '',
+      supports: [],
       objections: [],
       outcome: '',
     };
@@ -652,7 +856,7 @@ describe('resolveNominations', () => {
     const cfg = config({
       board: [member('alice'), member('bob'), member('carol'), member('dan')],
       board_max: 4,
-      nominations: opened.nominations,
+      nominations: carried.nominations,
     });
     const next = resolveNominations(cfg, '2026-03-09');
     expect(next.nominations[0].outcome).toBe('accepted');
@@ -660,9 +864,9 @@ describe('resolveNominations', () => {
   });
 
   it('never mutates the config it is given', () => {
-    resolveNominations(opened, '2026-03-09');
-    expect(opened.board).toHaveLength(3);
-    expect(opened.nominations[0].outcome).toBe('');
+    resolveNominations(carried, '2026-03-09');
+    expect(carried.board).toHaveLength(3);
+    expect(carried.nominations[0].outcome).toBe('');
   });
 });
 
@@ -692,9 +896,16 @@ describe('declareUnavailability', () => {
 });
 
 describe('the rule as a whole', () => {
-  it('asks for two co-hosted webinars and a seven-day window', () => {
+  it('asks for two co-hosted webinars, a fortnight, and a majority', () => {
     expect(NOMINATION_MIN_CO_HOSTED).toBe(2);
-    expect(NOMINATION_WINDOW_DAYS).toBe(7);
+    expect(NOMINATION_WINDOW_DAYS).toBe(14);
+    expect(NOMINATION_MINIMUM_SUPPORTS).toBe(3);
+    // More than half, and never below the floor. A board of two would put a
+    // majority at one, and one member seating another is the whole of what
+    // the floor is there to stop.
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(nominationBar)).toEqual([
+      3, 3, 3, 3, 3, 3, 4, 4, 5, 5,
+    ]);
   });
 
   it('shows a refusal as an explanation, not as a raw error', () => {

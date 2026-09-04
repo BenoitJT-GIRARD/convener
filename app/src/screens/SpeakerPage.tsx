@@ -174,8 +174,8 @@ export function SpeakerPage() {
       )}
 
       {/* Archiving publishes a named researcher's recording, so it is no
-          longer a bare button here: it lives behind the second gate (G-06,
-          G-07), which asks for the speaker's permission and the board's
+          longer a bare button here: it lives behind the second gate (G-07,
+          G-08), which asks for the speaker's permission and the board's
           separately. Still shown once archived, because a speaker may
           withdraw their permission afterwards and that has to be actionable. */}
       {(s.status === 'delivered' || s.status === 'archived') && (

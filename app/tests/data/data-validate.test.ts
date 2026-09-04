@@ -92,7 +92,7 @@ describe('what a volunteer is told when instance/data/config.yml is malformed', 
     const message = refusal(() =>
       parseConfig(
         configYaml({
-          nominations: [{ candidate: 'frank', sponsor: 'alice', opened_on: '', objections: [], outcome: '' }],
+          nominations: [{ candidate: 'frank', sponsor: 'alice', opened_on: '', supports: [], objections: [], outcome: '' }],
         }).replace("outcome: ''", 'outcome: rejected'),
       ),
     );

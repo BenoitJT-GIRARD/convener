@@ -13,6 +13,6 @@
 | **Parked** | A good speaker idea kept for later, for when a slot opens. It is reversible: the Board can bring a parked lead back. |
 | **Season** | A year of webinars. |
 | **Recusal** | A Board member standing aside from one vote because of a conflict of interest, with a written reason. They leave the count for that vote. |
-| **Nomination** | A proposal that a Contributor joins the Editorial Board, sponsored by a member. It carries after seven days without an objection. |
-| **Deferred** | A nomination somebody objected to in writing. Not a refusal: the yearly meeting decides. |
+| **Nomination** | A proposal that a Contributor joins the Editorial Board, put forward by a member. It carries only when a majority of the eligible Board has supported it inside its window; saying nothing counts against it. |
+| **Deferred** | A nomination the Board did not carry — objected to in writing, or short of the bar when its days ran out. Not a refusal: a meeting decides. |
 | **The forum** | {{ instance.organisation }} ({{ instance.forum_host }}) — where discussion happens before and after each talk. |

@@ -109,35 +109,67 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
 }
 
 /* ------------------------------------------------------------------ *
- * Nominations (G-04)
+ * Nominations (G-05)
  *
  * How the board renews itself: a Contributor who has co-hosted at least
- * two webinars is sponsored by a board member, and joins unless someone
- * objects within seven days. Silence is consent; an objection is not a
- * refusal but a referral to the annual meeting.
+ * two webinars is put forward by a board member, and joins when a majority
+ * of the eligible board has said yes inside the window. **Silence counts as
+ * refusal.** A member who has said nothing has not agreed, and no length of
+ * waiting turns that into a yes -- which is why `nominationStanding` counts
+ * the supports on the record rather than counting the members who have not
+ * objected.
+ *
+ * The default used to run the other way: one sponsor, seven days, and
+ * anybody the board did not actively stop was seated. One member's act plus
+ * a quiet fortnight was the whole of it, which is a board a small group can
+ * turn over.
  *
  * There is deliberately no rejected outcome in the vocabulary. The three
  * outcomes a transformation here can write are `accepted` (seated),
- * `deferred` (an objection was raised, the annual meeting arbitrates) and
- * `waiting` (the rule was satisfied but there is no seat). None of them is
- * terminal against the candidate, and none can be written by a scheduled
- * job: `resolveNominations` is called from the Board screen by a signed-in
- * member, and the only outcome it can reach without a named human act is
- * an acceptance -- the thing silence is supposed to produce.
+ * `deferred` (the question goes to a meeting -- either because a member
+ * objected or because the window ran out below the bar) and `waiting` (the
+ * board agreed and there is no seat). None of them is terminal against the
+ * candidate, and none can be written by a scheduled job: `resolveNominations`
+ * is called from the Board screen by a signed-in member.
  *
  * These are pure functions of their arguments, today's date included, so
  * they run inside a `mutate` transformation that may be replayed against a
  * freshly-read config after a concurrent write.
  * ------------------------------------------------------------------ */
 
-/** Days of silence after which a nomination carries (G-04). Calendar days,
- *  not working days: `objection_window_working_days` is the *publication*
- *  gate (G-07), a different window with a different unit. So `windowHasRun`
- *  below deliberately does *not* go through `state/working-days.ts`: that
- *  module counts the working-day windows, and routing this one through it
- *  would lengthen a seven-day window to nine or eleven calendar days -- a
- *  real decision moved by real days, on nobody's authority. */
-export const NOMINATION_WINDOW_DAYS = 7;
+/** Days the board has to express itself on a nomination (G-05). Calendar
+ *  days, not working days: `objection_window_working_days` is the
+ *  *publication* gate (G-08), a different window with a different unit. So
+ *  `windowHasRun` below deliberately does *not* go through
+ *  `state/working-days.ts`: that module counts the working-day windows, and
+ *  routing this one through it would stretch a fortnight into three weeks --
+ *  a real decision moved by real days, on nobody's authority.
+ *
+ *  Fourteen, and the same fourteen as `config.vote_window_days` and as the
+ *  `lead_decision` turnaround target: all three are the board being asked to
+ *  express itself. Seven was enough while a member only had to act to *stop*
+ *  a nomination; now every one of them has to act for it to carry. */
+export const NOMINATION_WINDOW_DAYS = 14;
+
+/** Supports a nomination needs however small the board is (G-05).
+ *
+ *  A majority on its own gives one, on a board of two, and one member
+ *  seating another is what this rule exists to prevent. It is the same
+ *  three as `governance.MINIMUM_YES` and for the same reason, and it is a
+ *  constant of its own rather than that one imported: they are two rules
+ *  about two questions, and folding them into one number would make a
+ *  change to the speaker's bar move the board's own membership with it. */
+export const NOMINATION_MINIMUM_SUPPORTS = 3;
+
+/** How many supports carry a nomination on a board of `eligible` members:
+ *  more than half, and never fewer than `NOMINATION_MINIMUM_SUPPORTS`. 5 ->
+ *  3 and 8 -> 5, matching the table the handbook states.
+ *
+ *  Deliberately not `governance.thresholdFor`: that is two thirds and it
+ *  decides a speaker. This is a majority and it appoints a member. */
+export function nominationBar(eligible: number): number {
+  return Math.max(Math.floor(eligible / 2) + 1, NOMINATION_MINIMUM_SUPPORTS);
+}
 
 /** Webinars a candidate must have actually co-hosted to be nominated,
  *  counted from `instance/data/speakers.yml` by `coHostedCount` -- never declared in
@@ -222,6 +254,73 @@ function windowHasRun(nomination: Nomination, on: string): boolean {
   return !Number.isNaN(days) && days >= NOMINATION_WINDOW_DAYS;
 }
 
+/** Whether a support recorded on `date` falls inside the window. `NaN` on
+ *  either side reads as outside, so a support with an unusable day, and
+ *  every support on a nomination with an unusable opening day, is on the
+ *  record and out of the count -- the direction that seats nobody. */
+function inTime(nomination: Nomination, date: string): boolean {
+  const days = daysBetween(nomination.opened_on, date);
+  return !Number.isNaN(days) && days < NOMINATION_WINDOW_DAYS;
+}
+
+/** Where a nomination stands today: how many members could speak, how many
+ *  of them have, and what it would take. */
+export interface NominationStanding {
+  /** Active members, minus those away today -- the denominator. */
+  eligible: number;
+  /** What `nominationBar` asks of that denominator. */
+  bar: number;
+  /** Supports that count today: one per eligible member, and none dated
+   *  after the window closed. */
+  supports: number;
+  /** Whole days since the window opened, `0` when the record does not hold
+   *  a day a clock could start from. */
+  elapsed: number;
+  /** Whether the board has said yes. */
+  carried: boolean;
+}
+
+/**
+ * How `nomination` stands on `on`.
+ *
+ * Eligibility is read the way `governance.eligibleVoters` reads it for a
+ * speaker, less the recusal, which belongs to one speaker's record and has
+ * no counterpart here: active members, minus anyone whose declared absence
+ * covers the day. So the bar moves the instant somebody declares one, for
+ * everyone looking, exactly as the two-thirds bar does.
+ *
+ * **A support dated after the window closed does not count.** Without that,
+ * a nomination the board let run out could be carried by one click on the
+ * twentieth day, and the days would be a suggestion rather than the whole
+ * of the chance the board is given. There is no lower bound to match it: a
+ * support recorded before `opened_on` is one that survived the restart
+ * `withdrawObjection` performs, and a member who said yes said yes.
+ *
+ * Distinct members, not entries: a hand-edited file may name one member
+ * twice, and repetition must not inflate a count that seats somebody.
+ */
+export function nominationStanding(
+  config: Config,
+  nomination: Nomination,
+  on: string,
+): NominationStanding {
+  const { logins, unavailable } = activeBoard(config, on);
+  const away = new Set(unavailable);
+  const voters = new Set(logins.filter(login => !away.has(login)));
+  const counted = new Set(
+    nomination.supports.filter(s => voters.has(s.member) && inTime(nomination, s.date)).map(s => s.member),
+  );
+  const bar = nominationBar(voters.size);
+  const days = daysBetween(nomination.opened_on, on);
+  return {
+    eligible: voters.size,
+    bar,
+    supports: counted.size,
+    elapsed: Number.isNaN(days) ? 0 : days,
+    carried: counted.size >= bar,
+  };
+}
+
 /**
  * Why `candidate` cannot be nominated by `sponsor` today, as a plain
  * sentence -- or `''` when the nomination can be opened. The screen calls
@@ -287,7 +386,7 @@ export function nominationBlocker(
  *
  * Eligibility is computed here, from `speakers`, rather than taken as a
  * number from the caller -- passing a count would be declaring eligibility,
- * which is precisely what G-04 forbids. That is why this takes the speaker
+ * which is precisely what G-05 forbids. That is why this takes the speaker
  * list even though it writes only to `config.yml`: the two files are read
  * in the same load cycle, and co-hosting history changes far more slowly
  * than the config being transformed.
@@ -299,6 +398,11 @@ export function nominationBlocker(
  * whose objections have all been withdrawn is kept in the list rather than
  * replaced, so the record of what was objected to stays readable next to the
  * new attempt.
+ *
+ * The sponsor's own support is written here, on the same day. Opening a
+ * nomination is saying yes to it, and leaving that to a second click would
+ * let a nomination sit at nought supports with the member who asked for it
+ * among the silent -- and silence is a refusal now.
  */
 export function openNomination(
   speakers: Speaker[],
@@ -314,6 +418,7 @@ export function openNomination(
     candidate: candidate.trim(),
     sponsor,
     opened_on: today,
+    supports: [{ member: sponsor, date: today }],
     objections: [],
     outcome: '',
   };
@@ -321,10 +426,88 @@ export function openNomination(
 }
 
 /**
+ * Which nomination a support for `candidate` lands on: the most recent one
+ * the board is still being asked about, or `-1`.
+ *
+ * `outcome: ''` and nothing else. A `deferred` one is in another room, an
+ * `accepted` one has its seat, and a `waiting` one has already carried --
+ * more support would change none of the three, and offering the control
+ * would suggest otherwise.
+ */
+function supportTarget(config: Config, candidate: string): number {
+  return config.nominations.reduce(
+    (found, n, i) => (n.candidate === candidate && n.outcome === '' ? i : found),
+    -1,
+  );
+}
+
+/**
+ * Why `member` cannot support `candidate`'s nomination today, as a plain
+ * sentence -- or `''` when they can.
+ *
+ * A member who has declared an absence is not refused. They are out of
+ * today's count, like any other vote they are away for, and their support
+ * counts again the day they are back if the window is still open: the
+ * denominator and the numerator move together, which is what `activeBoard`
+ * already does for the two-thirds bar.
+ */
+export function supportBlocker(
+  config: Config,
+  candidate: string,
+  member: string,
+  on: string,
+): string {
+  const index = supportTarget(config, candidate);
+  if (index === -1) return `There is no open nomination for ${candidate}.`;
+  if (!isBoardMember(config, member, on)) {
+    return 'Only an active board member can support a nomination.';
+  }
+  const nomination = config.nominations[index];
+  if (nomination.supports.some(s => s.member === member)) {
+    return `You have already supported ${candidate}'s nomination.`;
+  }
+  if (windowHasRun(nomination, on)) {
+    return (
+      `The ${NOMINATION_WINDOW_DAYS} days the board had on ${candidate}'s nomination ` +
+      'have run. A support recorded now does not count towards it, and the ' +
+      'question goes to the meeting.'
+    );
+  }
+  return '';
+}
+
+/**
+ * Record `member`'s support for `candidate`'s nomination on `today`.
+ *
+ * One support per member, and no way to take one back: a member who has
+ * changed their mind objects, which carries a written reason and defers the
+ * nomination on the spot. So the only thing this can do is move a
+ * nomination towards carrying, and it is a member's own named act -- there
+ * is no path here a clock could take.
+ *
+ * Returns a new `Config`; never mutates the one it is given.
+ */
+export function supportNomination(
+  config: Config,
+  candidate: string,
+  member: string,
+  today: string,
+): Config {
+  const blocker = supportBlocker(config, candidate, member, today);
+  if (blocker !== '') throw new NominationRejected(blocker);
+
+  const target = supportTarget(config, candidate);
+  const nominations = config.nominations.map((n, i): Nomination =>
+    i === target ? { ...n, supports: [...n.supports, { member, date: today }] } : n,
+  );
+  return { ...config, nominations };
+}
+
+/**
  * Which nomination an objection to `candidate` lands on: the most recent
  * one that is not already accepted, or `-1` when there is none. An accepted
  * nomination is closed to objections -- the seat is taken, and re-opening it
- * is a departure (G-13), not an objection. A *deferred* one still takes
+ * is a departure (G-14), not an objection. A *deferred* one still takes
  * them: the annual meeting arbitrates on the whole record, so a second
  * member's reason must be recordable next to the first. Most recent, not
  * every match, because a deferred nomination can be brought back (see
@@ -362,15 +545,19 @@ export function objectionBlocker(
  * Record `member`'s objection to `candidate`'s nomination and defer it, in
  * one transformation. The two are inseparable on purpose: an objection that
  * only appended to the list would leave a nomination carrying an objection
- * while still on course to be accepted by silence, and the next
- * `resolveNominations` would have to catch it. There is no window in which
- * that state exists.
+ * while still on course to carry, and the next `resolveNominations` would
+ * have to catch it. There is no window in which that state exists.
  *
- * `deferred` is not a refusal. It means the annual meeting decides, at the
- * G-01 threshold, with the objection and its author on the record -- which
- * is why a written reason and an identified board member are both required.
- * A second objection from the same member replaces the first in place,
- * keeping list order, exactly as `ballots.castBallot` does.
+ * `deferred` is not a refusal. It means a meeting decides, with the
+ * objection and its author on the record -- which is why a written reason
+ * and an identified board member are both required. A second objection from
+ * the same member replaces the first in place, keeping list order, exactly
+ * as `ballots.castBallot` does.
+ *
+ * The objector's own support goes with it. A member cannot be counted on
+ * both sides of one question, and the objection is the later act; the
+ * support they had recorded is what they have just changed their mind
+ * about.
  */
 export function objectToNomination(
   config: Config,
@@ -389,6 +576,7 @@ export function objectToNomination(
     const existing = n.objections.some(o => o.member === member);
     return {
       ...n,
+      supports: n.supports.filter(s => s.member !== member),
       objections: existing
         ? n.objections.map(o => (o.member === member ? objection : o))
         : [...n.objections, objection],
@@ -457,11 +645,17 @@ export function withdrawalBlocker(config: Config, candidate: string, member: str
  * the withdrawal survives -- the register adds, so the history keeps saying
  * what the objection said.
  *
- * When the last objection goes, the seven days start again from `today`
- * rather than resuming from the original opening. The rest of the board was
- * told this nomination had been deferred; most of them will have stopped
- * looking at it, and letting a spent window carry it the instant the
- * objection lifts would seat a member on a silence nobody was asked for.
+ * When the last objection goes, the window starts again from `today` rather
+ * than resuming from the original opening. The rest of the board was told
+ * this nomination had been deferred; most of them will have stopped looking
+ * at it, and a spent window would put the question straight back to a
+ * meeting on the day it was re-opened.
+ *
+ * The supports already on the record stay on it, and `nominationStanding`
+ * goes on counting them: one is dated before the new `opened_on` from that
+ * moment, and there is no lower bound on the window for exactly this
+ * reason. A member who said yes said yes, and somebody else's objection
+ * being lifted is no reason to ask them again.
  *
  * Returns a new `Config`; never mutates the one it is given, and takes
  * `today` as an argument, so it runs inside a `mutate` transformation that
@@ -495,7 +689,7 @@ export function withdrawObjection(
  * `joined_on` it has always had:
  *
  * - `joined_on` is the day the person joined the board, not the day of the
- *   most recent nomination. It is also what the inactivity rule (G-13) reads
+ *   most recent nomination. It is also what the inactivity rule (G-14) reads
  *   as the start of its silence window, so rewriting it restarts that clock
  *   for someone who has been on the board for years.
  * - `unavailable_until` is an absence that member declared about themselves
@@ -519,10 +713,21 @@ function seat(board: BoardMember[], candidate: string, on: string): BoardMember[
 }
 
 /**
- * Apply every nomination whose seven days of silence have run, and seat the
- * members that carries. Returns a new `Config`; never mutates its argument,
- * and returns a value-equal result when nothing is due, so it is safe to
- * call from a `mutate` transformation that may be replayed.
+ * Settle every nomination the board has finished with, and seat the members
+ * that carries. Returns a new `Config`; never mutates its argument, and
+ * returns a value-equal result when nothing is due, so it is safe to call
+ * from a `mutate` transformation that may be replayed.
+ *
+ * Three answers, and the middle one is the change: a nomination the board
+ * has carried is `accepted` (or `waiting`, if there is no seat); one still
+ * inside its window is left alone; and one whose window has run without
+ * reaching the bar is `deferred` -- **silence is a refusal**, so the days
+ * running out settles the question instead of granting it.
+ *
+ * A `waiting` nomination is past that test and is not put to it again. The
+ * board said yes; what it is waiting for is room, and re-reading the bar
+ * against a board that has since shrunk would take a seat back from
+ * somebody on nobody's decision.
  *
  * An acceptance and the board entry it implies are written together, so an
  * `accepted` nomination whose candidate is not on the board cannot exist. A
@@ -550,7 +755,7 @@ export function resolveNominations(config: Config, today: string, only?: string)
     // `only` settles one candidate's nomination and leaves the rest for a
     // later call. `Board.tsx` uses it to write one commit per nomination, so
     // the decision register records who joined the board rather than only
-    // that some nominations were applied (G-09). Omitted, every due
+    // that some nominations were applied (G-10). Omitted, every due
     // nomination is settled at once, which is what the seat counting below
     // is written for.
     if (only !== undefined && n.candidate !== only) return n;
@@ -558,7 +763,16 @@ export function resolveNominations(config: Config, today: string, only?: string)
     // A hand-edited nomination carrying an objection with no outcome: the
     // objection stands, so the nomination is deferred, never accepted.
     if (n.objections.length > 0) return { ...n, outcome: 'deferred' };
-    if (n.outcome === '' && !windowHasRun(n, today)) return n;
+
+    // Against the board this run is building rather than the one it was
+    // handed: a call that has already seated somebody has changed the
+    // denominator, and the next nomination is counted over the board as it
+    // now stands.
+    const carried = n.outcome === 'waiting' || nominationStanding({ ...config, board }, n, today).carried;
+    if (!carried) {
+      if (!windowHasRun(n, today)) return n;
+      return { ...n, outcome: 'deferred' };
+    }
 
     const seated = board.some(m => m.login === n.candidate && m.status === 'active');
     const active = board.filter(m => m.status === 'active').length;

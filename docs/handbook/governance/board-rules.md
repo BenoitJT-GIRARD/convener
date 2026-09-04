@@ -4,7 +4,7 @@ You have just joined the Editorial Board. This page is the whole of what binds y
 
 It describes the rules **as the application actually applies them**. Where a number appears here, it is the number the code computes; where a rule says "never", nothing in the repository can produce the case.
 
-**Why some rules carry a number.** *(G-01)*, *(G-04)*: these are the series' governance rules, numbered so that a commit message, a comment in the code, or another page can name a rule instead of paraphrasing it. The number is a handle; the rule is the prose beside it. Not every rule here has one, and some of the numbered rules are written on other pages and carry their number there. The table at the foot of this page names every one of them and the page it is stated on.
+**Why some rules carry a number.** *(G-01)*, *(G-05)*: these are the series' governance rules, numbered so that a commit message, a comment in the code, or another page can name a rule instead of paraphrasing it. The number is a handle; the rule is the prose beside it. Not every rule here has one, and some of the numbered rules are written on other pages and carry their number there. The table at the foot of this page names every one of them and the page it is stated on.
 
 **What this page is not.** It holds no name and no count. Every rule below is written against *the Board*, whoever that is: the members, their joining days and their absences are in `instance/data/config.yml`, edited from the cockpit's own Board screen, and a series run by somebody else has a different Board and the same rules. That separation is the point — a rule that named a member would have to be rewritten every time one joined, and a page that carried a headcount would be wrong the day after the yearly meeting. Where the current Board's own composition is unusual enough to change how a rule *feels*, that is said on [The Editorial Board](editorial-board.md), next to the composition itself.
 
@@ -13,7 +13,7 @@ It describes the rules **as the application actually applies them**. Where a num
 Start with these, because they are what makes the rest safe to read.
 
 - **No automated process refuses a speaker.** The only status a scheduled job can write on a suggested speaker is *parked* — kept for later. Declining is an act a named member takes.
-- **No automated process removes a member, and no nomination can be refused.** The outcomes a nomination can reach are *accepted*, *deferred* and *waiting*. There is no rejected outcome anywhere in the vocabulary, so none can be written by anybody, human or otherwise. The yearly inactivity check *proposes*, prints its proposal, and has no way to apply it.
+- **No automated process removes a member, and no nomination is ever refused.** The outcomes a nomination can reach are *accepted*, *deferred* and *waiting*. There is no rejected outcome anywhere in the vocabulary, so none can be written by anybody, human or otherwise. A nomination the Board does not carry is *deferred*, which moves the question to a meeting and closes nothing against the person. The yearly inactivity check *proposes*, prints its proposal, and has no way to apply it.
 - **The scheduled job cannot sign a decision.** Every decision is recorded as a commit naming the member who took it, and the nightly job has no login to sign with. Anything that has to be signed is therefore something a person did.
 
 ## Who votes, and how many yes votes are needed
@@ -51,6 +51,8 @@ The floor of three matters: without it, three recusals on a Board of six would q
 **The bar is never written down.** There is no threshold field in any file. It is recomputed from the ballots and the Board every time a screen is drawn, so it cannot drift away from the Board it claims to describe. If someone declares an absence, the bar moves that instant, for everyone looking.
 
 You cast one ballot per speaker. Changing your mind replaces your ballot; it never adds a second one.
+
+This bar decides a speaker. What it takes to appoint a member of the Board is a different number, and it is under *Joining the Board* (G-05).
 
 ## The vote window, and what parking means (G-02)
 
@@ -90,42 +92,72 @@ It cannot be recorded against a talk that has already been given, or against a s
 
 Nothing about the incident is written to anyone outside. The register records that the vote was reopened and by whom; the reason stays with the record, visible to the Board.
 
-## Joining the Board (G-04)
+## Joining the Board
 
 ### Who may be nominated
 
 Anyone who has **co-hosted at least two webinars that actually happened**. That is counted from the event records themselves — not declared anywhere, and not something a Board member can assert. Webinars still to come do not count yet.
 
-A Board member sponsors the nomination. You cannot nominate someone already on the Board, and you cannot open a second nomination for someone whose nomination is still an open question.
+A Board member opens the nomination, naming the candidate by their GitHub username. You cannot nominate someone already on the Board, and you cannot open a second nomination for someone whose nomination is still an open question. Opening one records your own support for it: nobody puts a candidate forward and then leaves them unbacked.
 
-### Silence accepts
+### The Board has to say yes (G-05)
 
-A nomination carries after **seven calendar days without an objection**.
+A nomination is a question put to the Board, and it carries only when the Board answers it.
 
-Silence is genuinely consent here — but the acceptance is still *recorded* by a member. The Board screen says which nominations are due and a member presses the button; no scheduled job seats anybody. Silence produces the outcome; a person writes it down.
+**The window is 14 calendar days** from the day the nomination was opened. It is the length the vote window already has (G-02) and the length the series already gives itself to decide on a suggested speaker (G-09): all three are the Board being asked to express itself, and one number is easier to keep than three.
 
-If the Board is already at its maximum size, the nomination becomes **waiting** rather than accepted. Waiting is not a refusal either: it is re-examined every time the Board changes, and the candidate is seated as soon as a seat frees.
+**The bar is a majority of the eligible Board, and never fewer than three supports.**
+
+| Eligible members | Supports needed |
+|---|---|
+| 3 | 3 |
+| 4 | 3 |
+| 5 | 3 |
+| 6 | 4 |
+| 7 | 4 |
+| 8 | 5 |
+| 9 | 5 |
+
+Eligible is counted here as it is counted for a speaker, without the recusal, which belongs to a speaker's record: every active member, minus anyone who has declared themselves away over the day the count is taken. A member who is away is still a member, and the bar moves with them the moment they declare.
+
+**The bar for a speaker and the bar for a member are two numbers.** Two thirds of the eligible Board approves a speaker (G-01); a majority of it appoints a member. Nothing converts between them.
+
+The floor of three is what a majority on its own does not give you: half of a Board of two is one, and one member seating another is the whole of what this rule exists to prevent. **A Board with fewer than three members able to vote appoints nobody**, and the question goes to the meeting instead.
+
+**Silence counts as refusal.** A member who has said nothing has not agreed, and no length of waiting turns their silence into a yes. So:
+
+- the moment the supports reach the bar, the nomination has carried, and a member records it. The Board screen says which nominations are due and a member presses the button; no scheduled job seats anybody. The Board produces the outcome; a person writes it down.
+- a support recorded after the window has closed does not count. The days are the whole of the chance the Board is given.
+- if the days run out below the bar, the candidate is **not appointed** and the nomination is **deferred**: the question goes to the Board's next meeting, or to the yearly one.
+
+If the Board is already at its maximum size, a nomination that has carried becomes **waiting**. Waiting is a question about room and says nothing about the candidate: it is re-examined every time the Board changes, and the candidate is seated as soon as a seat frees.
+
+**The candidate is written to.** A member writes to them, says the nomination did not carry, and says where the question goes next. This page holds no wording for that letter: it is addressed to one person about a decision about them, and a form of words published here would turn it into a form letter. Nothing in the repository records that it was sent.
+
+**A candidate still inside the window when the meeting comes stays inside it.** Nothing stored says a meeting happened, so nothing here turns on one: the window runs the days it has, and the members who are in the room record their support there like anybody else.
 
 ### Objecting, and what deferral means
 
 Any active member may object, in writing. An objection:
 
 - **requires a reason** — one line is enough, and it is kept on the record;
-- **is not a refusal.** It defers the nomination to the yearly meeting, which decides at the ordinary two-thirds bar with the objection and its author on the record. That is why both the reason and the name are required.
+- **closes the window early.** It defers the nomination to the yearly meeting there and then, with the objection and its author on the record. That is why both the reason and the name are required.
 
-A second objection from the same member replaces their first rather than stacking.
+A second objection from the same member replaces their first rather than stacking, and a member who had recorded support and then objects has that support taken off: nobody is counted on both sides of one question.
 
 **While an objection stands, the nomination cannot be re-opened.** A fresh nomination for the same person is refused, and the app says why and who objected. Otherwise an objection could be routed around by nominating the same person again a minute later, which would empty the deferral of its purpose.
 
-The way forward is that **the objecting member withdraws their own objection** — and only they can. Nobody can withdraw anyone else's, and no delay clears one. When the last objection on a nomination is withdrawn, the nomination is open again and **the seven days start again from that day**, so the rest of the Board gets a real window on a question they had been told was already settled.
+The way forward is that **the objecting member withdraws their own objection** — and only they can. Nobody can withdraw anyone else's, and no delay clears one. When the last objection on a nomination is withdrawn, the nomination is open again and **the 14 days start again from that day**, so the rest of the Board gets a real window on a question they had been told was already settled. The supports already on the record stay on it: a member who said yes said yes, and somebody else's objection being lifted is no reason to ask them again.
+
+A nomination deferred because its window ran out carries no objection, so there is nothing for anybody to withdraw. The way back to it is a fresh nomination, which the meeting is free to call for.
 
 The yearly meeting acts through that same door: a member whose objection the meeting does not uphold withdraws it, and the nomination resumes. If nobody withdraws, the deferral simply stands and the meeting can take it up again. There is no field anywhere recording that a meeting happened, and none was invented for this — a rule that turned on a date nobody writes down would be a rule nobody could rely on.
 
 ## Stepping back: absence, and inactivity
 
-**Declaring an absence (G-05)** is something you do for yourself. You give the last day you are away — that day included — and you are out of every count until it passes. You come back on your own: there is nothing to write, and nothing to remember. There is no proxy and no vote by delegation.
+**Declaring an absence (G-06)** is something you do for yourself. You give the last day you are away — that day included — and you are out of every count until it passes. You come back on your own: there is nothing to write, and nothing to remember. There is no proxy and no vote by delegation.
 
-**Inactivity** (G-13) is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
+**Inactivity** (G-14) is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
 
 Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in `docs/operating/operations.md` ("Inactivity").
 
@@ -145,7 +177,7 @@ Two roles, on two separate GitHub scopes: the **architect** is the organisation'
 
 A recording goes online only when **two separate permissions** are in hand, from two separate parties. Neither can be read off the other.
 
-### The speaker's — which must be present (G-06)
+### The speaker's — which must be present (G-07)
 
 Ask them, in writing, and record the answer. Only two answers can be recorded: **granted** or **refused**.
 
@@ -153,7 +185,7 @@ Ask them, in writing, and record the answer. Only two answers can be recorded: *
 - A **refusal takes the recording down** on the spot if it was already online, and it can be given at any time. A speaker may change their mind after publication.
 - A record with no answer yet is exactly as blocking as one with no answer ever.
 
-### The Board's — which must be absent (G-07)
+### The Board's — which must be absent (G-08)
 
 Here it is the **objection** that has to turn up, and silence does clear the way.
 
@@ -173,7 +205,7 @@ Two units are in use, on purpose, and nothing converts between them.
 |---|---|
 | Publication objection window (3) | **Working days** — weekends skipped |
 | Vote window (14) | Calendar days |
-| Nomination window (7) | Calendar days |
+| Nomination window (14) | Calendar days |
 | Turnaround targets (14 / 30 / 7 / 14) | Calendar days |
 
 Reading a calendar window as working days would stretch fourteen days into twenty; reading a working-day window as calendar days would shorten it across every weekend. Either way a real deadline moves by real days, so the unit is stated wherever a window is.
@@ -182,7 +214,7 @@ Reading a calendar window as working days would stretch fourteen days into twent
 
 Every date in the system is a **Paris calendar day**, everywhere, so a member reading the app late at night in another time zone sees the same day as the nightly job.
 
-### The turnaround targets (G-08)
+### The turnaround targets (G-09)
 
 Four steps have a target time: a decision on a suggested speaker (14 days), a follow-up on an invitation with no answer (30), a forum summary after the talk (7), the recording after the talk (14).
 
@@ -210,16 +242,21 @@ edit this block — run*
 | G-01 | The bar | `docs/handbook/governance/board-rules.md` |
 | G-02 | The vote window, and what parking means | `docs/handbook/governance/board-rules.md` |
 | G-03 | Standing aside: recusal | `docs/handbook/governance/board-rules.md` |
-| G-04 | Joining the Board | `docs/handbook/governance/board-rules.md` |
-| G-05 | Declaring an absence | `docs/handbook/governance/board-rules.md` |
-| G-06 | The speaker's — which must be present | `docs/handbook/governance/board-rules.md` |
-| G-07 | The Board's — which must be absent | `docs/handbook/governance/board-rules.md` |
-| G-08 | The turnaround targets | `docs/handbook/governance/board-rules.md` |
-| G-09 | This log, and the register next to it | `docs/handbook/governance/decisions.md` |
-| G-10 | Diversity | `docs/handbook/governance/selection-criteria.md` |
-| G-11 | Registration | `docs/handbook/governance/traitement-donnees.md` |
-| G-12 | The conflict-of-interest slide | `docs/handbook/toolkit/run-of-show.md` |
-| G-13 | Inactivity | `docs/operating/operations.md` |
-| G-14 | The Board's target size | `docs/operating/operations.md` |
-| G-15 | Handover | `docs/engineering/architecture.md` |
+| G-05 | The Board has to say yes | `docs/handbook/governance/board-rules.md` |
+| G-06 | Declaring an absence | `docs/handbook/governance/board-rules.md` |
+| G-07 | The speaker's — which must be present | `docs/handbook/governance/board-rules.md` |
+| G-08 | The Board's — which must be absent | `docs/handbook/governance/board-rules.md` |
+| G-09 | The turnaround targets | `docs/handbook/governance/board-rules.md` |
+| G-10 | This log, and the register next to it | `docs/handbook/governance/decisions.md` |
+| G-11 | Diversity | `docs/handbook/governance/selection-criteria.md` |
+| G-12 | Registration | `docs/handbook/governance/traitement-donnees.md` |
+| G-13 | The conflict-of-interest slide | `docs/handbook/toolkit/run-of-show.md` |
+| G-14 | Inactivity | `docs/operating/operations.md` |
+| G-15 | The Board's target size | `docs/operating/operations.md` |
+| G-16 | Handover | `docs/engineering/architecture.md` |
+
+And the numbers no rule carries any more. Each was a rule once, and no later
+rule takes it:
+
+- **G-04** — Joining the Board, under which a nomination carried on seven calendar days of silence. Withdrawn on 2026-09-04, when the Board's own agreement became what appoints a member.
 <!-- END GENERATED RULE INDEX -- edit tools/scripts/generate_rule_index.py, not this block -->

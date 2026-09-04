@@ -580,7 +580,7 @@ export const PHASES: PhaseDef[] = [
         note: 'Only after the speaker has agreed to the recording being published — check the recorded answer first.',
         contentKey: 'toolkit/emails/video-online',
       },
-      // The conflict declared to the audience during the session (G-12), as
+      // The conflict declared to the audience during the session (G-13), as
       // three lines and not one.
       //
       // Three, because the decision names three facts -- a slide of its own,

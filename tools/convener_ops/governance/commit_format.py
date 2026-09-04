@@ -68,7 +68,7 @@ ACTS: Final[dict[str, str]] = {
     # the overnight sweep. The day is not in the subject: it is already on
     # the record, and `lock-date` sets the same precedent.
     "mark-delivered": "record the delivery of",
-    # Publishing a recording (G-06, G-07).
+    # Publishing a recording (G-07, G-08).
     "consent-set": "record the recording consent of",
     "publication-approve": "approve publication of",
     "publication-object": "record an objection to publishing",
@@ -78,7 +78,7 @@ ACTS: Final[dict[str, str]] = {
     # the speaker or the board has refused still leaves a record worth
     # closing, and closing it writes no published outcome.
     "archive-unpublished": "archive without publishing the recording of",
-    # Who sits on the board (G-04), and who is available to vote (G-13).
+    # Who sits on the board (G-05), and who is available to vote (G-14).
     #
     # `availability-set` is a decision like the rest and not a diary
     # entry: `unavailable_until` is read by `activeBoard`, so declaring
@@ -89,6 +89,7 @@ ACTS: Final[dict[str, str]] = {
     # and the value is in the diff the commit carries.
     "availability-set": "record the availability of",
     "nomination-open": "open a nomination for",
+    "nomination-support": "record support for the nomination of",
     "nomination-object": "record an objection to the nomination of",
     "nomination-withdraw-objection": "withdraw an objection to the nomination of",
     "nomination-resolve": "settle the nomination of",
