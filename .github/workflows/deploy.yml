@@ -21,8 +21,11 @@ on:
     # whose *absence* is the defect, that is the only safe direction, so
     # this list holds only what provably cannot reach the bundle -- the
     # showcase (`site/`, published by `publish-showcase.yml`), the relays
-    # (each with its own deploy workflow), and the three repository-root
-    # files nothing under `app/` reads.
+    # (each with its own deploy workflow), and the two repository-root
+    # files nothing under `app/` reads. The count was written when there
+    # were four and stayed at three after two of them went, which is what
+    # a number in a comment does; `paths-ignore:` itself is four lines
+    # below and is the thing to read.
     # Nothing under `docs/` is on it any more, which is the plainest
     # statement of what `copy-handbook.mjs`'s registry allowlist already
     # decided: `docs/` is an input in full, and which of its pages ship is
