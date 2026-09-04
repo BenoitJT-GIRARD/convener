@@ -57,8 +57,7 @@ palette, the typefaces and the motif this series is drawn with — and from
 this series' own declaration (`instance/config.json`), so every colour in it is
 the charter's and every name in it is this series'. The charter is
 `instance/data/brand.json` if your series wrote one and the directory under
-`assets/brand/` that `instance/config.json` names if it did not; [standing an
-instance up](../../operating/standing-up.md) has the step that chooses. To
+`assets/brand/` that `instance/config.json` names if it did not. To
 change one, change the charter or the declaration and run
 `uv run python scripts/generate_brand_css.py` from `tools/`; the same
 command's `--check` fails the build if a template stops agreeing with them.
