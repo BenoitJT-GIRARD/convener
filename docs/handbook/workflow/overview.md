@@ -27,6 +27,21 @@ Lead → [ Gate: the Board validates ] → Approved → Invited → Confirmed �
 
 Three side outcomes: **Parked** (a good idea, kept for later, and reversible), **Declined (board)** and **Declined (speaker)** — who said no is kept, because the two lead to different messages and different second chances.
 
+## What closes each status
+
+An event has a page of its own in the workspace, and that page shows one status at a time. Every one of them is laid out the same way: **what you need to know, then what you do, then how you record that you did it.** The last of the three is a control, and it is the way onward — a record leaves a status because somebody presses one of these, never because a box was ticked or a field was filled in.
+
+| Status | The controls that close it |
+|---|---|
+| Lead | **Submit ballot**, once the Board has enough of them; **Park** and **Decline** for the two side outcomes |
+| Approved | **Mark invitation sent**, under the draft it has just filled the dates into |
+| Invited | **They can make this one**, on the evening the speaker agreed to — that click is both the acceptance and the choice of date. **Speaker declined** when none of them suit |
+| Confirmed | **Lock this date**, once the title, the abstract and the edition number are in |
+| Scheduled | **Mark it delivered**, available from the day before the talk |
+| Delivered | **Publish the recording and archive** — or **Archive without publishing**, when the speaker or the Board has refused |
+
+The wording above is the wording on the buttons themselves. `app/tests/state/pipeline-and-manual.test.ts` reads this table against the journey the workspace runs and against the components that draw each control, and fails if any of the three stops agreeing with the other two.
+
 ## The two gates
 
 Almost everything you do, you do on your own initiative. Only **two moments** need the Editorial Board's approval:

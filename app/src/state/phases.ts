@@ -104,6 +104,25 @@ export interface PhaseDef {
   status: SpeakerStatus;
   label: string;
   items: RunbookItem[];
+  /**
+   * The controls that take a record out of this status, in the order they
+   * appear, worded exactly as the buttons word themselves.
+   *
+   * The last of the three things every status shows -- what you need to
+   * know, what you do, then how you record that you did it -- and the only
+   * way onward: a record does not leave a status because a box was ticked or
+   * a field was filled, it leaves because somebody pressed one of these.
+   *
+   * Written here rather than only in the components because
+   * `docs/handbook/workflow/overview.md` describes the same sequence to a
+   * volunteer who is planning rather than clicking, and a page describing a
+   * state the code no longer produces is the failure this repository has
+   * paid for more than once. `pipeline-and-manual.test.ts` holds three
+   * things together against this list: the page's table, this table, and the
+   * source of the component that actually draws each button. A reword that
+   * reaches two of the three is red.
+   */
+  closes: string[];
   /** Key of the line the promotion channels follow, for the one phase that
    *  promotes. The channels themselves are configuration
    *  (`state/channels.ts`), so where they fall is the only thing this table
@@ -116,6 +135,7 @@ export interface PhaseDef {
 export const PHASES: PhaseDef[] = [
   {
     status: 'lead',
+    closes: ['Submit ballot', 'Park', 'Decline'],
     label: 'Lead — awaiting board review',
     items: [
       {
@@ -149,6 +169,7 @@ export const PHASES: PhaseDef[] = [
   },
   {
     status: 'approved',
+    closes: ['Mark invitation sent'],
     label: 'Approved — prepare invitation',
     items: [
       { key: 'approved/host_1', form: 'field', fieldKey: 'host_1', label: 'Host 1', required: true },
@@ -172,6 +193,7 @@ export const PHASES: PhaseDef[] = [
   },
   {
     status: 'invited',
+    closes: ['They can make this one', 'Speaker declined'],
     label: 'Invited — waiting for reply',
     items: [
       {
@@ -191,6 +213,7 @@ export const PHASES: PhaseDef[] = [
   },
   {
     status: 'confirmed',
+    closes: ['Lock this date'],
     label: 'Confirmed — schedule a date',
     items: [
       // The template first and it stays: the fields below are what the
@@ -219,6 +242,7 @@ export const PHASES: PhaseDef[] = [
   },
   {
     status: 'scheduled',
+    closes: ['Mark it delivered'],
     label: 'Scheduled — runbook',
     // Two weeks out, once the speaker is known to be on the forum, the event
     // is announced everywhere it is announced. Which places those are is read
@@ -411,6 +435,7 @@ export const PHASES: PhaseDef[] = [
   },
   {
     status: 'delivered',
+    closes: ['Publish the recording and archive', 'Archive without publishing'],
     label: 'Delivered — wrap-up',
     items: [
       {
