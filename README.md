@@ -50,9 +50,14 @@ Build it and serve it yourself, from a real build, with no account and no
 data of anybody's:
 
 ```bash
-cd site && npm install && cd ../app && npm install && cd ../tools
+cd site
+npm install
+cd ../app
+npm install
+cd ../tools
 uv run python scripts/demonstration_build.py ../demonstration
-cd ../demonstration && python -m http.server 8731
+cd ../demonstration
+python -m http.server 8731
 ```
 
 Then open <http://localhost:8731/example-showcase/> — the address the
