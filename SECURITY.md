@@ -11,9 +11,9 @@ there is no way to make it private afterwards.
 
 If the *Report a vulnerability* button is not there, private vulnerability
 reporting has not been switched on for the repository you are looking at
-(Settings → Advanced Security). On this one it is. On a duplicate it is
-that operator's to switch on, and worth doing before the first
-registration arrives rather than after.
+(Settings → Advanced Security). Switching it on is the operator's act,
+on this repository and on every duplicate, and worth doing before the
+first registration arrives rather than after.
 
 ## What to expect
 
