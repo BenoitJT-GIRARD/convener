@@ -6,8 +6,9 @@ D-29 is that they are three and not one:
 * ``LICENSE`` -- the GNU Affero General Public License, version 3, in the
   Free Software Foundation's own words, plus one added term at its head
   declining the name under section 7's paragraph e.
-* ``TRADEMARK.md`` -- what that term covers, what a fork renames, what it
-  keeps, and that all of it is asked in good faith.
+* ``TRADEMARK.md`` -- what that term reserves, what a fork renames, what
+  the licence obliges it to keep, what it may then write about where its
+  product came from, and that all of it is asked in good faith.
 * ``NOTICE.json`` -- the Appropriate Legal Notice both interfaces print in
   their footer, in the sense section 0 of the licence defines the phrase.
 
@@ -198,35 +199,90 @@ def test_the_added_term_sits_above_the_licence_it_supplements() -> None:
 # -------------------------------------------------------------------------- #
 
 
-def test_the_trade_mark_document_says_what_it_covers_and_what_it_asks() -> None:
-    """Four statements, and the file is not doing its job without all four.
+def trade_mark_prose() -> str:
+    """`TRADEMARK.md` with its line breaks taken out.
+
+    The file is prose wrapped at the width the rest of this repository
+    wraps at, so where a sentence breaks is a decision an editor makes and
+    a reader never sees. Searching the raw text for a phrase of more than
+    two words is therefore a check that a reflow can turn red without
+    changing a word, which is the kind of control this repository throws
+    away rather than lives with.
+    """
+    return " ".join(TRADE_MARKS.read_text(encoding="utf-8").split())
+
+
+#: What `TRADEMARK.md` has to say, and why each one is a sentence the file
+#: stops working without. Read in order below, and the order is half of what
+#: is held here.
+TRADE_MARK_STATEMENTS: tuple[tuple[str, str], ...] = (
+    ("are reserved", "what the grant does not hand over"),
+    ("rename", "what is actually being asked of a fork"),
+    ("kept intact", "the obligation sections 4 and 5 put on the notice"),
+    (
+        "an accurate description of an origin",
+        "the permission that follows that obligation",
+    ),
+    ("good faith", "that all of it is asked rather than enforced"),
+)
+
+
+def test_the_trade_mark_document_states_what_it_reserves_asks_and_permits() -> None:
+    """Five statements, and the file is not doing its job without all five.
 
     It has one reader -- somebody about to take this code and make their
     own product of it -- and one job: tell them what the licence does not
-    hand over, what to rename, what to keep, and that the rest is asked
-    rather than enforced. Each of those is one heading and a short list,
-    and each is the kind of sentence a later edit drops without leaving a
-    hole a reader would notice.
+    hand over, what to rename, what the licence obliges them to keep, what
+    they may then write about where their product came from, and that the
+    rest is asked rather than enforced. Each is one heading and a short
+    list, and each is the kind of sentence a later edit drops without
+    leaving a hole a reader would notice.
 
-    The file used to close on several hundred words about how little an
-    unregistered mark is worth in law, and the sentences below are what
-    replaced it: `docs/engineering/content-rules.md` section 7 refuses a
-    page that argues against a conversation the reader has not had, and
-    the passage also ended by telling somebody acting in bad faith that
-    none of what preceded it reaches them.
+    The fourth of them is the one that earns this project its attribution.
+    A reader who does not know they may write "built on Convener" either
+    omits the credit or opens an issue to ask; the right to describe an
+    origin accurately exists whether this file says so or not, so saying
+    nothing buys no protection and costs a good-faith reader the line.
     """
-    text = TRADE_MARKS.read_text(encoding="utf-8")
-    for expected, why in (
-        ("**not** covered by", "what the grant does not hand over"),
-        ("rename", "what is actually being asked of a fork"),
-        ("What is not covered", "the half that keeps this from overreaching"),
-        ("good faith", "that all of it is asked rather than enforced"),
-    ):
+    text = trade_mark_prose()
+    for expected, why in TRADE_MARK_STATEMENTS:
         assert expected in text, (
             f"{TRADE_MARKS.name} no longer says anything about "
             f"{expected!r} -- {why}. This file is one reader's whole "
             "answer on the name, and half an answer reads as the whole one."
         )
+
+
+def test_the_ask_comes_before_the_list_and_the_obligation_before_the_permission() -> (
+    None
+):
+    """The order the sentences come in, which is what the document *is*.
+
+    The same five statements arranged the other way round make a different
+    file. A good-faith ask that closes a page, after a list of everything
+    the claim does not reach, reads as a shrug over the list; at the top it
+    sets the register for everything under it. And a permission to name the
+    origin, standing on its own, reads as an open door; behind the
+    obligation the licence already imposes, it reads as the condition it is.
+
+    Neither is checkable by reading for a phrase, which is why this is a
+    second test and not a sixth row above: both failures leave every
+    sentence in place.
+    """
+    text = trade_mark_prose()
+
+    assert text.index("good faith") < text.index("## What is reserved"), (
+        f"{TRADE_MARKS.name} asks for good faith after it has listed what "
+        "it reserves. Below the list the ask reads as a shrug over it; "
+        "above, it is the register the list is read in."
+    )
+    assert text.index("kept intact") < text.index(
+        "an accurate description of an origin"
+    ), (
+        f"{TRADE_MARKS.name} permits naming the origin before it states the "
+        "obligation sections 4 and 5 impose. Permission first reads as an "
+        "open door; obligation first makes the permission a condition."
+    )
 
 
 # -------------------------------------------------------------------------- #
