@@ -74,6 +74,17 @@ def needles(root: Path, instance: Path | None = None) -> dict[str, str]:
     - **`published.Published.publish_repository`.** It is where a build is
       pushed, read by two workflows and by nothing that renders. Its two
       halves are already needles (`host`, `path_prefix`).
+    - **`published.CHARTER_KEY`.** The name of one of the product's own
+      charters, and the one declared value that is the product's rather
+      than the instance's -- `assets/brand/` is where the file it names is
+      maintained. What reaches a page is that file's colours, and every
+      one of them is a needle below, read through this key:
+      `brand.load` asks `brand.source`, and `brand.source` reads it. So
+      the key is swept by what it selects, which
+      `test_second_instance.py::test_the_charter_key_is_swept_through_the_
+      palette_it_names` measures rather than assumes. Sweeping for the
+      name itself would fire on the product's own directory in every
+      duplicate.
     - **`motif.width_ratio`.** The templates multiply it by a
       dimension and write the product, so the ratio itself never reaches
       an artefact.

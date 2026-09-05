@@ -177,6 +177,7 @@ from helpers import instance_identity, toolchain
 
 from convener_ops.declaration import boundary, published
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand
 
 ROOT = repo_root()
 
@@ -433,6 +434,68 @@ def _declared_values(data: object, path: str = "") -> Iterator[tuple[str, str]]:
         yield path, data
 
 
+#: The one declared key whose needles are the file it names rather than a
+#: form of its own value. `charter` names one of the product's own
+#: charters, and the name reaches no artefact: what a page carries is that
+#: file's colours, and `needles` reads them through this key
+#: (`brand.load` -> `brand.source` -> the name). So the sweep does derive
+#: from it, one step further along -- the same shape
+#: `publish_repository` has, where the value is absent and both its halves
+#: are needles. Held rather than granted:
+#: `test_the_charter_key_is_swept_through_the_palette_it_names` below fails
+#: if naming a different charter leaves the palette where it was.
+SWEPT_THROUGH_WHAT_IT_NAMES: Final = (published.CHARTER_KEY,)
+
+
+def test_the_charter_key_is_swept_through_the_palette_it_names(
+    tmp_path: Path,
+) -> None:
+    """The allowance above, measured.
+
+    Two roots differing in that one line, and the colour needles they give
+    have to differ with it. A key that selected nothing would hand back the
+    same palette twice, and the allowance would be a hole in the sweep
+    rather than a step in it.
+
+    On laid-out declarations rather than on a build, and deliberately: what
+    is being asked is which file `needles` reads, which is a property of
+    the declaration and needs no toolchain -- the same reason
+    `test_the_two_instances_disagree_about_every_needle` above is below the
+    build line.
+    """
+    shipped = brand.shipped(ROOT)
+    assert len(shipped) >= 2, "one charter cannot show that naming one chooses anything"
+    palettes: list[tuple[tuple[str, str], ...]] = []
+    for rel in shipped:
+        root = tmp_path / rel.parent.name
+        for charter in shipped:
+            target = root / charter
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((ROOT / charter).read_bytes())
+        declared = json.loads(
+            (ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
+        )
+        declared[published.CHARTER_KEY] = rel.parent.name
+        declaration = root / published.INSTANCE_PATH
+        declaration.parent.mkdir(parents=True, exist_ok=True)
+        declaration.write_text(json.dumps(declared), encoding="utf-8")
+        found = instance_identity.needles(root)
+        palettes.append(
+            tuple(
+                sorted(
+                    (name, value)
+                    for name, value in found.items()
+                    if name.startswith("colour.")
+                )
+            )
+        )
+    assert len(set(palettes)) == len(palettes), (
+        "two of the charters this product ships give the same colour "
+        "needles, so naming one rather than another changes nothing a "
+        "sweep could see"
+    )
+
+
 def test_every_value_the_declaration_holds_is_swept() -> None:
     """A key nothing derives a needle from is a value a second instance's
     build can carry with nothing looking for it.
@@ -463,7 +526,8 @@ def test_every_value_the_declaration_holds_is_swept() -> None:
     unswept = {
         key: value
         for key, value in _declared_values(declaration)
-        if not any(value in form or form in value for form in forms)
+        if key not in SWEPT_THROUGH_WHAT_IT_NAMES
+        and not any(value in form or form in value for form in forms)
     }
     assert unswept == {}, (
         "instance/config.json declares these values and no needle in "
