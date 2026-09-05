@@ -29,6 +29,7 @@ import pytest
 from conftest import speaker
 
 import convener_ops.publication.visual as visual
+from convener_ops.cli import publication as cli
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand
@@ -339,11 +340,15 @@ _ROOT_VAR_SOURCES = {
 
 
 def _brand() -> dict[str, Any]:
-    return dict(
-        json.loads(
-            (ROOT / "instance" / "data" / "brand.json").read_text(encoding="utf-8")
-        )
-    )
+    """The charter this repository's own build is drawn from.
+
+    `brand.source` and not `instance/data/brand.json`, because an instance
+    is in one of two states and the product ships in both: it wrote its own
+    charter, or its declaration names one of the product's. Naming the file
+    here answered only the first, and a repository `convener-derive`
+    produces is always in the second.
+    """
+    return dict(json.loads((ROOT / brand.source(ROOT)).read_text(encoding="utf-8")))
 
 
 def _root_block_text(doc: str) -> str:
@@ -560,20 +565,19 @@ def ribbon_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     check-posters.mjs`, at every charter and every canvas; what is left
     here is the ribbon's, so the ribbon is what this hands them.
 
-    The two files `cli._template_fixture_root` lays down, with
-    `motif.family` overridden the way that function overrides it.
+    The two files `cli._fixture_root` lays down, laid down by that
+    function itself rather than beside it -- which is also what takes the
+    `charter` key out of the declaration on the way in, so this builds the
+    same tree whether the instance running this repository wrote its own
+    charter or named one of the product's.
     """
-    made = tmp_path_factory.mktemp("ribbon")
-    (made / brand.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
-    (made / published.INSTANCE_PATH).write_bytes(
-        (ROOT / published.INSTANCE_PATH).read_bytes()
+    return cli._fixture_root(
+        tmp_path_factory.mktemp("ribbon"),
+        ROOT,
+        brand.source(ROOT),
+        published.INSTANCE_PATH,
+        "ribbon",
     )
-    charter = json.loads((ROOT / brand.source(ROOT)).read_text(encoding="utf-8"))
-    charter[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = "ribbon"
-    (made / brand.INSTANCE_PATH).write_text(
-        json.dumps(charter, indent=2), encoding="utf-8"
-    )
-    return made
 
 
 def test_the_safe_area_clears_every_ribbon_waypoint(ribbon_root: Path) -> None:

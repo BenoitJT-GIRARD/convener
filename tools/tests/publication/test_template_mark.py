@@ -48,7 +48,6 @@ from __future__ import annotations
 import ast
 import json
 import re
-import shutil
 import subprocess
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -56,6 +55,7 @@ from typing import Final
 
 import pytest
 
+from convener_ops.cli import publication as cli
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand, brand_templates, lockup, motifs, visual
@@ -136,21 +136,28 @@ def path_data(source: str) -> list[str]:
 
 
 def _charters() -> tuple[Path, ...]:
-    """Every charter a build can be drawn from, root-relative."""
-    return (brand.INSTANCE_PATH, *brand.shipped(ROOT))
+    """Every charter a build can be drawn from, root-relative.
+
+    The one in force first, then every other charter this product ships --
+    the shape `generate_brand_css.main` builds, for its reason. An instance
+    that *names* one of the product's is drawn from a file the second half
+    already holds, so asking for it twice would measure one file under two
+    names and say nothing the once did not.
+    """
+    in_force = brand.source(ROOT)
+    return (in_force, *(rel for rel in brand.shipped(ROOT) if rel != in_force))
 
 
 def _fixture_root(tmp_path: Path, charter: Path, family: str) -> Path:
-    """A repository root drawn from one charter with one family named."""
+    """A repository root drawn from one charter with one family named.
+
+    Through `cli`'s own function, so that a tree this measures and a tree
+    the fixture renderer writes cannot differ -- and so that a declaration
+    which *names* a charter has that key taken out on the way in, which is
+    what lets this lay any charter beside any declaration.
+    """
     made = tmp_path / charter.parent.name / family
-    (made / brand.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(ROOT / published.INSTANCE_PATH, made / published.INSTANCE_PATH)
-    values = json.loads((ROOT / charter).read_text(encoding="utf-8"))
-    values["motif"][brand.MOTIF_FAMILY] = family
-    (made / brand.INSTANCE_PATH).write_text(
-        json.dumps(values, indent=2) + "\n", encoding="utf-8"
-    )
-    return made
+    return cli._fixture_root(made, ROOT, charter, published.INSTANCE_PATH, family)
 
 
 def _paths(svg: str) -> list[str]:
@@ -279,7 +286,7 @@ def test_the_charters_dot_colour_fills_one_circle_and_nothing_else(
     This counts.
     """
     _name, render, _width, _height = page
-    root = _fixture_root(tmp_path, brand.INSTANCE_PATH, family)
+    root = _fixture_root(tmp_path, brand.source(ROOT), family)
     charter = root / brand.INSTANCE_PATH
     values = json.loads(charter.read_text(encoding="utf-8"))
     values["motif"]["logo_dots"] = _ONLY_THE_DOT
@@ -321,7 +328,7 @@ def test_the_device_is_the_charters_own_drawing_and_not_the_products_mark(
     ]
     assert arcs, "the product's mark draws no arc any more"
     for family in sorted(motifs.FAMILIES):
-        root = _fixture_root(tmp_path, brand.INSTANCE_PATH, family)
+        root = _fixture_root(tmp_path, brand.source(ROOT), family)
         for _name, render, _width, _height in PAGES:
             svg = render(root)
             for arc in arcs:
@@ -349,7 +356,7 @@ def test_the_device_is_clipped_to_its_own_box(
     viewport of its own and clips to it.
     """
     _name, render, _width, _height = page
-    root = _fixture_root(tmp_path, brand.INSTANCE_PATH, family)
+    root = _fixture_root(tmp_path, brand.source(ROOT), family)
     document = ElementTree.fromstring(render(root))  # type: ignore[operator]
     nested = [
         element

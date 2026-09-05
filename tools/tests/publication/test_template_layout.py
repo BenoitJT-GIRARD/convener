@@ -17,9 +17,7 @@ are. A layout is only right if both hold.
 
 from __future__ import annotations
 
-import json
 import re
-import shutil
 import xml.etree.ElementTree as ElementTree
 from collections.abc import Iterator
 from pathlib import Path
@@ -144,16 +142,14 @@ def _extent(block: Block) -> tuple[float, float]:
 
 def _fixture_root(tmp_path: Path, family: str) -> Path:
     """A repository root drawn with one family, the way
-    `cli.render_template_fixtures` builds one."""
-    made = tmp_path / family
-    (made / brand.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(ROOT / published.INSTANCE_PATH, made / published.INSTANCE_PATH)
-    charter = json.loads((ROOT / brand.source(ROOT)).read_text(encoding="utf-8"))
-    charter["motif"][brand.MOTIF_FAMILY] = family
-    (made / brand.INSTANCE_PATH).write_text(
-        json.dumps(charter, indent=2) + "\n", encoding="utf-8"
+    `cli.render_template_fixtures` builds one -- through that command's own
+    function, so the tree this measures and the tree the fixture renderer
+    writes cannot differ, and so that a declaration which *names* a charter
+    has that key taken out on the way in.
+    """
+    return cli._fixture_root(
+        tmp_path / family, ROOT, brand.source(ROOT), published.INSTANCE_PATH, family
     )
-    return made
 
 
 @pytest.mark.parametrize("family", sorted(motifs.FAMILIES))
@@ -193,26 +189,42 @@ def test_every_line_stands_inside_the_corridor_its_own_rows_leave(
 def test_the_drawing_moves_the_words_rather_than_the_other_way_round(
     tmp_path: Path, page: tuple[str, object, float, float]
 ) -> None:
-    """Rendered with two different families, these files disagree about
-    where their words go.
+    """Rendered with the drawings the registry holds, these files disagree
+    about where their words go.
 
     The one property a hand-placed layout cannot have. Before this, both
     files rendered byte-identically apart from the motif's own `d` and its
     colours: every coordinate was the same number whichever drawing the
     charter named, which is exactly what it means for a layout to be
     fitted to one of them.
+
+    Over every family rather than over one chosen pair, and the difference
+    is measured. Two drawings that leave the same ground over the rows a
+    line actually occupies place that line in the same spot, and a short
+    enough string sits inside every corridor there is: at the example
+    collective's own words the ribbon and the bracket agree about all of
+    the announcement's blocks and disagree about the flyer's. Whether one
+    named pair moves is a property of an instance's words; whether the
+    drawing decides where a word goes is a property of the layout, and
+    that is the one this holds.
     """
     _name, render, _width, _height = page
     drawn = {
-        family: [
+        family: tuple(
             (block.x, block.size)
             for block in _blocks(render(_fixture_root(tmp_path, family)))  # type: ignore[operator]
-        ]
+        )
         for family in sorted(motifs.FAMILIES)
     }
-    ribbon, bracket = drawn["ribbon"], drawn["bracket"]
-    assert len(ribbon) == len(bracket)
-    assert ribbon != bracket
+    counted = {family: len(placed) for family, placed in drawn.items()}
+    assert len(set(counted.values())) == 1, (
+        f"these families set a different number of blocks: {counted}"
+    )
+    assert len(set(drawn.values())) > 1, (
+        "every drawing in the registry puts every word at the same "
+        "coordinate, so this layout is fitted to a drawing rather than "
+        "derived from one"
+    )
 
 
 def test_the_announcement_puts_its_registration_slot_west_of_the_ribbon(

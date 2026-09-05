@@ -46,7 +46,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 from xml.etree import ElementTree
 
 import pytest
@@ -94,6 +94,37 @@ ROOT = repo_root()
 #: listed, so a charter added tomorrow is in the tests below on the commit
 #: that adds it.
 ROOT_CHARTERS = {rel.parent.name: rel for rel in brand.shipped(ROOT)}
+
+#: The charter this repository's own build is drawn from, then every other
+#: charter it ships. `brand.source` gives three answers and an instance is
+#: always on one of them: it wrote `instance/data/brand.json`, its
+#: declaration names one of the product's, or it does neither and the
+#: product's own default is in force. The second and third answer a file
+#: `assets/brand/` already holds, which is what the filter is for -- one
+#: file asked for under two names is measured twice and says nothing the
+#: once did not.
+CHARTERS_HELD: Final = (
+    brand.source(ROOT),
+    *(rel for rel in brand.shipped(ROOT) if rel != brand.source(ROOT)),
+)
+
+#: Whether the charter in force here *is* the product's own default. True
+#: in every repository `convener-derive` produces -- the example
+#: collective names `convener` and writes no charter -- and false upstream,
+#: which has a designer and a file. The two comparisons that carry it are
+#: about the difference between a duplicate's palette and the product's,
+#: and where the two are one file there is no difference to be about.
+DRAWN_BY_THE_PRODUCTS_OWN: Final = brand.source(ROOT) == brand.DEFAULT_PATH
+
+#: What those two say when they abstain, in the shape
+#: `instance_identity.ONE_INSTANCE` already uses: the condition, and what
+#: brings the test back.
+NO_SECOND_PALETTE: Final = (
+    "the charter in force here is the product's own default "
+    "(brand.source answers brand.DEFAULT_PATH), so there is no second "
+    "palette for this to hold it apart from -- it runs again as soon as "
+    "an instance writes a charter of its own"
+)
 
 #: The templates that draw the ribbon motif directly, outside any generated
 #: stylesheet. None may hand-type a colour `instance/data/brand.json` carries; each
@@ -162,16 +193,18 @@ def _all_brand_colours(brand: dict[str, Any]) -> dict[str, str]:
 def test_the_committed_site_css_tokens_are_what_brand_json_derives() -> None:
     committed = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
     assert committed == render_site_css(ROOT), (
-        f"{SITE_CSS_PATH.as_posix()} is not what {BRAND_PATH.as_posix()}"
-        f" derives; run `{COMMAND}` from `tools/`."
+        f"{SITE_CSS_PATH.as_posix()} is not what "
+        f"{brand.source(ROOT).as_posix()} derives; run `{COMMAND}` from "
+        "`tools/`."
     )
 
 
 def test_the_committed_app_tokens_css_is_what_brand_json_derives() -> None:
     committed = (ROOT / APP_TOKENS_CSS_PATH).read_text(encoding="utf-8")
     assert committed == render_app_tokens_css(ROOT), (
-        f"{APP_TOKENS_CSS_PATH.as_posix()} is not what {BRAND_PATH.as_posix()}"
-        f" derives; run `{COMMAND}` from `tools/`."
+        f"{APP_TOKENS_CSS_PATH.as_posix()} is not what "
+        f"{brand.source(ROOT).as_posix()} derives; run `{COMMAND}` from "
+        "`tools/`."
     )
 
 
@@ -238,12 +271,11 @@ def test_every_charter_keeps_its_grounds_far_enough_apart_to_be_told_apart() -> 
     is this product's, and it is measured -- `assets/brand/chevrons/`
     already ships the tightest of them.
     """
-    charters = [(brand.INSTANCE_PATH, _charter(brand.INSTANCE_PATH))] + [
-        (rel, _charter(rel)) for rel in brand.shipped(ROOT)
-    ]
-    assert len(charters) == 5, "a charter added under assets/brand/ is swept here too"
-    for rel, values in charters:
-        assert ground_problems(values, named=rel.as_posix()) == []
+    assert len(ROOT_CHARTERS) == 4, (
+        "a charter added under assets/brand/ is swept here too"
+    )
+    for rel in CHARTERS_HELD:
+        assert ground_problems(_charter(rel), named=rel.as_posix()) == []
 
 
 def test_the_ground_floor_refuses_a_field_lightened_past_it() -> None:
@@ -604,6 +636,50 @@ def _copy(root: Path, rel: Path) -> None:
     )
 
 
+def _declaring_no_charter(root: Path) -> None:
+    """This repository's declaration, in a throw-away repository, naming no
+    charter.
+
+    The `charter` key is the one thing that has to go, and taking it out is
+    what makes both fixtures below mean the same thing wherever this suite
+    runs. Each is about an instance that has a charter file or has none;
+    a declaration that also *names* one is the third state, which
+    `brand.source` refuses -- and which of the three the instance running
+    this repository is in is not a property a fixture may inherit.
+    Upstream writes its own charter and names none; every repository
+    `convener-derive` produces names one and writes none.
+    `cli.publication._fixture_root` takes the key out for this reason, and
+    this is the same decision at the same seam.
+    """
+    path = root / published.INSTANCE_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = (ROOT / published.INSTANCE_PATH).read_bytes()
+    declared = json.loads(raw.decode("utf-8"))
+    if published.CHARTER_KEY in declared:
+        del declared[published.CHARTER_KEY]
+        raw = (json.dumps(declared, indent=2) + "\n").encode("utf-8")
+    path.write_bytes(raw)
+
+
+def _wrote_its_own_charter(root: Path) -> None:
+    """The charter in force here, written where an instance that wrote its
+    own keeps it.
+
+    `brand.source` rather than `brand.INSTANCE_PATH`, so this reads a file
+    that exists in either state: upstream's own charter where upstream has
+    one, and the charter the declaration names where it names one. What
+    the fixture is for is an instance with values of its own, and values
+    are what this copies.
+    """
+    path = root / BRAND_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        (ROOT / brand.source(ROOT)).read_text(encoding="utf-8"),
+        encoding="utf-8",
+        newline="",
+    )
+
+
 def _skeleton(root: Path) -> None:
     """Everything a generation run reads except the instance's own charter:
     the product's default charter, the instance declaration the two
@@ -611,7 +687,7 @@ def _skeleton(root: Path) -> None:
     each of the two spliced targets.
     """
     _copy(root, brand.DEFAULT_PATH)
-    _copy(root, published.INSTANCE_PATH)
+    _declaring_no_charter(root)
     for rel in (SITE_CSS_PATH, APP_TOKENS_CSS_PATH):
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -638,12 +714,12 @@ _SYNTHETIC_MOTIF: dict[str, Any] = {
 
 @pytest.fixture
 def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A repository holding this instance's own `instance/data/brand.json`, the
-    product's default charter beside it, and marked-but-empty stylesheets
-    for both spliced targets.
+    """A repository holding a charter of its own at
+    `instance/data/brand.json`, the product's default charter beside it,
+    and marked-but-empty stylesheets for both spliced targets.
     """
     _skeleton(tmp_path)
-    _copy(tmp_path, BRAND_PATH)
+    _wrote_its_own_charter(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     return tmp_path
 
@@ -718,8 +794,20 @@ def test_a_hand_edited_generated_token_makes_check_fail(
     assert main([]) == 0
     css_path = fake_repo / SITE_CSS_PATH
     text = css_path.read_text(encoding="utf-8")
-    mutated = text.replace("--dominant:       #012765;", "--dominant:       #000000;")
-    assert mutated != text
+    # The value comes off the charter the fixture was given rather than
+    # being typed: a hexadecimal written here is one instance's dominant,
+    # and the mutation silently stopped being one in a repository drawn by
+    # any other charter -- which is a test that passes by changing
+    # nothing.
+    dominant = _charter_colours(brand.source(ROOT))["dominant"]
+    mutated = text.replace(
+        f"--dominant:       {dominant};", "--dominant:       #000000;"
+    )
+    assert mutated != text, (
+        f"the generated block carries no `--dominant: {dominant}` to edit, "
+        "so this mutation changes nothing and the check below would pass "
+        "over an unedited file"
+    )
     css_path.write_text(mutated, encoding="utf-8")
     assert main(["--check"]) == 1
 
@@ -784,30 +872,36 @@ def _charter_colours(rel: Path) -> dict[str, str]:
 def test_the_product_ships_a_charter_of_its_own() -> None:
     """The palette a duplicate that has chosen nothing builds with."""
     assert (ROOT / brand.DEFAULT_PATH).is_file()
-    assert brand.source(ROOT) == brand.INSTANCE_PATH, (
-        "this instance has values of its own and must still build from them"
+    assert (ROOT / brand.source(ROOT)).is_file(), (
+        f"the charter in force is {brand.source(ROOT).as_posix()} and this "
+        "repository does not hold that file, so nothing here builds"
     )
 
 
-def test_the_default_charter_names_the_same_tokens_as_this_instances() -> None:
-    """The *system* is the product's, and a default answering a different
-    set of names would be no default for this system at all -- every
+@pytest.mark.parametrize("rel", CHARTERS_HELD, ids=lambda p: p.as_posix())
+def test_every_charter_names_the_same_tokens_as_the_products_own(rel: Path) -> None:
+    """The *system* is the product's, and a charter answering a different
+    set of names would be no charter for this system at all -- every
     template that reads a colour reads it by name.
+
+    Over every charter this repository holds rather than over the one it
+    happens to be drawn by. Written as the default against this instance's
+    own, it said nothing at all in a repository where the two are one file,
+    which is every repository `convener-derive` produces.
     """
-    assert sorted(_charter_colours(brand.DEFAULT_PATH)) == sorted(
-        _charter_colours(BRAND_PATH)
-    )
+    assert sorted(_charter_colours(rel)) == sorted(_charter_colours(brand.DEFAULT_PATH))
 
 
-def test_the_default_charter_carries_the_same_contrast_obligations() -> None:
-    """The pairings belong to the composition, not to a palette: a default
+@pytest.mark.parametrize("rel", CHARTERS_HELD, ids=lambda p: p.as_posix())
+def test_every_charter_carries_the_same_contrast_obligations(rel: Path) -> None:
+    """The pairings belong to the composition, not to a palette: a charter
     recording fewer of them would be measured against less.
     """
 
-    def pairings(rel: Path) -> list[str]:
-        return sorted(k for k in _charter(rel)["contrast"] if not k.startswith("_"))
+    def pairings(path: Path) -> list[str]:
+        return sorted(k for k in _charter(path)["contrast"] if not k.startswith("_"))
 
-    assert pairings(brand.DEFAULT_PATH) == pairings(BRAND_PATH)
+    assert pairings(rel) == pairings(brand.DEFAULT_PATH)
 
 
 def test_every_contrast_the_default_charter_claims_recomputes_and_clears_aa() -> None:
@@ -842,17 +936,13 @@ def test_the_default_charter_carries_a_motif_of_its_own() -> None:
     assert [field for field in wanted if field not in section] == []
 
 
-def test_the_default_motif_is_the_products_own_mark() -> None:
-    """Not a variant of this instance's, and not an invention either.
-
-    Every value is read back out of a file this repository already
-    ships -- the two colours off `convener-mark.svg`, and the stroke
-    weight the same file draws its outer arc at, carried onto the half-width
-    `motifs/bracket.py` draws the left bracket at. A default motif nobody
-    can trace is exactly what the refusal it replaced was afraid of.
+@pytest.mark.skipif(DRAWN_BY_THE_PRODUCTS_OWN, reason=NO_SECOND_PALETTE)
+def test_the_default_motif_is_not_the_instances_wearing_the_products_name() -> None:
+    """A "default" carrying the mark of whoever happened to draw first
+    would leave every duplicate wearing it.
     """
     section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
-    instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
+    instance = _charter(brand.source(ROOT))[brand.MOTIF_KEY]
     for field in brand.MOTIF_FIELDS[section[brand.MOTIF_FAMILY]]:
         if field == brand.MOTIF_FAMILY:
             continue
@@ -860,6 +950,16 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
             f"{field} is this instance's own value wearing the product's name"
         )
 
+
+def test_the_default_motif_is_the_products_own_mark() -> None:
+    """Not an invention: every value is read back out of a file this
+    repository already ships -- the two colours off `convener-mark.svg`,
+    and the stroke weight the same file draws its outer arc at, carried
+    onto the half-width `motifs/bracket.py` draws the left bracket at. A
+    default motif nobody can trace is exactly what the refusal it replaced
+    was afraid of.
+    """
+    section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
     mark = (ROOT / "assets" / "brand" / "convener" / "convener-mark.svg").read_text(
         encoding="utf-8"
     )
@@ -883,13 +983,14 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
     assert f"A {outer_radius} " in mark
 
 
+@pytest.mark.skipif(DRAWN_BY_THE_PRODUCTS_OWN, reason=NO_SECOND_PALETTE)
 def test_the_default_palette_is_not_this_instances_wearing_a_new_name() -> None:
     """A "default" shipping this organisation's own colours would leave a
     duplicate wearing them until somebody remembered to configure
     something.
     """
     default = _charter_colours(brand.DEFAULT_PATH)
-    instance = _charter_colours(BRAND_PATH)
+    instance = _charter_colours(brand.source(ROOT))
     shared = {
         name for name in default if default[name].lower() == instance[name].lower()
     }
@@ -903,7 +1004,7 @@ def test_the_charter_in_force_is_the_instances_when_it_has_one(
     fake_repo: Path,
 ) -> None:
     assert brand.source(fake_repo) == brand.INSTANCE_PATH
-    assert brand.colours(brand.load(fake_repo)) == _charter_colours(BRAND_PATH)
+    assert brand.colours(brand.load(fake_repo)) == _charter_colours(brand.source(ROOT))
 
 
 def test_the_charter_in_force_is_the_products_when_the_instance_has_none(
@@ -1038,13 +1139,27 @@ def test_a_named_charter_is_matched_never_built_into_a_path(
         brand.source(default_repo)
 
 
-def test_this_instance_writes_its_own_charter_and_names_none() -> None:
-    """The two routes are alternatives and this repository takes the first:
-    it has a designer, so it has a file, so its declaration carries no name
-    for the resolution above to refuse."""
-    assert (ROOT / brand.INSTANCE_PATH).is_file()
-    assert published.load_charter(ROOT) is None
-    assert brand.source(ROOT) == brand.INSTANCE_PATH
+def test_this_repository_takes_exactly_one_of_the_two_routes() -> None:
+    """The two routes are alternatives, and a repository is on one of them.
+
+    Upstream takes the first: it has a designer, so it has a file, so its
+    declaration carries no name for the resolution above to refuse. Every
+    repository `convener-derive` produces takes the second: the example
+    collective's declaration names the product's own charter and writes
+    none. Both together is what `brand.source` refuses, and this asks that
+    of the repository the suite is running in rather than of the one it was
+    written in.
+    """
+    named = published.load_charter(ROOT)
+    wrote_one = (ROOT / brand.INSTANCE_PATH).is_file()
+    assert not (named and wrote_one), (
+        f"this repository names the {named!r} charter and also writes "
+        f"{brand.INSTANCE_PATH.as_posix()}; brand.source refuses that, so "
+        "nothing here builds"
+    )
+    assert brand.source(ROOT) == (
+        brand.INSTANCE_PATH if wrote_one else brand.chosen(ROOT) or brand.DEFAULT_PATH
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1087,11 +1202,16 @@ def test_an_instance_that_wrote_colours_but_no_motif_gets_the_products(
 
     section = brand.motif(fake_repo)
     default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
-    instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
+    # Another charter this repository ships, for the reason
+    # `test_a_duplicate_that_has_configured_nothing_builds_every_file`
+    # gives: what the second clause refuses is the build reaching for a
+    # charter it was not given, and the charter in force is not one of
+    # those wherever an instance is drawn by the product's own.
+    other = _charter(ROOT_CHARTERS[_ANOTHER_CHARTER])[brand.MOTIF_KEY]
     for field in brand.MOTIF_FIELDS[default[brand.MOTIF_FAMILY]]:
         assert section[field] == default[field]
         if field != brand.MOTIF_FAMILY:
-            assert section[field] != instance[field]
+            assert section[field] != other[field]
 
 
 def test_a_charter_whose_motif_is_incomplete_is_refused_by_the_missing_field(
@@ -1290,17 +1410,23 @@ def test_a_duplicate_that_has_configured_nothing_builds_every_file(
     assert main(["--check"]) == 0
 
     default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
-    instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
+    # The foil is another charter this repository ships rather than the one
+    # in force. "Never this instance's" has nothing to exclude where the
+    # instance is drawn by the product's own, which is every repository
+    # `convener-derive` produces; a charter the build was not given is the
+    # claim either way, and this one is a charter in both.
+    unchosen = _charter(ROOT_CHARTERS[_ANOTHER_CHARTER])
+    other = unchosen[brand.MOTIF_KEY]
     for rel in (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH):
         svg = (default_repo / rel).read_text(encoding="utf-8")
         assert str(default["stroke"]) in svg
         assert str(default["logo_dots"]) in svg
-        assert str(instance["stroke"]) not in svg
-        assert str(instance["logo_dots"]) not in svg
+        assert str(other["stroke"]) not in svg
+        assert str(other["logo_dots"]) not in svg
 
     written = (default_repo / SITE_CSS_PATH).read_text(encoding="utf-8")
     assert _charter_colours(brand.DEFAULT_PATH)["field"] in written
-    assert _charter_colours(BRAND_PATH)["field"] not in written
+    assert _all_brand_colours(unchosen)["field"] not in written
 
 
 def test_the_command_refuses_a_half_written_mark_and_says_what_is_missing(
@@ -1344,7 +1470,7 @@ def test_a_duplicate_that_brings_only_its_own_mark_builds_completely(
     svg = (default_repo / ANNOUNCEMENT_SVG_PATH).read_text(encoding="utf-8")
     assert _SYNTHETIC_STROKE in svg
     assert _SYNTHETIC_DOTS in svg
-    assert _charter_colours(BRAND_PATH)["dominant"] not in svg
+    assert _charter_colours(ROOT_CHARTERS[_ANOTHER_CHARTER])["dominant"] not in svg
 
 
 # --------------------------------------------------------------------------
@@ -1553,9 +1679,9 @@ def test_a_template_refuses_a_palette_whose_own_pairings_fail_aa(
         brand_templates.render_announcement_template(fake_repo)
 
 
-def test_every_pairing_the_templates_draw_clears_aa_in_both_charters() -> None:
-    """Both palettes against the same list, so neither is legible by luck."""
-    for rel in (BRAND_PATH, brand.DEFAULT_PATH):
+def test_every_pairing_the_templates_draw_clears_aa_in_every_charter() -> None:
+    """Every palette against the same list, so none is legible by luck."""
+    for rel in (*CHARTERS_HELD, brand.DEFAULT_PATH):
         problems = brand_templates._legibility_problems(
             _charter_colours(rel), named=rel.as_posix()
         )
@@ -1565,7 +1691,7 @@ def test_every_pairing_the_templates_draw_clears_aa_in_both_charters() -> None:
 def test_the_legibility_list_would_notice_a_pairing_that_failed() -> None:
     """A list that matched nothing would pass for free."""
     assert brand_templates._LEGIBILITY
-    flat = dict.fromkeys(_charter_colours(BRAND_PATH), "#fecac1")
+    flat = dict.fromkeys(_charter_colours(brand.source(ROOT)), "#fecac1")
     problems = brand_templates._legibility_problems(flat, named="a flat palette")
     assert len(problems) == len(brand_templates._LEGIBILITY)
 
@@ -1610,15 +1736,31 @@ def test_the_only_colours_either_template_inks_type_in_are_the_measured_ones() -
     reviewer's -- resolving that needs the rendered geometry, which is
     `tools/visuals/check-templates.mjs`'s half of the claim.
     """
-    colours = _charter_colours(BRAND_PATH)
+    colours = _charter_colours(brand.source(ROOT))
     measured = {pairing.ink for pairing in brand_templates._LEGIBILITY}
+    # One entry's run is the declaration's to produce, and this reads the
+    # declaration for it rather than assuming: the wordmark is set in two
+    # tones only where the organisation's name appears inside its forum's
+    # host, and in one where it does not (`_wordmark_runs`, which says why
+    # inventing a split there would be worse). The example collective is
+    # the second case, so in every repository `convener-derive` produces
+    # nothing takes the accent and the entry measures a pairing no run of
+    # type is set in -- which is correct rather than stale.
+    accented = any(
+        is_accent
+        for _text, is_accent in brand_templates._wordmark_runs(
+            published.load_identity(ROOT)
+        )
+    )
+    expected = measured if accented else measured - {brand_templates.WORDMARK_ACCENT}
     for rel in (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH):
         inked = _inked_text_roles(ROOT / rel, colours)
-        assert inked == measured, (
+        assert inked == expected, (
             f"{rel.as_posix()} inks type in {sorted(inked)}, and "
-            f"_LEGIBILITY measures {sorted(measured)}: every colour a run of "
-            "type is set in has to have an entry there, and every entry has "
-            "to name a colour some run of type is set in"
+            f"_LEGIBILITY measures {sorted(expected)} for this declaration: "
+            "every colour a run of type is set in has to have an entry "
+            "there, and every entry has to name a colour some run of type "
+            "is set in"
         )
 
 
@@ -1832,7 +1974,7 @@ def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
     document = ElementTree.fromstring(
         (ROOT / BACKGROUND_SVG_PATH).read_text(encoding="utf-8")
     )
-    white = _charter_colours(BRAND_PATH)["white"]
+    white = _charter_colours(brand.source(ROOT))["white"]
     boxes = [
         (
             float(rect.get("x", "0")),
@@ -1994,9 +2136,9 @@ def _charter_key_names(charter: dict[str, Any]) -> list[str]:
 def test_every_charter_the_repository_tracks_is_held_to_the_naming_rule() -> None:
     """A sweep that found no charter would pass for free."""
     tracked = _tracked_charters()
-    assert set(tracked) >= {brand.DEFAULT_PATH, BRAND_PATH}, (
+    assert set(tracked) >= {brand.DEFAULT_PATH, brand.source(ROOT)}, (
         f"git ls-files found {[p.as_posix() for p in tracked]}, which does not "
-        "include the product's own charter and this instance's"
+        "include the product's own charter and the one in force here"
     )
 
 

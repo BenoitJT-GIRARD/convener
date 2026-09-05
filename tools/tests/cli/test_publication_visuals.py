@@ -20,7 +20,9 @@ import yaml
 from conftest import speaker
 
 from convener_ops.cli.publication import _scheduled_announcements, render_visuals
+from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand
 from convener_ops.publication.formats import FORMATS
 from convener_ops.publication.public_data import to_public
 from convener_ops.publication.visual import render_announcement
@@ -30,13 +32,20 @@ _REAL_ROOT = repo_root()
 
 #: Read on demand, never while this module loads.
 #: Both are paths `declarations/boundary.yml` hands to the instance, and a
-#: derived repository is entitled not to have them until the derivation
-#: lays an example's own files there. At module scope the read took this
-#: whole module down at collection; from here it fails the tests that
-#: actually build a root, and says which file is missing.
+#: derived repository is entitled not to have the declaration until the
+#: derivation lays an example's own file there. At module scope the read
+#: took this whole module down at collection; from here it fails the tests
+#: that actually build a root, and says which file is missing.
+#:
+#: The charter comes from `brand.source` and lands at
+#: `brand.INSTANCE_PATH`, so the root each test builds writes its own
+#: charter whichever of the two states this repository's instance is in --
+#: it wrote one, or its declaration names one of the product's. Reading
+#: `instance/data/brand.json` off the repository answered only the first,
+#: which is the state no repository `convener-derive` produces is in.
 @cache
 def _real_brand() -> str:
-    return (_REAL_ROOT / "instance" / "data" / "brand.json").read_text(encoding="utf-8")
+    return (_REAL_ROOT / brand.source(_REAL_ROOT)).read_text(encoding="utf-8")
 
 
 #: The composition reads the instance's own declaration
@@ -47,7 +56,20 @@ def _real_brand() -> str:
 #: drift from the file every other reader in this project reads.
 @cache
 def _real_instance() -> str:
-    return (_REAL_ROOT / "instance" / "config.json").read_text(encoding="utf-8")
+    """The real declaration, with any `charter` key taken out.
+
+    The roots below write a charter of their own beside it, and naming one
+    as well is what `brand.source` refuses -- one notion in two files, free
+    to disagree. `cli._fixture_root` takes the key out for the same reason
+    and this is that decision, taken here because these roots carry a
+    speaker file and a typeface directory that function knows nothing
+    about.
+    """
+    declared = json.loads(
+        (_REAL_ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    declared.pop(published.CHARTER_KEY, None)
+    return json.dumps(declared, indent=2) + "\n"
 
 
 def _scheduled(**overrides: Any) -> dict[str, Any]:

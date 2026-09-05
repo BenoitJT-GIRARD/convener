@@ -31,6 +31,7 @@ from convener_ops.declaration.published import (
     load_identity,
 )
 from convener_ops.journey.registration import signup_url
+from convener_ops.publication import brand
 from convener_ops.publication.registration_code import (
     forum_code_svg,
     forum_code_target,
@@ -110,10 +111,8 @@ def test_the_registration_code_is_drawn_in_brand_black() -> None:
     "#000000" in its own shortened three-digit form, so that guard's
     literal substring search would not have caught a hand-typed value here
     either -- this test checks the actual, expanded colour instead)."""
-    brand = json.loads(
-        (ROOT / "instance" / "data" / "brand.json").read_text(encoding="utf-8")
-    )
-    black = brand["colour"]["black"].lower()
+    charter = json.loads((ROOT / brand.source(ROOT)).read_text(encoding="utf-8"))
+    black = charter["colour"]["black"].lower()
 
     doc = render_announcement(
         Announcement(

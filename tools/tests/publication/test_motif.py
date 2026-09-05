@@ -199,17 +199,39 @@ def test_check_passes_on_the_repository_as_committed(
     assert "matches" in capsys.readouterr().out
 
 
+def _regenerable(root: Path) -> None:
+    """The two generated files and the charter they came from, in a scratch
+    tree that writes its own.
+
+    The charter is taken from `brand.source` and written at
+    `brand.INSTANCE_PATH`, so this lays out one tree whichever of the two
+    states the instance running this repository is in: an instance writes
+    its own charter or names one of the product's, and a tree carrying no
+    declaration at all names none. Reading `brand.INSTANCE_PATH` off this
+    repository instead would build nothing in a duplicate that named one,
+    which is every repository `convener-derive` produces.
+    """
+    for relative in (SITE_DATA_PATH, APP_MODULE_PATH):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            (ROOT / relative).read_text(encoding="utf-8"), encoding="utf-8", newline=""
+        )
+    charter = root / brand.INSTANCE_PATH
+    charter.parent.mkdir(parents=True, exist_ok=True)
+    charter.write_text(
+        (ROOT / brand.source(ROOT)).read_text(encoding="utf-8"),
+        encoding="utf-8",
+        newline="",
+    )
+
+
 def test_check_refuses_a_hand_edited_fixture(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A path edited in the generated file, with the charter untouched --
     one of the two ways a generated file and its source drift apart."""
-    for relative in (SITE_DATA_PATH, APP_MODULE_PATH, brand.INSTANCE_PATH):
-        target = tmp_path / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            (ROOT / relative).read_text(encoding="utf-8"), encoding="utf-8", newline=""
-        )
+    _regenerable(tmp_path)
     hand_edited = tmp_path / SITE_DATA_PATH
     hand_edited.write_text(
         hand_edited.read_text(encoding="utf-8").replace('"M ', '"M 1 1 M ', 1),
@@ -228,12 +250,7 @@ def test_check_refuses_a_charter_changed_without_regenerating(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The other way round: the charter moves and the two files do not."""
-    for relative in (SITE_DATA_PATH, APP_MODULE_PATH, brand.INSTANCE_PATH):
-        target = tmp_path / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            (ROOT / relative).read_text(encoding="utf-8"), encoding="utf-8", newline=""
-        )
+    _regenerable(tmp_path)
     charter_path = tmp_path / brand.INSTANCE_PATH
     charter = json.loads(charter_path.read_text(encoding="utf-8"))
     charter[brand.MOTIF_KEY]["width_ratio"] = 0.05

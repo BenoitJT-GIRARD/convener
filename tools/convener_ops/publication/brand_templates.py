@@ -293,6 +293,15 @@ class _Pairing:
     ground: str
 
 
+#: The colour role the wordmark's second run is set in. Named here rather
+#: than typed where it is read, because it is the one ink in `_LEGIBILITY`
+#: below whose run a declaration may not produce at all: an organisation
+#: whose name does not appear in its forum's host is set in one tone
+#: (`_wordmark_runs`), so nothing on the page takes this role. A reader
+#: that has to know which entry that is needs the name from here rather
+#: than from a copy of it.
+WORDMARK_ACCENT: Final = "field_text"
+
 #: Every ink-on-ground the two files below actually draw. Text only:
 #: `rule_strong` outlines the QR slot and `logo_dots` fills the dot the
 #: lock-up closes on, and neither is text -- WCAG exempts a logotype from the
@@ -302,7 +311,7 @@ _LEGIBILITY: Final = (
     _Pairing("the wordmark's address, in the top band", "dominant", "band"),
     _Pairing(
         "the wordmark's second word, in the top band",
-        "field_text",
+        WORDMARK_ACCENT,
         "band",
     ),
     _Pairing("the series' name, on the field", "dominant", "field"),
@@ -671,7 +680,7 @@ def _values(root: Path) -> dict[str, str]:
         "wordmark": _wordmark(
             runs,
             ink=colours["dominant"],
-            accent=colours["field_text"],
+            accent=colours[WORDMARK_ACCENT],
         ),
         "motif_family": str(motif[brand.MOTIF_FAMILY]),
         "motif_stroke": str(motif["stroke"]),

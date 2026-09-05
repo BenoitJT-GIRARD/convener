@@ -34,6 +34,7 @@ from typing import Final
 import pytest
 
 from convener_ops.cli.publication import _template_charters, render_poster_fixtures
+from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
 from convener_ops.publication import brand, composition, motifs, visual
 from convener_ops.publication.formats import FORMATS
@@ -191,8 +192,8 @@ def test_the_ribbon_pays_for_its_right_loop_and_the_others_do_not(
         root = _template_fixture_root(
             tmp_path,
             ROOT,
-            brand.INSTANCE_PATH,
-            ROOT / "instance" / "config.json",
+            brand.source(ROOT),
+            published.INSTANCE_PATH,
             family,
         )
         ratio = brand.motif_width_ratio(root)

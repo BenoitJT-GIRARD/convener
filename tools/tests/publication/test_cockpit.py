@@ -44,12 +44,22 @@ from convener_ops.publication import brand, cockpit
 
 ROOT = repo_root()
 
-#: Every charter a build of this product can be drawn from: the one this
-#: instance wrote, and the four `assets/brand/` ships for a duplicate to choose.
+#: Every charter a build of this product can be drawn from: the one in
+#: force here, and the four `assets/brand/` ships for a duplicate to choose.
 #: Read off the directory rather than listed, for the reason
 #: `brand.shipped` gives -- a charter added there is measured on the
 #: commit that adds it, with no entry to make here.
-CHARTERS = (brand.INSTANCE_PATH, *brand.shipped(ROOT))
+#:
+#: `brand.source` and not `brand.INSTANCE_PATH`, because an instance is in
+#: one of two states and both are the product's: it wrote its own charter,
+#: or it named one of the product's. In the second, the file in force is
+#: already in the second half of this tuple, which is what the filter is
+#: for -- one file under two names would be measured twice and say nothing
+#: the once did not.
+CHARTERS = (
+    brand.source(ROOT),
+    *(rel for rel in brand.shipped(ROOT) if rel != brand.source(ROOT)),
+)
 
 
 def _charter(rel: Path) -> dict[str, Any]:

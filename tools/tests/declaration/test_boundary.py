@@ -937,7 +937,12 @@ def test_the_walk_sees_the_files_this_repository_really_holds() -> None:
     exactly how a sweep stops meaning anything."""
     found = instance_files(ROOT, load())
     assert "instance/data/config.yml" in found
-    assert "instance/data/brand.json" in found
+    # `speakers.yml` and not `brand.json`: an instance's charter is
+    # optional by declaration (`brand.INSTANCE_PATH`), so a repository
+    # whose declaration names one of the product's charters holds no such
+    # file and this list would be asserting the absence of a state rather
+    # than the presence of a walk.
+    assert "instance/data/speakers.yml" in found
     assert "instance/registration-lanes.yml" in found
     assert "docs/handbook/governance/register.md" in found
     assert "instance/data/schema.md" not in found, "a kept file is the product's"
