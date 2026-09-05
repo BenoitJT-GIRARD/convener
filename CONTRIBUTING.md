@@ -14,10 +14,10 @@ all: `SECURITY.md` has the private channel and says what to expect from it.
 
 ## Signing off a commit
 
-**Every commit carries one `Signed-off-by` line. There is no form to sign
-and no copyright to assign.** One right is asked beyond the certificate,
-and the paragraph headed *One thing is asked beyond the certificate* below
-is where it is asked.
+**Every commit a pull request brings carries one `Signed-off-by` line.
+There is no form to sign and no copyright to assign.** One right is asked
+beyond the certificate, and the paragraph headed *One thing is asked
+beyond the certificate* below is where it is asked.
 
 ```bash
 git commit -s
@@ -60,10 +60,18 @@ inherits that check, so a rule about who may contribute code upstream would
 stand between a volunteer and recording a vote in their own series.
 
 So the sign-off is checked where it can be judged: by the person merging the
-pull request, on the commits the pull request brings. What is automated is
-the other half — `tools/tests/repository/test_public_repository.py` refuses a
-commit-message check that starts rejecting a contributor's sign-off as an
-attribution trailer, which is the way this could quietly stop working.
+pull request, on the commits the pull request brings.
+
+**Upstream's own commits carry none, and a reader who checks will find
+that.** They are the copyright holder's, and the Developer Certificate of
+Origin is a statement made *to* a project by somebody contributing to it.
+The badge on `README.md` says which certificate a contribution here is
+held to.
+
+What is automated is the other half —
+`tools/tests/repository/test_public_repository.py` refuses a commit-message
+check that starts rejecting a contributor's sign-off as an attribution
+trailer, which is the way this could quietly stop working.
 
 ## Before you open a pull request
 
