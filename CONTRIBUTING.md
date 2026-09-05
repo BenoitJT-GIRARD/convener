@@ -65,8 +65,6 @@ pull request, on the commits the pull request brings.
 **Upstream's own commits carry none, and a reader who checks will find
 that.** They are the copyright holder's, and the Developer Certificate of
 Origin is a statement made *to* a project by somebody contributing to it.
-The badge on `README.md` says which certificate a contribution here is
-held to.
 
 What is automated is the other half —
 `tools/tests/repository/test_public_repository.py` refuses a commit-message

@@ -41,7 +41,7 @@ and the derivation guard (`tools/convener_ops/derivation/repository.py`).
 
 A weakness in a template is worth more to an attacker than the same
 weakness in one repository, because every duplicate inherits it. That is
-D-15's own reasoning for publishing this at all.
+the reasoning for publishing this at all.
 
 ## What is out of scope, and where it goes instead
 
@@ -56,8 +56,8 @@ D-15's own reasoning for publishing this at all.
   records what a certificate register does and does not hold. A report that
   one of these is true is a report that the documentation is accurate.
 - **The absence of a configured integration.** Every external integration
-  here is optional and degrades visibly when it is missing, by design
-  (D-13). The one deliberate exception fails the build outright rather than
+  here is optional and degrades visibly when it is missing, by design.
+  The one deliberate exception fails the build outright rather than
   degrading, and it is the one protecting personal data.
 
 ## Supported versions

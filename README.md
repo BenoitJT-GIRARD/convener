@@ -12,7 +12,7 @@ seminars that have nobody to pay and nothing to pay them with.**
 
 [![Licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-012765)](LICENSE)
 [![Cost to run: €0](https://img.shields.io/badge/cost%20to%20run-%E2%82%AC0-012765)](docs/engineering/architecture.md)
-[![Sign-off: DCO](https://img.shields.io/badge/sign--off-DCO-012765)](CONTRIBUTING.md)
+[![Accessibility: WCAG 2.1 AA](https://img.shields.io/badge/accessibility-WCAG%202.1%20AA-012765)](.github/workflows/a11y.yml)
 
 </div>
 
@@ -128,7 +128,7 @@ python -m http.server 8731
 Then open <http://localhost:8731/example-showcase/> — the address the
 example instance declares, prefix and all, because a build served at a bare
 root is a different topology from the deployed one
-([D-26](docs/engineering/decisions/d-26-verify-deployed-shape.md)).
+([why](docs/engineering/decisions/d-26-verify-deployed-shape.md)).
 
 The records are the example instance's. What you do to them stays in the
 tab you did it in, for as long as that tab is open, and is never sent
@@ -159,8 +159,7 @@ that served it and writes nothing at all.
 >
 > **Duplicate instead**: a new *private* repository of your own, holding
 > these contents, with no fork relationship to this one.
-> [D-15](docs/engineering/decisions/d-15-publication-topology.md) has the
-> reasoning in full.
+> [The reasoning in full](docs/engineering/decisions/d-15-publication-topology.md).
 
 ## Installing
 

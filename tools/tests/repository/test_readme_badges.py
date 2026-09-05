@@ -11,6 +11,16 @@ languages badge, which restates the bar GitHub already draws.
 
 This module is that rule with a reader.
 
+**What the row does not hold, and the judgement behind that.** Nothing here
+says *which* three claims the header makes. `test_there_are_badges_to_read`
+refuses a row shorter than three and the two pinning sweeps below hold the
+licence badge and the accessibility badge to the files that answer for them,
+so a badge cannot quietly say something false -- but which claims a front
+page makes at all is an editorial decision, and a list of them here would
+make the row unchangeable without a test change. What each badge *asserts*
+is a control; which assertions are worth three seconds of a stranger's
+attention is taste, and taste does not get a gate.
+
 **Where they sit.** Above the first `##`, between the title and the first
 section, which is the only place a badge is read at all. Two of these
 spent a long time below three screenshots instead, where a reader
@@ -22,9 +32,11 @@ computes the claim:
 * A **static badge**, drawn by `img.shields.io/badge/...` out of text
   somebody typed. Its two halves are read below and held against this
   repository: the licence badge has to carry the identifier `CITATION.cff`
-  declares, and no static badge may name a toolchain a declaration here
-  pins, because the value on the badge and the value in the declaration
-  are then two spellings of one fact with nothing holding them together.
+  declares, the accessibility badge has to name the standard
+  `site/scripts/check-a11y.mjs` actually hands axe, and no static badge may
+  name a toolchain a declaration here pins, because the value on the badge
+  and the value in the declaration are then two spellings of one fact with
+  nothing holding them together.
 * A **generated badge**, drawn by the service whose state it reports --
   the continuous-integration badge `docs/operating/publishing-the-product.md`
   lays at publication is one, and cannot exist before there is a
@@ -58,6 +70,19 @@ README: Final = ROOT / "README.md"
 #: `test_the_licence_badge_and_the_citation_file_name_one_licence`, so this
 #: constant cannot become a third spelling of it.
 LICENCE_IDENTIFIER: Final = "AGPL-3.0-or-later"
+
+#: The sweep that makes the accessibility claim true, and the workflow that
+#: runs it on a push and on a pull request touching what it builds. The badge
+#: names a standard and links to the second; both are read below, so a badge
+#: outliving either one fails here.
+A11Y_CHECKER: Final = ROOT / "site" / "scripts" / "check-a11y.mjs"
+
+#: The array of axe tags that checker runs, and one tag inside it. axe spells
+#: a success criterion set `wcag<major><minor?><level>`: `wcag2aa` is WCAG 2.0
+#: level AA, `wcag21aa` is 2.1 level AA. The badge has to name the furthest of
+#: them, which is what `standard_named_by` computes.
+TAG_ARRAY: Final = re.compile(r"WCAG_AA_TAGS\s*=\s*\[([^\]]*)\]")
+WCAG_TAG: Final = re.compile(r"wcag(\d)(\d?)(a+)")
 
 #: `[![alt](image)](target)` -- a badge is an image inside a link. An image
 #: that links nowhere is not matched here and is refused by
@@ -144,6 +169,44 @@ def toolchains_named(label: str, message: str) -> list[str]:
     return sorted(name for name in PINNED if re.search(rf"\b{name}\b", said))
 
 
+def standard_named_by(source: str) -> str:
+    """The standard `source` holds axe to, as a badge would spell it.
+
+    Takes the text rather than reading the file, so the refusals below can
+    be proved on tag lists this repository does not ship: a checker pinned
+    to `wcag22aa` tomorrow has to move the badge with it, and a control
+    that only ever saw today's list could not say that.
+    """
+    declared = TAG_ARRAY.search(source)
+    assert declared is not None, (
+        "no WCAG_AA_TAGS array in the source given -- the badge's message "
+        "is derived from that list and there is nothing here to derive it "
+        "from"
+    )
+    tags = WCAG_TAG.findall(declared.group(1))
+    assert tags, "WCAG_AA_TAGS holds no tag this reader recognises"
+    major, minor, level = max(
+        tags, key=lambda tag: (int(tag[0]), int(tag[1] or 0), len(tag[2]))
+    )
+    return f"WCAG {major}.{minor or 0} {level.upper()}"
+
+
+def labelled(label: str) -> list[tuple[str, str]]:
+    """Every static badge in the header with this label, as (message, target).
+
+    A list rather than one badge, and the sweeps below assert its length:
+    the failure a second licence badge or a second accessibility badge would
+    be is a row making one claim twice, which is worth a message of its own
+    rather than an index error.
+    """
+    found: list[tuple[str, str]] = []
+    for _alt, image, target in badges(header(readme())):
+        fields = static_fields(image)
+        if fields is not None and fields[0].lower() == label:
+            found.append((fields[1], target))
+    return found
+
+
 def tracked(path: str) -> bool:
     """Whether `path` is a file this repository's index carries."""
     listed = subprocess.run(  # nosec B603 B607
@@ -227,16 +290,59 @@ def test_the_licence_badge_and_the_citation_file_name_one_licence() -> None:
         "so the identifier this module compares the badge against is not "
         "the one the repository ships."
     )
-    messages: list[str] = []
-    for _alt, image, _target in badges(header(readme())):
-        fields = static_fields(image)
-        if fields is not None and fields[0].lower() == "licence":
-            messages.append(fields[1])
+    messages = [message for message, _target in labelled("licence")]
     assert messages == [LICENCE_IDENTIFIER], (
         f"the licence badge reads {messages}, and this repository ships "
         f"{LICENCE_IDENTIFIER!r}. A badge naming the wrong terms is read "
         "by everybody who never opens LICENSE."
     )
+
+
+def test_the_accessibility_badge_names_the_standard_the_sweep_actually_runs() -> None:
+    """The badge's message, and the tag list behind it.
+
+    `site/scripts/check-a11y.mjs` hands axe a closed list of success-criterion
+    tags and every page of the built showcase is run against it at two
+    viewports. The badge is the one-line reading of that list, so the two are
+    held together the way the licence badge and `CITATION.cff` are: raise the
+    checker to `wcag22aa` and the badge is a claim nobody is making; lower it
+    to `wcag2aa` and the badge is a claim nobody is checking.
+    """
+    expected = standard_named_by(A11Y_CHECKER.read_text(encoding="utf-8"))
+    messages = [message for message, _target in labelled("accessibility")]
+    assert messages == [expected], (
+        f"the accessibility badge reads {messages}, and "
+        f"{A11Y_CHECKER.name} holds this repository to {expected!r}. A badge "
+        "claiming a standard nothing measures is the one kind of badge this "
+        "row exists to refuse."
+    )
+
+
+def test_the_accessibility_badge_leads_to_the_workflow_that_runs_the_sweep() -> None:
+    """Where a reader lands, and whether anything is still running there.
+
+    Every other badge here can be checked by opening the file it links to.
+    This one claims a *constraint* rather than a state, so the file it links
+    to has to be the thing applying it: the workflow that builds the showcase
+    and runs the checker over it, on a push and on a pull request. Deleting
+    that workflow and leaving the badge is the failure, and it is a failure
+    nothing else in this module would see.
+    """
+    found = labelled("accessibility")
+    assert len(found) == 1, (
+        f"the header carries {len(found)} badges labelled accessibility"
+    )
+    _message, target = found[0]
+    workflow = (ROOT / target).read_text(encoding="utf-8")
+    for expected, why in (
+        ("check:a11y", "the sweep the badge is a reading of"),
+        ("push:", "so a merged change is checked"),
+        ("pull_request:", "so a change is checked before it is merged"),
+    ):
+        assert expected in workflow, (
+            f"{target} carries no {expected!r} -- {why}. The badge links "
+            "here because this is what makes its claim true."
+        )
 
 
 def test_no_badge_names_a_toolchain_a_declaration_here_pins() -> None:
@@ -270,9 +376,9 @@ def test_the_fields_of_a_static_badge_are_read_as_shields_writes_them() -> None:
         "cost to run",
         "€0",
     )
-    assert static_fields(f"{STATIC_BADGE}sign--off-DCO-012765") == (
-        "sign-off",
-        "DCO",
+    assert static_fields(f"{STATIC_BADGE}accessibility-WCAG%202.1%20AA-012765") == (
+        "accessibility",
+        "WCAG 2.1 AA",
     )
 
 
@@ -297,7 +403,22 @@ def test_the_rule_admits_the_badges_this_page_carries() -> None:
     """Narrowness, proved on the three real ones rather than asserted."""
     assert toolchains_named("licence", LICENCE_IDENTIFIER) == []
     assert toolchains_named("cost to run", "€0") == []
-    assert toolchains_named("sign-off", "DCO") == []
+    assert toolchains_named("accessibility", "WCAG 2.1 AA") == []
+
+
+def test_the_standard_is_read_off_the_tags_rather_than_typed_here() -> None:
+    """Four tag lists this repository does not ship, and one it does.
+
+    The last of them is the point: a control that only ever computed the
+    answer for today's checker would pass unchanged the day somebody
+    narrowed it, which is how a check stops being one.
+    """
+    assert standard_named_by("WCAG_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21aa']") == (
+        "WCAG 2.1 AA"
+    )
+    assert standard_named_by("WCAG_AA_TAGS = ['wcag2a', 'wcag2aa']") == "WCAG 2.0 AA"
+    assert standard_named_by("WCAG_AA_TAGS = ['wcag2a', 'wcag22aa']") == "WCAG 2.2 AA"
+    assert standard_named_by("WCAG_AA_TAGS = ['wcag2a']") == "WCAG 2.0 A"
 
 
 def test_the_header_stops_at_the_first_section() -> None:

@@ -95,7 +95,7 @@ concurrency:
 jobs:
   a11y:
     runs-on: ubuntu-latest
-    # Building both site/ and app/, then rendering 14 pages at two
+    # Building both site/ and app/, then rendering every built page at two
     # viewports each in a real browser, comfortably fits inside the same
     # 15-minute allowance publish-showcase.yml's own mixed Python/Node job
     # already gets for a lighter build.
