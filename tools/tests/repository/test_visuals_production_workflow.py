@@ -129,18 +129,35 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     its own colours and had them diffed against a committed image of
     somebody else's poster.
 
-    `assets/brand/convener/brand.json`, the product's default charter, is named
-    here as a path of its own: a duplicate that has written no
-    `instance/data/brand.json` falls back to it for a real render.
-    `visuals.yml` reaches the same file through `assets/brand/*/brand.json`,
-    because the example names it rather than writing a charter -- a glob
-    over the charters and a named path to one of them are two different
-    filters, and this test holds the named one to this job."""
+    The charters are the half both jobs reach the same way, and that is a
+    correction rather than the arrangement this file was written with. This
+    job named `assets/brand/convener/brand.json` alone, because a duplicate
+    that had written no `instance/data/brand.json` fell back to it -- which
+    was the whole of the second answer while `brand.source` had two.
+    `instance/config.json::charter` gave it a third: a declaration may name
+    any charter `assets/brand/` ships, and a real render is drawn from
+    whichever it names. So a change to `assets/brand/steps/brand.json`
+    re-renders the posters of the instance that named `steps`, and the
+    filter that named one file would have watched that change happen
+    without starting."""
     mine = set(_TRIGGERS["push"]["paths"])
+    charters = "assets/brand/*/brand.json"
+    assert charters in mine, (
+        f"{charters} is missing from this job's own filter, so a charter a "
+        "declaration names can change without the posters re-rendering"
+    )
+    assert f"'{charters}'" in _VISUALS_WORKFLOW, (
+        f"{charters} is the one filter the two jobs share, and visuals.yml "
+        "no longer carries it"
+    )
+    assert "assets/brand/convener/brand.json" not in mine, (
+        "the product's own charter is named here as a path of its own "
+        f"again, and {charters} already covers it -- two filters for one "
+        "file is one of them nobody maintains"
+    )
     production_only = (
         "instance/config.json",
         "instance/data/brand.json",
-        "assets/brand/convener/brand.json",
     )
     for path in production_only:
         assert path in mine, f"{path} is missing from this job's own filter"

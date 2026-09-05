@@ -34,6 +34,18 @@ filter. That is the shape `tools/tests/repository/test_docs_directory.py::EXCEPT
 already uses, and for its reason -- a list that may only grow stops describing
 anything.
 
+**And one entry whose emptiness is the instance's answer rather than this
+repository's.** `OPTIONAL_FOR_THE_INSTANCE` is for a path product code
+declares optional: present where the instance running this repository wrote
+one, absent where its declaration names one of the product's instead, and
+both are states the product ships in. Such an entry may not be held to
+either direction -- upstream tracks the file and a repository
+`convener-derive` produces does not -- and a filter that has to fire the day
+one appears must name it before it does. What is checked instead is that
+every entry there really is a path `declarations/boundary.yml` hands to the
+instance, so this cannot become a way to excuse a product path that a rename
+left behind.
+
 **What this does not ask.** Whether the filter is the *right* set of inputs is
 each workflow's own test's question -- `test_visuals_workflow.py`,
 `test_templates_workflow.py`, `test_visuals_production_workflow.py` and
@@ -51,7 +63,9 @@ from typing import Final
 import pytest
 import yaml
 
+from convener_ops.declaration import boundary
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand
 
 ROOT: Final = repo_root()
 WORKFLOWS: Final = ROOT / ".github" / "workflows"
@@ -140,6 +154,23 @@ EMPTY_IN_THIS_REPOSITORY: Final[dict[str, str]] = {
     ),
 }
 
+#: Filter entries naming a path the instance owns and may not have written.
+#: One entry, keyed off the product's own constant rather than typed:
+#: `brand.INSTANCE_PATH` is optional by declaration -- an instance either
+#: writes its own charter there or its declaration names one of the
+#: product's, and `brand.source` gives both answers. Upstream is in the
+#: first state and every repository `convener-derive` produces is in the
+#: second, so this one entry is tracked here and tracked nowhere in the
+#: published product, and the two workflows that re-render on a charter
+#: change have to name it either way.
+OPTIONAL_FOR_THE_INSTANCE: Final[dict[str, str]] = {
+    brand.INSTANCE_PATH.as_posix(): (
+        "the charter an instance writes for itself; an instance that names "
+        "one of the product's instead holds no such file, and both are "
+        "states brand.source answers"
+    ),
+}
+
 
 def test_this_repository_has_path_filters_to_check() -> None:
     """Non-vacuity: a reader that stopped finding any filter at all would
@@ -161,7 +192,7 @@ def test_every_path_filter_names_something_tracked(
 ) -> None:
     """The rule. A line that filters on nothing is a decision nobody
     enforces, and a rename is the ordinary way one arrives."""
-    if entry in EMPTY_IN_THIS_REPOSITORY:
+    if entry in EMPTY_IN_THIS_REPOSITORY or entry in OPTIONAL_FOR_THE_INSTANCE:
         return
     assert matches(entry), (
         f"{workflow}'s `{key}:` names {entry!r}, which matches nothing this "
@@ -190,6 +221,39 @@ def test_every_exemption_is_still_a_filter_somebody_writes() -> None:
     reads like a decision."""
     declared = {entry for _, _, entry in FILTERS}
     stale = sorted(set(EMPTY_IN_THIS_REPOSITORY) - declared)
+    assert not stale, (
+        f"{stale} are exempted here and no workflow filters on them any "
+        "more -- an exemption no case reaches is a line nobody can fail"
+    )
+
+
+def test_every_optional_entry_is_a_path_the_instance_owns() -> None:
+    """The half that keeps the second list from becoming a hole.
+
+    An entry there is excused in both directions, so the one thing that has
+    to hold is that the path is the instance's to write at all --
+    `declarations/boundary.yml` is what says so, and a product path a
+    rename left behind can never be admitted this way.
+    """
+    board = boundary.load(ROOT)
+    theirs = [
+        entry
+        for entry in OPTIONAL_FOR_THE_INSTANCE
+        if board.owner_of(entry) != boundary.INSTANCE
+    ]
+    assert theirs == [], (
+        f"{theirs} are exempted as files an instance may or may not have "
+        "written, and declarations/boundary.yml hands them to the product -- "
+        "a product path that matches nothing is the dead filter this module "
+        "is about"
+    )
+
+
+def test_every_optional_entry_is_still_a_filter_somebody_writes() -> None:
+    """And the other half, the same one `EMPTY_IN_THIS_REPOSITORY` gets: an
+    exemption for an entry no workflow carries any more excuses nothing."""
+    declared = {entry for _, _, entry in FILTERS}
+    stale = sorted(set(OPTIONAL_FOR_THE_INSTANCE) - declared)
     assert not stale, (
         f"{stale} are exempted here and no workflow filters on them any "
         "more -- an exemption no case reaches is a line nobody can fail"

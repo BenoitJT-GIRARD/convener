@@ -134,7 +134,7 @@ on:
       - 'instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'instance/data/brand.json'
-      - 'assets/brand/convener/brand.json'
+      - 'assets/brand/*/brand.json'
       - 'tools/convener_ops/publication/brand.py'
       - 'assets/fonts/**'
       - 'tools/uv.lock'
