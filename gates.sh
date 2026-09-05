@@ -23,7 +23,7 @@
 # to". It was false, and had been for a long time: eight targets stood
 # against twenty-eight of `quality.yml`'s own checks, so the six
 # generators' `--check`, the decision register, the commit-message check,
-# the security scan, the dependency audits of all seven trees, both
+# the security scan, the dependency audits `quality.yml` runs, both
 # lint runs outside `tools/`, the application's own types, the
 # performance budget and the relays' lint were all things a maintainer
 # believed `sh gates.sh` had run. A gate you think you ran and did not is
@@ -90,13 +90,22 @@
 #
 # Two places where the same check is not the same command
 # -------------------------------------------------------
-# `audit` runs the dependency audits of all seven trees together, at the
+# `audit` runs the dependency audits of six trees together, at the
 # position `quality.yml` runs the first of them, rather than four
 # fragments scattered through the order. That is the one departure from
 # "the order that workflow runs them", and it is deliberate: an audit
-# reads an advisory database rather than this repository, so the seven
+# reads an advisory database rather than this repository, so the six
 # belong to each other and not to the lanes they sit in --
 # `.github/dependabot.yml`'s own header already treats them as one family.
+#
+# Six, and the seventh is named here because a count nobody can check is
+# a count that drifts. `tools/visuals/` has a lockfile of its own and
+# `.github/dependabot.yml` watches it beside the other six; its `npm
+# audit` is a step of `visuals.yml` and of `visuals-production.yml`,
+# which are the two workflows that install the pinned renderer, and
+# neither is in this runner's claim. `cd tools/visuals && npm audit` is
+# that seventh. It needs no browser -- what it needs is an `npm ci` in a
+# tree no target here installs.
 #
 # `workflows` passes `-shellcheck= -pyflakes=`, and `quality.yml` runs a
 # bare `./actionlint`. A GitHub runner has both of those on its `PATH` and
