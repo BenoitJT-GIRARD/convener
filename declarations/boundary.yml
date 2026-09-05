@@ -65,8 +65,12 @@
 # ---------------------------------------------------------------------
 # That directory holds one file for each path an instance owns, at the same
 # relative path -- so `examples/the-example-collective/instance/` mirrors `instance/`,
-# down to an invented instance's `config.json`, `brand.json`, `config.yml`,
-# `speakers.yml`. It is still the product's, by the default
+# down to an invented instance's `config.json`, `config.yml` and
+# `speakers.yml`. It holds no `brand.json`: that instance's declaration
+# names one of the product's own charters instead, which is the first of
+# the three answers `tools/convener_ops/publication/brand.py::source`
+# gives, and that directory's own README says what naming one costs. It
+# is still the product's, by the default
 # above: upstream ships it and upstream maintains it, and nothing reads it
 # at run time. `tools/tests/repository/test_second_instance.py` copies this
 # repository, deletes everything the list below hands to the instance,
