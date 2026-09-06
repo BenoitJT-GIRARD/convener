@@ -6,9 +6,10 @@ D-29 is that they are three and not one:
 * ``LICENSE`` -- the GNU Affero General Public License, version 3, in the
   Free Software Foundation's own words, plus one added term at its head
   declining the name under section 7's paragraph e.
-* ``TRADEMARK.md`` -- what that term reserves, what a fork renames, what
-  the licence obliges it to keep, what it may then write about where its
-  product came from, and that all of it is asked in good faith.
+* ``TRADEMARK.md`` -- what that term reserves, what a duplicate names
+  its own series, what the licence obliges it to keep, what it may then
+  write about where its product came from, and that all of it is asked in
+  good faith.
 * ``NOTICE.json`` -- the Appropriate Legal Notice both interfaces print in
   their footer, in the sense section 0 of the licence defines the phrase.
 
@@ -216,8 +217,8 @@ def trade_mark_prose() -> str:
 #: stops working without. Read in order below, and the order is half of what
 #: is held here.
 TRADE_MARK_STATEMENTS: tuple[tuple[str, str], ...] = (
-    ("are reserved", "what the grant does not hand over"),
-    ("rename", "what is actually being asked of a fork"),
+    ("however it is cased or spaced", "what the grant does not hand over"),
+    ("naming its own series", "what a duplicate is doing, in its own name"),
     ("kept intact", "the obligation sections 4 and 5 put on the notice"),
     (
         "an accurate description of an origin",
@@ -232,11 +233,26 @@ def test_the_trade_mark_document_states_what_it_reserves_asks_and_permits() -> N
 
     It has one reader -- somebody about to take this code and make their
     own product of it -- and one job: tell them what the licence does not
-    hand over, what to rename, what the licence obliges them to keep, what
-    they may then write about where their product came from, and that the
-    rest is asked rather than enforced. Each is one heading and a short
-    list, and each is the kind of sentence a later edit drops without
-    leaving a hole a reader would notice.
+    hand over, what their own series is called and where that name is set,
+    what the licence obliges them to keep, what they may then write about
+    where their product came from, and that the rest is asked rather than
+    enforced. Each is one heading and a short list, and each is the kind of
+    sentence a later edit drops without leaving a hole a reader would
+    notice.
+
+    **The second of them used to read ``rename``, and the verb was the
+    defect.** Two rewrites of that page told a reader "an instance is
+    yours -- but keep the notice", and both were rejected for the same
+    two reasons: *yours* attached to the running software rather than to
+    what an operator writes into it, and the two halves read as opposed,
+    so the notice arrived as a price extracted for having customised
+    anything. The page now stands on one axis -- a series and the software
+    it runs on are two different things, each with its own name -- and
+    ``rename`` cannot survive it: a duplicate is not renaming Convener, it
+    is naming its own series, which never carried that name. The needle is
+    the new verb, and it is a needle rather than a note because the old
+    one would have gone on passing: the sentence that replaced it still
+    contains the word ``rename``, in the clause that refuses it.
 
     The fourth of them is the one that earns this project its attribution.
     A reader who does not know they may write "built on Convener" either

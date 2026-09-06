@@ -329,7 +329,7 @@ ROOT_FILE_PURPOSE: Final[Mapping[str, str]] = {
     ),
     "TRADEMARK.md": (
         "What the name and the mark are not covered by, the licence grant "
-        "being about the code, and what a fork renames."
+        "being about the code, and what a duplicate names for itself."
     ),
     "cspell.json": (
         "The dictionary and the file list the British-English spelling gate reads."

@@ -52,7 +52,7 @@ alternative pins this work to one document for ever, and correcting a defect
 discovered in that document would then need the written agreement of everybody
 who had ever contributed.
 
-### The name: a term section 7 permits, and a document for whoever renames
+### The name: a term section 7 permits, and a document for whoever forks
 
 Paragraph e of section 7 exists for precisely this — declining to grant rights
 under trade-mark law — and it is the only way to hold a name back without
@@ -63,14 +63,15 @@ covered work as a whole, so the file that carries the licence is where a
 reader looks for it and where it can be read against the paragraph that
 authorises it.
 
-`TRADEMARK.md` is that term written for the person it lands on, and it is
-four short lists: what the name and the mark cover, what stays an instance's
-own identity, what a fork renames and what it keeps, and a closing line
-asking that all of it be respected in good faith. It argues none of it. The
-argument for holding a name back at all, and for holding it back this way, is
-this record — which is where a reader who wants it can find it, and where it
-stops standing between a fork and the four things it came to `TRADEMARK.md`
-to look up.
+`TRADEMARK.md` is that term written for the person it lands on, and it turns
+on one distinction: a series and the software it runs on are two different
+things, each with its own name. What is reserved, what a duplicate names for
+itself, what the licence obliges it to keep and what it may then say about
+where its product came from all follow from that, and it is asked in good
+faith. It argues none of it. The argument for holding a name back at all, and
+for holding it back this way, is this record — which is where a reader who
+wants it can find it, and where it stops standing between a fork and the
+things it came to `TRADEMARK.md` to look up.
 
 ### Attribution: an Appropriate Legal Notice, not a credit
 
@@ -172,9 +173,9 @@ what the software does. That is a real loss of adopters, accepted because the
 adopters it loses are the ones whose improvements would not have come back
 anyway.
 
-**A good-faith fork has to rename**, which costs somebody an afternoon and a
-little goodwill, and the thing it buys — a reader always knowing whose
-software they are running — is invisible when it works.
+**A good-faith fork has to name its own series**, which costs somebody an
+afternoon and a little goodwill, and the thing it buys — a reader always
+knowing whose software they are running — is invisible when it works.
 
 **The trade-mark position is weak, and stays weak.** An unregistered name
 constrains nobody in advance, so what `TRADEMARK.md` asks of a fork acting in

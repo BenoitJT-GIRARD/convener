@@ -91,7 +91,7 @@ Two conventions that are not obvious from the diff:
 
 ## If you are forking rather than contributing
 
-Rename it. `TRADEMARK.md` says what the name covers, what a fork renames
-and what it keeps. *Fork* there is the free-software sense — your own
-product, out of this code — which the licence allows and `README.md`
-distinguishes from GitHub's *Fork* button.
+Name your own series. `TRADEMARK.md` says what the name and the mark
+cover, and what the licence obliges a duplicate to keep. *Fork* there is
+the free-software sense — your own product, out of this code — which the
+licence allows and `README.md` distinguishes from GitHub's *Fork* button.

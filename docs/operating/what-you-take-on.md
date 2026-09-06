@@ -69,10 +69,10 @@ quietly become somebody's closed fork.
 
 The name and the mark are **not** covered by that grant — a term at the head
 of `LICENSE`, under section 7 of the licence itself, declines them, and
-[`TRADEMARK.md`](../../TRADEMARK.md) says what a fork renames and what it
-keeps. Both the showcase and the cockpit display the licence notice in their
-footer; its text is `NOTICE.json`, and no part of it is an instance's to
-configure.
+[`TRADEMARK.md`](../../TRADEMARK.md) says what a duplicate calls its own
+series, and what it keeps. Both the showcase and the cockpit display the
+licence notice in their footer; its text is `NOTICE.json`, and no part of
+it is an instance's to configure.
 [D-29](../engineering/decisions/d-29-licence-and-attribution.md) is the whole
 argument, including the two licence families that were rejected and why.
 

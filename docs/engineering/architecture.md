@@ -112,7 +112,7 @@ And the files at the root, which no row above accounts for:
 | `NOTICE.json` | product | The attribution both interfaces show in their footer, and the notice section 7 of the licence makes enforceable. |
 | `README.md` | product | The front page: what this runs, what it looks like, how an instance is stood up, and what the licence asks. |
 | `SECURITY.md` | product | Where a vulnerability is reported privately, and what a report can and cannot expect. |
-| `TRADEMARK.md` | product | What the name and the mark are not covered by, the licence grant being about the code, and what a fork renames. |
+| `TRADEMARK.md` | product | What the name and the mark are not covered by, the licence grant being about the code, and what a duplicate names for itself. |
 | `cspell.json` | product | The dictionary and the file list the British-English spelling gate reads. |
 | `gates.sh` | product | Every gate `.github/workflows/quality.yml` runs, one target each, and `all` for the lot in that workflow's own order. |
 <!-- END GENERATED DIRECTORY MAP -- edit tools/scripts/generate_directory_map.py, not this block -->
