@@ -571,6 +571,69 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 .verify__details dd { display: inline; margin: 0; }
 .verify__checking { color: var(--ink-mute); }
 
+/* The way in for a visit that reached this page with no link at all --
+ * `VerifyPage.tsx::HandEntry`. The field, label and error shapes are
+ * `.signup-form`'s own, repeated under this island's own prefix rather
+ * than shared, exactly as `.survey-form` below repeats them: each
+ * island's block stays readable on its own, and none of the three moves
+ * under another's edit. Both colours are pairings
+ * instance/data/brand.json already measures -- `--ink-mute` on the field
+ * for a label and a hint, which `.verify__checking` above already uses,
+ * and `--dominant` on the field for an error, 7.93 and AAA, the pairing
+ * `.signup-form__error` gives its own reasoning for. Both fields are set
+ * in `--ff-mono`, the face `.verify__id` already prints an identifier in:
+ * what goes in them is a code being copied character by character. */
+.verify__entry-title {
+  font-family: var(--ff-display);
+  font-size: 1.15rem;
+  margin: 0 0 .75rem;
+}
+.verify__form {
+  max-width: 32rem;
+  margin-top: 1.25rem;
+}
+.verify__field { margin-bottom: 1.25rem; }
+.verify__field > label {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .3rem;
+}
+.verify__hint {
+  margin: 0 0 .45rem;
+  font-size: .88rem;
+  color: var(--ink-mute);
+}
+.verify__field input,
+.verify__field textarea {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  font: inherit;
+  font-family: var(--ff-mono);
+  font-size: .85rem;
+  color: var(--ink);
+}
+.verify__field textarea { resize: vertical; }
+.verify__field input:focus,
+.verify__field textarea:focus {
+  outline: 0;
+  border-color: var(--dominant);
+  box-shadow: 0 0 0 3px var(--field-tint);
+}
+.verify__error {
+  color: var(--dominant);
+  font-weight: 700;
+  margin-top: .85rem;
+}
+.verify__again { margin-top: 1.25rem; }
+
 /* ── Post-event survey island ────────────────────────────────
  * `app/src/islands/survey/SurveyForm.tsx`'s own class names -- plain,
  * semantic strings, the same reasoning `.signup-form`'s own comment

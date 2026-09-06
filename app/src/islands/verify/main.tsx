@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { VerifyPage } from './VerifyPage';
+import { parseVerificationFragment } from '../../verify/address';
 
 /**
  * Bootstraps the verification island onto whatever the built verify page
@@ -19,47 +20,17 @@ import { VerifyPage } from './VerifyPage';
  */
 export const MOUNT_ID = 'verify-app';
 
-function safeDecodeURIComponent(value: string): string {
-  // A hand-edited or truncated fragment can carry a lone `%` that is not
-  // the start of a real percent-encoding -- `decodeURIComponent` throws
-  // `URIError` on that rather than returning best-effort text. Falling
-  // back to the raw segment keeps this a parsing step, never a page
-  // crash: whatever comes out still reaches `VerifyPage`, which already
-  // has to handle an identifier that is not shaped like one of ours
-  // (`InvalidIdentifierShape`) or a token whose signature does not verify
-  // (`NotVerifiable`) -- garbled input is exactly the same shape of
-  // "cannot confirm this" either way.
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
 /**
- * Pulls `identifier` and `token` out of a URL fragment, the same shape
- * `certificate.verification_url` builds: `#/<identifier>?token=<token>`.
- * Takes the fragment as a plain string -- `location.hash` when called from
- * this file's own bootstrap below -- rather than reading `window.location`
- * itself, so a test can exercise every shape of input directly, with no
- * `window.location` stubbing at all.
- *
- * Both `#` and the leading `/` are optional on the way in: a caller may
- * pass `location.hash` verbatim (which always includes the `#` once a
- * fragment exists) or an already-stripped fragment. An identifier segment
- * is decoded but never validated here -- `VerifyPage` -> `register.ts`'s
- * own `isValidIdentifierShape` is where a malformed identifier is turned
- * into an honest "not a certificate identifier" answer, not this function,
- * which only ever describes what the URL said, never what it means.
+ * Re-exported, not defined here. `VerifyPage`'s hand-entry form reads the
+ * same shape out of an address somebody pasted off a printed
+ * certificate, and no component can import this module: importing it runs
+ * the bootstrap at the foot of this file, which mounts an island onto
+ * whatever `#verify-app` the importing document happens to hold. So the
+ * function moved to `app/src/verify/address.ts`, beside the other pure
+ * verification modules, and this line keeps every import path that
+ * already named it here.
  */
-export function parseVerificationFragment(hash: string): { identifier?: string; token?: string } {
-  const withoutHash = hash.startsWith('#') ? hash.slice(1) : hash;
-  const withoutSlash = withoutHash.startsWith('/') ? withoutHash.slice(1) : withoutHash;
-  const [rawIdentifier = '', query = ''] = withoutSlash.split('?');
-  const identifier = rawIdentifier ? safeDecodeURIComponent(rawIdentifier) : undefined;
-  const token = new URLSearchParams(query).get('token') ?? undefined;
-  return { identifier, token };
-}
+export { parseVerificationFragment };
 
 const roots = new WeakMap<Element, Root>();
 

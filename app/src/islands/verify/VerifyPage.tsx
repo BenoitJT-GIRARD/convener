@@ -1,11 +1,12 @@
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { instanceIdentity } from '../../instance';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { verify } from '../../verify/verify';
 import type { VerifyResult } from '../../verify/verify';
 import { asDisplayCertificate } from '../../verify/format';
 import type { DisplayCertificate } from '../../verify/format';
 import { loadSigningPublicKeys } from '../../verify/publicKeys';
+import { normaliseIdentifier, parsePrintedAddress } from '../../verify/address';
 import {
   isValidIdentifierShape,
   lookupCertificateState,
@@ -119,13 +120,44 @@ import type { LookupResult } from '../../verify/register';
  * No nominative data leaves this component
  * --------------------------------------------
  * The only name ever rendered here comes from a token the holder's own
- * browser already has, in their own URL -- never logged, never sent
- * anywhere else. Nothing in this file calls `console.*` or touches
- * `localStorage`; the one fetch made when a token is present
- * (`lookupCertificateState`, in register.ts) carries no identifier over
- * the network at all, and the token-less path (`VerifyTokenless`) never
- * runs any cryptography and never renders a name, by construction -- there
- * is no payload in scope for it to read one from.
+ * browser already has, in their own URL or in what they typed into the
+ * form below -- never logged, never sent anywhere else. Nothing in this
+ * file calls `console.*` or touches `localStorage`; the one fetch made
+ * when a token is present (`lookupCertificateState`, in register.ts)
+ * carries no identifier over the network at all, and the token-less path
+ * (`VerifyTokenless`) never runs any cryptography and never renders a
+ * name, by construction -- there is no payload in scope for it to read
+ * one from.
+ *
+ * Reached with no link at all
+ * -----------------------------------------------------------------------
+ * This page used to answer a visit carrying no identifier with one panel
+ * saying the link named no certificate, and there was no field anywhere
+ * on it to do anything about that. Everything a holder needs is printed
+ * on their certificate --
+ * `tools/convener_ops/journey/delivery.py::render_certificate` puts the
+ * identifier on its own line and the whole verification address under it,
+ * and encodes that same address as the QR -- so the one thing that page
+ * could not survive was its own address changing. A renamed
+ * organisation, a moved repository or a custom domain leaves every
+ * certificate already issued pointing at nothing, with its holder reading
+ * an identifier off the paper and having nowhere to put it, and a
+ * relative path cannot help: a QR scanner and a human eye both have no
+ * base to resolve one against. `HandEntry` below is the way in, and what
+ * it reaches is this same component, from these same modules, as a link
+ * reaches.
+ *
+ * It keeps the property `register.ts` and `certificate.py` are both
+ * written around: nothing about *which* certificate is being checked
+ * leaves the browser. What was typed stays in this component's own state
+ * -- it is never written into `location.hash`, so it reaches no history
+ * entry, no address bar and no `Referer` -- `lookupCertificateState`
+ * still fetches the whole register rather than one row, and a signature
+ * is still checked here against keys this page already holds. The form
+ * carries `method="post"` for the reason `SignupForm.tsx`'s own does: if
+ * React's delegated submit handler ever failed to attach, a native GET
+ * submit would put a token -- which carries the holder's **name** -- into
+ * a query string, the browser history and the next page's `Referer`.
  */
 
 // The address a participant writes to about their own data. Declared
@@ -233,15 +265,35 @@ function Revoked({ cert }: { cert: DisplayCertificate }) {
   );
 }
 
-function NotVerifiable() {
+/**
+ * `entered` says the code was typed or pasted into `HandEntry` rather
+ * than followed as a link, and that difference is the whole reason this
+ * component takes a prop. A code that arrived by hand is one a copy could
+ * have truncated or a line break could have cut, so the first thing worth
+ * doing about it is looking at it again -- offered before the address
+ * that is a link's only recourse. Neither wording calls anything forged:
+ * `MALFORMED` and `NO_MATCHING_KEY` are the same "we cannot confirm this"
+ * to a stranger standing here (see this file's own module comment), and a
+ * mistyped character is much the likelier of the two.
+ */
+function NotVerifiable({ entered }: { entered: boolean }) {
   return (
     <Panel tone="danger" title="We cannot confirm this certificate">
       <p>
-        This link&apos;s signature does not check out against any signing key we currently
-        publish. This is not proof that anything is wrong: the code may be damaged or
-        incomplete, or it may have been issued under a signing key not yet published here. We
-        never show a name or any other certificate detail when we cannot confirm a signature.
+        {entered
+          ? 'The code you entered does not check out against any signing key we currently publish.'
+          : "This link's signature does not check out against any signing key we currently publish."}{' '}
+        This is not proof that anything is wrong: the code may be damaged or incomplete, or it
+        may have been issued under a signing key not yet published here. We never show a name
+        or any other certificate detail when we cannot confirm a signature.
       </p>
+      {entered && (
+        <p>
+          Check what you entered against the certificate and try again: everything printed
+          after the <code>#</code> is part of the address, and a copy that stopped at a line
+          break stops being checkable.
+        </p>
+      )}
       <p>
         If you believe this certificate is genuine, contact{' '}
         <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
@@ -417,7 +469,7 @@ function InvalidIdentifierShape({ identifier }: { identifier: string }) {
   );
 }
 
-function VerifyWithToken({ token }: { token: string }) {
+function VerifyWithToken({ token, entered }: { token: string; entered: boolean }) {
   const [sig, setSig] = useState<'checking' | 'keys_unavailable' | VerifyResult>('checking');
   const [lookup, setLookup] = useState<'checking' | LookupResult>('checking');
 
@@ -478,7 +530,7 @@ function VerifyWithToken({ token }: { token: string }) {
 
   if (sig === 'checking') return <Checking />;
   if (sig === 'keys_unavailable') return <CannotCheckSignature />;
-  if (!sig.valid) return <NotVerifiable />;
+  if (!sig.valid) return <NotVerifiable entered={entered} />;
 
   const cert = asDisplayCertificate(sig.payload);
   if (!identifier) return <StateUnknown cert={cert} reason="no_identifier" />;
@@ -519,17 +571,245 @@ function VerifyTokenless({ identifier }: { identifier: string }) {
   return <RecordUnknown identifier={identifier} />;
 }
 
+/** What this page was given, however it arrived: off the URL, or out of
+ *  the form below. `identifier` is the empty string when only a token was
+ *  given -- an address may carry one without the other, and a token names
+ *  its own certificate inside the payload its signature covers, so
+ *  `VerifyWithToken` never reads this field. Neither route ever builds
+ *  one of these with both halves empty. */
+interface Entry {
+  readonly identifier: string;
+  readonly token?: string;
+}
+
+/** The ids that tie each label, hint and error to its own field. Module
+ *  constants rather than `useId()`: `site/src/verify.njk` mounts this
+ *  island once per document (`#verify-app`), so there is no second copy
+ *  for a fixed id to collide with. */
+const IDENTIFIER_FIELD = 'verify-identifier';
+const IDENTIFIER_HINT = 'verify-identifier-hint';
+const ADDRESS_FIELD = 'verify-address';
+const ADDRESS_HINT = 'verify-address-hint';
+const ENTRY_ERROR = 'verify-entry-error';
+
+/** Four times the longest address this project has ever printed (885
+ *  characters for the shared fixture's own, host and prefix on top), so
+ *  that a paste is bounded without any real one being truncated. */
+const MAX_ENTRY_LENGTH = 4096;
+
+/**
+ * What somebody is told when what they typed is not one of our
+ * identifiers, and it is never "not found": the register is not asked at
+ * all for a string that could not name a certificate, so the honest
+ * complaint is about the shape, and the useful half of it is *which* way
+ * the shape is wrong. Length first, because a truncated copy is the
+ * common failure and a reader can count; a wrong character otherwise,
+ * which is the only thing left once the length is right.
+ *
+ * It never prints what was typed back. `InvalidIdentifierShape`'s own
+ * comment gives the reason -- React escapes it, so this was never an XSS
+ * risk, but a page that echoes arbitrary text under its own heading is
+ * one nobody should have to think about twice -- and the field still
+ * holds what was typed, an inch above the message.
+ */
+function shapeComplaint(identifier: string): string {
+  const shape =
+    'A certificate identifier is 32 characters long and uses only the digits 0 to 9 and the letters a to f';
+  return identifier.length === 32
+    ? `${shape}. This one is the right length, so one of its characters is not one of those. Check it against the certificate and try again.`
+    : `${shape}; this one is ${identifier.length}. Check it against the certificate and try again.`;
+}
+
+/**
+ * The way in for somebody holding a certificate and no working link.
+ *
+ * Two fields, one for each thing a certificate has printed on it, and
+ * either one is enough: the identifier alone answers from the register,
+ * and the address carries the signed token, which is what lets a name be
+ * shown. Neither is a placeholder standing in for a label, and each
+ * carries its own format before anything is submitted rather than only
+ * after -- `aria-describedby` on the field, so a screen reader reads the
+ * format with the field rather than leaving it as an unannounced
+ * paragraph nearby.
+ *
+ * Whichever box an address is pasted into, it is read as one
+ * (`parsePrintedAddress` is applied to both), because a person with one
+ * long string in the clipboard should not have to work out which of two
+ * boxes this page wanted it in.
+ *
+ * The shape is checked here rather than left to `VerifyTokenless`'s own
+ * `InvalidIdentifierShape` panel: an answer beside the field that still
+ * holds what was typed is a correction, and the same sentence in a panel
+ * that has replaced the form is a dead end.
+ */
+function HandEntry({
+  focusOnMount,
+  onEntered,
+}: {
+  focusOnMount: boolean;
+  onEntered: (entry: Entry) => void;
+}) {
+  const [identifierText, setIdentifierText] = useState('');
+  const [addressText, setAddressText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const identifierInput = useRef<HTMLInputElement>(null);
+
+  // Only after `Check another certificate` has taken an answer off the
+  // screen -- never on first load, where stealing focus would scroll a
+  // reader past the heading that says what this page is.
+  useEffect(() => {
+    if (focusOnMount) identifierInput.current?.focus();
+  }, [focusOnMount]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const fromField = parsePrintedAddress(identifierText);
+    const fromAddress = parsePrintedAddress(addressText);
+    const token = fromField.token ?? fromAddress.token;
+    const identifier =
+      fromField.identifier ?? fromAddress.identifier ?? normaliseIdentifier(identifierText);
+
+    // A token is checked against its own signed payload, which carries the
+    // identifier `VerifyWithToken` actually uses -- so an address that
+    // brought one is answerable whatever the identifier field holds, and
+    // refusing it over that field's shape would refuse a certificate this
+    // page can read.
+    if (token) {
+      setError(null);
+      onEntered({ identifier, token });
+      return;
+    }
+    if (!identifier) {
+      setError(
+        'Enter the identifier printed on the certificate, or paste the whole verification address printed under it.',
+      );
+      identifierInput.current?.focus();
+      return;
+    }
+    if (!isValidIdentifierShape(identifier)) {
+      setError(shapeComplaint(identifier));
+      identifierInput.current?.focus();
+      return;
+    }
+    setError(null);
+    onEntered({ identifier });
+  }
+
+  return (
+    <div className="verify__entry">
+      <h2 className="verify__entry-title">Enter what is printed on the certificate</h2>
+      <p>
+        A certificate carries its identifier and the address to check it at, printed as text
+        and as a square code. Either one is enough, and neither is sent anywhere: the check
+        runs in this browser.
+      </p>
+      {/* `method="post"` on a page that would otherwise default to GET.
+          Unreachable through React's own delegated submit handler, but if
+          that handler ever failed to attach, a native submit would put a
+          token -- which carries the holder's name -- into the URL, the
+          browser history and the `Referer` of whatever loads next. The
+          same closure `SignupForm.tsx` makes for the same reason. */}
+      <form method="post" onSubmit={submit} className="verify__form">
+        <div className="verify__field">
+          <label htmlFor={IDENTIFIER_FIELD}>Certificate identifier</label>
+          <p className="verify__hint" id={IDENTIFIER_HINT}>
+            32 characters, using the digits 0 to 9 and the letters a to f. It is printed on
+            the certificate under &ldquo;Identifier&rdquo;.
+          </p>
+          <input
+            ref={identifierInput}
+            id={IDENTIFIER_FIELD}
+            type="text"
+            value={identifierText}
+            onChange={e => setIdentifierText(e.target.value)}
+            aria-describedby={error ? `${IDENTIFIER_HINT} ${ENTRY_ERROR}` : IDENTIFIER_HINT}
+            aria-invalid={error ? true : undefined}
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={MAX_ENTRY_LENGTH}
+          />
+        </div>
+        <div className="verify__field">
+          <label htmlFor={ADDRESS_FIELD}>Verification address (optional)</label>
+          <p className="verify__hint" id={ADDRESS_HINT}>
+            The whole address printed under &ldquo;Verify this certificate at&rdquo;,
+            everything after the <code>#</code> included. With it we can show the name on the
+            certificate; with the identifier alone we can only confirm what our register
+            records.
+          </p>
+          <textarea
+            id={ADDRESS_FIELD}
+            rows={3}
+            value={addressText}
+            onChange={e => setAddressText(e.target.value)}
+            aria-describedby={ADDRESS_HINT}
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={MAX_ENTRY_LENGTH}
+          />
+        </div>
+        <button type="submit" className="btn btn--primary">
+          Check this certificate
+        </button>
+        {error && (
+          // `role="alert"`, an implicit assertive live region: this text
+          // appears purely in response to the button above it, and
+          // without this a screen reader user is never told it happened
+          // at all. The same discipline `SignupForm.tsx` keeps for its
+          // own submit error.
+          <p role="alert" id={ENTRY_ERROR} className="verify__error">
+            {error}
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}
+
 export function VerifyPage({ identifier, token }: { identifier?: string; token?: string }) {
+  const [entry, setEntry] = useState<Entry | null>(null);
+  const [returning, setReturning] = useState(false);
+
+  // The URL always wins, and it is read for a token as well as an
+  // identifier: an address carrying only a token is still answerable,
+  // because the token names its own certificate once its signature holds.
+  const fromUrl: Entry | null =
+    identifier || token ? { identifier: identifier ?? '', token } : null;
+  const given = fromUrl ?? entry;
+
+  if (!given) {
+    return (
+      <div className="verify">
+        <HandEntry focusOnMount={returning} onEntered={setEntry} />
+      </div>
+    );
+  }
+
+  // Keyed for the reason `main.tsx` keys this whole component: a second
+  // certificate checked in the same visit must tear the first one's
+  // `sig`/`lookup` state down rather than reuse it, or a stale answer
+  // briefly describes the previous certificate under the new one's entry.
+  const key = `${given.identifier}::${given.token ?? ''}`;
   return (
     <div className="verify">
-      {!identifier ? (
-        <Panel tone="danger" title="No certificate identifier">
-          <p>This link does not name a certificate to check.</p>
-        </Panel>
-      ) : token ? (
-        <VerifyWithToken token={token} />
+      {given.token !== undefined ? (
+        <VerifyWithToken key={key} token={given.token} entered={fromUrl === null} />
       ) : (
-        <VerifyTokenless identifier={identifier} />
+        <VerifyTokenless key={key} identifier={given.identifier} />
+      )}
+      {fromUrl === null && (
+        <p className="verify__again">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setEntry(null);
+              setReturning(true);
+            }}
+          >
+            Check another certificate
+          </button>
+        </p>
       )}
     </div>
   );

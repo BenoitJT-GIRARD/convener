@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { VerifyPage } from '../../src/islands/verify/VerifyPage';
 import cases from '../../../tools/tests/fixtures/certificate-verification.json';
 
@@ -259,10 +259,157 @@ describe('VerifyPage -- no token (the printed-page flow)', () => {
   });
 });
 
-describe('VerifyPage -- no identifier at all', () => {
-  it('shows a plain refusal rather than crashing', () => {
+/**
+ * The way in for a visit that arrived with no link -- the case this page
+ * used to answer with one panel and no field, which made every
+ * certificate already issued unverifiable the day its printed address
+ * stopped resolving. Every case below goes through the same `verify()`,
+ * the same `lookupCertificateState` and the same panels a link goes
+ * through; what changes is only where the two values came from.
+ */
+describe('VerifyPage -- reached with no link at all', () => {
+  const enter = (label: RegExp, value: string) =>
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  const check = () =>
+    fireEvent.click(screen.getByRole('button', { name: /check this certificate/i }));
+
+  it('offers the two things a certificate has printed on it, each under its own label', () => {
     render(<VerifyPage />);
-    expect(screen.getByText('No certificate identifier')).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('heading', { name: /enter what is printed on the certificate/i }),
+    ).toBeInTheDocument();
+    // `getByLabelText`, not a placeholder or a nearby paragraph: a field
+    // whose only description is text beside it has no label at all.
+    expect(screen.getByLabelText(/certificate identifier/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/verification address/i)).toBeInTheDocument();
+  });
+
+  it('states each field\'s format before anything is submitted, on the field itself', () => {
+    render(<VerifyPage />);
+
+    const identifier = screen.getByLabelText(/certificate identifier/i);
+    const describedBy = identifier.getAttribute('aria-describedby') ?? '';
+    const hint = document.getElementById(describedBy.split(' ')[0] ?? '');
+    expect(hint?.textContent ?? '').toMatch(/32 characters/);
+  });
+
+  it('answers a typed identifier the way a token-less link does, and writes nothing into the URL', async () => {
+    stubFetch({});
+    render(<VerifyPage />);
+
+    // Capitals and the spaces a copy off a printed page leaves behind:
+    // hexadecimal is the same value either case, and neither names a
+    // different certificate.
+    enter(/certificate identifier/i, ` ${SIGNED.identifier.toUpperCase()} `);
+    check();
+
+    await screen.findByText('Recorded as issued');
+    // The whole point of the fragment (see `certificate.py`'s own
+    // "verification address" section) is that nothing about which
+    // certificate is being checked reaches a server. Hand entry keeps
+    // that by keeping what was typed out of the URL entirely -- no
+    // history entry, no address bar, no `Referer`.
+    expect(window.location.hash).toBe('');
+  });
+
+  it('reads a whole printed address, whatever host it names -- including one that no longer answers', async () => {
+    stubFetch({});
+    render(<VerifyPage />);
+
+    enter(
+      /verification address/i,
+      `https://an-organisation-that-moved.invalid/convener/${SIGNED.verification_url_path}`,
+    );
+    check();
+
+    await screen.findByText('Certificate verified');
+    expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
+    expect(window.location.hash).toBe('');
+  });
+
+  it('takes a pasted address in whichever of the two boxes it was pasted into', async () => {
+    stubFetch({});
+    render(<VerifyPage />);
+
+    enter(/certificate identifier/i, `https://example.invalid/x/${SIGNED.verification_url_path}`);
+    check();
+
+    await screen.findByText('Certificate verified');
+  });
+
+  it('tells a damaged code what to do about itself, and still never reads as a forgery', async () => {
+    const truncated = cases.verification_rejects.find(c => c.name === 'truncated');
+    if (!truncated) throw new Error('fixture case not found');
+    stubFetch({});
+    render(<VerifyPage />);
+
+    enter(
+      /verification address/i,
+      `#/${SIGNED.identifier}?token=${encodeURIComponent(truncated.token)}`,
+    );
+    check();
+
+    await screen.findByText('We cannot confirm this certificate');
+    expect(screen.getByText(/check what you entered against the certificate/i)).toBeInTheDocument();
+    const text = document.body.textContent ?? '';
+    expect(text).not.toMatch(/forged|forger|fake/i);
+  });
+
+  it('refuses a short identifier at the field, says how short it is, and never asks the register', () => {
+    stubFetch({});
+    render(<VerifyPage />);
+
+    enter(/certificate identifier/i, SIGNED.identifier.slice(0, 30));
+    check();
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/32 characters long/);
+    expect(alert).toHaveTextContent(/this one is 30/);
+    const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
+    expect(calls.some(url => url.endsWith('/certificates.json'))).toBe(false);
+  });
+
+  it('names the other half of the shape when the length is already right', () => {
+    render(<VerifyPage />);
+
+    enter(/certificate identifier/i, 'z'.repeat(32));
+    check();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/right length/);
+  });
+
+  it('asks for something rather than checking nothing', () => {
+    render(<VerifyPage />);
+
+    check();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /Enter the identifier printed on the certificate/,
+    );
+  });
+
+  it('comes back to an empty form, carrying nothing over from the answer before it', async () => {
+    stubFetch({});
+    render(<VerifyPage />);
+
+    enter(/certificate identifier/i, SIGNED.identifier);
+    check();
+    await screen.findByText('Recorded as issued');
+    fireEvent.click(screen.getByRole('button', { name: /check another certificate/i }));
+
+    expect(screen.getByLabelText(/certificate identifier/i)).toHaveValue('');
+    expect(screen.queryByText('Recorded as issued')).not.toBeInTheDocument();
+  });
+
+  it('offers no way back when the certificate came from the URL, which still names it', async () => {
+    stubFetch({});
+    renderVerify(SIGNED.identifier);
+
+    await screen.findByText('Recorded as issued');
+    expect(
+      screen.queryByRole('button', { name: /check another certificate/i }),
+    ).not.toBeInTheDocument();
   });
 });
 

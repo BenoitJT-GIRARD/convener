@@ -138,7 +138,9 @@ describe('main.tsx -- finding and reading the mount point', () => {
 
     await import('../../src/islands/verify/main');
 
-    await screen.findByText('No certificate identifier');
+    // Which is the way in, not a refusal: with nothing in the fragment
+    // this island offers the fields instead of a dead end.
+    await screen.findByText('Enter what is printed on the certificate');
   });
 });
 
