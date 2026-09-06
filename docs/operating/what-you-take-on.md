@@ -37,6 +37,36 @@ For an operator, concretely:
   yours, the workers are deployed under your own account. Which is also why
   nobody here can help you when a key is gone.
 
+### The services an instance leans on
+
+Convener is built to run on no budget. To do that, an instance leans on
+outside services with a free tier, and standing one up makes you their
+customer as well as this software's operator. Here is what this instance
+uses, what each one sees, and what changes if you choose others.
+
+| Service | What it carries here | What it sees |
+|---|---|---|
+| **GitHub** | The two repositories, every scheduled job, and the public site | The whole repository and every job's log. A registration is stored as ciphertext, and decrypted inside a job that runs on GitHub's own machines |
+| **Cloudflare** | The three workers under `services/` | Every request one of them answers, and the address it came from. A registration and a survey answer arrive already encrypted; a proposal does not |
+| **Tally** | The public proposal form | A speaker or event-lead candidate's own name, address and answers, in the clear, until the form relay hands them over |
+| **Gmail, over SMTP** | The registration confirmation, the certificate and the survey invitation | Every address one of the three is sent to, and what the message says |
+| **FreeConferenceCall** | The room a webinar runs in | A display name and an address for each person who joins, and the recording until it is deleted |
+| **YouTube** | The channel a recording is published to | What is published, which is a talk and the speaker giving it |
+
+The last three are slots rather than choices this product made.
+`declarations/integrations.yml` declares `email_transport`,
+`meeting_provider` and `video_publishing`; an instance fills each with a
+repository secret, and any mailbox reachable over SMTP, any meeting
+account and any channel will do. One thing changes with the meeting
+provider: reading attendance and deleting a recording through an API is
+written against one provider's own
+(`tools/convener_ops/journey/platform_fcc.py`), so with any other the
+manual adapter runs instead — links typed in, attendance imported from a
+file — which is what this project does by default anyway. The first three
+are not slots: they are named in the workflows, in the workers' own
+configuration and in the form the proposal page points at, so an instance
+that wants others is writing code rather than setting a value.
+
 ## No warranty, in ordinary words
 
 The licence states this in capitals and in legal English. Here it is in

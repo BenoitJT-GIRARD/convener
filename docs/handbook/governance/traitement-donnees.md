@@ -71,7 +71,15 @@ any time before the retention deadline below.
 
 ## Recipients
 
-Nobody outside the organising team, and not even all of it. The signup
+Two services outside the organising team see a participant in the clear:
+the mailbox that sends a confirmation, a certificate or a survey
+invitation sees the address it goes to and what the message says, and the
+meeting platform sees the name and the address each person joins the room
+with. `docs/operating/what-you-take-on.md`, in the operator's own tree,
+is the whole list of what an instance leans on, what each one sees, and
+what an operator changes by choosing others.
+
+Nobody else, and inside the organising team not even everybody. The signup
 relay, the service a participant's browser actually talks to, checks that
 the encrypted envelope it receives is shaped correctly and forwards it — it
 never holds a key that could decrypt it, and it never sees plaintext.
