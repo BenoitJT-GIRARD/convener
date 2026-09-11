@@ -3,8 +3,8 @@
 `app/tests/content/registered-links.test.ts` already refuses a registered page that
 links to a page this repository does not publish. This module applies the
 identical test to the *other* way a comment points somewhere: not a link, an
-identifier or a coordinate. `D-19`, `phase 8, task 3, change E`, `R-27`,
-`H4 (2026-08-23 security audit)`, `Minor 2 (fix round 1, task 16)` all read
+identifier or a coordinate. `D-19`, `phase 12, task 7, change K`, `R-41`,
+`H6 (2026-03-04 security audit)`, `Minor 5 (fix round 3, task 24)` all read
 as citations. Only the first of them resolves.
 
 This is more visible than a commit message. Anybody reading the source meets
@@ -58,7 +58,7 @@ resolves only if some page bears that name.
 That derivation is exactly what separates the two meanings of one word.
 `docs/handbook/workflow/3-hosting.md` opens `# Phase 3 — Hosting day`, so
 "[Phase 3 — Hosting day](../workflow/3-hosting.md)" resolves and stays;
-"phase 8, task 3" names a plan this repository never publishes, and goes.
+"phase 12, task 7" names a plan this repository never publishes, and goes.
 **The limit of that, stated rather than left to be discovered:** the event
 journey has four phases, so a *construction* phase numbered 1 to 4 would
 pass this check. Five upwards, and every `task N`, `round N`, `wave N`,
@@ -100,7 +100,7 @@ published page states, so nothing here resolves a number for them.
 An identifier is the easy half. The same document gets cited in running
 English too -- "the spec's S:4 rights section", "acceptance criterion 8 of
 the spec", "see this task's own report" -- and a reader who follows one of
-those finds exactly what they find for `R-27`. `WORKING_RECORD_PHRASE`
+those finds exactly what they find for `R-41`. `WORKING_RECORD_PHRASE`
 refuses four phrases, and only four:
 
 * `this task` / `the task's`
@@ -179,13 +179,13 @@ PUBLIC_STANDARDS = frozenset({"UTF", "SHA", "AES", "RFC", "P"})
 
 #: An identifier-shaped citation: one to three capitals, a hyphen, a number.
 #: The shape every family this project ever used is written in -- `D-19`,
-#: `R-27`, `AF-2`, `P2-9` -- and the shape a new one would be written in.
+#: `R-41`, `AF-2`, `P2-9` -- and the shape a new one would be written in.
 IDENTIFIER = re.compile(r"(?<![A-Za-z0-9_-])([A-Z]{1,3})-(\d{1,3})(?![A-Za-z0-9_-])")
 
-#: A coordinate into a numbered thing: `phase 8`, `task 3`, `fix round 1`,
-#: `ruling 6`, `Minor 2`, `Important 1b`. Resolved against the titles of
+#: A coordinate into a numbered thing: `phase 12`, `task 7`, `fix round 3`,
+#: `ruling 6`, `Minor 5`, `Important 1b`. Resolved against the titles of
 #: published pages, which is what lets the event journey's own `Phase 3`
-#: through and stops a construction plan's `phase 8`. `ruling` belongs in
+#: through and stops a construction plan's `phase 12`. `ruling` belongs in
 #: this list rather than beside the phrases below because a *numbered*
 #: ruling is a coordinate and nothing else: "a design ruling", carrying no
 #: number, names a settled decision and never matches.
@@ -196,7 +196,7 @@ COORDINATE = re.compile(
     re.IGNORECASE,
 )
 
-#: The same coordinate, lettered instead of numbered: `change E`,
+#: The same coordinate, lettered instead of numbered: `change K`,
 #: `Critical B`. Case-sensitive on the letter, and stopping at `M`, because
 #: `N` and `X` are this repository's placeholders for "any number" -- a
 #: comment naming `phase-N-bilan.md` is describing a filename shape, not
@@ -490,7 +490,7 @@ def _coordinate_resolves(word: str, number: str, titles: frozenset[str]) -> bool
 
 #: This module's own path. It is the one file the sweep skips, and the
 #: reason is structural rather than convenient: everything above states the
-#: rule by naming the shapes it refuses -- `R-27`, `phase 8, task 3`,
+#: rule by naming the shapes it refuses -- `R-41`, `phase 12, task 7`,
 #: `Critical A` -- so a module that swept itself would refuse its own
 #: source the day it was written. `convener_ops.derivation.derivation_guard` already
 #: solved the identical problem the other way, by never writing a
@@ -675,7 +675,7 @@ def unresolvable_identifiers(name: str, body: str) -> list[str]:
 
 
 def unresolvable_coordinates(body: str) -> list[str]:
-    """Every `phase 8` / `task 3` / `Minor 2` naming no published page."""
+    """Every `phase 12` / `task 7` / `Minor 5` naming no published page."""
     titles = published_page_titles()
     offenders = []
     for word, number in COORDINATE.findall(body):
@@ -712,7 +712,7 @@ def _report(found: dict[str, list[str]]) -> str:
 
 def test_every_identifier_in_a_comment_names_a_published_document() -> None:
     """`D-19` resolves: `docs/engineering/decisions/d-19-event-identifier.md` is a page
-    the handbook serves. `R-27` resolved to a reviewer's ruling in a
+    the handbook serves. `R-41` resolved to a reviewer's ruling in a
     document this repository never publishes, and a reader who went
     looking found nothing."""
     found = _offenders(unresolvable_identifiers)
@@ -726,7 +726,7 @@ def test_every_identifier_in_a_comment_names_a_published_document() -> None:
 
 def test_no_comment_cites_a_phase_or_a_task_that_is_not_published() -> None:
     """`Phase 3 — Hosting day` is a page in the handbook, so a link that
-    says "Phase 3" resolves. `phase 8, task 3, change E` named a plan and
+    says "Phase 3" resolves. `phase 12, task 7, change K` named a plan and
     a task inside it, and this repository publishes neither."""
     found = _offenders(lambda name, body: unresolvable_coordinates(body))
     assert not found, (
@@ -747,7 +747,7 @@ def test_no_comment_names_the_working_record_in_words() -> None:
 
     "the spec's S:4 rights section", "acceptance criterion 8 of the spec",
     "see this task's own report" -- a reader who goes looking finds exactly
-    what they find for `R-27`. Say what the code guarantees; if a document
+    what they find for `R-41`. Say what the code guarantees; if a document
     really is the point, name one this repository publishes.
     """
     found = _offenders(lambda name, body: working_record_phrases(body))
@@ -797,9 +797,9 @@ def test_a_dangling_identifier_is_caught(tmp_path: Path) -> None:
     reports. A file written to fail, and read through the same
     extractor."""
     probe = tmp_path / "probe.py"
-    probe.write_text('"""Refuses a stale payload (R-27, fix round 1)."""\n', "utf-8")
+    probe.write_text('"""Refuses a stale payload (R-41, fix round 3)."""\n', "utf-8")
     body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
-    assert unresolvable_identifiers("probe.py", body) == ["R-27"]
+    assert unresolvable_identifiers("probe.py", body) == ["R-41"]
 
 
 def test_a_governance_rule_no_page_states_is_caught(tmp_path: Path) -> None:
@@ -860,11 +860,11 @@ def test_a_published_decision_record_is_not_caught(tmp_path: Path) -> None:
 
 
 def test_a_dangling_coordinate_is_caught() -> None:
-    """`phase 8` names nothing published; `Phase 3` names a handbook page."""
-    assert sorted(unresolvable_coordinates("# Phase 8, task 3, change E")) == [
-        "Phase 8",
-        "change E",
-        "task 3",
+    """`phase 12` names nothing published; `Phase 3` names a handbook page."""
+    assert sorted(unresolvable_coordinates("# Phase 12, task 7, change K")) == [
+        "Phase 12",
+        "change K",
+        "task 7",
     ]
     assert unresolvable_coordinates("see [Phase 3](../workflow/3-hosting.md)") == []
     assert unresolvable_coordinates("change a file, and every phase-N-bilan.md") == []
