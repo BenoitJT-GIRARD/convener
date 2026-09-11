@@ -983,6 +983,33 @@ def unresolvable_test_paths(text: str) -> list[str]:
     return sorted({m for m in TEST_MODULE_PATH.findall(text) if m not in tracked})
 
 
+def cited_in(name: str) -> str:
+    """Where a *citation* of a test module can be, in a file of this kind.
+
+    The whole text for every kind but one, because a citation is not
+    only a comment here: a workflow names a module in the command it
+    runs, and a command that names a module that moved is the same
+    defect louder.
+
+    **Python is the exception, and it is the distinction rather than an
+    exemption.** A path in a `.py` string literal is a value the code
+    uses, and a value that has gone stale stops something working -- an
+    import fails, a fixture is not found, a filter filters nothing -- so
+    a second control always stands behind it. A path in a comment or a
+    docstring is a citation and nothing at all stands behind that, which
+    is the case this module exists for.
+
+    Measured rather than assumed, on the day the distinction was needed:
+    `derivation_guard.KEPT_BACK` holds every spelling a path that never
+    leaves has ever had, which is a list of paths this repository
+    deliberately no longer tracks. Read as citations they are four
+    refusals; read as what they are they are the subject of the control
+    that reads them.
+    """
+    text = _text_of(name)
+    return prose_of(name, text) if name.endswith(".py") else text
+
+
 def test_every_test_module_a_file_names_is_a_file_this_repository_tracks() -> None:
     """A citation of a test module is a coordinate like `D-19`, and it goes
     stale the same way -- by the thing moving, with nothing red.
@@ -1016,7 +1043,7 @@ def test_every_test_module_a_file_names_is_a_file_this_repository_tracks() -> No
         name: unresolvable
         for name in _tracked()
         if name != SELF
-        for unresolvable in [unresolvable_test_paths(_text_of(name))]
+        for unresolvable in [unresolvable_test_paths(cited_in(name))]
         if unresolvable
     }
 
