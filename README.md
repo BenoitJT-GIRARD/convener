@@ -120,8 +120,8 @@ npm install
 cd ../app
 npm install
 cd ../tools
-uv run python scripts/demonstration_build.py ../demonstration
-cd ../demonstration
+uv run python scripts/demonstration_build.py ../../convener-demonstration
+cd ../../convener-demonstration
 python -m http.server 8731
 ```
 
