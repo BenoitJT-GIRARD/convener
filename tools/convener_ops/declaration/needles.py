@@ -2,10 +2,10 @@
 
 This began as `tools/tests/helpers/instance_identity.py`, for one reader:
 the sweep that builds a second instance and refuses anything of the first
-in what it produced. It has a second now, `derivation_guard.py`,
-which asks the same question of every blob of every ref before a public
-push -- and a second reader is exactly when a thing has to move out of
-`tests/` rather than be copied into the package. The test helper still
+in what it produced. It moved here the day a second reader appeared --
+one asking the same question of every blob of every ref rather than of
+one build -- and a second reader is exactly when a thing has to move out
+of `tests/` rather than be copied into the package. The test helper still
 exists and still owns the *deferred register*; it imports what is here
 rather than restating it, so there is one derivation and not two.
 
@@ -170,20 +170,19 @@ def forms(needle: str) -> tuple[str, ...]:
       in a case nobody wrote down.
 
     The second was measured rather than supposed, and the values are
-    deliberately not quoted here -- naming them is the defect. A derived
-    repository that `convener-check-derivation` passed with `nothing
-    refused.` still carried five of them in capitals: the organisation,
+    deliberately not quoted here -- naming them is the defect. A
+    repository built as another instance, which every check then in force
+    had passed, still carried five of them in capitals: the organisation,
     its forum, its published host, the series' name and its strapline, in
     the two downloadable templates, in the video-call background, in an
     edge worker's test and in a typeface fixture, at the tip and
-    throughout the history. Neither half of the derivation saw one:
-    `derivation_guard.identity_hits` searched the declared spelling only,
-    and `repository.identity_rules` built a literal, case-sensitive
-    rewrite rule from the same one.
+    throughout its history. Neither the rewrite nor the search that
+    follows it saw one: both looked for the declared spelling only, and
+    both built that spelling from this function.
 
     Returning the upper-case spelling here closes both at once, because
-    both read this function: the table rewrites what it now knows to look
-    for, and the guard refuses whatever the table missed. It is not case
+    both read this function: a rewrite converts what it now knows to look
+    for, and a search refuses whatever the rewrite missed. It is not case
     *folding*, which this deliberately still does not do -- lower-casing
     the haystack would fold a declared abbreviation into its lower-case
     spelling and make a short needle fire on prose. It is one more

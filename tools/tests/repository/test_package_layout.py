@@ -62,19 +62,15 @@ question -- is this module named after something in the package it mirrors
 the question that actually found `test_cli.py`: is this module named after
 the directory it is sitting in. That question lived inside the mirror and
 nowhere else, so two modules on the other side of the tree carried their
-own directory's name with nothing to say so: the tests of
-`derivation/repository.py` and the tests of `governance/rule.py`, each
-named after the package holding it. They are
-`tools/tests/derivation/test_repository.py` and
-`tools/tests/governance/test_rule.py` now, and
+own directory's name with nothing to say so, each named after the package
+holding it rather than after anything inside it. Both were renamed, and
 `test_no_test_module_is_named_after_the_package_that_holds_it` is that
 question asked of the whole tree.
 
 A suffix is not the same thing and is not refused:
 `tools/tests/governance/test_governance_fixture.py` is about the fixture the
-two languages share and `tools/tests/derivation/test_derivation_guard.py`
-about `derivation/derivation_guard.py`, and each names a subject the
-directory has rather than the directory. What the rule refuses is the name
+two languages share, and it names a subject the directory has rather than
+the directory itself. What the rule refuses is the name
 that says only *everything behind this door*, because that is a file with
 no subject and it grows until somebody measures it.
 
@@ -350,16 +346,16 @@ def test_the_rule_reads_a_package_name_apart_from_a_subject() -> None:
     empty list behind on the day they are written."""
     made_up = [
         Path("governance/test_governance.py"),
-        Path("derivation/test_derivation.py"),
+        Path("publication/test_publication.py"),
         Path("governance/test_rule.py"),
         Path("governance/test_governance_fixture.py"),
-        Path("derivation/test_derivation_guard.py"),
+        Path("publication/test_publication_brand.py"),
         Path("cli/journey/test_attendance.py"),
     ]
 
     assert named_after_their_package(made_up) == [
-        "derivation/test_derivation.py",
         "governance/test_governance.py",
+        "publication/test_publication.py",
     ]
 
 

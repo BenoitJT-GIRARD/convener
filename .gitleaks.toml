@@ -11,8 +11,28 @@
 # carries one RSA-2048 private key **on purpose**: generated for that fixture,
 # encrypting nothing anybody sent, and the only thing holding this project's
 # two languages to one wire format (D-14). The argument for keeping it is
-# written once, in `tools/convener_ops/derivation/derivation_guard.py::DECLARED_SECRETS`,
-# where the derivation guard reads it. It is not repeated here.
+# here, beside the clause that exempts it, and nowhere else.
+#
+# It is the only proof this project has that a registration encrypted in a
+# browser is readable by the job that has to read it. The browser code
+# encrypts a case's `fields` under that fixture's own public half once, the
+# resulting envelope is frozen in the file, and
+# `tools/tests/journey/test_eventkeys.py` decrypts *those exact bytes* with
+# the private half through the real decryptor. The two runners never share a
+# process, so that pinned envelope is the only thing standing between the two
+# implementations and each merely passing its own tests -- which is the
+# failure the fixture was written for. Generating the pair at test time
+# removes it; so does replacing the key with an unusable one, because an
+# envelope no key opens proves nothing; and re-capturing the envelopes under
+# a fresh pair only produces another working private key at the same path.
+#
+# What it is safe against: it encrypts nothing real. `instance/keys/events/`
+# has never held a key, no event key has ever been issued, and no deployment
+# of this repository uses this pair for anything. What it is *not* safe
+# against is noise: a public repository carrying a PEM block trips secret
+# scanners that never read this file, and that cost is accepted here rather
+# than hidden -- obfuscating the key so a scanner misses it would keep the
+# whole of the risk and remove only the warning.
 #
 # Without this file the `secrets` job is red on its first run and stays red.
 # That is where it stood for a long time: nothing had ever run, so nobody
@@ -24,8 +44,8 @@
 # `paths` on its own would exempt the whole file, and the file most likely to
 # grow a second key is the file that already holds one: a single decision
 # would have become a standing hole in exactly the wrong place. So
-# `condition = "AND"` requires both clauses to hold, which is the same pair
-# `derivation_guard.is_declared(where, digest)` already requires. A second
+# `condition = "AND"` requires both clauses to hold, which is the pair this
+# decision is about: a value at a path, never a path. A second
 # credential added to this fixture is still reported; this key at any other
 # path is still reported; and this key regenerated is still reported, because
 # the anchor below stops matching.
@@ -33,18 +53,18 @@
 # The anchor is sixty-four base64 characters of that key's **modulus** -- the
 # public half, which the same fixture publishes in the clear beside it as
 # `public_pem`. A slice of the private half would have made this file a second
-# copy of a key, and a copy the derivation guard would then have to refuse.
+# copy of a key, and a copy every check here would then have to refuse.
 #
-# `tools/tests/derivation/test_derivation_guard.py` holds every clause below against the
-# fixture it names, offline and without the scanner: an allowlist that has
-# stopped standing for anything fails in the test suite instead of quietly
-# exempting nothing.
+# Every clause below is a property of this file and of the fixture it names,
+# so all of them can be read against that fixture offline and without the
+# scanner -- which is how an allowlist that has stopped standing for
+# anything is found before it quietly exempts nothing.
 
 [extend]
 useDefault = true
 
 [[allowlists]]
-description = "the fixture key DECLARED_SECRETS declares, at the one path declaring it"
+description = "the fixture key argued for above, at the one path that holds it"
 targetRules = ["private-key"]
 condition = "AND"
 regexTarget = "secret"

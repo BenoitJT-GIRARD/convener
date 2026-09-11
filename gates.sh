@@ -5,10 +5,10 @@
 #     sh gates.sh            # every gate
 #     sh gates.sh types      # just mypy
 #
-# Dispatch and nothing else. Each line below is the command
-# `docs/operating/publishing-the-product.md` already told a reader to type,
-# from the directory it already told them to type it in, so a gate that
-# passes here passes there and the two cannot drift into different checks.
+# Dispatch and nothing else. Each line below is the command a maintainer
+# was already typing, from the directory it was already typed in, so a
+# gate that passes by hand passes here and the two cannot drift into
+# different checks.
 # The installs are not here: they are three commands run once per tree
 # (`npm ci` in `app/` and `site/`, `uv sync --all-extras` in `tools/`),
 # ordered for a reason that page states, and a runner that hid them behind
@@ -116,10 +116,10 @@
 #
 # Every Python tool is run as a module of the environment's own
 # interpreter (`python -m mypy`), never through the launcher `uv` puts in
-# `tools/.venv/`. Two reasons, and neither is this machine's:
-# `publishing-the-product.md` already warns that a console-script launcher
-# embeds an absolute interpreter path, so a copied environment goes on
-# checking the tree it came from; and a launcher is an executable, which
+# `tools/.venv/`. Two reasons, and neither is this machine's: a
+# console-script launcher embeds an absolute interpreter path, so an
+# environment copied from another tree goes on checking the tree it came
+# from; and a launcher is an executable, which
 # an application-control policy can refuse -- one does, on the
 # maintainer's own machine, for `mypy` and `pytest` (`os error 4551`),
 # which is how long this runner had two targets that could not run at all.

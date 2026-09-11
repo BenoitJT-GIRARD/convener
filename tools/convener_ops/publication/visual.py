@@ -1021,9 +1021,10 @@ class Announcement:
 #: `examples/the-example-collective/`, so the registration code it draws is a URL under
 #: the example's published address -- and it carried this instance's
 #: edition prefix inside that URL until it was measured. What that cost
-#: was the check itself: `convener-derive` rewrites a declared value
-#: wherever it appears, so the derived repository rendered the same
-#: fixture at a different code, drew a different QR, and failed
+#: was the check itself: an instance's declared values are rewritten
+#: wherever they appear when another instance takes this repository over,
+#: so that repository rendered the same fixture at a different code,
+#: drew a different QR, and failed
 #: `render-and-compare` against reference images no substitution can
 #: convert. A committed image is exactly where an identity must not be.
 FIXTURE_ANNOUNCEMENT: Final = Announcement(

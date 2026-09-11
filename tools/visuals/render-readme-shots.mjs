@@ -30,13 +30,11 @@
  * through Vite's own `define`, `site/.eleventy.js` composes the same
  * values into every showcase page -- so a picture taken here would be a
  * picture of whichever series happens to run this repository, in every
- * file `assets/screenshots/` hands to the derived public repository.
- * Nothing downstream could catch it:
- * `convener_ops.derivation.derivation_guard` cannot read a raster and
- * says so in every report it writes, and
- * `tools/tests/repository/test_second_instance.py`'s sweep skips a `.png` for the
- * same reason. `docs/assets/zoom-background.png` was deleted for exactly
- * that once.
+ * file `assets/screenshots/` hands to a public repository exactly as
+ * committed. Nothing downstream could catch it: no check here reads a
+ * raster, and `tools/tests/repository/test_second_instance.py`'s sweep
+ * skips a `.png` and says why. `docs/assets/zoom-background.png` was
+ * deleted for exactly that once.
  *
  * So `refuseUnlessTheExampleDeclares` is a refusal rather than a
  * convention: this script stops unless every value the declaration it can

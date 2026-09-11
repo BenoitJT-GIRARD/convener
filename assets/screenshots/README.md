@@ -35,10 +35,9 @@ holds rather than against what the run happened to write.
 declaration it can see against `examples/the-example-collective/instance/config.json`, value
 by value, and stop while any of them is this repository's own. A masthead is
 compiled into a build rather than fetched by it, so a picture taken here would
-carry this series' name into files the derived public repository publishes
-verbatim and no guard can read: `convener-check-derivation` reports the
-non-text blobs it did not read on every run, and the second instance's sweep
-skips a `.png` for the same reason. Both scripts' own comments carry the rest of
+carry this series' name into files a public repository publishes exactly as
+committed and no check can read: nothing here reads a raster, and the second
+instance's sweep skips a `.png` and says why. Both scripts' own comments carry the rest of
 that reasoning, and `tools/tests/scripts/test_readme_shots.py` runs the refusal rather
 than reading it.
 

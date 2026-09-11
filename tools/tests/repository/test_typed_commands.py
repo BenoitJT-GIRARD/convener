@@ -5,10 +5,10 @@ gave. On Windows PowerShell 5.1 -- the shell a Windows machine opens by
 default -- it prints *The token '&&' is not a valid statement separator in
 this version* and runs nothing at all. It was not one command: `&&` stood
 22 times in `docs/operating/standing-up.md`, 14 times in
-`docs/operating/operations.md`, 6 times in
-`docs/operating/publishing-the-product.md` and twice in `README.md`, and
-the standing-up guide is the page somebody with a browser and a text
-editor walks before there is anything else here to read.
+`docs/operating/operations.md`, six more times across the rest of that
+tree and twice in `README.md`, and the standing-up guide is the page
+somebody with a browser and a text editor walks before there is anything
+else here to read.
 
 What a command is, here
 -----------------------

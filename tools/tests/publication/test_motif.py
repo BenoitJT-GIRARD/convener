@@ -209,7 +209,7 @@ def _regenerable(root: Path) -> None:
     its own charter or names one of the product's, and a tree carrying no
     declaration at all names none. Reading `brand.INSTANCE_PATH` off this
     repository instead would build nothing in a duplicate that named one,
-    which is every repository `convener-derive` produces.
+    which is every repository that ships the example as its instance.
     """
     for relative in (SITE_DATA_PATH, APP_MODULE_PATH):
         target = root / relative

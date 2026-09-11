@@ -42,7 +42,7 @@ _REAL_ROOT = repo_root()
 #: charter whichever of the two states this repository's instance is in --
 #: it wrote one, or its declaration names one of the product's. Reading
 #: `instance/data/brand.json` off the repository answered only the first,
-#: which is the state no repository `convener-derive` produces is in.
+#: which is the state no repository that ships the example as its instance is in.
 @cache
 def _real_brand() -> str:
     return (_REAL_ROOT / brand.source(_REAL_ROOT)).read_text(encoding="utf-8")

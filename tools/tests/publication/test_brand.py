@@ -109,7 +109,7 @@ CHARTERS_HELD: Final = (
 )
 
 #: Whether the charter in force here *is* the product's own default. True
-#: in every repository `convener-derive` produces -- the example
+#: in every repository that ships the example as its instance -- the example
 #: collective names `convener` and writes no charter -- and false upstream,
 #: which has a designer and a file. The two comparisons that carry it are
 #: about the difference between a duplicate's palette and the product's,
@@ -647,7 +647,7 @@ def _declaring_no_charter(root: Path) -> None:
     `brand.source` refuses -- and which of the three the instance running
     this repository is in is not a property a fixture may inherit.
     Upstream writes its own charter and names none; every repository
-    `convener-derive` produces names one and writes none.
+    that ships the example as its instance names one and writes none.
     `cli.publication._fixture_root` takes the key out for this reason, and
     this is the same decision at the same seam.
     """
@@ -887,7 +887,7 @@ def test_every_charter_names_the_same_tokens_as_the_products_own(rel: Path) -> N
     Over every charter this repository holds rather than over the one it
     happens to be drawn by. Written as the default against this instance's
     own, it said nothing at all in a repository where the two are one file,
-    which is every repository `convener-derive` produces.
+    which is every repository that ships the example as its instance.
     """
     assert sorted(_charter_colours(rel)) == sorted(_charter_colours(brand.DEFAULT_PATH))
 
@@ -1144,7 +1144,7 @@ def test_this_repository_takes_exactly_one_of_the_two_routes() -> None:
 
     Upstream takes the first: it has a designer, so it has a file, so its
     declaration carries no name for the resolution above to refuse. Every
-    repository `convener-derive` produces takes the second: the example
+    repository that ships the example as its instance takes the second: the example
     collective's declaration names the product's own charter and writes
     none. Both together is what `brand.source` refuses, and this asks that
     of the repository the suite is running in rather than of the one it was
@@ -1480,7 +1480,8 @@ def test_a_duplicate_that_has_configured_nothing_builds_every_file(
     # The foil is another charter this repository ships rather than the one
     # in force. "Never this instance's" has nothing to exclude where the
     # instance is drawn by the product's own, which is every repository
-    # `convener-derive` produces; a charter the build was not given is the
+    # that ships the example as its instance; a charter the build was not
+    # given is the
     # claim either way, and this one is a charter in both.
     unchosen = _charter(ROOT_CHARTERS[_ANOTHER_CHARTER])
     other = unchosen[brand.MOTIF_KEY]
@@ -1810,7 +1811,7 @@ def test_the_only_colours_either_template_inks_type_in_are_the_measured_ones() -
     # tones only where the organisation's name appears inside its forum's
     # host, and in one where it does not (`_wordmark_runs`, which says why
     # inventing a split there would be worse). The example collective is
-    # the second case, so in every repository `convener-derive` produces
+    # the second case, so in every repository that ships the example as its instance
     # nothing takes the accent and the entry measures a pairing no run of
     # type is set in -- which is correct rather than stale.
     accented = any(

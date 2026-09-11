@@ -1,13 +1,12 @@
 """What holds the README's pictures to a build nobody's identity reaches.
 
-`assets/screenshots/` is the product's, so its rasters travel into the
-derived public repository exactly as committed. They used to be taken
-from a build of *this* instance, which put one series' name and one
-series' editions into files no later check could read:
-`convener_ops.derivation.derivation_guard` says in every report it writes
-that it did not read the non-text blobs, and `test_second_instance.py`'s
-sweep skips a `.png` for the same reason. `docs/assets/zoom-background.png`
-had already been deleted for exactly that.
+`assets/screenshots/` is the product's, so its rasters travel into a
+public repository exactly as committed. They used to be taken from a
+build of *this* instance, which put one series' name and one series'
+editions into files no later check could read: nothing here reads a
+raster, and `test_second_instance.py`'s sweep skips a `.png` and says
+why. `docs/assets/zoom-background.png` had already been deleted for
+exactly that.
 
 What is checkable here, and what is not
 ---------------------------------------

@@ -35,9 +35,9 @@ The product's own code, wherever it runs: the three Cloudflare Workers
 under `services/`, the workflows under `.github/workflows/` and the secrets
 they name, the browser-side encryption of a registration and the
 certificate signing and verification behind it, the retention sweep that
-destroys an event's key, and the two checks that decide what may leave a
-private repository at all — the boundary declaration (`declarations/boundary.yml`)
-and the derivation guard (`tools/convener_ops/derivation/repository.py`).
+destroys an event's key, and the declaration that decides which paths belong
+to a series rather than to the code, and so what may leave a private
+repository at all (`declarations/boundary.yml`).
 
 A weakness in a template is worth more to an attacker than the same
 weakness in one repository, because every duplicate inherits it. That is

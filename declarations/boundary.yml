@@ -96,10 +96,11 @@
 # is different is that no entry here names a path that exists, and no
 # entry here is a path `instance:` still hands over -- one of the two
 # would be a copy of the other, and `boundary.retired_from_data` refuses
-# it. `Boundary.ever_owned` is `owner_of` widened by this list, and it is
-# read by the history-reading half only: `convener_ops.derivation.repository`, which
-# decides what a derived repository may carry. The two JavaScript readers
-# do not mirror it, because neither of them ever asks about a commit.
+# it. `Boundary.ever_owned` is `owner_of` widened by this list, and only
+# something reading this repository's *history* has any use for it:
+# whose a path is today and whose its blobs have ever been are two
+# questions. The two JavaScript readers do not mirror it, because neither
+# of them ever asks about a commit.
 #
 # `site/src/_data/site.json` is the entry that is not a move. Its four
 # identity keys were folded into `instance/config.json` and the file was
@@ -110,16 +111,18 @@
 #
 # A *product* path that moves needs no entry here, and adding one does
 # real damage rather than none. The reflex is the wrong way round: this
-# list widens **instance** ownership, and the derivation reads it to
-# decide what a public repository may not carry, so retiring `assets/brand/` on
-# the day it becomes `assets/brand/` would delete every earlier version
-# of the product's own charters from the repository the product is
-# published from. Nothing about such an entry looks wrong -- it names a
-# path that existed, does not exist now, and is not handed to the
-# instance, which is all the parser can see -- so it is measured instead:
-# `tools/tests/derivation/test_retirement.py` takes every blob ever
-# stored under a retired path and refuses the entry if those same bytes
-# are tracked today at a path the product owns. `config/` becoming
+# list widens **instance** ownership, and whatever decides what a public
+# repository may not carry reads it, so retiring `assets/brand/` on
+# the day it becomes `assets/brand/` would take every earlier version
+# of the product's own charters out of that repository. Nothing about
+# such an entry looks wrong -- it names a path that existed, does not
+# exist now, and is not handed to the instance, which is all the parser
+# can see -- so two readings stand behind the parser:
+# `boundary.retirements_must_land_where_the_instance_is` refuses an entry
+# whose `became:` is not a path the instance owns today, and the blobs
+# themselves answer the rest, an entry being wrong whenever the bytes
+# ever stored under the retired path are tracked now at a path the
+# product owns. `config/` becoming
 # `declarations/`, `examples/` becoming `examples/` and `assets/brand/` and
 # `fonts/` moving under `assets/` are all that shape, and none of them
 # is below.

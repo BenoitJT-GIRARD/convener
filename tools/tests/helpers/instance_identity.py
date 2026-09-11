@@ -5,10 +5,10 @@ second copy of either would be the defect this whole phase exists to end:
 
 1. **The needles** -- every writable form of what `instance/config.json`
    and the charter in force declare. They are **not written here any
-   more**: they have a second reader outside the suite
-   (`convener_ops.derivation.derivation_guard`, which asks the same question of every
-   blob of every ref before a public push), and a derivation with two
-   readers belongs in the package. `convener_ops.declaration.needles` owns it; the names
+   more**: they gained a second reader outside the suite, one asking the
+   same question of every blob of every ref rather than of one build, and
+   a derivation with two readers belongs in the package.
+   `convener_ops.declaration.needles` owns it; the names
    are re-exported below so every reader of this module keeps working and
    nobody has two places to look. `test_second_instance.py` sweeps a
    *build* for them; anything looking for "this instance's identity" in
@@ -248,13 +248,14 @@ def claimed_by_any(relative: str) -> bool:
 #: Why a test about the separation of two instances cannot run in a
 #: repository that ships only one.
 #:
-#: `convener_ops.derivation.repository` lays `examples/the-example-collective/`
-#: into every path the boundary hands to the instance, because a product repository with
-#: those paths merely deleted neither starts its own suite nor builds --
-#: `paths.repo_root` finds a repository by `instance/data/config.yml` and the
-#: product's default charter has no `motif`. The consequence is exact and
-#: not a compromise: **in the derived repository the instance and the
-#: example are the same instance**, so every needle agrees with itself,
+#: `examples/the-example-collective/` sits at every path the boundary
+#: hands to the instance whenever no series has taken this repository
+#: over, because a repository with those paths merely absent neither
+#: starts its own suite nor builds -- `paths.repo_root` finds a
+#: repository by `instance/data/config.yml` and the product's default
+#: charter has no `motif`. The consequence is exact and not a
+#: compromise: **in such a repository the instance and the example are
+#: the same instance**, so every needle agrees with itself,
 #: every "second copy" is the example's own file, and a build made as the
 #: example legitimately carries the example's identity.
 #:

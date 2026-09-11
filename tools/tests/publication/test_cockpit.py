@@ -101,7 +101,7 @@ def test_white_on_the_field_is_the_pairing_every_charter_forbids() -> None:
     """The measurement behind the fix, recomputed rather than quoted: the
     field is a ground, and white on it is 1.60 to 1.71 wherever it is
     tried -- 1.60 at the example's, which is the charter in force in a
-    repository `convener-derive` has produced. Each charter says so in
+    repository that ships the example as its instance. Each charter says so in
     its own `contrast._forbidden`."""
     for rel in CHARTERS:
         tokens = _tokens(rel)
@@ -281,14 +281,13 @@ def test_an_opacity_the_class_list_names_its_type_for_is_composited(
     repository.
 
     Measured against `brand.DEFAULT_PATH` rather than against the charter
-    in force, which is what it read until a derived repository failed
-    here: `convener-derive` lays the example instance into
-    `instance/data/`, so "the charter in force" is a different palette on
-    the other side of the derivation and a figure written down beside it
-    cannot be right in both trees. The product's own charter is the one
-    palette every duplicate has and no derivation replaces. What is
-    proved here is that an opacity changes the measurement, and any
-    palette proves it."""
+    in force, which is what it read until a repository shipping the
+    example as its instance failed here: the example's own files sit at
+    `instance/data/` there, so "the charter in force" is a different
+    palette in the two trees and a figure written down beside it cannot
+    be right in both. The product's own charter is the one palette every
+    repository has and nothing replaces. What is proved here is that an
+    opacity changes the measurement, and any palette proves it."""
     found, refused = _scan(
         tmp_path, 'const c = "bg-paper border-border text-ink-muted opacity-60";\n'
     )

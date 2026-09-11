@@ -61,9 +61,7 @@ DOCS = ROOT / "docs"
 #: answerable for. A cockpit is the one place none of them can be read at
 #: the moment they are needed, which is why they are not registered -- and
 #: `README.md` is the only front door such a reader has, which is why it
-#: has to be able to link them. `operating/publishing-the-product.md` is
-#: unregistered for the same reason and is absent here only because
-#: `README.md` does not link it.
+#: has to be able to link them.
 #:
 #: `operating/standing-up-for-an-agent.md` is the fourth, and it is the same
 #: argument once more rather than a new one: it is the generated second

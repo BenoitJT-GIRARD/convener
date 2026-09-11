@@ -369,7 +369,7 @@ def test_the_notice_writes_nothing_this_instance_declared() -> None:
     """The product's statement about itself, and only that.
 
     Swept against the declared identity rather than eyeballed: the same
-    needles `derivation_guard` refuses a public push over. A notice
+    needles every other sweep here reads. A notice
     carrying an organisation's name would be a notice every duplicate had
     to edit, and one every duplicate edits is one a modified version can
     empty without anybody noticing it had.

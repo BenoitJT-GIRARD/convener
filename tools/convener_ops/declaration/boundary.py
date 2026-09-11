@@ -562,8 +562,8 @@ def retirements_must_land_where_the_instance_is(board: Boundary) -> None:
 
     **The rule, in one sentence: a retirement is a move, and a move ends
     somewhere.** `retired:` widens *instance* ownership over a history,
-    and `convener_ops.derivation.repository` reads the widened answer to
-    decide what a public repository may not carry. So an entry is a claim
+    and whatever decides what a public repository may not carry reads the
+    widened answer. So an entry is a claim
     that this instance's own files sat at a path -- and every such claim
     has a present-tense counterpart, because the files did not evaporate:
     they are at `instance/data/`, or at `instance/config.json`, or folded
@@ -583,10 +583,10 @@ def retirements_must_land_where_the_instance_is(board: Boundary) -> None:
     Both are correct entries, and a control that fires on a correct entry
     is one somebody turns off. So the mapping is *declared* rather than
     inferred, this refuses a declaration that does not land on the
-    instance, and `tools/tests/derivation/test_retirement.py` holds the
-    declaration against the act git can still see -- the commit that
-    emptied the retired path is the commit that wrote its destination --
-    which is the half that can be measured without an exemption.
+    instance, and what is left is held against the act git can still see
+    -- the commit that emptied the retired path is the commit that wrote
+    its destination -- which is the half that can be measured without an
+    exemption.
 
     Landing on the instance is not by itself enough, and this refusal
     does not claim it is: every path `instance:` names satisfies it, so a

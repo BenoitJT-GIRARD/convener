@@ -3,12 +3,10 @@
 **The gap this closes, and why nothing already held it.** Every sweep in
 this repository that looks for one instance's identity in another's
 output compares *declared values*: `needles` derives them from
-`instance/config.json` and the charter in force,
-`test_second_instance.py` looks for them in a build, and
-`derivation_guard` looks for them in every blob of every ref before a
-public push. All three read **content**. A file *name* is nobody's
-declared value, so all three are blind to it, and the identity walked out
-in one:
+`instance/config.json` and the charter in force, and
+`test_second_instance.py` looks for them in a build. Every one of them
+reads **content**. A file *name* is nobody's declared value, so they are
+all blind to it, and the identity walked out in one:
 
     .github/workflows/publish-vitrine.yml
     site/publish/gitignore-for-vitrine
@@ -92,7 +90,7 @@ MINIMUM_TOKEN: Final = 3
 
 #: Words this instance's declaration contributes that are nonetheless not
 #: this instance's, each with the argument for it. The shape is
-#: `derivation_guard.KEPT_BACK`'s and `boundary.yml`'s `kept:`: an
+#: `boundary.yml`'s `kept:`: an
 #: exemption states its reason beside itself, and
 #: `test_no_exemption_survives_the_word_it_was_written_for` below refuses
 #: one that no longer excuses anything -- an exemption nobody needs is a
@@ -213,11 +211,11 @@ def test_no_product_path_is_named_after_this_instance() -> None:
         "these paths belong to the product -- upstream ships them and "
         "every duplicate receives them -- and they are named after the "
         f"instance that happens to run this repository: {found}. A "
-        "declared value in a file's *contents* is rewritten when the "
-        "public repository is derived and swept for by "
-        "`convener-check-derivation`; a file's *name* is neither, so this "
-        "is the only place it can be refused. Rename the path after what "
-        "the file does, in the product's own words"
+        "declared value in a file's *contents* is rewritten when another "
+        "instance takes this repository over, and swept for afterwards; a "
+        "file's *name* is neither, so this is the only place it can be "
+        "refused. Rename the path after what the file does, in the "
+        "product's own words"
     )
 
 

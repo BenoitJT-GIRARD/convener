@@ -31,19 +31,13 @@ and `problems` refuses it by name.
 though `git diff` between two tags would answer it, and it does not, for a
 reason that was measured rather than supposed:
 
-1. **The ranges are tags, and no tag survives the derivation.**
-   `convener_ops.derivation.repository.clone` passes `--no-tags`, and the
-   filter rewrites every commit, so the public repository -- the one a
-   duplicate actually merges from -- carries no range to compute over.
-   `docs/operating/publishing-the-product.md` says where the product's own
-   tags are made instead.
-2. **This repository's own history answers a different question.** Most
+1. **This repository's own history answers a different question.** Most
    commits here touching `instance/data/` are the cockpit recording a vote
-   and the scheduled jobs writing their ledgers. None of them reaches the
-   product at all -- the derivation filters those paths out of every commit
-   -- so a range read here would report this instance's own week as work a
-   duplicate must act on.
-3. **What to do about a change is a judgement.** A key added to
+   and the scheduled jobs writing their ledgers. None of them reaches a
+   duplicate at all -- the boundary hands those paths to the instance, so a
+   merge never brings one -- so a range read here would report this
+   instance's own week as work a duplicate must act on.
+2. **What to do about a change is a judgement.** A key added to
    `instance/config.json` is copied across and filled in; a key renamed is
    renamed in place; a ledger's shape changing is absorbed by the next run.
    A generator can say which file moved and nothing about which of those
@@ -139,8 +133,9 @@ _END: Final = (
 HAND_EDITED: Final[Mapping[str, str]] = {
     ".github/CODEOWNERS": (
         "read by GitHub verbatim, before any code of this project's can "
-        "run, so the team a review request goes to is typed rather than "
-        "derived. A duplicate writes its own organisation's team into it "
+        "run, so the owner a review request goes to is typed rather than "
+        "read from the declaration. It arrives naming a single account, "
+        "which a duplicate replaces with its own organisation's team "
         "before its first pull request."
     ),
     "services/form-relay/wrangler.toml": (

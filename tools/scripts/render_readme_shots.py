@@ -14,10 +14,10 @@ Because a masthead is compiled, not fetched. `app/vite.config.ts` carries
 `identity` into the cockpit's bundle through Vite's own `define` and
 `site/.eleventy.js` composes the same values into every showcase page, so
 a picture of a build made here is a picture of *this* series' name, in
-four files the derivation carries verbatim into the public repository --
-where nothing can read them back out again, because
-`convener_ops.derivation.derivation_guard` cannot read a raster and says
-so in every report it writes. `docs/assets/zoom-background.png` was
+four files a public repository carries exactly as committed -- where
+nothing can read them back out again, because no check here reads a
+raster and `tools/tests/repository/test_second_instance.py`'s own sweep
+skips a `.png` and says why. `docs/assets/zoom-background.png` was
 removed for exactly that once already.
 
 So the images are taken from a build nobody's identity reaches, which is

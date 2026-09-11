@@ -345,8 +345,8 @@ def _brand() -> dict[str, Any]:
     `brand.source` and not `instance/data/brand.json`, because an instance
     is in one of two states and the product ships in both: it wrote its own
     charter, or its declaration names one of the product's. Naming the file
-    here answered only the first, and a repository `convener-derive`
-    produces is always in the second.
+    here answered only the first, and a repository that ships the example
+    as its instance is always in the second.
     """
     return dict(json.loads((ROOT / brand.source(ROOT)).read_text(encoding="utf-8")))
 
@@ -557,7 +557,8 @@ def ribbon_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     `_motif_safe_margins` answers for whichever family the charter in
     force names. Handed `ROOT` they were a statement about this
     instance's charter rather than about the ribbon, and they failed in a
-    repository `convener-derive` had produced for that reason alone: the
+    repository that ships the example as its instance for that reason
+    alone: the
     example instance is the charter in force there and it names the
     bracket, whose corridor is narrower than the ribbon's reach. Every
     other family's clearance is measured by

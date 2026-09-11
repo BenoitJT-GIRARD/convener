@@ -106,8 +106,8 @@ instruction for exactly this reason.
 boundary already says so for merges; publication makes the same rule a
 security rule. A relay that names the repository it writes into, or an origin
 written into a deployment file, publishes which private repository a
-write-capable token reaches — which is the target, not the key. The derivation
-lays the example instance's own values into those files before the push.
+write-capable token reaches — which is the target, not the key. The example
+instance's own values are laid into those files before anything is published.
 
 **What this does not change.** The compiled output repository is still public
 for the reason given above, and still carries no real data. An instance that

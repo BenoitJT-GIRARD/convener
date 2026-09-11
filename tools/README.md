@@ -44,9 +44,9 @@ without a process and a command stays one thing to invoke.
 
 ## The sub-packages
 
-Seven, one per subject. Each one's own `__init__.py` opens with a single
-sentence saying what it gathers, which is the sentence to read before
-opening anything inside it.
+One per subject, and the table below is the list. Each one's own
+`__init__.py` opens with a single sentence saying what it gathers, which
+is the sentence to read before opening anything inside it.
 
 | Sub-package | Roughly |
 |---|---|

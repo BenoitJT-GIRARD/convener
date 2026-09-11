@@ -133,13 +133,14 @@ def test_the_lines_these_templates_actually_set_are_over_estimated() -> None:
     **Every line here is the example instance's**, and that is a
     requirement rather than a preference. Two of them were the identity of
     whichever instance runs this repository, and a fixture of that shape
-    cannot survive the derivation: `convener-derive` rewrites a declared
-    value wherever it appears, and a substitution converts a *string* and
-    not the width somebody measured beside it -- the same argument
-    `repository.regenerate` makes for a stylesheet's contrast figures. The
-    derived repository either shipped this instance's name in a public
-    product test or failed this assertion, depending only on whether the
-    rewrite table had heard of the spelling. Neither is a state to leave a
+    cannot survive that instance being replaced by another: a declared
+    value is rewritten wherever it appears, and a substitution converts a
+    *string* and not the width somebody measured beside it -- the same
+    argument the generated stylesheets make for their own contrast
+    figures. A repository running a different instance either shipped
+    this instance's name in a public product test or failed this
+    assertion, depending only on whether the rewrite had heard of the
+    spelling. Neither is a state to leave a
     fixture in. `examples/the-example-collective/` is the product's, so its lines are
     rewritten by nothing and measure the same on both sides.
 

@@ -115,9 +115,9 @@ buy coverage at the price of an exemption list longer than the rule --
 which is the shape this project treats as a failed control, not as a
 thorough one:
 
-* **`the plan`.** `plan_queue_drain` computes one and `repository.py`
-  prints one; `validate.py` and `app/src/state/channels.ts` both mean the
-  promotion plan a volunteer edits. It is a noun this product owns.
+* **`the plan`.** `plan_queue_drain` computes one and prints one;
+  `validate.py` and `app/src/state/channels.ts` both mean the promotion
+  plan a volunteer edits. It is a noun this product owns.
 * **`the review`.** `docs/handbook/governance/editorial-board.md` says a member
   "reviews edits to the handbook"; `commit_format.py` means "the commits
   under review"; `docs/handbook/toolkit/run-of-show.md` means peer review. Ordinary
@@ -492,10 +492,10 @@ def _coordinate_resolves(word: str, number: str, titles: frozenset[str]) -> bool
 #: reason is structural rather than convenient: everything above states the
 #: rule by naming the shapes it refuses -- `R-41`, `phase 12, task 7`,
 #: `Critical A` -- so a module that swept itself would refuse its own
-#: source the day it was written. `convener_ops.derivation.derivation_guard` already
-#: solved the identical problem the other way, by never writing a
-#: credential pattern as its own literal; a docstring has no such trick
-#: available, because the examples *are* the explanation.
+#: source the day it was written. A module whose subject is a *pattern*
+#: escapes this by never writing one out as its own literal; a docstring
+#: has no such trick available, because the examples *are* the
+#: explanation.
 #:
 #: Read off `__file__` rather than typed out: a hand-typed path is an
 #: exemption that survives the module moving, and this module moving is
@@ -911,9 +911,9 @@ def test_the_prose_sweep_refuses_a_citation_and_keeps_the_domain_noun() -> None:
 
     A sweep that refused `the plan` would be right about
     `tools/tests/journey/test_registration.py` and wrong about
-    `convener_ops/derivation/repository.py`, which computes one and prints it -- and
-    the way that failure shows up is a maintainer adding an exemption
-    rather than a citation being removed.
+    `convener_ops/cli/journey/registration.py`, which computes one and
+    prints it -- and the way that failure shows up is a maintainer adding
+    an exemption rather than a citation being removed.
     """
     for line, refused in PROSE_CASES:
         assert working_record_phrases(line) == refused, line
@@ -1000,11 +1000,11 @@ def cited_in(name: str) -> str:
     is the case this module exists for.
 
     Measured rather than assumed, on the day the distinction was needed:
-    `derivation_guard.KEPT_BACK` holds every spelling a path that never
-    leaves has ever had, which is a list of paths this repository
-    deliberately no longer tracks. Read as citations they are four
-    refusals; read as what they are they are the subject of the control
-    that reads them.
+    a constant whose whole subject is a path this repository no longer
+    tracks -- every spelling a file has had, the place something used to
+    be -- is a list of names that must not resolve. Read as citations
+    they are refusals; read as what they are they are the subject of the
+    control that holds them.
     """
     text = _text_of(name)
     return prose_of(name, text) if name.endswith(".py") else text

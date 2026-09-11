@@ -2,16 +2,17 @@
  * example -- the condition under which a test about the *difference*
  * between two instances has no subject.
  *
- * `convener_ops.derivation.repository` lays `examples/the-example-collective/` into every path
- * `declarations/boundary.yml` hands to the instance, because a product
- * repository with those paths merely deleted neither starts its own
- * suite nor builds: several modules read an instance path while they
- * load, `paths.repo_root` finds a repository by `instance/data/config.yml`, and
- * the product's default charter has no `motif`. The consequence is exact
- * and is not a compromise -- **in the derived repository the instance
- * and the example are the same instance**, so every declared value
- * agrees with itself, and a build made as the example legitimately
- * carries the example's identity.
+ * `examples/the-example-collective/` sits at every path
+ * `declarations/boundary.yml` hands to the instance whenever no series
+ * has taken this repository over yet, because a repository with those
+ * paths merely absent neither starts its own suite nor builds: several
+ * modules read an instance path while they load, `paths.repo_root` finds
+ * a repository by `instance/data/config.yml`, and the product's default
+ * charter has no `motif`. The consequence is exact and is not a
+ * compromise -- **in such a repository the instance and the example are
+ * the same instance**, so every declared value agrees with itself, and a
+ * build made as the example legitimately carries the example's
+ * identity.
  *
  * A test whose subject is that difference therefore has nothing to be
  * about there, and asserting it anyway makes it fail for the one reason

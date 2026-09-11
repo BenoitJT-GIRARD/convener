@@ -32,14 +32,6 @@ one place. The newest entry below has to name that same value:
 `tools/scripts/generate_changelog.py --check` fails a page where the two
 disagree, so a release that bumps one and forgets the other never lands.
 
-**The tags are in this repository and not in the product's.**
-`convener-derive` clones with `--no-tags` and rewrites every commit it
-carries over, so a tag made here names a commit the public repository does
-not hold.
-[`docs/operating/publishing-the-product.md`](docs/operating/publishing-the-product.md)
-is where the product's own tag is made, on the derived history, by the
-person publishing it.
-
 ## What a duplicate owns
 
 <!-- BEGIN GENERATED PATHS A DUPLICATE OWNS -- tools/scripts/generate_changelog.py -->
@@ -68,9 +60,10 @@ maintains these; your copy differs from upstream's by the value you
 entered, so a release that changes one arrives at that edit.
 
 - `.github/CODEOWNERS` — read by GitHub verbatim, before any code of this
-  project's can run, so the team a review request goes to is typed rather
-  than derived. A duplicate writes its own organisation's team into it
-  before its first pull request.
+  project's can run, so the owner a review request goes to is typed rather
+  than read from the declaration. It arrives naming a single account, which
+  a duplicate replaces with its own organisation's team before its first
+  pull request.
 - `services/form-relay/wrangler.toml` — the identifier of the storage
   namespace the proposal relay binds to, which does not exist until
   `wrangler kv namespace create` has printed it and so cannot be shipped
@@ -114,8 +107,7 @@ repeating.
 The first published state. What is in it is the whole product as this
 repository has it: the cockpit and the public showcase, the three edge
 workers, the operational tooling every workflow runs, the standing-up
-sequence a person walks with a browser and a text editor, and the
-derivation that produces the public repository this page is read in.
+sequence a person walks with a browser and a text editor.
 [`README.md`](README.md) says what the product does and
 [`docs/engineering/architecture.md`](docs/engineering/architecture.md) how
 it is built.

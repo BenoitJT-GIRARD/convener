@@ -39,8 +39,8 @@ repository's.** `OPTIONAL_FOR_THE_INSTANCE` is for a path product code
 declares optional: present where the instance running this repository wrote
 one, absent where its declaration names one of the product's instead, and
 both are states the product ships in. Such an entry may not be held to
-either direction -- upstream tracks the file and a repository
-`convener-derive` produces does not -- and a filter that has to fire the day
+either direction -- upstream tracks the file and a repository that ships
+the example as its instance does not -- and a filter that has to fire the day
 one appears must name it before it does. What is checked instead is that
 every entry there really is a path `declarations/boundary.yml` hands to the
 instance, so this cannot become a way to excuse a product path that a rename
@@ -159,7 +159,7 @@ EMPTY_IN_THIS_REPOSITORY: Final[dict[str, str]] = {
 #: `brand.INSTANCE_PATH` is optional by declaration -- an instance either
 #: writes its own charter there or its declaration names one of the
 #: product's, and `brand.source` gives both answers. Upstream is in the
-#: first state and every repository `convener-derive` produces is in the
+#: first state and every repository that ships the example as its instance is in the
 #: second, so this one entry is tracked here and tracked nowhere in the
 #: published product, and the two workflows that re-render on a charter
 #: change have to name it either way.
