@@ -1349,13 +1349,28 @@ def test_a_stroke_at_the_bound_itself_loads(fake_repo: Path) -> None:
     assert loaded[brand.MOTIF_KEY][brand.MOTIF_WIDTH_RATIO] == brand.HEAVIEST_STROKE
 
 
-def test_every_charter_this_product_ships_is_under_the_bound() -> None:
-    """The four a duplicate may name, and the one this instance wrote,
-    read through the same refusal a duplicate's own charter meets. None
-    of them may need editing for this bound to arrive, which is the whole
-    claim: the figure was a ceiling already and is now stated as one."""
+def test_every_charter_this_repository_holds_is_under_the_bound() -> None:
+    """Every charter here, read through the same refusal a duplicate's own
+    charter meets: the four the product ships, the one in force for this
+    instance, and the one the worked example names. None of them may need
+    editing for this bound to arrive, which is the whole claim -- the
+    figure was a ceiling already and is now stated as one.
+
+    The charter *in force* rather than `INSTANCE_PATH` by name, which is
+    the same set `tests/publication/motifs/` reads and for the same
+    reason: an instance that names one of the product's charters rather
+    than writing one has no file at that path at all, and the derived
+    repository is exactly such an instance. `brand.source` answers with
+    the file whichever of the two routes an instance took.
+    """
     root = repo_root()
-    for rel in (brand.INSTANCE_PATH, *brand.shipped(root)):
+    holdings = {
+        brand.source(root),
+        brand.source(root, published.EXAMPLE_INSTANCE_ROOT),
+        *brand.shipped(root),
+    }
+    assert len(holdings) >= 4, f"only {len(holdings)} charter(s) were read"
+    for rel in sorted(holdings):
         section = brand.charter(root, rel).get(brand.MOTIF_KEY)
         assert isinstance(section, dict)
         assert section[brand.MOTIF_WIDTH_RATIO] <= brand.HEAVIEST_STROKE, (
