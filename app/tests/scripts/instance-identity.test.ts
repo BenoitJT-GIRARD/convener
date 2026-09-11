@@ -32,9 +32,9 @@
  */
 import { readFileSync } from 'node:fs';
 import { ONE_INSTANCE } from '../helpers/one-instance';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { rm, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { scratch } from '../helpers/scratch';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { copyHandbook, walkAll } from '../../scripts/handbook-registry.mjs';
 import { walk } from '../../scripts/handbook-files.mjs';
@@ -193,29 +193,24 @@ describe('a second instance renders nothing of the first', () => {
 });
 
 /**
- * This block and `copy-handbook.test.ts`'s own real run have been seen to
- * fail intermittently when the whole suite runs them together -- twice,
- * against six consecutive clean runs of the same suite afterwards. Green in
- * isolation, green on the retry, and the cause is not attributed: both
- * modules copy the real `docs/` tree into `os.tmpdir()`, on a machine whose
- * `%TEMP%` an application-control policy watches, and `copyHandbook` clears
- * its destination before writing it.
- *
- * Nothing here claims a cure. What the assertions below now do is name what
- * they were looking at, so the next occurrence arrives as a file list rather
- * than as a diff of two markdown pages with no clue which two.
+ * This block and `copy-handbook.test.ts`'s own real run were seen to fail
+ * intermittently when the whole suite ran them together -- twice, against
+ * six consecutive clean runs of the same suite afterwards. Green in
+ * isolation, green on the retry, and the cause was not attributed at the
+ * time. It is attributed now, and it was neither module: both wrote their
+ * copy of the real `docs/` tree into `os.tmpdir()`, which is a directory
+ * this project does not own and every other process on the machine
+ * does. `tests/helpers/scratch.ts` carries the whole of that, and the
+ * measurement that settled it.
  */
 /** How long a real run of `copyHandbook` is given, and why it is not the
  *  default five seconds.
  *
- *  This block copies the whole of `docs/` -- eighty files -- into
- *  `os.tmpdir()`, clearing the destination first, and does it under the
- *  coverage instrumentation the `test:cov` gate runs with. On this
- *  project's own machine `%TEMP%` is watched by an application-control
- *  policy, which is the cause `instance-identity.test.ts`'s own note
- *  attributes the intermittent failures to; measured, these tests take
- *  about half a second alone and have been seen past five with the whole
- *  suite running beside them.
+ *  This block copies the whole of `docs/` -- eighty files -- clearing the
+ *  destination first, and does it under the coverage instrumentation the
+ *  `test:cov` gate runs with. Measured, these tests take about half a
+ *  second alone and have been seen past five with the whole suite running
+ *  beside them.
  *
  *  Thirty seconds weakens no assertion below -- each one still compares
  *  exactly what it compared -- and it takes out of them the one thing that
@@ -228,7 +223,7 @@ describe('the handbook copied into the built bundle', () => {
   let dst: string;
 
   beforeEach(async () => {
-    dst = await mkdtemp(join(tmpdir(), 'handbook-identity-'));
+    dst = await scratch('instance-identity', 'handbook');
   });
 
   afterEach(async () => {

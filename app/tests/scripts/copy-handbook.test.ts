@@ -35,9 +35,9 @@
  *    this one, because the probe page sits outside all three.
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { mkdir, cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { mkdir, cp, rm, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { scratch } from '../helpers/scratch';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CONTENT_REGISTRY, PUBLIC_ASSETS } from '../../src/content/registry';
 import {
@@ -49,6 +49,8 @@ import {
 } from '../../scripts/handbook-registry.mjs';
 
 const DOCS = resolve(__dirname, '../../../docs');
+/** This module's own scratch root -- see `helpers/scratch.ts`. */
+const OWNER = 'copy-handbook';
 const REGISTRY_SOURCE = readFileSync(resolve(__dirname, '../../src/content/registry.ts'), 'utf-8');
 
 /** Windows path separators normalised, the same way every other sweep test
@@ -131,20 +133,18 @@ export const PUBLIC_ASSETS = [
 /** How long a real run of `copyHandbook` is given, and why it is not the
  *  default five seconds.
  *
- *  This block copies the whole of `docs/` -- eighty files -- into
- *  `os.tmpdir()`, clearing the destination first, and does it under the
- *  coverage instrumentation the `test:cov` gate runs with. On this
- *  project's own machine `%TEMP%` is watched by an application-control
- *  policy, which is the cause `instance-identity.test.ts`'s own note
- *  attributes the intermittent failures to; measured, these tests take
- *  about half a second alone and have been seen past five with the whole
- *  suite running beside them.
+ *  This block copies the whole of `docs/` -- eighty files -- clearing the
+ *  destination first, and does it under the coverage instrumentation the
+ *  `test:cov` gate runs with. Measured, these tests take about half a
+ *  second alone and have been seen past five with the whole suite running
+ *  beside them.
  *
  *  Thirty seconds weakens no assertion below -- each one still compares
  *  exactly what it compared -- and it takes out of them the one thing that
  *  was never theirs to test: how busy the machine is. A check whose colour
  *  is the machine's is a check people learn to re-run, which is D-25's own
- *  failure in slow motion. */
+ *  failure in slow motion. Where the tree is written, and why that is not
+ *  the machine's temp directory any more, is `tests/helpers/scratch.ts`. */
 const REAL_TREE_TIMEOUT = 30_000;
 
 describe('a real run against the real docs/ tree', () => {
@@ -155,31 +155,32 @@ describe('a real run against the real docs/ tree', () => {
   });
 
   it('publishes exactly the registry allowlist, swept from the destination rather than from the filter\'s own return value', async () => {
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    dst = await scratch(OWNER, 'real');
     const { files } = await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const onDisk = slash(await walkAll(dst));
-    // Named, because this block has been seen to fail intermittently under
-    // the full suite (see `instance-identity.test.ts`'s own note) and a bare
-    // list comparison says which paths differ but never where they were
-    // read from.
+    // Named, because this block was seen to fail intermittently under the
+    // full suite and a bare list comparison says which paths differ but
+    // never where they were read from. It is what made the cause legible
+    // once it was reproduced: thirteen of eighty files, in a directory
+    // something else on the machine had emptied (`helpers/scratch.ts`).
     expect(onDisk, `copied from ${DOCS} into ${dst}`).toEqual(slash(files));
     expect(onDisk, `copied into ${dst}`).toEqual(publishedPaths(REGISTRY_SOURCE));
   });
 
   it('never publishes docs/operating/operations.md -- it names every secret this project uses', async () => {
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    dst = await scratch(OWNER, 'real');
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     expect(slash(await walkAll(dst))).not.toContain('operating/operations.md');
   });
 
   it('never publishes anything under docs/superpowers/ -- the specs and plans this project never releases', async () => {
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    dst = await scratch(OWNER, 'real');
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     expect(slash(await walkAll(dst)).some(p => p.startsWith('superpowers/'))).toBe(false);
   });
 
   it('publishes nothing under docs/handbook/assets/ beyond what PUBLIC_ASSETS names', async () => {
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    dst = await scratch(OWNER, 'real');
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const publishedAssets = slash(await walkAll(dst)).filter(p => p.startsWith('handbook/assets/'));
     expect(publishedAssets).toEqual([...PUBLIC_ASSETS].sort());
@@ -190,7 +191,7 @@ describe('a real run against the real docs/ tree', () => {
     // above would still agree with itself if this path were ever added
     // back there, which is exactly the silent-reinstatement this
     // assertion exists to catch instead.
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    dst = await scratch(OWNER, 'real');
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     expect(slash(await walkAll(dst))).not.toContain('handbook/assets/flyer-example.png');
   });
@@ -205,7 +206,7 @@ describe('a real run against the real docs/ tree', () => {
     // another such page until it was registered -- see
     // `registry.ts`'s own comment on that entry, and
     // `app/tests/content/registered-links.test.ts`.)
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    dst = await scratch(OWNER, 'real');
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const onDisk = slash(await walkAll(dst));
     expect(onDisk).not.toContain('handbook/index.md');
@@ -226,7 +227,7 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
    *  even briefly, is exactly the kind of stray file `git status` in this
    *  project's Drive-hosted working copy is known to misreport. */
   async function sandboxDocs(): Promise<string> {
-    const dir = await mkdtemp(join(tmpdir(), 'convener-handbook-docs-'));
+    const dir = await scratch(OWNER, 'docs');
     await cp(DOCS, dir, { recursive: true });
     return dir;
   }
@@ -237,7 +238,7 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
       resolve(sandbox, 'zzz-not-in-the-registry.md'),
       '# Not registered\n\nA page nobody has added to CONTENT_REGISTRY.\n',
     );
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-mut-'));
+    dst = await scratch(OWNER, 'mut');
 
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
@@ -258,7 +259,7 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
     // which directories happen to exist.
     await mkdir(resolve(sandbox, 'superpowers'), { recursive: true });
     await writeFile(resolve(sandbox, 'superpowers', 'zzz-probe.md'), '# probe\n');
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-mut-'));
+    dst = await scratch(OWNER, 'mut');
 
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
@@ -269,7 +270,7 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
   it('does not publish a probe file added under docs/handbook/assets/ that no registered page links to', async () => {
     sandbox = await sandboxDocs();
     await writeFile(resolve(sandbox, 'handbook', 'assets', 'zzz-probe.png'), Buffer.from([0]));
-    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-mut-'));
+    dst = await scratch(OWNER, 'mut');
 
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
