@@ -7,15 +7,20 @@
 # review request goes to that board's own team, and the setup below is how
 # that team is named.
 #
-# The **product** -- the public repository
-# `docs/operating/publishing-the-product.md` derives and pushes -- has no
-# Editorial Board and no organisation team to name. One maintainer, one
-# line, `* @<that maintainer>`, and the whole of what this file earns
-# there is that an outside contributor's pull request reaches them without
-# anybody having to watch the repository. It is written in that repository
-# after the first push, and it cannot be written here: the derivation
-# carries this file over with the organisation half rewritten into the
-# worked example's, which is a team in an organisation nobody owns.
+# The **product** -- the public repository this code is published from --
+# has no Editorial Board and no organisation team to name. One maintainer,
+# and the catch-all rule carries that maintainer's own account: the whole
+# of what this file earns there is that an outside contributor's pull
+# request reaches them without anybody having to watch the repository.
+# Nothing here can be that value and nothing here can derive it, because
+# the repository it belongs to does not exist until the first push -- so
+# the tool that produces the product writes it, out of the account that
+# tool is run as, and refuses a result naming any other.
+#
+# Which is what a duplicate finds when it first opens this file: a single
+# account on the catch-all rather than a team, belonging to somebody who
+# is not a collaborator on the duplicate's own repository and cannot be
+# assigned a review there. Replacing it is step 2 below.
 #
 # One-off setup, once per instance, and stated here rather than pointed at:
 # this file used to send a reader to a TODO.md that no longer exists, so

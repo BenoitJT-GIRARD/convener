@@ -297,11 +297,12 @@ stranger reads — the organisation and its short form, the series, its
 strapline and its tagline, the forum, the contact address, the proposal form,
 and the cockpit's own repository. Leave `proposal_form` as it is for now; the
 intake stage writes it once the form exists. Then correct the one product file
-carrying a value derived from this one that nothing can derive for it:
-`.github/CODEOWNERS` names the team every review request goes to as
-`@<organisation>/editorial-board`, and `<organisation>` is the owner half of
-the repository just declared. GitHub parses that file itself, before any code
-of this project's can run, which is why it holds a literal at all.
+carrying a value nothing can derive for it: `.github/CODEOWNERS` arrives with
+a single account on its catch-all rule, the product's own maintainer, who is
+not a collaborator here. Replace it with `@<organisation>/editorial-board`,
+where `<organisation>` is the owner half of the repository just declared.
+GitHub parses that file itself, before any code of this project's can run,
+which is why it holds a literal at all.
 
 **Proves it is done.** After the first publish, open any page of the showcase
 and the cockpit's sign-in screen: the band naming unfilled keys is gone from
@@ -322,9 +323,10 @@ band is what the band exists to prevent: the published address is what every
 other address in this project is derived from, so a duplicate that renames the
 organisation and leaves that address alone publishes under somebody else's
 prefix while every page reads as its own. An uncorrected `.github/CODEOWNERS`
-degrades the other way, quietly: every review request goes to a team in an
-organisation this repository does not own, GitHub resolves it to nobody, and
-the pull request waits for a review that cannot arrive.
+degrades the other way, quietly: every review request goes to the product's
+own maintainer, who has no access to this repository, GitHub assigns a review
+to nobody it cannot assign one to, and the pull request waits for a review
+that cannot arrive.
 
 ### 9. The Board, the season and the bar a vote is measured against
 

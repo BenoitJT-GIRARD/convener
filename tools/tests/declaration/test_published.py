@@ -318,8 +318,8 @@ def _bundle_configurations() -> dict[str, Any]:
     without `app/node_modules` there is no answer to compare and the four
     tests below reported an absent install as four failures. That is D-25
     read backwards -- loud where nothing is broken -- and it is the first
-    thing `docs/operating/publishing-the-product.md` used to walk a fresh
-    derivation into. On a runner the same absence still fails, by name,
+    thing a freshly-built tree with no `npm ci` in it used to walk into.
+    On a runner the same absence still fails, by name,
     because `quality.yml` installs `app/`'s packages before `pytest` runs.
     """
     if not _VITE.is_dir():
@@ -1117,14 +1117,12 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
     no Editorial Board in it and no organisation team to name, and the one
     thing the file earns there is that an outside contributor's pull
     request reaches that maintainer; the value is a single user handle.
-    That shape is not hypothetical, and the derivation is what makes it
-    reachable: a derived repository declares the worked example's
-    identity, so a check that knew only the first shape would demand
-    `@example-instance/editorial-board` -- a team in an organisation
-    nobody owns -- of the one repository where a maintainer's own handle
-    is the right answer, and
-    `docs/operating/publishing-the-product.md` tells that maintainer to
-    write exactly that.
+    That shape is not hypothetical: a repository published from this one
+    declares the worked example's identity, so a check that knew only the
+    first shape would demand `@example-instance/editorial-board` -- a team
+    in an organisation nobody owns -- of the one repository where a
+    maintainer's own handle is the right answer, and where it is written
+    from the account that publication is made under.
 
     So two clauses, and they divide the way the two kinds of repository
     do. **Wherever a team is named at all**, it has to be the declared
@@ -1165,9 +1163,9 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
         f".github/CODEOWNERS names no {board}, and instance/config.json "
         "declares an instance of its own -- so this is a board's repository "
         "with nothing routing a review to the board. The single-handle "
-        "shape belongs to the product, which declares the worked example's "
-        "identity and is told to write it in "
-        "docs/operating/publishing-the-product.md"
+        "shape belongs to a public repository with one maintainer, which "
+        "declares the worked example's identity and carries that "
+        "maintainer's own account on its catch-all rule"
     )
 
 

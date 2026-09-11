@@ -38,10 +38,10 @@ computes the claim:
   and the value in the declaration are then two spellings of one fact with
   nothing holding them together.
 * A **generated badge**, drawn by the service whose state it reports --
-  the continuous-integration badge `docs/operating/publishing-the-product.md`
-  lays at publication is one, and cannot exist before there is a
-  repository to name. Nothing here reads its message, because nobody here
-  writes it.
+  the continuous-integration badge is one, and cannot exist before there
+  is a repository to name, which is why it arrives with the publication
+  rather than with the source. Nothing here reads its message, because
+  nobody here writes it.
 
 **What every badge owes.** A link somewhere a reader can go, and a local
 target that is a file this repository tracks. A badge that leads nowhere

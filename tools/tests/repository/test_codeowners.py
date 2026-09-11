@@ -172,9 +172,8 @@ def test_at_least_one_pattern_is_actually_evaluated() -> None:
     lost it, or a parser that stopped finding rules at all, would leave
     the sweep reporting green over nothing.
 
-    The **product**'s own file has no path rule to find and never will:
-    one maintainer, one line, `*` and a handle, written after the first
-    push by `docs/operating/publishing-the-product.md`. So that shape is
+    A file reduced to the **product**'s own shape has no path rule to
+    find: one maintainer, one line, `*` and a handle. So that shape is
     admitted by *being* it -- exactly one rule, the catch-all, with an
     owner on it -- rather than by the sweep finding nothing and taking
     silence for a decision. A file that had lost its last path rule would

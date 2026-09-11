@@ -72,16 +72,19 @@ step of its own.
 
 **One more product file carries a value nothing can derive for it, and a
 duplicate meets it before its first pull request.**
-[`.github/CODEOWNERS`](../../.github/CODEOWNERS) names the team every review
-request goes to, `@<organisation>/editorial-board`, and the organisation
-half is the owner of `instance/config.json`'s `identity.repository`.
+[`.github/CODEOWNERS`](../../.github/CODEOWNERS) arrives with a single
+account on its catch-all rule — the maintainer of the product itself, who
+has no access here. The team every review request should go to is
+`@<organisation>/editorial-board`, and the organisation half is the owner
+of `instance/config.json`'s `identity.repository`.
 GitHub parses that file itself, before any code of this project's can
 run, so it cannot read the declaration the way the origin and the
 repository now do; generating it with a `--check` in continuous
 integration was the alternative, and it keeps a copy honest without
 removing it, at the price of a Python toolchain in a sequence a text
-editor has to be enough for. Left uncorrected it sends every review
-request to an organisation the duplicate does not own, and
+editor has to be enough for. Left uncorrected it asks somebody with no
+access here for every review, which GitHub answers by assigning nobody,
+and
 `tools/tests/declaration/test_published.py::test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
 goes red on the first run.
 
