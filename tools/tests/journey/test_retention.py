@@ -844,12 +844,51 @@ def test_record_destructions_writes_the_registry(
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
 
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
     assert "mrg-042" in capsys.readouterr().out
 
     registry_path = eventkeys.destructions_path(tmp_path)
     data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
     assert eventkeys.registry_from_data(data) == {"mrg-042": date(2026, 4, 1)}
+
+
+def test_record_destructions_takes_the_ids_and_the_day_as_options(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The hand-run path this command exists for, on a shell that cannot
+    type `DESTROYED_IDS=<id> DESTROYED_ON=<day> command`. Both variables
+    are deliberately unset."""
+    _publish_event_key(tmp_path, "mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("DESTROYED_IDS", raising=False)
+    monkeypatch.delenv("DESTROYED_ON", raising=False)
+
+    assert record_destructions(["--ids", "mrg-042", "--on", "2026-04-01"]) == 0
+    assert "mrg-042" in capsys.readouterr().out
+
+    data = yaml.safe_load(
+        eventkeys.destructions_path(tmp_path).read_text(encoding="utf-8")
+    )
+    assert eventkeys.registry_from_data(data) == {"mrg-042": date(2026, 4, 1)}
+
+
+def test_record_destructions_prefers_the_options_to_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`retention.yml` passes both in `env:` and names no option, so the
+    environment has to go on answering -- and an operator recovering a
+    wedged sweep by hand has to be able to override it."""
+    _publish_event_key(tmp_path, "mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
+    monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
+
+    assert record_destructions(["--on", "2026-05-02"]) == 0
+
+    data = yaml.safe_load(
+        eventkeys.destructions_path(tmp_path).read_text(encoding="utf-8")
+    )
+    assert eventkeys.registry_from_data(data) == {"mrg-042": date(2026, 5, 2)}
 
 
 def test_record_destructions_calls_eventkeys_destroy_and_refuses_a_malformed_id(
@@ -869,7 +908,7 @@ def test_record_destructions_calls_eventkeys_destroy_and_refuses_a_malformed_id(
     monkeypatch.setenv("DESTROYED_IDS", "vw 042 oops")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
 
-    assert record_destructions() == 1
+    assert record_destructions([]) == 1
     assert "not a valid event id" in capsys.readouterr().err
     assert not eventkeys.destructions_path(tmp_path).exists()
 
@@ -884,7 +923,7 @@ def test_record_destructions_refuses_an_id_whose_key_was_never_published(
     monkeypatch.setenv("DESTROYED_IDS", "mrg-999")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
 
-    assert record_destructions() == 1
+    assert record_destructions([]) == 1
     assert "mrg-999" in capsys.readouterr().err
     assert not eventkeys.destructions_path(tmp_path).exists()
 
@@ -909,7 +948,7 @@ def test_record_destructions_deletes_the_published_pub_only_after_recording(
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
 
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
 
     registry_path = eventkeys.destructions_path(tmp_path)
     data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
@@ -932,7 +971,7 @@ def test_record_destructions_never_overwrites_an_existing_destruction_date(
     # after the original destruction.
     monkeypatch.setenv("DESTROYED_ON", "2026-05-15")
 
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
 
     registry_path = eventkeys.destructions_path(tmp_path)
     data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
@@ -945,7 +984,7 @@ def test_record_destructions_with_no_ids_writes_nothing(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.delenv("DESTROYED_IDS", raising=False)
 
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
     assert not eventkeys.destructions_path(tmp_path).exists()
 
 
@@ -956,7 +995,7 @@ def test_record_destructions_rejects_an_invalid_date(
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "not-a-date")
 
-    assert record_destructions() == 1
+    assert record_destructions([]) == 1
     assert "not a valid date" in capsys.readouterr().err
 
 
@@ -970,7 +1009,7 @@ def test_record_destructions_fails_on_a_malformed_registry(
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
 
-    assert record_destructions() == 1
+    assert record_destructions([]) == 1
     assert "format version" in capsys.readouterr().err
 
 
@@ -1005,7 +1044,7 @@ def test_destruction_leaves_the_certificate_register_untouched(
     assert retention_sweep() == 0
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
 
     assert register_path.read_text(encoding="utf-8") == register_text_before
     reloaded = register_from_data(
@@ -1041,7 +1080,7 @@ def test_destruction_leaves_the_ciphertext_file_in_place(
     assert retention_sweep() == 0
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
 
     assert enc_path.exists()
     assert enc_path.read_text(encoding="utf-8") == ciphertext_before

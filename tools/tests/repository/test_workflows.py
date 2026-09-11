@@ -1873,6 +1873,26 @@ def _env_vars_read(
                 name = _literal_env_name(node.args[0])
                 if name and name not in _RUNNER_PROVIDED_ENV_VARS:
                     names.add(name)
+            # `given.value(option, name)` is the same shape as
+            # `env_flag_is_true` above and needs the same case for the
+            # same reason -- the read is one level down, inside
+            # `cli/given.py`, through that function's own parameter -- with
+            # one difference: the literal is its *second* argument, because
+            # the first is the option an operator may have typed instead.
+            # Missing it would make a command that moved a value from a
+            # bare `os.environ.get` into an option silently drop out of the
+            # set this derives, and the workflow check below would go on
+            # passing while forwarding nothing.
+            is_given_value = (
+                isinstance(callee, ast.Attribute)
+                and callee.attr == "value"
+                and isinstance(callee.value, ast.Name)
+                and callee.value.id == "given"
+            )
+            if is_given_value and len(node.args) > 1:
+                name = _literal_env_name(node.args[1])
+                if name and name not in _RUNNER_PROVIDED_ENV_VARS:
+                    names.add(name)
         elif isinstance(node, ast.Subscript) and _is_os_environ(node.value):
             name = _literal_env_name(node.slice)
             if name and name not in _RUNNER_PROVIDED_ENV_VARS:

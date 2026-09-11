@@ -10,6 +10,7 @@ ciphertext into the form rather than somebody's address.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -20,7 +21,7 @@ from typing import Final
 
 import yaml
 
-from convener_ops.cli import step_output, store
+from convener_ops.cli import given, step_output, store
 from convener_ops.cli.journey.event import (
     survey_enabled,
 )
@@ -485,8 +486,9 @@ def resend_confirmation() -> int:
     return 0
 
 
-def encrypt_identifier() -> int:
-    """`convener-encrypt-identifier`: turn a registrant's own e-mail address
+def encrypt_identifier(argv: Sequence[str] | None = None) -> int:
+    """`convener-encrypt-identifier [--event ID] [--email ADDRESS]`: turn a
+    registrant's own e-mail address
     into the ciphertext `resend-confirmation.yml`'s and
     `erase-registration.yml`'s own `encrypted_identifier` input both
     expect -- closing the class rather than the one instance.
@@ -514,23 +516,52 @@ def encrypt_identifier() -> int:
     `encrypt_attendance_export`'s own docstring gives for its identical
     "no secret needed" shape).
 
-    Reads `EVENT_ID` and `REGISTRATION_EMAIL` -- both plain, operator-
+    Takes both values from `--event` and `--email`, or from `EVENT_ID`
+    and `REGISTRATION_EMAIL` when no option is given -- plain, operator-
     typed values on the operator's own terminal, never inside a CI job
-    and never written to any file this command controls. Refuses (exit
+    and never written to any file this command controls. `cli.given` is
+    where that order is decided and argued; the options exist because a
+    shell with no environment-variable prefix refuses the environment
+    spelling outright. Refuses (exit
     1) when the event id is not shaped like one, when no public key has
-    been published for it yet, or when `REGISTRATION_EMAIL` is empty.
+    been published for it yet, or when no address was given.
     Prints the resulting envelope -- `eventkeys.encrypt`'s own compact
     JSON, one line -- to stdout and nothing else, for the operator to
     copy into the workflow's own `encrypted_identifier` field.
     """
-    event_id = os.environ.get("EVENT_ID", "").strip()
+    parser = argparse.ArgumentParser(
+        prog="convener-encrypt-identifier",
+        description=(
+            "Encrypt one registrant's address under the event's own "
+            "published public key, for a workflow's encrypted_identifier "
+            "input."
+        ),
+    )
+    parser.add_argument(
+        "--event",
+        default=None,
+        metavar="ID",
+        help="the event id (default: the EVENT_ID environment variable)",
+    )
+    parser.add_argument(
+        "--email",
+        default=None,
+        metavar="ADDRESS",
+        help=(
+            "the registrant's address (default: the REGISTRATION_EMAIL "
+            "environment variable)"
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    event_id = given.value(args.event, "EVENT_ID")
     try:
         eventkeys.secret_name(event_id)
     except ValueError:
         print("no valid event id supplied", file=sys.stderr)
         return 1
 
-    email = os.environ.get("REGISTRATION_EMAIL", "").strip()
+    email = given.value(args.email, "REGISTRATION_EMAIL")
     if not email:
         print("no e-mail address supplied", file=sys.stderr)
         return 1

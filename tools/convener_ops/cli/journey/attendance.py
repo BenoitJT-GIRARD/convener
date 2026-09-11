@@ -11,12 +11,13 @@ and reported without ever printing an address. `release_recording` and
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
-from convener_ops.cli import store
+from convener_ops.cli import given, store
 from convener_ops.cli.journey.event import (
     conference_ids_from_env,
     load_registrations,
@@ -79,8 +80,9 @@ from convener_ops.journey.registration import (
 UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 
 
-def encrypt_attendance_export() -> int:
-    """`convener-encrypt-attendance-export`: turn a host's raw, never-committed
+def encrypt_attendance_export(argv: Sequence[str] | None = None) -> int:
+    """`convener-encrypt-attendance-export [--event ID]`: turn a host's raw,
+    never-committed
     `instance/data/events/<id>/attendance-import.csv` into a committable,
     encrypted `instance/data/events/<id>/attendance-import.csv.enc` -- see
     `platform.py`'s module docstring, "one independent envelope per row",
@@ -97,8 +99,12 @@ def encrypt_attendance_export() -> int:
     matching private half stays exactly where it belongs, in a
     CI job's own environment, never on the machine this command runs on.
 
-    Reads `EVENT_ID` -- the same operator-typed, manual-trigger shape
-    `resend_confirmation` and `match_attendance` already read -- and the
+    Takes the event from `--event`, or from `EVENT_ID` when no option is
+    given -- the same operator-typed, manual-trigger shape
+    `resend_confirmation` and `match_attendance` already read, with the
+    option in front of it so that an operator on a shell with no
+    environment-variable prefix can run this at all (`cli.given`, which is
+    where that order is decided and argued). Reads the
     plaintext CSV at `instance/data/events/<id>/attendance-import.csv`. Refuses
     (exit 1) when the event id is not shaped like one, when no public key
     has been published for it yet (`instance/keys/events/<id>.pub` absent -- an
@@ -126,7 +132,22 @@ def encrypt_attendance_export() -> int:
     `platform.encrypt_attendance_rows` for the real work this function
     wraps.
     """
-    event_id = os.environ.get("EVENT_ID", "").strip()
+    parser = argparse.ArgumentParser(
+        prog="convener-encrypt-attendance-export",
+        description=(
+            "Encrypt a host's downloaded attendance export under the "
+            "event's own published public key, so it can be committed."
+        ),
+    )
+    parser.add_argument(
+        "--event",
+        default=None,
+        metavar="ID",
+        help="the event id (default: the EVENT_ID environment variable)",
+    )
+    args = parser.parse_args(argv)
+
+    event_id = given.value(args.event, "EVENT_ID")
     try:
         eventkeys.secret_name(event_id)
     except ValueError:

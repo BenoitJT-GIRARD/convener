@@ -256,7 +256,7 @@ def test_encrypt_attendance_export_replays_from_a_plaintext_drop_alone(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
 
-    assert encrypt_attendance_export() == 0
+    assert encrypt_attendance_export([]) == 0
     envelope_text = (event_dir / "attendance-import.csv.enc").read_text(
         encoding="utf-8"
     )
@@ -660,7 +660,7 @@ def test_record_destructions_replays_from_env_alone_recovering_a_wedged_sweep(
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-08-20")
 
-    assert record_destructions() == 0
+    assert record_destructions([]) == 0
     assert "mrg-042" in capsys.readouterr().out
     assert not (tmp_path / "instance" / "keys" / "events" / "mrg-042.pub").exists()
 

@@ -83,7 +83,7 @@ def test_encrypt_attendance_export_with_no_event_id_returns_1(
 ) -> None:
     monkeypatch.delenv("EVENT_ID", raising=False)
 
-    assert encrypt_attendance_export() == 1
+    assert encrypt_attendance_export([]) == 1
     assert "no valid event id" in capsys.readouterr().err
 
 
@@ -93,7 +93,7 @@ def test_encrypt_attendance_export_without_a_published_key_returns_1(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
 
-    assert encrypt_attendance_export() == 1
+    assert encrypt_attendance_export([]) == 1
     assert "no public key published" in capsys.readouterr().err
 
 
@@ -104,7 +104,7 @@ def test_encrypt_attendance_export_without_a_plaintext_csv_returns_1(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
 
-    assert encrypt_attendance_export() == 1
+    assert encrypt_attendance_export([]) == 1
     err = capsys.readouterr().err
     assert "no attendance export to encrypt" in err
     assert "instance/data/events/mrg-042/attendance-import.csv" in err
@@ -132,7 +132,7 @@ def test_encrypt_attendance_export_writes_a_decryptable_committed_file(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
 
-    assert encrypt_attendance_export() == 0
+    assert encrypt_attendance_export([]) == 0
     out = capsys.readouterr().out
     assert "attendance-import.csv.enc" in out
     assert "convener-match-attendance" in out
@@ -168,13 +168,13 @@ def test_encrypt_attendance_export_warns_when_replacing_an_already_committed_fil
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
 
-    assert encrypt_attendance_export() == 0
+    assert encrypt_attendance_export([]) == 0
     assert "replacing" not in capsys.readouterr().out
 
     plain_path.write_text(
         ATTENDANCE_CSV_HEADER + "\nGrace,grace@example.org,x,y,90\n", encoding="utf-8"
     )
-    assert encrypt_attendance_export() == 0
+    assert encrypt_attendance_export([]) == 0
     out = capsys.readouterr().out
     assert "replacing the already-committed" in out
     assert "attendance-import.csv.enc" in out
@@ -212,7 +212,56 @@ def test_encrypt_attendance_export_never_reads_the_private_key(
 
     monkeypatch.setattr(os_module.environ, "get", _guarded_get)
 
-    assert encrypt_attendance_export() == 0
+    assert encrypt_attendance_export([]) == 0
+
+
+def test_encrypt_attendance_export_takes_the_event_as_an_option(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The option exists because the environment spelling cannot be
+    typed on every shell this product is opened on: `EVENT_ID=<id>
+    command` is a shape Windows PowerShell 5.1 has no form of at all, and
+    no rewording of the page closes that. With `EVENT_ID` deliberately
+    unset, the command still runs.
+    """
+    private_pem, _public_pem = publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("EVENT_ID", raising=False)
+    write_attendance_csv(tmp_path, "mrg-042", "Ada,ada@example.org,x,y,60")
+
+    assert encrypt_attendance_export(["--event", "mrg-042"]) == 0
+    assert "attendance-import.csv.enc" in capsys.readouterr().out
+
+    written = (
+        tmp_path
+        / "instance"
+        / "data"
+        / "events"
+        / "mrg-042"
+        / "attendance-import.csv.enc"
+    )
+    file = load_attendance_export_file(written.read_text(encoding="utf-8"))
+    assert [row.email for row in decrypt_attendance_rows(file, private_pem)] == [
+        "ada@example.org"
+    ]
+
+
+def test_encrypt_attendance_export_prefers_the_option_to_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The precedence, measured rather than described: an operator who
+    names an event on the command line means that event, whatever a
+    standing `env:` says. See `cli/given.py` for the argument."""
+    publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-999")
+    write_attendance_csv(tmp_path, "mrg-042", "Ada,ada@example.org,x,y,60")
+
+    assert encrypt_attendance_export(["--event", "mrg-042"]) == 0
+
+    events = tmp_path / "instance" / "data" / "events"
+    assert (events / "mrg-042" / "attendance-import.csv.enc").is_file()
+    assert not (events / "mrg-999").exists()
 
 
 # --- encrypt_identifier() ---------------------------------------------- #
@@ -227,7 +276,7 @@ def test_encrypt_identifier_with_no_event_id_returns_1(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.delenv("EVENT_ID", raising=False)
-    assert encrypt_identifier() == 1
+    assert encrypt_identifier([]) == 1
     assert "no valid event id" in capsys.readouterr().err
 
 
@@ -235,7 +284,7 @@ def test_encrypt_identifier_with_an_invalid_event_id_returns_1(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("EVENT_ID", "../escape")
-    assert encrypt_identifier() == 1
+    assert encrypt_identifier([]) == 1
     assert "no valid event id" in capsys.readouterr().err
 
 
@@ -244,7 +293,7 @@ def test_encrypt_identifier_with_no_email_returns_1(
 ) -> None:
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
-    assert encrypt_identifier() == 1
+    assert encrypt_identifier([]) == 1
     assert "no e-mail address" in capsys.readouterr().err
 
 
@@ -255,7 +304,7 @@ def test_encrypt_identifier_without_a_published_key_returns_1(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
 
-    assert encrypt_identifier() == 1
+    assert encrypt_identifier([]) == 1
     assert "no public key published" in capsys.readouterr().err
 
 
@@ -282,7 +331,48 @@ def test_encrypt_identifier_never_reads_the_private_key(
 
     monkeypatch.setattr(os_module.environ, "get", _guarded_get)
 
-    assert encrypt_identifier() == 0
+    assert encrypt_identifier([]) == 0
+
+
+def test_encrypt_identifier_takes_both_values_as_options(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Both halves of the prefix this command used to require, as
+    options -- with neither environment variable set, which is the state
+    an operator on a shell with no such prefix is always in."""
+    private_pem, _public_pem = publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("EVENT_ID", raising=False)
+    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+
+    assert (
+        encrypt_identifier(
+            ["--event", "mrg-042", "--email", "ada@example.org"],
+        )
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "ada@example.org" not in out
+    assert (
+        eventkeys.decrypt(private_pem, out.strip()).decode("utf-8") == "ada@example.org"
+    )
+
+
+def test_encrypt_identifier_prefers_the_options_to_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The precedence again, on the command that reads two values: the
+    option wins, the environment is the fallback."""
+    private_pem, _public_pem = publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "grace@example.org")
+
+    assert encrypt_identifier(["--email", "ada@example.org"]) == 0
+    out = capsys.readouterr().out
+    assert (
+        eventkeys.decrypt(private_pem, out.strip()).decode("utf-8") == "ada@example.org"
+    )
 
 
 def test_encrypt_identifier_prints_a_decryptable_envelope_and_nothing_else(
@@ -297,7 +387,7 @@ def test_encrypt_identifier_prints_a_decryptable_envelope_and_nothing_else(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
 
-    assert encrypt_identifier() == 0
+    assert encrypt_identifier([]) == 0
     out = capsys.readouterr().out
     lines = out.strip("\n").splitlines()
     assert len(lines) == 1

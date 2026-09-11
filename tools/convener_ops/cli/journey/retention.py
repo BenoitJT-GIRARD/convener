@@ -9,14 +9,16 @@ here because it reads the same registry the sweep writes.
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, time
 from pathlib import Path
 
 import yaml
 
-from convener_ops.cli import step_output, store
+from convener_ops.cli import given, step_output, store
 from convener_ops.declaration.paths import (
     DATA_DIR,
     repo_root,
@@ -206,9 +208,11 @@ def retention_sweep() -> int:
     return 0
 
 
-def record_destructions() -> int:
-    """`convener-record-destructions`: write `instance/data/event-key-destructions.yml`
-    with every id in `DESTROYED_IDS` (comma-joined, `retention_sweep`'s
+def record_destructions(argv: Sequence[str] | None = None) -> int:
+    """`convener-record-destructions [--ids IDS] [--on DATE]`: write
+    `instance/data/event-key-destructions.yml`
+    with every id in `--ids`, or in `DESTROYED_IDS` when no option is
+    given (comma-joined, `retention_sweep`'s
     own `$GITHUB_OUTPUT`, or a hand-run operator recovering from a wedged
     sweep -- see `docs/operating/operations.md`, 'Retention and early
     erasure') recorded as destroyed on `DESTROYED_ON` (an ISO date; every
@@ -227,7 +231,12 @@ def record_destructions() -> int:
     produces already names a published key by construction, but this
     function is also `convener-record-destructions`, a console script an
     operator can and does run by hand after a wedged sweep -- reading a
-    plain `DESTROYED_IDS` environment variable with no such guarantee.
+    plain list of ids with no such guarantee. `--ids` and `--on` are what
+    that operator types, and the two environment variables are what
+    `retention.yml` still passes; `cli.given` is where that order is
+    decided and argued, and the options exist because a shell with no
+    environment-variable prefix refuses the environment spelling
+    outright.
     `destroy`'s own `key_was_published` guard
     (`public_key_path(event_id).exists()`) is exactly the missing
     validation: it refuses a typo'd or never-published id instead of
@@ -269,16 +278,44 @@ def record_destructions() -> int:
     sweep finds those events still due, re-deletes secrets that are
     already absent (which the tolerance above makes safe), and records them then.
     """
+    parser = argparse.ArgumentParser(
+        prog="convener-record-destructions",
+        description=(
+            "Record that each event's key was destroyed on a given day, "
+            "and take its published public half down."
+        ),
+    )
+    parser.add_argument(
+        "--ids",
+        default=None,
+        metavar="IDS",
+        help=(
+            "the event ids whose keys were destroyed, comma-joined "
+            "(default: the DESTROYED_IDS environment variable)"
+        ),
+    )
+    parser.add_argument(
+        "--on",
+        dest="on",
+        default=None,
+        metavar="DATE",
+        help=(
+            "the ISO day they were destroyed on (default: the DESTROYED_ON "
+            "environment variable)"
+        ),
+    )
+    args = parser.parse_args(argv)
+
     ids = [
         event_id
-        for event_id in os.environ.get("DESTROYED_IDS", "").split(",")
+        for event_id in given.value(args.ids, "DESTROYED_IDS").split(",")
         if event_id
     ]
     if not ids:
         print("no destroyed event ids to record")
         return 0
 
-    destroyed_on_raw = os.environ.get("DESTROYED_ON", "").strip()
+    destroyed_on_raw = given.value(args.on, "DESTROYED_ON")
     try:
         destroyed_on = date.fromisoformat(destroyed_on_raw)
     except ValueError:

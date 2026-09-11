@@ -51,8 +51,8 @@ on:
         description: >-
           Fallback only, used when no matching code is given: the
           registrant's e-mail address, encrypted for this event with
-          `cd tools && EVENT_ID=<id> REGISTRATION_EMAIL=<address> uv run
-          convener-encrypt-identifier` -- never the address itself. See this
+          `uv run convener-encrypt-identifier --event <id>
+          --email <address>`, from `tools/` -- never the address itself. See this
           file's own header comment for why (D-24).
         required: false
         type: string

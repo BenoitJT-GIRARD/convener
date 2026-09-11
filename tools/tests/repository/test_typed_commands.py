@@ -22,10 +22,12 @@ this cannot become the list of the commands somebody decided not to fix.
 
 What it refuses
 ---------------
-`&&` and `||`, the two shell control operators Windows PowerShell 5.1 does
-not have. They are refused wherever a reader is told to type them; nothing
-here reads `gates.sh`, `package.json` or a workflow, which are run by the
-shell each one declares rather than typed by anybody.
+Two classes, and both are shapes Windows PowerShell 5.1 has no form of.
+
+**The control operators, `&&` and `||`.** Refused wherever a reader is
+told to type them; nothing here reads `gates.sh`, `package.json` or a
+workflow, which are run by the shell each one declares rather than typed
+by anybody.
 
 The fix is never `;`. A command a reader types is one command, and where
 it needs a directory the directory is a line of its own inside the block
@@ -33,6 +35,22 @@ it needs a directory the directory is a line of its own inside the block
 span (*run `uv run convener-validate` from `tools/`*). Both spellings work
 on every shell this product is opened on, and neither asks the reader to
 know which shell they are on.
+
+**The environment-variable prefix, `NAME=value command`.** A POSIX shell
+reads that as one variable set for the duration of one command; PowerShell
+reads `EVENT_ID=mrg-042` as a bare word and stops. Unlike the operators,
+this one could not be closed by rewording the page at all: there is no
+third spelling both shells accept, so the three commands it stood in front
+of -- `convener-encrypt-identifier`, `convener-encrypt-attendance-export`
+and `convener-record-destructions` -- each take the value as an option
+now, and the environment stayed as the fallback because the workflows pass
+it in `env:`. `tools/convener_ops/cli/given.py` is where the order between
+the two is decided.
+
+`NAME=value` alone is not the shape and is not refused: an assignment with
+nothing after it to run is a value being named in prose (`merge=ours`,
+`?demo=1`), not a command anybody is being told to type. What the pattern
+below requires is at least one assignment followed by something to run.
 
 Where a generated page's fix is
 -------------------------------
@@ -42,20 +60,17 @@ first line. A command corrected on the page is a command the next
 `--check` deletes, so the failure below names the page and the page names
 the declaration.
 
-The class this does not cover, and why it is here rather than swept in
-----------------------------------------------------------------------
-Three commands are given with an environment variable in front of them, in
-four places: `EVENT_ID=<event id> uv run convener-encrypt-attendance-export`
-in `docs/handbook/workflow/4-after.md` and again in
-`docs/operating/operations.md`, and `convener-encrypt-identifier` and
-`convener-record-destructions` in the same page. PowerShell has no form of
-that prefix, and there is no third spelling both shells accept, so no
-rewording closes it: each of those three commands would have to take the
-value as an option instead of reading it out of the environment, which is a
-change to what this product offers rather than to what a page says about
-it. Detecting the shape here without that change would be a red suite over
-two pages nobody may fix, so it is written here instead, where the next
-person to widen this sweep will read it.
+The one shape a page can still carry unread
+------------------------------------------
+An inline span that wraps. Backticks do not nest and the pattern below
+reads one line at a time, so a span opened on one line and closed on the
+next is read as two half-spans and matched by neither rule. It is a real
+hole and it is left open rather than papered over: a span long enough to
+wrap is a span long enough to be a paragraph of its own, and the four
+invocations this module was widened for were all rewritten short enough to
+sit on one line. `test_the_sweep_reads_the_pages_and_finds_the_commands_on_
+them` is what would notice the corpus going quiet; nothing notices one
+wrapped span, and saying so here is the whole of what is done about it.
 """
 
 from __future__ import annotations
@@ -92,14 +107,30 @@ LANGUAGES: Final = frozenset(
     }
 )
 
-#: What PowerShell 5.1 answers with when it meets either of them, quoted so
-#: that a failure says what the reader would see rather than only what the
-#: rule is.
+#: What PowerShell 5.1 answers with when it meets either operator, quoted
+#: so that a failure says what the reader would see rather than only what
+#: the rule is.
 REFUSAL: Final = "The token '&&' is not a valid statement separator in this version"
+
+#: And what it answers with when it meets the prefix: the assignment is
+#: read as a command name, and the shell looks for a program by that name.
+PREFIX_REFUSAL: Final = (
+    "The term 'EVENT_ID=mrg-042' is not recognized as the name of a cmdlet, "
+    "function, script file, or operable program"
+)
 
 #: The two operators. `;` is not among them: it separates statements in
 #: both shells, and it is not what this repository writes either.
 OPERATORS: Final = ("&&", "||")
+
+#: One or more `NAME=value` assignments with a command after them. The
+#: trailing `\S` is the whole of the distinction between a prefix and a
+#: value named in prose: `merge=ours` runs nothing and is not this shape.
+#: A value may itself contain a space when a page writes a placeholder in
+#: angle brackets (`EVENT_ID=<event id> ...`), which is why the assignment
+#: is `\S*` rather than `\S+` and why one more token is always required
+#: after it.
+ENVIRONMENT_PREFIX: Final = re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)+\S")
 
 #: One inline code span. Backticks do not nest and a span does not wrap, so
 #: the shortest run between two backticks on one line is the whole of it.
@@ -152,14 +183,24 @@ def commands(text: str) -> list[tuple[int, str]]:
     return found
 
 
+def refused(command: str) -> bool:
+    """Whether `command` is one of the two shapes PowerShell 5.1 cannot
+    run: a control operator anywhere in it, or an environment-variable
+    prefix in front of it."""
+    if any(operator in command for operator in OPERATORS):
+        return True
+    return ENVIRONMENT_PREFIX.match(command) is not None
+
+
 def offences(swept: list[tuple[str, str]]) -> list[str]:
-    """Every command carrying an operator, as `path:line: the command`."""
-    found: list[str] = []
-    for name, text in swept:
-        for number, command in commands(text):
-            if any(operator in command for operator in OPERATORS):
-                found.append(f"{name}:{number}: {command}")
-    return found
+    """Every command in a shape PowerShell cannot run, as
+    `path:line: the command`."""
+    return [
+        f"{name}:{number}: {command}"
+        for name, text in swept
+        for number, command in commands(text)
+        if refused(command)
+    ]
 
 
 # ------------------------------------------------------------------ #
@@ -231,6 +272,49 @@ def test_the_second_operator_is_refused_as_well() -> None:
     ]
 
 
+def test_a_command_with_an_environment_variable_in_front_of_it_is_refused() -> None:
+    """The second class, on both the shape a workflow taught this
+    repository to write and the two-assignment version of it."""
+    page = (
+        "```bash\n"
+        "EVENT_ID=mrg-042 uv run convener-encrypt-attendance-export\n"
+        "```\n"
+        "\n"
+        "Then run `DESTROYED_IDS=mrg-042 DESTROYED_ON=2026-04-01 uv run x`.\n"
+    )
+
+    assert offences([("made-up.md", page)]) == [
+        "made-up.md:2: EVENT_ID=mrg-042 uv run convener-encrypt-attendance-export",
+        "made-up.md:5: DESTROYED_IDS=mrg-042 DESTROYED_ON=2026-04-01 uv run x",
+    ]
+
+
+def test_a_value_named_in_prose_is_not_a_prefix() -> None:
+    """The distinction the trailing token draws. `merge=ours` is a git
+    attribute this repository's own declaration names, `?demo=1` is a
+    query string, and neither is anybody being told to run anything --
+    a rule that refused them would be one somebody turns off."""
+    page = (
+        "`.gitattributes` gives that path `merge=ours`, and the cockpit "
+        "takes `?demo=1`.\n"
+    )
+
+    assert offences([("made-up.md", page)]) == []
+
+
+def test_the_option_spelling_of_the_same_command_is_not_refused() -> None:
+    """The fix this class has, run rather than described: the value moves
+    from a prefix into an option and the same command passes."""
+    page = (
+        "```bash\n"
+        "cd tools\n"
+        "uv run convener-encrypt-identifier --event mrg-042 --email a@example.org\n"
+        "```\n"
+    )
+
+    assert offences([("made-up.md", page)]) == []
+
+
 # ------------------------------------------------------------------ #
 # The rule.
 # ------------------------------------------------------------------ #
@@ -241,10 +325,14 @@ def test_no_command_a_page_gives_uses_a_shell_operator() -> None:
     found = offences(pages())
 
     assert found == [], (
-        f"these commands carry {' or '.join(OPERATORS)}, and a reader on "
-        f'Windows PowerShell 5.1 is answered "{REFUSAL}" and runs nothing: '
-        f"{found}. Put the directory on a line of its own inside the block, "
-        "or name it in the prose beside an inline span; where the page is "
-        "generated, the declaration it names on its first line is where the "
-        "command is written"
+        f"these commands carry {' or '.join(OPERATORS)}, or an "
+        "environment-variable prefix, and a reader on Windows PowerShell "
+        f'5.1 is answered "{REFUSAL}" or "{PREFIX_REFUSAL}" and runs '
+        f"nothing: {found}. For an operator: put the directory on a line of "
+        "its own inside the block, or name it in the prose beside an inline "
+        "span. For a prefix: the command takes the value as an option "
+        "(`--event`, `--email`, `--ids`, `--on`) and reads the environment "
+        "only when none is given. Where the page is generated, the "
+        "declaration it names on its first line is where the command is "
+        "written"
     )

@@ -741,7 +741,7 @@ address itself — produce it with:
 
 ```bash
 cd tools
-EVENT_ID=mrg-042 REGISTRATION_EMAIL=person@example.org uv run convener-encrypt-identifier
+uv run convener-encrypt-identifier --event mrg-042 --email person@example.org
 ```
 
 which needs no secret (`instance/keys/events/<id>.pub` is public data, not a
@@ -869,8 +869,8 @@ secrets. The encrypted registrations already committed under
 `instance/data/events/<event id>/` stay in git, with no history rewrite, and become
 permanently unreadable the moment the secret is gone — nothing else needs
 to happen to the repository itself. Record the destruction by running
-`DESTROYED_IDS=<event id> DESTROYED_ON=<YYYY-MM-DD> uv run
-convener-record-destructions`, from `tools/`, so the register can tell "destroyed on purpose"
+`uv run convener-record-destructions --ids <event id> --on <YYYY-MM-DD>`,
+from `tools/`, so the register can tell "destroyed on purpose"
 apart from "this event never had a key" two years from now — the two look
 identical from the repository alone, and only the register carries the
 difference. That same command also removes `instance/keys/events/<event id>.pub`
@@ -880,7 +880,10 @@ registrations too — do not delete the `.pub` by hand first, or
 for an id whose key was never published) will refuse the very destruction
 it is meant to record. This happens automatically now — see *Retention and
 early erasure*, below, for the scheduled workflow that removes the secret
-and records the destruction together; done by hand instead, it is these
+and records the destruction together — passing the same two values in its
+own `env:`, which goes on working because an option takes precedence over
+the environment and never replaces it (`tools/convener_ops/cli/given.py`).
+Done by hand instead, it is these
 two steps, always together, in that order: remove the secret, then run
 `convener-record-destructions`.
 
@@ -1438,7 +1441,7 @@ closes that gap:
    locally as `instance/data/events/<event id>/attendance-import.csv` (never
    committed).
 2. Run, on your own machine, no CI job and no secret needed, from `tools/`:
-   `EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This reads
+   `uv run convener-encrypt-attendance-export --event <event id>`. This reads
    only the event's already-published public key
    (`instance/keys/events/<event id>.pub`) and the plaintext file above, and writes
    `instance/data/events/<event id>/attendance-import.csv.enc` -- one independent

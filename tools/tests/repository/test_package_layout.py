@@ -109,11 +109,13 @@ COMMAND_LINE = Path(convener_ops.cli.__file__).parent
 #: Where the console commands are declared, outside Python.
 DECLARATION: Final = repo_root() / "tools" / "pyproject.toml"
 
-#: The two modules of `cli/` that are not named after a sub-package, each
+#: The three modules of `cli/` that are not named after a sub-package, each
 #: because it holds something every command module needs and no command
-#: module owns: the dialect the store's own YAML files are written in, and
-#: the file a workflow step reads its predecessor's answer out of.
-SHARED: Final = frozenset({"store", "step_output"})
+#: module owns: the dialect the store's own YAML files are written in, the
+#: file a workflow step reads its predecessor's answer out of, and the
+#: order an option and an environment variable holding one value are read
+#: in.
+SHARED: Final = frozenset({"given", "store", "step_output"})
 
 #: Every test of this repository's Python. `COMMAND_LINE_TESTS` is one
 #: directory of it, and the strong mirror rule reaches only that one; the
