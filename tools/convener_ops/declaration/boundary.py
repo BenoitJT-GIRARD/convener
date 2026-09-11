@@ -584,8 +584,15 @@ def retirements_must_land_where_the_instance_is(board: Boundary) -> None:
     is one somebody turns off. So the mapping is *declared* rather than
     inferred, this refuses a declaration that does not land on the
     instance, and `tools/tests/derivation/test_retirement.py` holds the
-    declaration against what git and the working tree can still see of the
-    move -- which is the half that can be measured without an exemption.
+    declaration against the act git can still see -- the commit that
+    emptied the retired path is the commit that wrote its destination --
+    which is the half that can be measured without an exemption.
+
+    Landing on the instance is not by itself enough, and this refusal
+    does not claim it is: every path `instance:` names satisfies it, so a
+    product path that merely looks like one of them satisfies it too.
+    That is the other module's half, and it reads the act rather than the
+    content, because content is exactly what a look-alike has.
 
     No history and no existence check: a derived repository loads this
     same file with its instance paths filtered out of its history and laid

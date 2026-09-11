@@ -158,9 +158,25 @@
 # What can be measured without an exemption is the declaration against
 # the move, and `test_retirement.py` measures exactly that: every rename
 # git can see out of a retired path has to land at or under that entry's
-# `became:`, and something of what was stored under it has to still be
-# readable there. `tools/migrations/` shares no line with any of the
-# eight instance paths this file names, so no `became:` saves it.
+# `became:`, and the commit that emptied the retired path has to be the
+# commit that wrote `became:`.
+#
+# That second reading used to be about *lines* -- something of what was
+# stored under the path had to still be readable at its destination --
+# and that was not evidence of anything. `examples/the-example-collective/`
+# holds one file per path the instance owns, at the same relative path,
+# so a file there resembles an instance file by construction: retiring
+# `examples/the-example-collective/instance/data/brand.json` with
+# `became: instance/data/` shared lines with `instance/data/brand.json`
+# for no better reason than both being a `brand.json`, passed every
+# reading, took the derivation from 24 paths never leaving to 25, and
+# withheld the worked example's own charter -- the product's -- from the
+# repository the product is published from. A move is one act: the place
+# it leaves goes empty in the same commit the place it arrives at is
+# written, and a resemblance cannot forge that. `tools/migrations/` was
+# deleted in a commit that wrote nothing the instance owns, and the
+# example's charter in a commit that wrote nothing under
+# `instance/data/`, so no `became:` saves either of them.
 
 # `kept:` -- the product's own files inside a directory the instance owns
 # ----------------------------------------------------------------------
