@@ -47,8 +47,8 @@ each is fixed by a measurement this repository already holds:
 
 - **`_STEP`, the field's own unit.** Bounded from below by the heaviest
   stroke a charter here may draw -- 0.03 of the shorter side, the ceiling
-  `tests/publication/motifs/test_lattice.py::HEAVIEST_RATIO` holds every
-  `motif.width_ratio` under -- because a mark one step long, painted at
+  `brand.HEAVIEST_STROKE` holds every `motif.width_ratio` under, refused
+  where a charter is read -- because a mark one step long, painted at
   that weight with a round cap at each end, would close the gap to the
   next mark down its column and the field would become a rule. At 0.045
   that gap is a third of the mark's own length, so the field stays a field

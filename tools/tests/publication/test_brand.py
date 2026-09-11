@@ -1311,6 +1311,58 @@ def test_a_motif_that_names_no_family_is_refused_and_says_what_to_add(
     assert "Add the family to the section" in message
 
 
+def test_a_stroke_heavier_than_the_drawings_clear_is_refused(
+    fake_repo: Path,
+) -> None:
+    """The bound that was nowhere in the product until now.
+
+    Three families reserve their own ground against `HEAVIEST_STROKE`, and
+    the only thing holding a charter under it was three test modules
+    asserting that no charter drew heavier than the heaviest charter --
+    true of any set of numbers, and a duplicate writing its own charter
+    never runs them. So the refusal is where a charter is read, and this
+    is it being read.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data[brand.MOTIF_KEY][brand.MOTIF_WIDTH_RATIO] = brand.HEAVIEST_STROKE + 0.001
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    with pytest.raises(brand.HeavyStrokeError) as raised:
+        brand.load(fake_repo)
+
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert str(brand.HEAVIEST_STROKE) in message
+    assert str(brand.HEAVIEST_STROKE + 0.001) in message
+
+
+def test_a_stroke_at_the_bound_itself_loads(fake_repo: Path) -> None:
+    """A ceiling, not a limit approached from below: the figure is what
+    the clearances were measured *at*, so a charter drawing exactly there
+    is the heaviest correct charter rather than the first wrong one."""
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data[brand.MOTIF_KEY][brand.MOTIF_WIDTH_RATIO] = brand.HEAVIEST_STROKE
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    loaded = brand.load(fake_repo)
+
+    assert loaded[brand.MOTIF_KEY][brand.MOTIF_WIDTH_RATIO] == brand.HEAVIEST_STROKE
+
+
+def test_every_charter_this_product_ships_is_under_the_bound() -> None:
+    """The four a duplicate may name, and the one this instance wrote,
+    read through the same refusal a duplicate's own charter meets. None
+    of them may need editing for this bound to arrive, which is the whole
+    claim: the figure was a ceiling already and is now stated as one."""
+    root = repo_root()
+    for rel in (brand.INSTANCE_PATH, *brand.shipped(root)):
+        section = brand.charter(root, rel).get(brand.MOTIF_KEY)
+        assert isinstance(section, dict)
+        assert section[brand.MOTIF_WIDTH_RATIO] <= brand.HEAVIEST_STROKE, (
+            f"{rel.as_posix()} draws heavier than {brand.HEAVIEST_STROKE}"
+        )
+
+
 def test_a_family_this_product_cannot_draw_is_refused_by_name(
     fake_repo: Path,
 ) -> None:

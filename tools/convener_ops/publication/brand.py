@@ -169,6 +169,40 @@ SHIPPED_FILE: Final = "brand.json"
 #: mark are one identity instead of two.
 DEFAULT_PATH: Final = SHIPPED_DIR / "convener" / SHIPPED_FILE
 
+#: The heaviest stroke a charter may draw its motif at, as a fraction of
+#: the composition's shorter side.
+#:
+#: Three of the four motif families measure a clearance against it --
+#: `chevrons._EDGE_GUTTER`, `lattice._STEP`, and `steps._OVERHANG` with
+#: `steps._RISERS` -- because a stroke is painted centred on the line it
+#: follows, so half of it falls outside whatever the drawing reserved. A
+#: charter heavier than this bleeds a drawing off its own edge and closes
+#: the ground between one mark and the next, and no drawing here was
+#: measured for that.
+#:
+#: The figure is 0.03 because that is what those clearances were measured
+#: against, and it is a **ceiling** rather than a reading of what happens
+#: to be committed. It was a reading once: the heaviest charter in this
+#: repository was the worked example's own, at exactly 0.03, and three
+#: test modules asserted that no charter drew heavier than the heaviest
+#: charter -- a sentence that is true of any set of numbers. The day that
+#: example took to naming one of the product's charters instead of writing
+#: one, the heaviest committed dropped to 0.024 and all three went red
+#: having found nothing wrong. Lowering the bound to follow the set would
+#: tighten drawings nobody asked to have tightened, and would do it again
+#: on every charter that ever goes; so the figure stays where the
+#: clearances were measured and the charters are held under it.
+#:
+#: Held here, where a charter is read, rather than in the three test
+#: modules that consume it: a duplicate writing its own charter never runs
+#: this repository's tests, and "the heaviest that happens to be
+#: committed" cannot bound a file that is not committed here at all.
+HEAVIEST_STROKE: Final = 0.03
+
+#: The field the bound above is about.
+MOTIF_WIDTH_RATIO: Final = "width_ratio"
+
+
 #: The design section. `assets/brand/convener/brand.json` carries one, so an
 #: instance never has to; what it may not do is write half of one.
 MOTIF_KEY: Final = "motif"
@@ -202,7 +236,7 @@ MOTIF_FIELDS: Final[dict[str, tuple[str, ...]]] = {
 #: is not the ribbon, and neither keeps the ribbon's name.
 SUPERSEDED_MOTIF_FIELDS: Final = {
     "ribbon_stroke": "stroke",
-    "ribbon_width_ratio": "width_ratio",
+    "ribbon_width_ratio": MOTIF_WIDTH_RATIO,
 }
 
 #: WCAG 2.1's floor for normal text. AAA is 7; nothing here is held to
@@ -310,6 +344,22 @@ class AmbiguousCharterError(RuntimeError):
     so: a duplicate with nobody to draw for it names one of the product's
     charters, and a duplicate with a designer writes
     `instance/data/brand.json` and names none.
+    """
+
+
+class HeavyStrokeError(RuntimeError):
+    """A charter drawing its motif heavier than the drawings clear.
+
+    The one refusal in this module that is about a *number* rather than a
+    shape, and it is here for the reason `HEAVIEST_STROKE` gives: three
+    families reserve their ground against that figure, and a charter above
+    it puts paint where nothing left room for it. A duplicate writing its
+    own charter meets this at the moment it builds, naming the bound and
+    what it wrote, rather than meeting a drawing that looks subtly wrong
+    and nothing saying why.
+
+    Carries the whole message rather than a code, for the reason
+    `MissingMotifError` gives.
     """
 
 
@@ -538,6 +588,9 @@ def _checked(root: Path, rel: Path) -> dict[str, Any]:
     named = rel.as_posix()
     _refuse_superseded_names(charter, named=named)
     _refuse_superseded_motif(charter.get(MOTIF_KEY), named=named)
+    _refuse_a_stroke_heavier_than_the_drawings_clear(
+        charter.get(MOTIF_KEY), named=named
+    )
     return charter
 
 
@@ -613,6 +666,43 @@ def _refuse_superseded_motif(section: Any, *, named: str) -> None:
         motifs.family(str(section[MOTIF_FAMILY]))
     except motifs.UnknownMotifFamilyError as unknown:
         raise motifs.UnknownMotifFamilyError(f"{named}: {unknown}") from unknown
+
+
+def _refuse_a_stroke_heavier_than_the_drawings_clear(
+    section: Any, *, named: str
+) -> None:
+    """Stop on a `motif` whose `width_ratio` is above `HEAVIEST_STROKE`.
+
+    Beside the two shape refusals above rather than in a second place: a
+    charter is validated here, once, whichever of the three callers asked
+    for it -- the charter in force, the product's own default, or one of
+    the palettes `generate_brand_css.py --check` reads without any build
+    being drawn from it.
+
+    A section with no `width_ratio`, or one whose value is not a number,
+    is left alone. The first is a family that declares no stroke weight
+    and the second is `motif`'s own business: a missing field is what
+    `MissingMotifError` names, and completing or coercing it here would
+    put this refusal in front of the one that actually says what to write.
+    """
+    if not isinstance(section, dict):
+        return
+    declared = section.get(MOTIF_WIDTH_RATIO)
+    if not isinstance(declared, int | float) or isinstance(declared, bool):
+        return
+    if declared <= HEAVIEST_STROKE:
+        return
+    raise HeavyStrokeError(
+        f"{named} draws its {MOTIF_KEY} at "
+        f"{MOTIF_WIDTH_RATIO} {declared}, and {HEAVIEST_STROKE} is the "
+        "heaviest this product's drawings clear. A stroke is painted "
+        "centred on the line it follows, so half of it falls outside "
+        "whatever the drawing reserved, and three of the four families "
+        "measure their own gutters and pitches against that figure -- at a "
+        "heavier weight the drawing bleeds off its own edge and closes the "
+        "ground between one mark and the next. Lower "
+        f"{MOTIF_KEY}.{MOTIF_WIDTH_RATIO} to {HEAVIEST_STROKE} or below."
+    )
 
 
 def _read(root: Path, rel: Path) -> dict[str, Any]:
@@ -751,7 +841,7 @@ def motif_width_ratio(root: Path, instance: Path | None = None) -> float:
     the product's is carried over from the proportion its own mark's inner
     arc is drawn at (`assets/brand/convener/brand.json`).
     """
-    return float(motif(root, instance)["width_ratio"])
+    return float(motif(root, instance)[MOTIF_WIDTH_RATIO])
 
 
 # --------------------------------------------------------------------------

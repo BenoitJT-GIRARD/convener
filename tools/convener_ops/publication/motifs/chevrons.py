@@ -49,8 +49,9 @@ repository already measures:
 - **`_EDGE_GUTTER`, how far a chevron's arm-ends stand off the edge.** The
   heaviest stroke a charter here may draw a motif at is 0.03 of the
   shorter side; the heaviest one committed draws at 0.024, and
-  `tests/publication/motifs/test_chevrons.py::HEAVIEST_RATIO` is what
-  holds every charter under the figure this was measured against. At a
+  `brand.HEAVIEST_STROKE` is what holds every charter under the figure
+  this was measured against, refused where a charter is read rather than
+  only where one is tested. At a
   gutter of exactly that, the paint at an arm's end stops half a stroke
   short of the edge at a charter drawn at the ceiling and further at every
   one committed, so no column bleeds off the page it is drawn on.

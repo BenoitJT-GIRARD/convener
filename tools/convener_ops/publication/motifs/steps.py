@@ -100,8 +100,8 @@ repository already measures:
   side, and one riser of the height is never shorter than that at any
   canvas this product renders. A span nearer than that would put paint on
   a page it is not drawn on.
-  `tests/publication/motifs/test_steps.py::HEAVIEST_RATIO` is the ceiling
-  and holds every committed charter under it; the heaviest draws at
+  `brand.HEAVIEST_STROKE` is the ceiling and holds every charter under
+  it, refused where a charter is read; the heaviest committed draws at
   0.024.
 
 `_CONTENT_TOP` below is the fifth figure and it is not the line's: it is

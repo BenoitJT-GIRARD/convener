@@ -253,7 +253,12 @@ def test_check_refuses_a_charter_changed_without_regenerating(
     _regenerable(tmp_path)
     charter_path = tmp_path / brand.INSTANCE_PATH
     charter = json.loads(charter_path.read_text(encoding="utf-8"))
-    charter[brand.MOTIF_KEY]["width_ratio"] = 0.05
+    # A weight this product actually draws at, and a different one from
+    # what the two generated files below hold. Heavier than
+    # `brand.HEAVIEST_STROKE` would be refused at the read, before this
+    # command compares a single generated file, and this is about the
+    # comparison rather than about the bound.
+    charter[brand.MOTIF_KEY][brand.MOTIF_WIDTH_RATIO] = 0.019
     charter_path.write_text(json.dumps(charter), encoding="utf-8", newline="")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
 

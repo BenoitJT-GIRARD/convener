@@ -62,15 +62,14 @@ CANVASES: Final[tuple[tuple[float, float], ...]] = (
 #: `_STEP` is bounded from below by: a charter committed at a heavier
 #: stroke closes this field's own gaps, and this is what says so. A
 #: ceiling the charters are held under, rather than a
-#: reading of what they happen to draw at. It stopped being a reading on
-#: the day the example instance named one of the product's charters
-#: instead of writing one: the example's was the only charter here at
-#: 0.03, and the heaviest now committed is 0.024. Lowering the bound to
-#: follow it would tighten a drawing nobody asked to have tightened, so
-#: the figure stays where it was measured and the charters are held to it
-#: instead. A charter committed above it is what this refuses, which is
-#: the direction that puts paint where it does not belong.
-HEAVIEST_RATIO: Final = 0.03
+#: reading of what they happen to draw at, and it is the product's own
+#: rule rather than this module's: `brand.HEAVIEST_STROKE` is where the
+#: figure and the whole argument for it live, and `brand._checked`
+#: refuses a charter above it wherever a charter is read -- including one
+#: a duplicate writes and never brings near this suite. Read from there
+#: rather than retyped here, so the bound a drawing is measured against
+#: and the bound a charter is refused by cannot come to differ.
+HEAVIEST_RATIO: Final = brand.HEAVIEST_STROKE
 
 
 def _points(text: str) -> list[Point]:
