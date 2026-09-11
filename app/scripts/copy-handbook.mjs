@@ -6,8 +6,8 @@
  *
  * This used to copy every file under `docs/` with a recognised extension
  * (`.md`, `.svg`, `.png` -- an extension allowlist) that did not sit in one
- * of three skipped directories (`superpowers`, `stylesheets`, `app` -- a
- * directory denylist). Both existed; neither was the allowlist
+ * of a handful of skipped directories (a directory denylist). Both
+ * existed; neither was the allowlist
  * `public_data.py` describes. The denylist named three directories and
  * never `docs/operating/`, so any `.md` page added there shipped, whichever
  * it was -- `docs/operating/operations.md`, which names every secret and

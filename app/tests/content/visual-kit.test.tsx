@@ -161,12 +161,16 @@ describe('the build serves what the kit links to', () => {
     // Orthogonal to the allowlist above: this is the extension/skip-dir
     // rule that decides whether a random file under docs/ could ever be
     // servable at all, regardless of the registry. Widening it to `docs/`
-    // wholesale would let the specs, the plans and whatever else lands
-    // there back into scope for that rule -- the registry-derived
-    // allowlist above is what actually keeps them out of the build.
+    // wholesale would put whatever happens to land there back into scope
+    // for that rule -- the registry-derived allowlist above is what
+    // actually keeps anything unregistered out of the build.
     expect(isServed('notes.txt')).toBe(false);
     expect(isServed('archive.zip')).toBe(false);
-    expect(served.some(p => p.startsWith('superpowers/'))).toBe(false);
+    // And the same rule on the real tree rather than on two invented
+    // names: the walk returns something, and everything it returns is a
+    // name the rule above admits.
+    expect(served.length).toBeGreaterThan(0);
+    expect(served.filter(name => !isServed(name))).toEqual([]);
   });
 });
 

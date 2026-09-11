@@ -10,11 +10,10 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 /** Directories under `docs/` that never reach the app.
- *  - `superpowers` — specs and plans, written for us, not for volunteers.
  *  - `stylesheets` — belongs to the handbook's own rendering, not the app's.
  *  - `app` — `docs/handbook/assets/app/` is the deployed bundle (git-ignored); copying
  *    a build output back into the next build is how a bundle eats itself. */
-export const SKIP_DIRS = new Set(['superpowers', 'stylesheets', 'app']);
+export const SKIP_DIRS = new Set(['stylesheets', 'app']);
 
 /** Extensions served to the app. Markdown is the content; SVG and PNG are the
  *  visual kit — open formats a volunteer downloads and opens in their own

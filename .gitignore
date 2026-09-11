@@ -44,13 +44,13 @@ instance/public-data/*
 # channel is configured, posted by the notify workflow, never edited.
 notify-body.md
 
-# The working record this repository is developed against: specifications,
-# plans and task reports, none of which is the product. It was ignored by a
-# `.gitignore` of its own inside `.superpowers/sdd/`, which covered that one
-# sub-directory and nothing beside it -- so a file written one level up was
-# untracked, invisible in `git status`, and one `git add` away from being
-# published. Named here, where every other exclusion this repository makes
-# is named.
+# One more agent vendor's own per-project state, on the same rule as the
+# directory below and for the same reason: it is a working copy's, not the
+# product's. It was ignored by a `.gitignore` of its own one level down,
+# which covered that sub-directory and nothing beside it -- so a file
+# written above it was untracked, invisible in `git status`, and one
+# `git add` away from being published. Named here, where every other
+# exclusion this repository makes is named.
 .superpowers/
 
 # Claude Code's own per-project state -- `settings.local.json` above all,

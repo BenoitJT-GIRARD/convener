@@ -1,7 +1,7 @@
 /**
  * The architecture decision records under `docs/engineering/decisions/`: the edited,
  * published form of the decisions this project took while it was built.
- * Four properties are pinned here rather than trusted by inspection:
+ * Three properties are pinned here rather than trusted by inspection:
  *
  * 1. Every `D-NN` file on disk is registered in `CONTENT_REGISTRY` under a
  *    `decisions/d-NN` key, and every such key names a file that exists --
@@ -14,12 +14,6 @@
  *    here on its own.
  * 3. Each record carries the minimum an ADR needs: a status line, and
  *    `Context`, `Decision`, `Rejected` and `Cost` sections.
- * 4. Nothing under `docs/engineering/decisions/` links into `docs/superpowers/` --
- *    the working record, which stays local and is never published.
- *    `registered-links.test.ts` already forbids this indirectly, because
- *    nothing under `docs/superpowers/` is registered; this test pins the
- *    same guarantee directly, so it holds even if that indirect route ever
- *    changed.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -114,24 +108,6 @@ describe('every record carries the minimum an ADR needs', () => {
       expect(text).toMatch(/^## Decision$/m);
       expect(text).toMatch(/^## Rejected$/m);
       expect(text).toMatch(/^## Cost$/m);
-    });
-  }
-});
-
-describe('nothing under docs/engineering/decisions/ links into docs/superpowers/', () => {
-  const files = ['index.md', ...recordFilesOnDisk()];
-
-  it('is a real sweep: at least one of these files carries a local link', () => {
-    const anyLinks = files.some(f => localMdLinks(page(f)).length > 0);
-    expect(anyLinks).toBe(true);
-  });
-
-  for (const file of files) {
-    it(`${file} carries no link, and no bare mention, of docs/superpowers/`, () => {
-      const text = page(file);
-      const superpowersLinks = localMdLinks(text).filter(href => href.includes('superpowers'));
-      expect(superpowersLinks).toEqual([]);
-      expect(text).not.toContain('superpowers/');
     });
   }
 });

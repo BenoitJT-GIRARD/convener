@@ -29,10 +29,10 @@
  *    `docs/`: a page added to a *private copy* of `docs/` that the
  *    registry has never heard of is run through the real copy step and
  *    does not reach the destination. This is the test that would fail if
- *    the filter were removed, or replaced with a denylist of today's three
- *    known-bad paths (`operations.md`, `docs/handbook/assets/`, `docs/superpowers/`)
- *    -- a denylist passes every check in section 2 above and still fails
- *    this one, because the probe page sits outside all three.
+ *    the filter were removed, or replaced with a denylist of today's two
+ *    known-bad paths (`operations.md`, `docs/handbook/assets/`) -- a
+ *    denylist passes every check in section 2 above and still fails this
+ *    one, because the probe page sits outside both.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { mkdir, cp, rm, writeFile } from 'node:fs/promises';
@@ -173,12 +173,6 @@ describe('a real run against the real docs/ tree', () => {
     expect(slash(await walkAll(dst))).not.toContain('operating/operations.md');
   });
 
-  it('never publishes anything under docs/superpowers/ -- the specs and plans this project never releases', async () => {
-    dst = await scratch(OWNER, 'real');
-    await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
-    expect(slash(await walkAll(dst)).some(p => p.startsWith('superpowers/'))).toBe(false);
-  });
-
   it('publishes nothing under docs/handbook/assets/ beyond what PUBLIC_ASSETS names', async () => {
     dst = await scratch(OWNER, 'real');
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
@@ -243,28 +237,28 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
     // The probe sits at the top level of docs/ -- not under
-    // `operating/`, `handbook/assets/` or `superpowers/` -- exactly so that a
-    // denylist of today's three known-bad paths would still let it
+    // `operating/` and not under `handbook/assets/` -- exactly so that a
+    // denylist of today's two known-bad paths would still let it
     // through. Only a real allowlist stops it.
     expect(files).not.toContain('zzz-not-in-the-registry.md');
     expect(existsSync(resolve(dst, 'zzz-not-in-the-registry.md'))).toBe(false);
   });
 
-  it('does not publish a probe file added under docs/superpowers/', async () => {
+  it('does not publish a probe file added in a directory of its own that no registered page names', async () => {
     sandbox = await sandboxDocs();
-    // Created rather than assumed: `docs/superpowers/` never leaves this
-    // repository, so in one derived from it the copy above brings no
-    // such directory and this probe used to fail on the write rather
-    // than prove anything. The claim is about the allowlist, not about
-    // which directories happen to exist.
-    await mkdir(resolve(sandbox, 'superpowers'), { recursive: true });
-    await writeFile(resolve(sandbox, 'superpowers', 'zzz-probe.md'), '# probe\n');
+    // The directory is created here rather than found: the claim is about
+    // the allowlist, not about which directories happen to exist under
+    // `docs/` on the day. A whole directory rather than the file above,
+    // because a walk meets the two differently -- one it may descend
+    // into, the other it may only copy.
+    await mkdir(resolve(sandbox, 'zzz-unregistered-tree'), { recursive: true });
+    await writeFile(resolve(sandbox, 'zzz-unregistered-tree', 'zzz-probe.md'), '# probe\n');
     dst = await scratch(OWNER, 'mut');
 
     const { files } = await copyHandbook({ docsDir: sandbox, registrySource: REGISTRY_SOURCE, dst });
 
-    expect(files.some(f => f.startsWith('superpowers/'))).toBe(false);
-    expect(existsSync(resolve(dst, 'superpowers', 'zzz-probe.md'))).toBe(false);
+    expect(files.some(f => f.startsWith('zzz-unregistered-tree/'))).toBe(false);
+    expect(existsSync(resolve(dst, 'zzz-unregistered-tree', 'zzz-probe.md'))).toBe(false);
   });
 
   it('does not publish a probe file added under docs/handbook/assets/ that no registered page links to', async () => {

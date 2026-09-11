@@ -64,7 +64,7 @@ _DOCS = _REPO / "docs"
 #: pages committed under `docs/` that nothing has registered yet, and sweeping
 #: them for copies is the stricter reading of the rule -- a copy made in an
 #: unregistered page is a copy the day somebody registers it.
-_SKIP_DIRS = {"superpowers", "stylesheets", "app"}
+_SKIP_DIRS = {"stylesheets", "app"}
 
 #: Where the app's copy of the same rule lives, and the form it is written in.
 _HANDBOOK_FILES = Path("app/scripts/handbook-files.mjs")
@@ -171,7 +171,6 @@ def test_the_sweep_covers_the_pages_the_app_serves() -> None:
     assert "handbook/workflow/4-after.md" in names
     assert "handbook/governance/board-rules.md" in names
     assert "handbook/toolkit/intro-scripts.md" in names
-    assert not any(name.startswith("superpowers/") for name in names)
 
 
 def test_the_detector_finds_a_copy_when_there_is_one() -> None:

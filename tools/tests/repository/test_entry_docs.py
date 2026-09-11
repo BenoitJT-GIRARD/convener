@@ -253,15 +253,14 @@ def test_the_diagram_carries_the_personal_data_lifecycle() -> None:
         assert label in block, label
 
 
-#: The two prefixes that name this project's own working record. Neither
-#: exists for any reader of this repository: nothing is tracked under the
-#: first, and `.gitignore` has always kept the second out of every clone.
-#: They are still refused by name, because a page naming either sends its
-#: reader somewhere that is not there, and because the day somebody starts
-#: keeping a working record again is the day this matters most.
-#: `convener_ops.derivation.derivation_guard.KEPT_BACK` refuses the first the other
-#: way round, in the objects rather than in the prose.
-WORKING_RECORD = ("docs/superpowers/", ".superpowers/")
+#: The prefix a working record is kept under on a maintainer's own machine.
+#: `.gitignore` has always kept it out of every clone, so it exists for no
+#: reader of this repository -- and that is exactly why a page naming it is
+#: refused: the reader it sends looking has nothing to find. One prefix
+#: rather than two: a second named a directory under `docs/` that no commit
+#: of this repository has ever held, so the sweep read for it forever and
+#: could never have met it.
+WORKING_RECORD = (".superpowers/",)
 
 
 def _shipping_markdown() -> list[Path]:
@@ -278,16 +277,14 @@ def _shipping_markdown() -> list[Path]:
 
 def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     """
-    `app/tests/content/decisions-records.test.ts` already holds this of
-    `docs/engineering/decisions/`: a published record may not send a reader into the
-    working record. The same sentence is true of every other page that
-    ships, and nothing held them to it -- so `README.md` pointed a public
-    reader at a design specification no clone would ever hold,
-    `site/README.md` at a decision whose published form sits in
-    `docs/engineering/decisions/`, and `docs/operating/operations.md` at
-    four such paths plus one under `.superpowers/`, which `.gitignore`
-    keeps out of *every* clone and which was therefore already
-    unfollowable here.
+    A page that ships may not send a reader into a working record no clone
+    of this repository holds. Nothing held any page to that -- so
+    `README.md` pointed a public reader at a working note no clone would
+    ever hold, `site/README.md` at
+    a decision whose published form sits in `docs/engineering/decisions/`,
+    and `docs/operating/operations.md` at five of them, one of which sat
+    under `.superpowers/`, which `.gitignore` keeps out of *every* clone
+    and which was therefore already unfollowable here.
 
     Prose or link makes no difference: none of them was a link, and every
     one of them was a dead end for the reader who met it.
