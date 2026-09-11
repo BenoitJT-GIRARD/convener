@@ -157,12 +157,24 @@ a {
    * clears both grounds it can appear on (7.93 on the field, 11.26 on a
    * band). */
   color: var(--dominant);
-  text-decoration: none;
-  border-bottom: 1px solid currentColor;
-  transition: color .15s, border-color .15s;
+  /* The underline is a text decoration and not a bottom border, which is
+   * the property a box owns. A link's rule and a box's edge were the same
+   * declaration here, and `a` is one component more specific than a lone
+   * class -- so `a.unstyled`, the helper that takes the underline off a
+   * link that is really a button or a wordmark, beat `.masthead__access`
+   * and flattened the bottom edge of its box. Every component that wanted
+   * a real border had to write the collision back out of itself
+   * (`a.btn`'s width and style, `.archive__action`'s and
+   * `.colophon__nav a`'s `border-bottom: 0`), and the one that did not
+   * was drawn with three sides. Borders belong to boxes now, and nothing
+   * about a link reaches into one. */
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .22em;
+  transition: color .15s, text-decoration-color .15s;
 }
-a:hover { color: var(--ink); border-bottom-color: var(--ink); }
-a.unstyled, a.unstyled:hover { border-bottom: 0; }
+a:hover { color: var(--ink); }
+a.unstyled, a.unstyled:hover { text-decoration: none; }
 
 .container {
   max-width: var(--content-w);
@@ -294,11 +306,10 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   display: flex;
   align-items: baseline;
   gap: .65rem;
-  border-bottom: 0;
   color: var(--dominant);
   text-transform: uppercase;
 }
-.masthead__brand:hover { color: var(--dominant); border-bottom: 0; }
+.masthead__brand:hover { color: var(--dominant); }
 .masthead__brand-mark {
   font-family: var(--ff-mono);
   text-transform: none;
@@ -424,7 +435,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   color: var(--dominant);
   margin-bottom: 2rem;
 }
-.event-lead__back a { border-bottom: 0; }
+.event-lead__back a { text-decoration: none; }
 .event-lead__back a:hover { text-decoration: underline; }
 
 /* The one-screen data-protection notice, which the event page carries
@@ -769,12 +780,6 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   background: var(--dominant);
   color: var(--white);
 }
-a.btn { border-bottom-style: solid; border-bottom-width: 2px; }
-a.btn:hover { border-bottom-width: 2px; }
-a.btn--primary { border-color: var(--dominant); }
-a.btn--primary:hover { border-color: var(--dominant-hover); }
-a.btn--ghost { border-color: var(--dominant); }
-a.btn--ghost:hover { border-color: var(--dominant); }
 
 /* ── Section ──────────────────────────────────────────────── */
 .section {
@@ -1038,7 +1043,6 @@ a.btn--ghost:hover { border-color: var(--dominant); }
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--dominant);
-  border-bottom: 0;
   padding: .35rem .6rem;
   background: var(--field-tint);
   transition: background .15s, color .15s;
@@ -1058,7 +1062,6 @@ a.btn--ghost:hover { border-color: var(--dominant); }
    */
   background: var(--dominant);
   color: var(--white);
-  border-bottom: 0;
 }
 .archive__action--alt {
   color: var(--dominant);
@@ -1239,7 +1242,7 @@ a.btn--ghost:hover { border-color: var(--dominant); }
 }
 .colophon__credit a {
   color: var(--field-text);
-  border-bottom-color: var(--field);
+  text-decoration-color: var(--field);
 }
 .colophon__credit em { color: var(--ink-faint); font-style: italic; }
 .colophon__nav {
@@ -1254,7 +1257,6 @@ a.btn--ghost:hover { border-color: var(--dominant); }
   letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--ink-mute);
-  border-bottom: 0;
 }
 .colophon__nav a:hover { color: var(--dominant); }
 /* The licence notice: a full-width row under the credit and the navigation,
@@ -1277,7 +1279,7 @@ a.btn--ghost:hover { border-color: var(--dominant); }
 }
 .colophon__legal a {
   color: var(--field-text);
-  border-bottom-color: var(--field);
+  text-decoration-color: var(--field);
 }
 
 @media (max-width: 640px) {
