@@ -104,6 +104,15 @@ tools/.venv/
 .ruff_cache/
 .coverage
 
+# Wrangler's own working directory. `npx wrangler` writes it into whichever
+# service directory it is run from, and the standing-up sequence tells every
+# duplicate to run it twice -- once per relay -- so this is not an optional
+# tidy-up. `cache/wrangler-account.json` holds the Cloudflare account id and
+# the account's own name, which is the organisation's mailbox: no secret, and
+# nothing gitleaks matches, but nothing that belongs in a repository either --
+# and a duplicate that chose a public cockpit would publish both.
+.wrangler/
+
 # OS
 .DS_Store
 Thumbs.db
