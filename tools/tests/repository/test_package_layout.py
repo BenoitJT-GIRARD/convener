@@ -455,3 +455,51 @@ def test_the_size_sweep_is_recursive() -> None:
         "the size sweep reached no module inside a sub-package, which is "
         "every module this package has"
     )
+
+
+# ------------------------------------------------------------------ #
+# The lockfile, against the project it locks.
+# ------------------------------------------------------------------ #
+
+
+def test_the_lockfile_names_the_version_pyproject_names() -> None:
+    """`--frozen` prevents a rewrite; it detects nothing, and that is the
+    hole this fills.
+
+    Before every documented command carried the flag, a stale lockfile
+    announced itself: the first `uv run` anybody typed rewrote it, and the
+    dirty tree was the signal. That was ugly and it worked. Freezing the
+    commands removed the ugliness and the signal with it -- the
+    documentation is frozen, `gates.sh` is frozen, and continuous
+    integration rewrites a copy it throws away, so a version bumped in
+    `pyproject.toml` without a re-lock would now reach a release with
+    nothing anywhere saying so.
+
+    It had already happened once, which is what made it visible: `1.1.0`
+    was cut with the lockfile still naming `1.0.0`, and the only reason
+    anybody noticed was the dirty tree that the fix then took away.
+
+    Narrow on purpose. A dependency added to `pyproject.toml` without a
+    re-lock fails loudly at import, so it needs no reading here; the
+    project's own version is the one field that can drift in silence,
+    because nothing imports it.
+    """
+    project = tomllib.loads(DECLARATION.read_text(encoding="utf-8"))
+    declared = project["project"]["version"]
+
+    lock = (DECLARATION.parent / "uv.lock").read_text(encoding="utf-8")
+    match = re.search(
+        r'\[\[package\]\]\nname = "convener-ops"\nversion = "([^"]+)"', lock
+    )
+    assert match, (
+        "tools/uv.lock carries no `convener-ops` package entry, so nothing "
+        "here can say which version it locks"
+    )
+    locked = match.group(1)
+
+    assert locked == declared, (
+        f"tools/pyproject.toml declares {declared} and tools/uv.lock locks "
+        f"{locked}. Run `uv lock` from `tools/` and commit what it writes. "
+        "Nothing else will tell you: every documented command is --frozen "
+        "now, so the drift no longer shows up as a dirty tree."
+    )

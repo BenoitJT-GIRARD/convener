@@ -179,7 +179,11 @@ the day they were written; the lesson had never crossed into Python.
   it — and `gates.sh` was the only thing that followed it. 133 invocations
   across 46 files now carry `--frozen`, and a reading in
   `test_typed_commands.py` refuses the next one that does not. The lockfile
-  also names the version `pyproject.toml` names, which it had stopped doing.
+  also names the version `pyproject.toml` names, which it had stopped doing. And
+  because `--frozen` prevents a rewrite without detecting a stale lockfile,
+  the signal that freezing removed is a reading of its own: the lockfile is
+  held against `pyproject.toml`'s version, which is the one field that can
+  drift in silence.
 - **A step asked for a control that does not exist.** `dependency_updates`
   sent an operator to a Settings toggle for Dependabot version updates, and
   GitHub replaces that toggle with a *Configure* button whenever
