@@ -1121,13 +1121,36 @@ marks it so, on the row and again in its closing line.
 
 **In a browser, in full:**
 
-1. Generate a long random value on your own machine. `openssl rand -base64 32`
-   is enough; so is anything that produces thirty-odd bytes nobody could
-   guess.
-2. Paste it into the private repository's Settings → Secrets and variables →
+1. Generate the value with a cryptographic generator, and use one of the three
+   lines below rather than anything that merely produces enough bytes. This
+   step is the one the sequence forbids correcting later, so a weak value
+   chosen here is a weak value permanently.
+2. Anywhere Python is present, which this sequence guarantees because `tools/`
+   requires it — `python -c "import secrets, base64;
+   print(base64.b64encode(secrets.token_bytes(32)).decode())"`. No question
+   about PATH on any platform, which is why it is first.
+3. On POSIX, or in Git Bash on Windows — `openssl rand -base64 32`. On a
+   default Windows install `openssl` is not on PATH in PowerShell at all; it
+   ships with Git and is reachable only from Git Bash.
+4. In Windows PowerShell 5.1, which is still `powershell.exe` on Windows 11 —
+   `$b = [byte[]]::new(32);
+   [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b);
+   [Convert]::ToBase64String($b)`. Not `RandomNumberGenerator::Fill`, which is
+   a .NET Core addition and errors on the .NET Framework that version runs on
+   — an operator reaching for the right API hits that first and has one more
+   reason to fall back to something that runs.
+5. **Not `Get-Random`**, and this is the trap rather than a caution. It is the
+   generator a Windows operator reaches first, it is backed by
+   `System.Random`, and Microsoft's own documentation states it is unsuitable
+   for cryptographic use. Nothing in this step, its check, or any gate would
+   catch that choice — the value is a long string either way. What it derives
+   is the code a participant types into the meeting room and the register's
+   salted trace of an address, both of which a guessable salt makes reversible
+   by anyone who knows the scheme.
+6. Paste it into the private repository's Settings → Secrets and variables →
    Actions → Secrets → New repository secret, named `CONVENER_MATCHING_SALT`,
    and into the shared store.
-3. Do not rotate it afterwards. Rotating changes every matching code already
+7. Do not rotate it afterwards. Rotating changes every matching code already
    given to a participant, so a resent confirmation no longer matches what
    they were told — and it changes every past attendee's fingerprint too, so
    certificate issuance stops recognising them and mints each a second
