@@ -112,11 +112,12 @@ import sys
 import urllib.error
 import urllib.request
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
+from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.published import load, load_identity
 from convener_ops.declaration.user_agent import USER_AGENT
 from convener_ops.journey.proposal import (
@@ -135,6 +136,7 @@ from convener_ops.journey.proposal import (
     LABEL_PROPOSED_BY,
     LABEL_TITLE,
 )
+from convener_ops.publication import brand
 
 #: The form's name in Tally, and the idempotency key: `sync_form` finds the
 #: existing form by this exact name (`GET /forms` has no filter-by-name
@@ -143,6 +145,70 @@ from convener_ops.journey.proposal import (
 #: The form a proposer lands on names whoever runs the series. Read
 #: from `instance/config.json` like every other public name.
 FORM_TITLE: Final = f"Propose a speaker for {load_identity().organisation}"
+
+#: The five colours Tally's own theme offers, and the charter role each one
+#: takes. Read from the charter in force -- `instance/data/brand.json` when
+#: an instance has chosen its colours, one of the product's own when it has
+#: named one instead (`publication/brand.py::source`) -- so the published
+#: form is drawn from the same file as the cockpit, the showcase, the motif
+#: and the three handbook templates, rather than being the one surface set
+#: by hand in somebody else's web interface.
+#:
+#: Every pairing here has a measured contrast in the charter itself: ink on
+#: band 10.12, dominant on band 11.26, white on dominant 12.74. Nothing is
+#: derived at this end, because `derived` in that file already carries six
+#: values somebody measured.
+THEME_SLOTS: Final = (
+    ("background", "band"),
+    ("text", "ink"),
+    ("accent", "dominant"),
+    ("buttonBackground", "dominant"),
+    ("buttonText", "white"),
+)
+
+
+def theme_from(charter: Mapping[str, Any]) -> dict[str, Any]:
+    """The `styles` object, built from the charter's own colour roles.
+
+    **An object, where the API's own document says `string`.** Measured
+    against the live service: a `PATCH` carrying this shape returns 200 and
+    a fresh `GET` reads it back key for key, while `FormSettings.styles` is
+    typed `string` in Tally's OpenAPI schema. That document has been wrong
+    about a field before -- `DropdownOptionPayload.placeholder` declared no
+    length limit and the server enforced one anyway, which is how every
+    published form lost its `phd` option -- so the shape here is the one the
+    service returns rather than the one the schema promises.
+
+    One colour the charter has and this cannot place: Tally computes the
+    button's pressed shade itself, and the `color` object has no slot for
+    it. The charter's own `derived.dominant_hover` is two steps from what
+    Tally computes, and closing that gap would mean shipping a CSS selector
+    for somebody else's markup -- a worse trade than a near shade.
+
+    `direction` is the one value not from the charter: a charter measures
+    colour and says nothing about writing direction.
+    """
+    colour = charter.get("colour")
+    if not isinstance(colour, Mapping):
+        raise TallyError(
+            "the charter in force declares no `colour` block, so the form has "
+            "no palette to be drawn in"
+        )
+    palette: dict[str, str] = {}
+    for slot, role in THEME_SLOTS:
+        value = colour.get(role)
+        if not isinstance(value, str) or not value.startswith("#"):
+            raise TallyError(
+                f"the charter in force gives no colour for the role {role!r}, "
+                f"which the form's {slot} is drawn in"
+            )
+        palette[slot] = value
+    return {"theme": "CUSTOM", "color": palette, "direction": "ltr"}
+
+
+#: The theme every run asserts, computed once at import for the reason
+#: `FORM_TITLE` is: `build_blocks` promises to touch no filesystem.
+THEME: Final = theme_from(brand.load(repo_root()))
 
 
 def _published_url() -> str | None:
@@ -653,7 +719,10 @@ def _find_form_id(get: Callable[[str], dict[str, Any]], title: str) -> str | Non
 
 
 def sync_form(
-    client: TallyClient, title: str, blocks: list[dict[str, Any]]
+    client: TallyClient,
+    title: str,
+    blocks: list[dict[str, Any]],
+    styles: dict[str, Any],
 ) -> tuple[str, bool]:
     """Create the form named `title`, or update it if it already exists.
 
@@ -679,13 +748,32 @@ def sync_form(
     The `response.get("name") != title` check below turns that unverifiable
     assumption into a verified, self-healing one: found wrong, corrected
     with one `PATCH`, in the same run that created it.
+
+    `settings` is sent beside `blocks` and carries only `styles`, and the
+    asymmetry between the two is measured rather than assumed: **`blocks`
+    replaces the whole list, `settings` merges key by key.** On a form
+    holding 41 settings, a `PATCH` naming one of them left the other forty
+    untouched. So re-asserting the charter cannot disturb a close date, an
+    e-mail notification or a redirect somebody configured in the editor --
+    while anything added to `blocks` there is still destroyed, which is why
+    the thank-you page is emitted from here too.
+
+    The theme is asserted on every run rather than written once, for the
+    reason every generated surface is re-derived: the charter is the one
+    source of fact, and a value nothing re-asserts is a value that drifts
+    the day the charter is remeasured.
     """
     form_id = _find_form_id(client.get, title)
     if form_id is not None:
-        client.patch(f"/forms/{form_id}", {"blocks": blocks})
+        client.patch(
+            f"/forms/{form_id}", {"blocks": blocks, "settings": {"styles": styles}}
+        )
         return form_id, False
 
-    response = client.post("/forms", {"status": "DRAFT", "blocks": blocks})
+    response = client.post(
+        "/forms",
+        {"status": "DRAFT", "blocks": blocks, "settings": {"styles": styles}},
+    )
     new_id = response.get("id")
     if not isinstance(new_id, str) or not new_id:
         raise TallyError("POST /forms: response had no form id")
@@ -787,7 +875,7 @@ def main(
 
     client = client_factory(api_key)
     try:
-        form_id, created = sync_form(client, FORM_TITLE, build_blocks())
+        form_id, created = sync_form(client, FORM_TITLE, build_blocks(), THEME)
     except TallyError as exc:
         print(f"error: {_ascii(str(exc))}", file=sys.stderr)
         return 1
