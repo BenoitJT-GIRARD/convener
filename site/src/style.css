@@ -114,7 +114,7 @@
   /* Rules and borders only -- never text. */
   --rule:           #d0bbc3;
   --rule-strong:    #b18f9b;
-  --select:         rgba(130, 219, 215, 0.35);
+  --select:         rgba(254, 202, 193, 0.35);
 
   /* White as a foreground/border role, distinct in name from --paper (the
    * ground) though currently the same value: text and a border drawn on a

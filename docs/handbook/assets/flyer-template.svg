@@ -25,36 +25,20 @@
          placed clear of it. Move or delete it freely; if you move a word
          instead, keep it out of the stroke. -->
     <g id="motif" fill="none" stroke="#012765"
-       stroke-width="50.4"
+       stroke-width="42.84"
        stroke-linecap="round" stroke-linejoin="round">
-      <path d="M 222.6 0
-               C 222.6 315.56 111.3 631.12 0 631.12
-               C -525 720.83 -525 810.54 0 900.24
-               C 18.6 894.17 73.93 865.53 111.61 863.79
-               C 149.3 862.04 192.88 871.94 226.12 889.79
-               C 259.35 907.63 291.67 938.49 311.04 970.87
-               C 330.4 1003.25 342.3 1046.32 342.3 1084.05
-               C 342.3 1121.78 330.4 1164.85 311.04 1197.23
-               C 291.67 1229.61 259.35 1260.47 226.12 1278.31
-               C 192.88 1296.16 149.3 1306.06 111.61 1304.31
-               C 73.93 1302.57 -62.95 1115.48 0 1267.86
-               C 62.95 1420.24 428.05 1934.9 489.3 2218.59
-               C 550.55 2502.28 387.8 2844.76 367.5 2970
-               C 367.5 8910 8040 8910 8040 8910
-               C 8040 1485 8040 55.71 8040 55.71
-               C 6258 55.71 3882 55.71 2100 55.71
-               C 2081.52 46.87 2027.9 8.87 1989.1 2.69
-               C 1950.31 -3.49 1903.12 2.69 1867.23 18.65
-               C 1831.33 34.61 1795.13 65.51 1773.73 98.45
-               C 1752.32 131.39 1738.8 177.02 1738.8 216.3
-               C 1738.8 255.58 1752.32 301.21 1773.73 334.15
-               C 1795.13 367.09 1831.33 397.99 1867.23 413.95
-               C 1903.12 429.91 1950.31 436.09 1989.1 429.91
-               C 2027.9 423.73 2075.22 378.73 2100 376.89
-               C 2124.78 375.06 2137.8 401.39 2137.8 418.89
-               C 2137.8 436.39 2122.75 357.67 2100 481.89
-               C 2077.25 606.12 2001.3 1009.43 2001.3 1164.24
-               C 2001.3 1319.05 2083.55 1369.66 2100 1410.75"/>
+      <path d="M 294.63 825.09
+               L 294.63 504.9
+               L 38.43 504.9
+               L 38.43 1360.26
+               L 294.63 1360.26
+               L 294.63 1040.07
+               M 1911.3 279.32
+               L 1911.3 74.25
+               L 2075.39 74.25
+               L 2075.39 622.09
+               L 1911.3 622.09
+               L 1911.3 417.01"/>
     </g>
 
     <!-- Wordmark: the charter's own drawing at the size of a mark,
@@ -63,47 +47,31 @@
     <svg class="block" x="280" y="92" width="175" height="175"
          viewBox="0 0 100 100"
          aria-hidden="true" focusable="false">
-      <path d="M 10.6 0
-                   C 10.6 10.62 5.3 21.25 0 21.25
-                   C -25 23.42 -25 25.58 0 27.75
-                   C 0.89 27.46 3.52 26.09 5.31 26.01
-                   C 7.11 25.93 9.18 26.4 10.77 27.25
-                   C 12.35 28.1 13.89 29.57 14.81 31.11
-                   C 15.73 32.65 16.3 34.7 16.3 36.5
-                   C 16.3 38.3 15.73 40.35 14.81 41.89
-                   C 13.89 43.43 12.35 44.9 10.77 45.75
-                   C 9.18 46.6 7.11 47.07 5.31 46.99
-                   C 3.52 46.91 -3 40.63 0 45.25
-                   C 3 49.87 20.38 65.58 23.3 74.7
-                   C 26.22 83.82 18.47 95.78 17.5 100
-                   C 17.5 300 300 300 300 300
-                   C 300 50 300 2.65 300 2.65
-                   C 240 2.65 160 2.65 100 2.65
-                   C 99.12 2.23 96.57 0.42 94.72 0.13
-                   C 92.87 -0.17 90.62 0.13 88.92 0.89
-                   C 87.21 1.65 85.48 3.12 84.46 4.69
-                   C 83.44 6.26 82.8 8.43 82.8 10.3
-                   C 82.8 12.17 83.44 14.34 84.46 15.91
-                   C 85.48 17.48 87.21 18.95 88.92 19.71
-                   C 90.62 20.47 92.87 20.77 94.72 20.47
-                   C 96.57 20.18 98.82 18.03 100 17.95
-                   C 101.18 17.86 101.8 19.11 101.8 19.95
-                   C 101.8 20.78 101.08 19.74 100 22.95
-                   C 98.92 26.16 95.3 35.11 95.3 39.2
-                   C 95.3 43.29 99.22 46.12 100 47.5"
-            fill="none" stroke="#012765" stroke-width="2.4"
+      <path d="M 14.03 26.28
+                   L 14.03 17
+                   L 1.83 17
+                   L 1.83 45.8
+                   L 14.03 45.8
+                   L 14.03 36.52
+                   M 91.01 8.44
+                   L 91.01 2.5
+                   L 98.83 2.5
+                   L 98.83 20.95
+                   L 91.01 20.95
+                   L 91.01 15"
+            fill="none" stroke="#012765" stroke-width="2.04"
             stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="82.99" cy="49.84" r="9.31" fill="#fecac1"/>
+      <circle cx="82.99" cy="49.84" r="9.31" fill="#fd6b52"/>
     </svg>
-    <text x="485" y="188" font-size="72.68"
-          font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
-    <rect x="280" y="267" width="1414.98" height="7"
+    <text x="485" y="188" font-size="88"
+          font-weight="500"><tspan fill="#012765">forum.example.test</tspan></text>
+    <rect x="280" y="267" width="1588.46" height="7"
           fill="#012765"/>
 
-    <text x="1050" y="430" text-anchor="middle" font-size="82.16"
+    <text x="1050" y="430" text-anchor="middle" font-size="86"
           font-weight="900" letter-spacing="2"
           fill="#012765">MONTHLY READING GROUP</text>
-    <text x="1050" y="530" text-anchor="middle" font-size="50"
+    <text x="1050" y="530" text-anchor="middle" font-size="47.25"
           fill="#000000">An invented series, shipped as this product's own worked example.</text>
     <text x="1050" y="600" text-anchor="middle" font-size="50"
           font-weight="700"
@@ -122,7 +90,7 @@
 
     <!-- DATE AND TIME. The app holds {{speaker.date}} as 2026-11-12 and
          {{speaker.time}} as 12:30; write them out the way they are said. -->
-    <text x="1050" y="1290" text-anchor="middle" font-size="62.29"
+    <text x="1050" y="1290" text-anchor="middle" font-size="62.89"
           font-weight="700"
           fill="#012765">{{speaker.date}} at {{speaker.time}} (CET)</text>
 
@@ -150,7 +118,7 @@
   <g id="fixed-what-to-expect">
     <text x="480" y="1470" font-size="62" font-weight="800"
           fill="#000000">WHAT TO EXPECT?</text>
-    <text font-size="42.64" fill="#000000">
+    <text font-size="50" fill="#000000">
       <tspan x="560" y="1590" font-weight="800"
              fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="560" y="1652">questions to the speaker</tspan>

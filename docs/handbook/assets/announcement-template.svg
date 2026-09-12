@@ -24,36 +24,20 @@
          it freely; if you move a word instead, keep it out of the stroke,
          because a heavy line behind dark type is unreadable type. -->
     <g id="motif" fill="none" stroke="#012765"
-       stroke-width="28.8"
+       stroke-width="24.48"
        stroke-linecap="round" stroke-linejoin="round">
-      <path d="M 127.2 0
-               C 127.2 127.5 63.6 255 0 255
-               C -300 280.99 -300 306.98 0 332.97
-               C 10.63 329.5 42.24 313.13 63.78 312.13
-               C 85.31 311.14 110.22 316.79 129.21 326.99
-               C 148.2 337.19 166.67 354.83 177.74 373.33
-               C 188.8 391.83 195.6 416.44 195.6 438
-               C 195.6 459.56 188.8 484.17 177.74 502.67
-               C 166.67 521.17 148.2 538.81 129.21 549.01
-               C 110.22 559.21 85.31 564.86 63.78 563.87
-               C 42.24 562.87 -35.97 487.61 0 543.03
-               C 35.97 598.45 244.6 786.91 279.6 896.4
-               C 314.6 1005.89 221.6 1149.4 210 1200
-               C 210 3600 3600 3600 3600 3600
-               C 3600 600 3600 31.83 3600 31.83
-               C 2880 31.83 1920 31.83 1200 31.83
-               C 1189.44 26.78 1158.8 5.07 1136.63 1.54
-               C 1114.46 -1.99 1087.5 1.54 1066.99 10.66
-               C 1046.47 19.78 1025.79 37.43 1013.56 56.26
-               C 1001.33 75.08 993.6 101.15 993.6 123.6
-               C 993.6 146.05 1001.33 172.12 1013.56 190.94
-               C 1025.79 209.77 1046.47 227.42 1066.99 236.54
-               C 1087.5 245.66 1114.46 249.19 1136.63 245.66
-               C 1158.8 242.13 1185.84 216.42 1200 215.37
-               C 1214.16 214.32 1221.6 229.37 1221.6 239.37
-               C 1221.6 249.37 1213 236.86 1200 275.37
-               C 1187 313.87 1143.6 421.29 1143.6 470.4
-               C 1143.6 519.51 1190.6 553.4 1200 570"/>
+      <path d="M 168.36 315.38
+               L 168.36 204
+               L 21.96 204
+               L 21.96 549.6
+               L 168.36 549.6
+               L 168.36 438.22
+               M 1092.17 101.33
+               L 1092.17 30
+               L 1185.94 30
+               L 1185.94 251.35
+               L 1092.17 251.35
+               L 1092.17 180.01"/>
     </g>
 
     <!-- Wordmark. The device is the charter's own drawing again, at the
@@ -65,41 +49,25 @@
     <svg class="block" x="165" y="57" width="100" height="100"
          viewBox="0 0 100 100"
          aria-hidden="true" focusable="false">
-      <path d="M 10.6 0
-                   C 10.6 10.62 5.3 21.25 0 21.25
-                   C -25 23.42 -25 25.58 0 27.75
-                   C 0.89 27.46 3.52 26.09 5.31 26.01
-                   C 7.11 25.93 9.18 26.4 10.77 27.25
-                   C 12.35 28.1 13.89 29.57 14.81 31.11
-                   C 15.73 32.65 16.3 34.7 16.3 36.5
-                   C 16.3 38.3 15.73 40.35 14.81 41.89
-                   C 13.89 43.43 12.35 44.9 10.77 45.75
-                   C 9.18 46.6 7.11 47.07 5.31 46.99
-                   C 3.52 46.91 -3 40.63 0 45.25
-                   C 3 49.87 20.38 65.58 23.3 74.7
-                   C 26.22 83.82 18.47 95.78 17.5 100
-                   C 17.5 300 300 300 300 300
-                   C 300 50 300 2.65 300 2.65
-                   C 240 2.65 160 2.65 100 2.65
-                   C 99.12 2.23 96.57 0.42 94.72 0.13
-                   C 92.87 -0.17 90.62 0.13 88.92 0.89
-                   C 87.21 1.65 85.48 3.12 84.46 4.69
-                   C 83.44 6.26 82.8 8.43 82.8 10.3
-                   C 82.8 12.17 83.44 14.34 84.46 15.91
-                   C 85.48 17.48 87.21 18.95 88.92 19.71
-                   C 90.62 20.47 92.87 20.77 94.72 20.47
-                   C 96.57 20.18 98.82 18.03 100 17.95
-                   C 101.18 17.86 101.8 19.11 101.8 19.95
-                   C 101.8 20.78 101.08 19.74 100 22.95
-                   C 98.92 26.16 95.3 35.11 95.3 39.2
-                   C 95.3 43.29 99.22 46.12 100 47.5"
-            fill="none" stroke="#012765" stroke-width="2.4"
+      <path d="M 14.03 26.28
+                   L 14.03 17
+                   L 1.83 17
+                   L 1.83 45.8
+                   L 14.03 45.8
+                   L 14.03 36.52
+                   M 91.01 8.44
+                   L 91.01 2.5
+                   L 98.83 2.5
+                   L 98.83 20.95
+                   L 91.01 20.95
+                   L 91.01 15"
+            fill="none" stroke="#012765" stroke-width="2.04"
             stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="82.99" cy="49.84" r="9.31" fill="#fecac1"/>
+      <circle cx="82.99" cy="49.84" r="9.31" fill="#fd6b52"/>
     </svg>
-    <text x="282" y="112" font-size="41.23"
-          font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
-    <rect x="165" y="157" width="804.74" height="4"
+    <text x="282" y="112" font-size="50"
+          font-weight="500"><tspan fill="#012765">forum.example.test</tspan></text>
+    <rect x="165" y="157" width="955" height="4"
           fill="#012765"/>
 
     <text x="600" y="272" text-anchor="middle" font-size="50"
@@ -146,7 +114,7 @@
   <g id="fixed-what-to-expect">
     <text x="240" y="730" font-size="34" font-weight="800"
           fill="#000000">WHAT TO EXPECT?</text>
-    <text font-size="23.23" fill="#000000">
+    <text font-size="27" fill="#000000">
       <tspan x="320" y="796" font-weight="800"
              fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="320" y="832">questions to the speaker</tspan>
@@ -167,9 +135,9 @@
          the motif rather than inside the corridor with the words: it
          takes whatever ground the drawing leaves between it and the left
          edge, over its own rows, and is as wide as that ground allows. -->
-    <text x="24" y="898" font-size="31.5" font-weight="800"
+    <text x="24" y="898" font-size="32" font-weight="800"
           fill="#000000">REGISTER</text>
-    <text x="24" y="936" font-size="31.5" font-weight="800"
+    <text x="24" y="936" font-size="32" font-weight="800"
           fill="#000000">HERE</text>
     <rect class="block" x="24" y="960" width="180" height="180"
           fill="#ffffff"/>

@@ -52,7 +52,6 @@ is the sentence to read before opening anything inside it.
 |---|---|
 | `cli/` | The way in. |
 | `declaration/` | What one instance says about itself. |
-| `derivation/` | Producing the public repository, and the guard on it. |
 | `governance/` | Deciding, and recording the decision. |
 | `journey/` | One participant, one event, start to certificate. |
 | `maintenance/` | Upkeep nobody is watching. |

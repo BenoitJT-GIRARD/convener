@@ -83,7 +83,7 @@
    * needed a rejection colour or a soft informational one. */
   --danger:         #9b2226;
   --info:           #4a6c75;
-  --select:         rgba(130, 219, 215, 0.25);
+  --select:         rgba(254, 202, 193, 0.25);
 /* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
 
   /* The radius a form control is drawn with, and the only one this

@@ -50,7 +50,7 @@
 # docs/operating/operations.md, "Board notifications", step 2.
 
 # Default: handbook, governance, and app changes are reviewed by the Editorial Board.
-*               @example-instance/editorial-board
+*               @BenoitJT-GIRARD
 
 # instance/data/ is driven by the team app and validated by CI on every commit.
 # No required review here.

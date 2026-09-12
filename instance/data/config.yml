@@ -1,0 +1,91 @@
+# The example instance's own governance configuration -- the same file
+# `instance/data/config.yml` is for the instance that runs this repository, written
+# for one that does not exist.
+#
+# Every login below is prefixed `example-`: these are not accounts anybody
+# is asked to register, and nothing in a second-instance build ever calls
+# GitHub with one. The thresholds are the product's own defaults, because a
+# fictional board has no better figure to offer and inventing one would
+# suggest a threshold is identity when it is a rule.
+season: 2026
+next_edition_number: 6
+overlap_window_days: 7
+board:
+- login: example-alba
+  joined_on: '2023-01-12'
+  status: active
+  unavailable_until: ''
+- login: example-brix
+  joined_on: '2023-01-12'
+  status: active
+  unavailable_until: ''
+- login: example-cedar
+  joined_on: '2023-10-19'
+  status: active
+  unavailable_until: ''
+- login: example-dune
+  joined_on: '2024-08-29'
+  status: active
+  unavailable_until: ''
+- login: example-elm
+  joined_on: '2025-07-10'
+  status: active
+  unavailable_until: ''
+seminar_duration_minutes: 90
+# See `instance/data/config.yml`'s own comment on this value: 0.6666666666666666 is
+# the closest float64 below exactly two thirds, and rounding it up refuses
+# somebody present for exactly two thirds of a session.
+eligibility_share: 0.6666666666666666
+# Two nominations, and between them they walk the whole of G-05 on the
+# anchor day (see `speakers.yml`'s own header for how these days move).
+#
+# `example-fern` was put forward five days ago: the window is open, two of
+# the five eligible members have said yes, and three is what it takes. The
+# Board screen shows the count against the bar and the days gone -- and
+# `example-alba`, whom a visitor is signed in as (`app/src/data/demo.ts`),
+# is deliberately not one of the two, so the *Support* control is on the
+# screen and pressing it carries the nomination.
+#
+# `example-gorse` was put forward three weeks ago and nobody but the member
+# who opened it ever said anything. The window has run, so the nomination is
+# due to be recorded as *not appointed* and the question goes to the meeting
+# -- which is the whole of what "silence counts as refusal" looks like from
+# a chair. Both candidates have co-hosted two webinars that happened.
+nominations:
+- candidate: example-fern
+  sponsor: example-cedar
+  opened_on: '2026-08-29'
+  supports:
+  - member: example-cedar
+    date: '2026-08-29'
+  - member: example-dune
+    date: '2026-08-31'
+  objections: []
+  outcome: ''
+- candidate: example-gorse
+  sponsor: example-brix
+  opened_on: '2026-08-13'
+  supports:
+  - member: example-brix
+    date: '2026-08-13'
+  objections: []
+  outcome: ''
+board_min: 5
+board_max: 9
+vote_window_days: 14
+objection_window_working_days: 3
+inactivity_months: 12
+balance_window_months: 24
+view_count_window_days: 30
+instructions: ''
+sla_days:
+  invitation_follow_up: 30
+  summary_after_delivery: 7
+  recording_after_delivery: 14
+channels:
+- key: forum
+  label: Announced on the Example Collective forum
+- key: mailing_list
+  label: Posted to the reading-group mailing list
+- key: posters
+  label: Posters printed and put up in the departments

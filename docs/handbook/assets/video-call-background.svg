@@ -19,51 +19,35 @@
        corridor the drawing leaves free, so no word is ever drawn across
        it. -->
   <g id="motif" fill="none" stroke="#012765"
-     stroke-width="25.92"
+     stroke-width="22.03"
      stroke-linecap="round" stroke-linejoin="round">
-    <path d="M 114.48 0
-               C 114.48 114.75 57.24 229.5 0 229.5
-               C -270 252.89 -270 276.28 0 299.67
-               C 9.57 296.55 38.02 281.82 57.4 280.92
-               C 76.78 280.02 99.19 285.11 116.29 294.29
-               C 133.38 303.47 150 319.34 159.96 335.99
-               C 169.92 352.65 176.04 374.8 176.04 394.2
-               C 176.04 413.6 169.92 435.75 159.96 452.41
-               C 150 469.06 133.38 484.93 116.29 494.11
-               C 99.19 503.29 76.78 508.38 57.4 507.48
-               C 38.02 506.58 -32.37 438.85 0 488.73
-               C 32.37 538.61 220.14 708.21 251.64 806.76
-               C 283.14 905.31 199.44 1034.46 189 1080
-               C 189 4920 5760 4920 5760 4920
-               C 5760 540 5760 28.65 5760 28.65
-               C 4608 28.65 3072 28.65 1920 28.65
-               C 1910.49 24.11 1882.92 4.56 1862.97 1.38
-               C 1843.02 -1.79 1818.75 1.39 1800.29 9.59
-               C 1781.83 17.8 1763.21 33.69 1752.2 50.63
-               C 1741.19 67.57 1734.24 91.04 1734.24 111.24
-               C 1734.24 131.44 1741.19 154.91 1752.2 171.85
-               C 1763.21 188.79 1781.83 204.68 1800.29 212.89
-               C 1818.75 221.09 1843.02 224.27 1862.97 221.1
-               C 1882.92 217.92 1907.25 194.77 1920 193.83
-               C 1932.75 192.89 1939.44 206.43 1939.44 215.43
-               C 1939.44 224.43 1931.7 213.17 1920 247.83
-               C 1908.3 282.48 1869.24 379.16 1869.24 423.36
-               C 1869.24 467.56 1911.54 498.06 1920 513"/>
+    <path d="M 151.52 283.84
+               L 151.52 183.6
+               L 19.76 183.6
+               L 19.76 494.64
+               L 151.52 494.64
+               L 151.52 394.4
+               M 1822.95 91.2
+               L 1822.95 27
+               L 1907.34 27
+               L 1907.34 226.21
+               L 1822.95 226.21
+               L 1822.95 162.01"/>
   </g>
 
   <!-- The plate: who this is, what the series is for, and where to find
        it. All three lines are declared values set in capitals, and each is
        sized to fit this plate rather than at a fixed size, so a longer
        name shrinks instead of running off the edge. -->
-  <rect class="block" x="285.87" y="25.5" width="1420.95"
+  <rect class="block" x="175.06" y="25.5" width="1624.36"
         height="349"
         fill="#ffffff" stroke="#000000" stroke-width="3"/>
   <g text-anchor="middle" fill="#000000">
-    <text x="996.35" y="152" font-size="100.66"
+    <text x="987.24" y="152" font-size="102.78"
           font-weight="900">THE EXAMPLE COLLECTIVE</text>
-    <text x="996.35" y="241" font-size="62.5"
+    <text x="987.24" y="241" font-size="62.5"
           font-weight="800">READ TOGETHER</text>
-    <text x="996.35" y="311" font-size="34.72"
+    <text x="987.24" y="311" font-size="34.72"
           font-weight="700">FORUM.EXAMPLE.TEST</text>
   </g>
 
@@ -81,5 +65,5 @@
         height="202"
         fill="#ffffff"/>
   <svg x="1632" y="854" width="202"
-       height="202"><svg viewBox="0 0 37 37" class="forum-qr"><title>https://forum.example.test</title><path class="forum-qr__line" stroke="#000" d="M4 4.5h7m1 0h1m1 0h2m1 0h3m3 0h2m1 0h7m-29 1h1m5 0h1m1 0h4m1 0h1m2 0h3m3 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m2 0h2m1 0h1m3 0h1m1 0h1m1 0h1m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m5 0h2m1 0h1m1 0h1m2 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m4 0h1m2 0h1m1 0h4m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m5 0h2m1 0h3m1 0h2m1 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-21 1h1m1 0h1m4 0h3m2 0h1m-21 1h1m1 0h2m1 0h3m2 0h1m1 0h2m1 0h4m3 0h1m2 0h1m1 0h2m-28 1h2m2 0h1m1 0h2m2 0h5m2 0h3m1 0h3m3 0h1m-29 1h1m2 0h4m1 0h1m1 0h1m2 0h1m4 0h1m1 0h2m1 0h2m1 0h2m-28 1h3m2 0h1m2 0h2m1 0h2m3 0h1m3 0h1m1 0h3m3 0h1m-29 1h1m5 0h1m1 0h2m1 0h2m1 0h2m1 0h1m2 0h1m4 0h2m-27 1h1m2 0h2m3 0h1m1 0h1m1 0h1m1 0h1m4 0h1m2 0h2m2 0h3m-29 1h3m1 0h4m2 0h1m2 0h1m3 0h4m2 0h2m1 0h3m-29 1h3m4 0h1m3 0h2m1 0h1m1 0h1m4 0h1m1 0h2m2 0h1m-28 1h3m3 0h2m2 0h3m1 0h1m3 0h1m1 0h2m2 0h2m1 0h1m-25 1h2m3 0h1m5 0h2m2 0h1m1 0h1m2 0h1m1 0h3m-28 1h1m1 0h1m1 0h1m1 0h2m2 0h2m1 0h3m1 0h2m4 0h1m2 0h1m-23 1h1m2 0h2m1 0h2m1 0h3m1 0h1m2 0h2m4 0h1m-26 1h3m2 0h1m4 0h4m2 0h2m1 0h7m-19 1h3m5 0h1m3 0h1m3 0h5m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h5m1 0h1m1 0h2m1 0h1m-28 1h1m5 0h1m1 0h1m2 0h1m1 0h3m2 0h1m1 0h1m3 0h2m1 0h2m-29 1h1m1 0h3m1 0h1m3 0h1m1 0h1m4 0h1m2 0h5m1 0h2m-28 1h1m1 0h3m1 0h1m1 0h1m4 0h1m1 0h2m2 0h3m2 0h2m2 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m2 0h3m1 0h1m1 0h1m4 0h1m2 0h1m1 0h1m-29 1h1m5 0h1m5 0h1m1 0h1m1 0h1m3 0h2m1 0h1m1 0h1m1 0h1m-28 1h7m1 0h1m2 0h2m2 0h1m3 0h2m1 0h1m2 0h1m1 0h1"/></svg></svg>
+       height="202"><svg viewBox="0 0 33 33" class="forum-qr"><title>https://forum.example.test</title><path class="forum-qr__line" stroke="#000" d="M4 4.5h7m1 0h2m2 0h2m2 0h1m1 0h7m-25 1h1m5 0h1m1 0h2m1 0h2m3 0h1m1 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m2 0h3m1 0h2m1 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m1 0h2m1 0h5m2 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m3 0h1m4 0h2m1 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m4 0h3m2 0h1m1 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-17 1h1m1 0h1m3 0h1m-15 1h1m1 0h2m1 0h3m2 0h2m2 0h2m2 0h1m2 0h1m1 0h2m-25 1h2m2 0h2m3 0h1m1 0h1m1 0h1m2 0h1m2 0h1m3 0h1m-24 1h2m1 0h1m2 0h1m2 0h2m1 0h1m3 0h1m1 0h1m-19 1h1m2 0h1m3 0h1m1 0h1m1 0h1m1 0h1m3 0h2m2 0h2m-23 1h4m1 0h2m1 0h8m1 0h2m1 0h1m1 0h3m-21 1h2m1 0h3m1 0h1m2 0h3m1 0h3m3 0h1m-24 1h1m1 0h1m2 0h5m2 0h2m1 0h1m3 0h1m1 0h2m-24 1h1m1 0h1m2 0h1m2 0h3m3 0h1m1 0h1m2 0h2m3 0h1m-23 1h2m1 0h2m1 0h17m-17 1h1m1 0h3m3 0h1m3 0h1m1 0h1m1 0h1m-25 1h7m1 0h1m4 0h2m1 0h1m1 0h1m1 0h1m1 0h3m-25 1h1m5 0h1m1 0h2m4 0h1m1 0h1m3 0h1m2 0h2m-25 1h1m1 0h3m1 0h1m3 0h1m1 0h1m1 0h1m1 0h6m2 0h1m-25 1h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h1m2 0h2m1 0h5m-25 1h1m1 0h3m1 0h1m1 0h5m2 0h2m1 0h1m1 0h1m1 0h2m-24 1h1m5 0h1m3 0h1m1 0h2m3 0h1m2 0h1m1 0h1m-23 1h7m1 0h1m1 0h1m1 0h3m2 0h8"/></svg></svg>
 </svg>

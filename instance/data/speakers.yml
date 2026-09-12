@@ -1,0 +1,1150 @@
+# The example instance's own speakers and editions (unified schema v6 --
+# see docs/engineering/schema.md). The same file `instance/data/speakers.yml` is for
+# the instance that runs this repository, written for one that does not
+# exist.
+#
+# Nobody here is real. Every address is under `.test`, which RFC 2606
+# reserves and no registry will ever delegate; every affiliation names an
+# institution that does not exist; every board login is prefixed
+# `example-`. That combination is what makes a record unmistakably
+# synthetic even if a name it invents happens to be somebody's somewhere.
+#
+# `country` is the one field that names a real place, and it is the one
+# field that has to. The cockpit's *Diversity* screen counts a country as
+# a bucket and reports a share against the people who declared one
+# (`app/src/state/diversity.ts`); a programme spread over invented
+# countries is a measure nobody can read, and a bucket nobody can place
+# says nothing about whether the balance target is being kept. A country
+# is not a person, an organisation or an address, so nothing about the
+# three habits above is given up by writing one.
+#
+# `edition_code` is `MRG-N`: this instance's own prefix, declared once in
+# `../instance/config.json` as `edition_prefix` and written nowhere else.
+# It is deliberately not `identity.short_name` (`TEC`) -- the two are free
+# to differ, which is the whole reason the prefix has a key of its own --
+# and `validate.validate_speakers` builds its pattern from the declaration
+# rather than fixing one shape for every instance there will ever be.
+#
+# The day these records are written for
+# -------------------------------------
+# 2026-09-03, and every date below is placed against it. Nothing reads
+# that day from this file: it is `example_dates.ANCHOR`, stated once per
+# language (`tools/scripts/example_dates.py`, `app/scripts/example-dates.mjs`)
+# and pinned by `tools/tests/fixtures/example-dates.json`. Whatever reads
+# these records shifts every day in them by whole weeks, so the fixture is
+# as old on the day the demonstration runs as it was on the day it was
+# written -- a Thursday session stays a Thursday session, and the inbox
+# stops printing "Forum summary is 281 days overdue" for a talk this
+# instance gave last autumn.
+#
+# So the offsets are the content and the dates are their rendering. On the
+# anchor day: MRG-4 was delivered that evening, MRG-5 is five weeks out,
+# one lead has had its vote open for five days of the fourteen it gets,
+# and no step of any record is past the turnaround time the series sets
+# itself. Moving a date here means moving it relative to that day, not to
+# the day you happen to be editing.
+#
+# Sixteen records, chosen to exercise states rather than to be plausible:
+# one for every status the model has, and enough of the ones a board
+# actually decides on to make the *Diversity* screen say something. That
+# screen refuses a share below ten declared answers, and it asks its
+# question of two populations -- everyone who applied, and everyone the
+# board selected -- so the ten selected records below all declare a
+# gender, a career stage and a country. Two records decline to declare,
+# which is a first-class answer and is what the undisclosed row is for.
+#
+#   2 leads (one with the vote open, one nobody has opened yet)
+#   1 approved  1 invited  2 confirmed  1 scheduled
+#   2 delivered (one waiting on the board, one whose speaker refused the
+#                recording)  2 archived and published
+#   2 parked (the window closed)  2 declined by the board
+#   1 declined by the speaker
+#
+# Two of the hosts are not on the board: `example-fern` and
+# `example-gorse` have each co-hosted two webinars that happened, which is
+# what makes them nominable (G-05). A fixture whose every past webinar was
+# hosted by a board member would leave the two nominations in `config.yml`
+# standing on nobody, and the rule that admits a member undemonstrable.
+- id: exm-001
+  name: Alba Quennell
+  gender: F
+  career_stage: group-leader
+  email: a.quennell@example.test
+  affiliation: Institute for Imaginary Studies
+  country: Portugal
+  photo_url: https://media.example.test/portraits/quennell.jpg
+  bio: |
+    Reads more than she writes, which she says is the point of a
+    reading group.
+  linkedin: alba-quennell
+  title: What a reading group is for, and the three ways one usually stops being for it
+  abstract: |
+    A first session on why a group that reads together drifts, and what the
+    people who keep one going do about it.
+  seed_questions: What made you start one? What made the last one stop?
+  conflicts_of_interest: ''
+  source: organizer
+  proposed_by: example-alba
+  assigned_to: example-brix
+  links:
+  - https://example.test/reading-group
+  host_1: example-fern
+  host_2: example-gorse
+  status: archived
+  selection:
+    ballots:
+    - voter: example-alba
+      value: recused
+      comment: ''
+      coi_reason: Proposed this session herself
+      date: '2025-09-04'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-09-04'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-09-05'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-09-05'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-09-11'
+    opened_on: '2025-09-04'
+    decided_on: '2025-09-11'
+  publication:
+    consent: granted
+    approved_by: example-brix
+    approved_on: '2025-10-13'
+    objections: []
+    outcome: published
+  edition_code: MRG-1
+  candidate_dates: []
+  date: '2025-10-09'
+  time: '18:00'
+  zoom_link: ''
+  youtube_url: https://video.example.test/watch/mrg-1
+  forum_thread: https://forum.example.test/t/mrg-1
+  survey_enabled: false
+  runbook_progress:
+    delivered/forum-summary: true
+    delivered/thank-you: true
+    delivered/video-online: true
+  checklist: {}
+  metrics:
+    registrations: 41
+    live_peak: 28
+    youtube_views_30d: 96
+    forum_replies: 4
+  notes: ''
+- id: exm-002
+  name: Bram Oosterlin
+  gender: M
+  career_stage: postdoc
+  email: b.oosterlin@example.test
+  affiliation: Fictional Polytechnic
+  country: Netherlands
+  photo_url: ''
+  bio: |
+    Keeps every book he has ever annotated, and lends none of them.
+  linkedin: ''
+  title: Note-taking in the margin
+  abstract: |
+    A session on marginalia, and on what a shared copy of a book records
+    that a private one does not.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Cedar Halloway
+  assigned_to: example-dune
+  links: []
+  host_1: example-fern
+  host_2: example-alba
+  status: archived
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-12-11'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-12-11'
+    - voter: example-cedar
+      value: abstain
+      comment: Has not read the book.
+      coi_reason: ''
+      date: '2025-12-12'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-12-12'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2025-12-18'
+    opened_on: '2025-12-11'
+    decided_on: '2025-12-18'
+  publication:
+    consent: granted
+    approved_by: example-alba
+    approved_on: '2026-01-19'
+    objections: []
+    outcome: published
+  edition_code: MRG-2
+  candidate_dates: []
+  date: '2026-01-15'
+  time: '18:00'
+  zoom_link: ''
+  youtube_url: https://video.example.test/watch/mrg-2
+  forum_thread: https://forum.example.test/t/mrg-2
+  survey_enabled: false
+  runbook_progress:
+    delivered/forum-summary: true
+    delivered/thank-you: true
+    delivered/video-online: true
+  checklist: {}
+  metrics:
+    registrations: 33
+    live_peak: 22
+    youtube_views_30d: 61
+    forum_replies: 1
+  notes: ''
+- id: exm-003
+  name: Cyra Adeyemo-Lund
+  gender: NB
+  career_stage: independent
+  email: c.adeyemo-lund@example.test
+  affiliation: Independent
+  country: Nigeria
+  photo_url: ''
+  bio: |
+    Keeps a list of every book the group has abandoned halfway.
+  linkedin: ''
+  title: The books a group abandons, and what that says about the group
+  abstract: |
+    What a half-read shelf records about the people who chose it.
+  seed_questions: Which one did you put down, and at which page?
+  conflicts_of_interest: ''
+  source: organizer
+  proposed_by: example-dune
+  assigned_to: example-alba
+  links: []
+  host_1: example-alba
+  host_2: example-gorse
+  status: delivered
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-03-12'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-03-12'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-03-13'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-03-13'
+    opened_on: '2026-03-12'
+    decided_on: '2026-03-19'
+  publication:
+    consent: granted
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: MRG-3
+  candidate_dates: []
+  date: '2026-04-16'
+  time: '18:00'
+  zoom_link: ''
+  youtube_url: https://video.example.test/watch/mrg-3
+  forum_thread: https://forum.example.test/t/mrg-3
+  survey_enabled: false
+  runbook_progress:
+    delivered/forum-summary: true
+    delivered/thank-you: true
+  checklist: {}
+  metrics:
+    registrations: 52
+    live_peak: 35
+    youtube_views_30d: 118
+    forum_replies: 6
+  notes: Waiting on the board to approve publication; the objection window is open.
+- id: exm-004
+  name: Dara Vantroost
+  gender: F
+  career_stage: phd
+  email: d.vantroost@example.test
+  affiliation: Imaginary Institute of Reading
+  country: Belgium
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Reading aloud, and who it is for
+  abstract: |
+    On the difference between a text read to a room and the same text read
+    alone.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Elm Vasari
+  assigned_to: example-cedar
+  links: []
+  host_1: example-cedar
+  host_2: example-dune
+  status: delivered
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-05-28'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-05-28'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-05-29'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-05-29'
+    opened_on: '2026-05-28'
+    decided_on: '2026-06-04'
+  publication:
+    consent: refused
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: MRG-4
+  candidate_dates: []
+  date: '2026-09-03'
+  time: '18:00'
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: https://forum.example.test/t/mrg-4
+  survey_enabled: true
+  runbook_progress: {}
+  checklist:
+    delivered/forum-summary:
+      assignee: example-alba
+  metrics:
+    registrations: 47
+    live_peak: 31
+    youtube_views_30d: null
+    forum_replies: 2
+  notes: Recording withheld at the speaker's own request.
+- id: exm-005
+  name: Eleni Papadopoulou-Sand
+  gender: F
+  career_stage: other
+  email: e.papadopoulou-sand@example.test
+  affiliation: Invented Academy of Letters
+  country: Greece
+  photo_url: ''
+  bio: |
+    Teaches Greek to people who have no intention of reading Greek.
+  linkedin: ''
+  title: 'Anagnosis (ἀνάγνωσις): reading as a shared act, from the scriptorium to the group chat'
+  abstract: |
+    One word, two thousand years, and the same argument about whether
+    reading is done alone.
+  seed_questions: When did you last read something out loud to somebody?
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: example-alba
+  assigned_to: example-brix
+  links: []
+  host_1: example-alba
+  host_2: example-elm
+  status: scheduled
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-06-18'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-06-18'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-06-19'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-06-19'
+    opened_on: '2026-06-18'
+    decided_on: '2026-06-25'
+  publication:
+    consent: pending
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: MRG-5
+  candidate_dates: []
+  date: '2026-10-08'
+  time: '18:00'
+  zoom_link: https://meet.example.test/j/000000000?pwd=EXAMPLE-ROOM-NEVER-PUBLISHED
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: true
+  runbook_progress:
+    scheduled/T-30/visuals: true
+    scheduled/T-21/promotion-starting: true
+  checklist:
+    scheduled/T-7/forum-announce:
+      assignee: example-alba
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''
+- id: exm-006
+  name: Ferran Oyelaran-Mott
+  gender: M
+  career_stage: group-leader
+  email: f.oyelaran-mott@example.test
+  affiliation: Nowhere School of Letters
+  country: Kenya
+  photo_url: ''
+  bio: |
+    Runs three reading groups and admits that two of them are the same one.
+  linkedin: ''
+  title: Everything a reading list leaves out
+  abstract: |
+    On the books that never make a list, and on who decides that.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: outreach
+  proposed_by: example-cedar
+  assigned_to: example-cedar
+  links: []
+  host_1: example-brix
+  host_2: example-dune
+  status: confirmed
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-09'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-09'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-10'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-10'
+    opened_on: '2026-07-09'
+    decided_on: '2026-07-16'
+  publication:
+    consent: pending
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates:
+  - date: '2026-11-05'
+    time: '18:00'
+    answer: accepted
+  - date: '2026-11-12'
+    time: '18:00'
+    answer: ''
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''
+- id: exm-007
+  name: Gita Ravensworth
+  gender: F
+  career_stage: postdoc
+  email: g.ravensworth@example.test
+  affiliation: Institute for Imaginary Studies
+  country: Brazil
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Reading in translation, twice
+  abstract: |
+    What a group reads when half of it is reading a different book.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Hollis Renn
+  assigned_to: example-dune
+  links: []
+  host_1: example-cedar
+  host_2: example-elm
+  status: confirmed
+  selection:
+    ballots:
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-23'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-23'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-24'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-24'
+    opened_on: '2026-07-23'
+    decided_on: '2026-07-30'
+  publication:
+    consent: pending
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates:
+  - date: '2026-11-19'
+    time: '18:00'
+    answer: ''
+  - date: '2026-11-26'
+    time: '18:00'
+    answer: ''
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: Still choosing between the two evenings offered.
+- id: exm-008
+  name: Hollis Ndiaye-Palmqvist
+  gender: NB
+  career_stage: phd
+  email: h.ndiaye-palmqvist@example.test
+  affiliation: Fictional Polytechnic
+  country: Japan
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: The reading group as a scheduling problem
+  abstract: |
+    Six people, one evening a month, and the arithmetic nobody wants to do.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: organizer
+  proposed_by: example-elm
+  assigned_to: example-elm
+  links: []
+  host_1: example-dune
+  host_2: example-alba
+  status: invited
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-13'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-13'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-14'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-14'
+    opened_on: '2026-08-13'
+    decided_on: '2026-08-20'
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates:
+  - date: '2026-12-03'
+    time: '18:00'
+    answer: ''
+  - date: '2026-12-10'
+    time: '18:00'
+    answer: ''
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''
+- id: exm-009
+  name: Ilse Marchetti-Kwan
+  gender: M
+  career_stage: independent
+  email: i.marchetti-kwan@example.test
+  affiliation: Independent
+  country: Germany
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Shelves as an argument
+  abstract: |
+    On arranging books so that the arrangement says something.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Jonas Ekelund
+  assigned_to: example-alba
+  links: []
+  host_1: example-alba
+  host_2: example-cedar
+  status: approved
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-18'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-18'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-19'
+    - voter: example-elm
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-19'
+    opened_on: '2026-08-18'
+    decided_on: '2026-08-25'
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''
+- id: exm-010
+  name: Jonquil Abarca-Teller
+  gender: F
+  career_stage: group-leader
+  email: j.abarca-teller@example.test
+  affiliation: Imaginary Institute of Reading
+  country: Portugal
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Reading groups that outlive their founders
+  abstract: |
+    Three groups that kept going, and what each of them gave up to do it.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: outreach
+  proposed_by: example-brix
+  assigned_to: example-brix
+  links: []
+  host_1: example-brix
+  host_2: example-elm
+  status: decline-speaker
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-04-23'
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-04-23'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-04-24'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-04-24'
+    opened_on: '2026-04-23'
+    decided_on: '2026-04-30'
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates:
+  - date: '2026-07-02'
+    time: '18:00'
+    answer: declined
+  - date: '2026-07-09'
+    time: '18:00'
+    answer: declined
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: Neither evening worked; happy to be asked again next season.
+- id: exm-011
+  name: Kaia Thorbecke
+  gender: M
+  career_stage: phd
+  email: k.thorbecke@example.test
+  affiliation: Nowhere School of Letters
+  country: Kenya
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: What a group owes the book it did not finish
+  abstract: |
+    A short argument about abandoning a text together rather than alone.
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Kaia Thorbecke
+  assigned_to: example-cedar
+  links: []
+  host_1: ''
+  host_2: ''
+  status: lead
+  selection:
+    ballots:
+    - voter: example-brix
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-30'
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-08-31'
+    opened_on: '2026-08-29'
+    decided_on: ''
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress:
+    lead/acknowledge-proposal: true
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''
+- id: exm-012
+  name: Lior Basselin
+  gender: undisclosed
+  career_stage: undisclosed
+  email: l.basselin@example.test
+  affiliation: Invented Academy of Letters
+  country: ''
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Reading rooms, and the rooms that replaced them
+  abstract: ''
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Lior Basselin
+  assigned_to: ''
+  links: []
+  host_1: ''
+  host_2: ''
+  status: lead
+  selection:
+    ballots: []
+    opened_on: ''
+    decided_on: ''
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: Arrived through the form this week; nobody has opened the vote yet.
+- id: exm-013
+  name: Maren Okonjo-Reid
+  gender: F
+  career_stage: postdoc
+  email: m.okonjo-reid@example.test
+  affiliation: Fictional Polytechnic
+  country: Brazil
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Annotation as conversation
+  abstract: ''
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Maren Okonjo-Reid
+  assigned_to: example-dune
+  links: []
+  host_1: ''
+  host_2: ''
+  status: parked
+  selection:
+    ballots:
+    - voter: example-dune
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-07-05'
+    opened_on: '2026-07-02'
+    decided_on: ''
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: The window closed before the board reached a threshold; kept for a later season.
+- id: exm-014
+  name: Nils Aaltonen
+  gender: M
+  career_stage: undisclosed
+  email: n.aaltonen@example.test
+  affiliation: Institute for Imaginary Studies
+  country: Japan
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Reading lists nobody follows
+  abstract: ''
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: outreach
+  proposed_by: example-cedar
+  assigned_to: example-cedar
+  links: []
+  host_1: ''
+  host_2: ''
+  status: parked
+  selection:
+    ballots:
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-05-09'
+    - voter: example-elm
+      value: abstain
+      comment: Would rather see this next season.
+      coi_reason: ''
+      date: '2026-05-10'
+    opened_on: '2026-05-07'
+    decided_on: ''
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''
+- id: exm-015
+  name: Orla Fitzhume
+  gender: NB
+  career_stage: independent
+  email: o.fitzhume@example.test
+  affiliation: Independent
+  country: Germany
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: A history of the bookmark
+  abstract: ''
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Orla Fitzhume
+  assigned_to: example-alba
+  links: []
+  host_1: ''
+  host_2: ''
+  status: decline-board
+  selection:
+    ballots:
+    - voter: example-alba
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-02-05'
+    - voter: example-brix
+      value: abstain
+      comment: Outside what this group reads.
+      coi_reason: ''
+      date: '2026-02-06'
+    - voter: example-cedar
+      value: abstain
+      comment: ''
+      coi_reason: ''
+      date: '2026-02-06'
+    - voter: example-dune
+      value: abstain
+      comment: ''
+      coi_reason: ''
+      date: '2026-02-15'
+    opened_on: '2026-02-05'
+    decided_on: '2026-02-19'
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: Turned down on the editorial line rather than on the work.
+- id: exm-016
+  name: Priya Venkataraman-Boe
+  gender: undisclosed
+  career_stage: phd
+  email: p.venkataraman-boe@example.test
+  affiliation: Imaginary Institute of Reading
+  country: ''
+  photo_url: ''
+  bio: ''
+  linkedin: ''
+  title: Speed-reading, and why a group cannot
+  abstract: ''
+  seed_questions: ''
+  conflicts_of_interest: ''
+  source: form
+  proposed_by: Priya Venkataraman-Boe
+  assigned_to: example-elm
+  links: []
+  host_1: ''
+  host_2: ''
+  status: decline-board
+  selection:
+    ballots:
+    - voter: example-brix
+      value: abstain
+      comment: ''
+      coi_reason: ''
+      date: '2026-04-02'
+    - voter: example-cedar
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-04-03'
+    - voter: example-elm
+      value: abstain
+      comment: Not a session this group would sit through.
+      coi_reason: ''
+      date: '2026-04-09'
+    opened_on: '2026-04-02'
+    decided_on: '2026-04-16'
+  publication:
+    consent: ''
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: ''
+  candidate_dates: []
+  date: ''
+  time: ''
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  survey_enabled: false
+  runbook_progress: {}
+  checklist: {}
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''

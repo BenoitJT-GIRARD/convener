@@ -13,6 +13,7 @@ seminars that have nobody to pay and nothing to pay them with.**
 [![Licence: AGPL-3.0-or-later](https://img.shields.io/badge/licence-AGPL--3.0--or--later-012765)](LICENSE)
 [![Cost to run: €0](https://img.shields.io/badge/cost%20to%20run-%E2%82%AC0-012765)](docs/engineering/architecture.md)
 [![Accessibility: WCAG 2.1 AA](https://img.shields.io/badge/accessibility-WCAG%202.1%20AA-012765)](.github/workflows/a11y.yml)
+[![Continuous integration](https://github.com/BenoitJT-GIRARD/convener/actions/workflows/quality.yml/badge.svg)](https://github.com/BenoitJT-GIRARD/convener/actions/workflows/quality.yml)
 
 </div>
 
@@ -108,8 +109,8 @@ repository's own GitHub Pages. It runs on every push that reaches what it
 publishes and rebuilds every Thursday, and it publishes nothing until the
 repository variable `CONVENER_DEMONSTRATION_PAGES` is set to `true` and
 Pages is pointed at the `gh-pages` branch — two settings no workflow can
-make for itself, so until somebody makes them there is no link here to
-click.
+make for itself. Once both are made, the demonstration is at
+<https://BenoitJT-GIRARD.github.io/convener/>.
 
 Build it and serve it yourself, from a real build, with no account and no
 data of anybody's:

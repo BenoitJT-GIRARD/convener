@@ -13,9 +13,6 @@ accounts and secrets, and keeps it running once volunteers are using it.
 - **[What you take on](what-you-take-on.md)** — the personal data you
   become the controller for, the keys this software destroys on purpose,
   and what the licence does not promise.
-- **[Publishing the product](publishing-the-product.md)** — creating and
-  pushing the product repository, the one sequence
-  `declarations/standing-up.yml` deliberately does not declare.
 - **[Operations](operations.md)** — every external integration, the secret
   it needs, and what degrades without it.
 
