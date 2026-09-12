@@ -387,21 +387,38 @@ steps:
     title: The dependency updates a duplicate switches off
     actor: human
     does: >-
-      Switch Dependabot **version updates** off on the private repository,
-      and leave Dependabot **alerts** on. Every manifest and every lockfile
-      `.github/dependabot.yml` watches belongs to the product, and for a
-      duplicate an update is a merge: a Dependabot pull request opened here
-      edits a generated file upstream also bumps, and upstream's own bump of
-      that same file is then a conflict with no readable resolution. One
-      bump upstream reaches every instance through the merge each of them
-      already does, so version updates belong there and nowhere else. Alerts
-      are the half worth keeping — a setting rather than a file, costing no
-      Actions minutes, telling you what you are running without proposing to
-      rewrite a file you do not own.
+      Stop Dependabot **version updates** opening anything on the private
+      repository, and leave Dependabot **alerts** on. Every manifest and
+      every lockfile `.github/dependabot.yml` watches belongs to the
+      product, and for a duplicate an update is a merge: a Dependabot pull
+      request opened here edits a generated file upstream also bumps, and
+      upstream's own bump of that same file is then a conflict with no
+      readable resolution. One bump upstream reaches every instance through
+      the merge each of them already does, so version updates belong there
+      and nowhere else. Alerts are the half worth keeping — a setting rather
+      than a file, costing no Actions minutes, telling you what you are
+      running without proposing to rewrite a file you do not own.
+
+      **This is a file edit, and it used to say a settings toggle.** There
+      is no toggle: GitHub replaces the Enable/Disable control for version
+      updates with a *Configure* button whenever `.github/dependabot.yml` is
+      present, and a duplicate inherits that file at the moment it is
+      created — two steps before this one. No REST endpoint exposes the
+      control either. The state this step asks for could not be reached from
+      the state a duplicate necessarily starts in, and the step could never
+      have been walked to its end on a real duplicate.
     check: >-
-      Settings → Code security shows *Dependabot version updates* off and
-      *Dependabot alerts* on, and no dependency-bump pull request is open on
-      the first of the month after this.
+      Insights → Dependency graph → Dependabot reads *Dependabot version
+      updates aren't configured yet*, and Settings → Code security shows
+      *Dependabot alerts* on. No dependency-bump pull request is open on the
+      first of the month after this.
+
+      Measured, on two repositories differing only by these three lines: the
+      product's own page lists its three ecosystems with a *Recent update
+      jobs* link on each, and a duplicate carrying the limits reads as not
+      configured at all. GitHub honours the value rather than accepting and
+      ignoring it — which is not something the schema could have told you,
+      and is why this check names a page rather than a field.
     degraded: >-
       One grouped pull request per dependency tree per month, each one
       editing a generated file the product owns, and each one a conflict
@@ -411,16 +428,30 @@ steps:
       prevent, arriving through the one file in this repository that
       configures a service rather than running one.
     walkthrough:
-      - Open the private repository's Settings → Code security.
-      - Find *Dependabot version updates* and switch it off. This is the
-        only place they can be switched off — `.github/dependabot.yml` is
-        what configures them and it is the product's own file, so deleting
-        it would itself be editing a product file, which is the same
-        conflict by a shorter route.
-      - Find *Dependabot alerts* in the same list and make sure it is on. It
-        reads the manifests you are running against GitHub's advisory
-        database and opens no pull request.
-      - Nothing here is done to the public repository, which holds a built
+      - >-
+        Edit `.github/dependabot.yml` and add `open-pull-requests-limit: 0`
+        to each entry under `updates:`, beside its `package-ecosystem:`
+        line. Three entries today. Zero is a value the format allows and
+        GitHub acts on: the ecosystems stay declared, so nothing here stops
+        watching, and no pull request is proposed for any of them.
+      - >-
+        Leave the entries themselves alone. They are what
+        `tools/tests/repository/test_public_repository.py` derives from
+        `git ls-files` — a manifest committed without an entry fails that
+        test rather than going unwatched — and it reads which directories
+        are watched, never a limit. Emptying `updates:` instead would pass
+        GitHub and fail your own suite on seven manifests.
+      - >-
+        This is the one edit in this sequence to a product file that the
+        boundary does not hand over and no generator writes, so it is a line
+        you keep through every merge. `docs/operating/taking-an-update.md`
+        names it among the four of that shape.
+      - >-
+        Find *Dependabot alerts* in Settings → Code security and make sure
+        it is on. It reads the manifests you are running against GitHub's
+        advisory database and opens no pull request.
+      - >-
+        Nothing here is done to the public repository, which holds a built
         site and neither a manifest nor a lockfile.
 
   - id: instance_declaration
