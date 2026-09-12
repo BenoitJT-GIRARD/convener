@@ -226,9 +226,26 @@ class _Question:
         return self.aliases[0]
 
     def blocks(self) -> list[dict[str, Any]]:
+        # The question's own wording is the matching key: `proposal.py` reads
+        # a submission by `label`, against exact alternatives
+        # (`LABEL_CAREER_STAGE = ("Career stage", "Career level")`), never a
+        # prefix. So a gloss folded into this title would not be a wording
+        # change, it would unmatch every answer the question ever receives --
+        # `undisclosed` for every respondent rather than for a PhD student
+        # alone. The gloss rides in a TEXT group of its own instead, emitted
+        # before this question by `_QUESTION_BLOCKS`, where it carries no
+        # label and so reaches no reader of one.
         title = _block("TITLE", "QUESTION", f"{self.label}:title", {"html": self.label})
         if self.answer_type == "DROPDOWN":
-            return [title, *self._option_blocks()]
+            # `TextBlock` in Tally's own schema: type TEXT, groupType TEXT,
+            # an `html` payload, and a group of its own. It captures nothing,
+            # so it appears in no webhook payload and is invisible to every
+            # reader that matches on a label -- which is the whole reason the
+            # gloss can live here and nowhere nearer the question.
+            gloss = _block(
+                "TEXT", "TEXT", f"{self.label}:gloss", {"html": self.placeholder}
+            )
+            return [gloss, title, *self._option_blocks()]
         return [
             title,
             _block(
@@ -254,15 +271,20 @@ class _Question:
                 # Group-level settings, and Tally's own convention (see
                 # `hasBadge`/`randomize`/etc. in its option payload schema)
                 # is to set them once, on the first option, rather than
-                # repeat them identically on every sibling. `placeholder`
-                # existing on `DropdownOptionPayload` is confirmed against
-                # Tally's own OpenAPI spec; that it renders the way
-                # INPUT_TEXT's placeholder does -- a hint shown before a
-                # value is chosen -- is inferred from the field's presence
-                # and name, not confirmed by a worked example the way the
-                # option block's own shape was.
+                # repeat them identically on every sibling.
+                #
+                # No `placeholder` here, and that is the correction rather
+                # than an omission. `DropdownOptionPayload.placeholder` is
+                # declared in Tally's OpenAPI spec as a bare string with no
+                # `maxLength`, but the server enforces one anyway: at 181
+                # characters Career stage's gloss made Tally drop this whole
+                # option -- `phd`, the first token of the vocabulary -- from
+                # the published form, while Gender's 77-character gloss was
+                # accepted. Nothing reported it. The script exited 0, the
+                # options this file builds still matched the vocabulary
+                # exactly, and only re-reading what Tally serves showed the
+                # option missing and a PhD student with no way to say so.
                 payload["isRequired"] = self.required
-                payload["placeholder"] = self.placeholder
             blocks.append(
                 _block(
                     "DROPDOWN_OPTION",
