@@ -39,10 +39,10 @@ so the way this fails is a red suite naming the range, never a quiet
 **Soundness was measured against node-semver rather than argued.** No
 Python dependency of this repository reasons about semver, so the reader
 is this module's own. Every distinct `engines.node` the six lock files
-record (76 of them) and forty more written to exercise the grammar --
+record -- 82 of them -- and 34 more written to exercise the grammar --
 caret, tilde, hyphen, x-ranges, a bare operator with a space after it,
 a leading `v`, several comparators in one alternative -- were each put to
-3 906 versions and the 453 096 answers compared with `semver.satisfies`
+3 906 versions, and all 453 096 answers compared with `semver.satisfies`
 from `semver@6.3.1` and again from `semver@7.8.5`, both already in
 `app/`'s installed tree. Zero disagreements, both times.
 `test_the_reader_agrees_with_the_published_grammar` pins the handful of
@@ -470,7 +470,11 @@ def test_the_sweep_reads_every_tree_and_every_lock_file() -> None:
 
 
 def test_the_line_comes_out_of_the_one_file_that_names_it() -> None:
-    """`.nvmrc` is read, not restated. Nothing in this module names 24."""
+    """The window is read out of `.nvmrc`, so raising that file moves what
+    every comparison below is made inside. The tests further down name 24
+    on purpose -- they are about the reader and about the defect this
+    module was written for -- and the rule itself names no version at
+    all."""
     written = (ROOT / NODE_LINE).read_text(encoding="utf-8").strip()
     assert node_line() == _admitted(written)
     assert len(node_line()) == 1, (
