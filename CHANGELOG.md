@@ -220,6 +220,20 @@ the day they were written; the lesson had never crossed into Python.
   not installed. The commands run from the repository root and chain nothing,
   because Windows PowerShell 5.1 refuses the operator that would.
 
+- **A high-severity security alert on a field that holds no secret.** The
+  credential watchdog's `Renewal.secret` carries a credential's *name* —
+  `CONVENER_MEETING_API_TOKEN` — and never its value, which
+  `instance/data/credential-renewals.yml` has no way to hold; naming the one
+  it expires is the entire point of the watchdog. CodeQL read the field's
+  name rather than its contents and reported clear-text logging of sensitive
+  data on the public repository. The field is `secret_name` now, which is
+  what it always held and the word the code already used one line below it.
+  The declaration's key stays `secret` — it reads correctly in YAML and
+  renaming it would break a file every duplicate has written. Fixed rather
+  than dismissed: an alert explained away is one the next reader learns to
+  skip, which is what this release already fixed once when CodeQL's own
+  failures were burying the secret scan beside them.
+
 ### Before you merge this
 
 - `instance/data/credential-renewals.yml` — **new, and it arrives empty.**
