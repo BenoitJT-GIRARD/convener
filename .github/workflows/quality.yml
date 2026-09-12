@@ -454,15 +454,41 @@ jobs:
       # at all. Blocking on those would fail this job on a class of finding
       # that cannot reach the surface this step is actually protecting;
       # never checking them would hide the day one of them stops being
-      # theoretical. `continue-on-error` prints the finding and marks the
-      # step visibly (D-25: a check that cannot fail is not a check, and
+      # theoretical (D-25: a check that cannot fail is not a check, and
       # the mirror is just as true -- a finding nothing ever surfaces is
-      # not reported either) without failing the job or blocking a merge.
-      - name: Dependency audit (development tooling, informational)
-        continue-on-error: true
+      # not reported either).
+      #
+      # This step used to carry `continue-on-error: true`, and that kept
+      # the second half of D-25 in name only. `continue-on-error` stops
+      # the job failing and still records the step as failed, so every run
+      # that passed -- every pull request, and every push to `main` --
+      # was stamped `Process completed with exit code 1`. A red cross on a
+      # green run is read as broken once and ignored ever after, which is
+      # precisely the finding-nobody-reads this step exists not to be.
+      #
+      # So the finding goes where a person meets it: a table on the run's
+      # own page, written into the job summary by
+      # `app/scripts/audit-summary.mjs`, and the step exits 0 on whatever
+      # it found. It can still fail, and it fails on one thing -- a report
+      # it could not read. "Three moderate, in the test runner" and "the
+      # audit never ran" are the two outcomes that must not look alike,
+      # and the exit code is what tells them apart now that a finding no
+      # longer moves it.
+      #
+      # The same table is printed to the log as well, and that is not
+      # duplication for its own sake: a job summary is rendered on the run
+      # page and is reachable through no API at all, so the log is the only
+      # copy anything but a browser can read afterwards -- including
+      # whoever has to answer "what did the audit actually say on that
+      # commit" once the pull request is closed.
+      - name: Dependency audit (development tooling, reported in the job summary)
         if: always() && steps.install-app.outcome == 'success'
         working-directory: app
-        run: npm audit
+        run: |
+          npm audit --json > "$RUNNER_TEMP/app-audit.json" || true
+          node scripts/audit-summary.mjs < "$RUNNER_TEMP/app-audit.json" > "$RUNNER_TEMP/app-audit.md"
+          cat "$RUNNER_TEMP/app-audit.md" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/app-audit.md"
       - name: Lint app
         if: always() && steps.install-app.outcome == 'success'
         working-directory: app
