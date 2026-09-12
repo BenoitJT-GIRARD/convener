@@ -63,7 +63,7 @@
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 /** This repository's own root, from this file's location -- the app's build
  *  runs with `app/` as its working directory, so a path relative to the

@@ -59,7 +59,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import ts from 'typescript';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { BOUNDARY_PATH, handedFromData } from '../../src/settings/declaration';
 
 const ROOT = resolve(__dirname, '../..', '..');

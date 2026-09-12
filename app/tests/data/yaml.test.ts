@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { parseSpeakers, serializeSpeakers, parseConfig, serializeConfig } from '../../src/data/yaml';
+import * as yaml from 'js-yaml';
+import { parseSpeakers, serializeSpeakers, parseConfig, serializeConfig, loadDocument } from '../../src/data/yaml';
 import { SPEAKERS_HEADER, withSpeakersHeader, withConfigHeader, stripHeader } from '../../src/data/yaml';
 import { SPEAKERS, CONFIG } from '../helpers/boundary-samples';
 import { speaker as blank } from '../helpers/data-doubles';
@@ -153,7 +154,7 @@ describe('the JS/Python YAML boundary (D-14)', () => {
       { date: '2026-06-01', time: '12:30', answer: 'accepted' },
       { date: '2026-06-15', time: '09:05', answer: '' },
     ]);
-    // At the parent key's indentation (`noArrayIndent`), one level deeper
+    // At the parent key's indentation (`seqNoIndent`), one level deeper
     // than any list the fixture carried before, and with the hour quoted.
     expect(fixture('speakers-from-app.yml')).toContain(
       "candidate_dates:\n  - date: '2026-05-18'\n    time: '12:30'\n    answer: declined\n",
@@ -187,5 +188,70 @@ describe('the JS/Python YAML boundary (D-14)', () => {
       'deferred', 'waiting', 'accepted',
     ]);
     expect(cfg?.nominations[0].objections[0].member).toBe('bob');
+  });
+});
+
+/** Files this project's own reader calls no document at all, each written
+ *  the way a half-started file actually looks. */
+const NO_DOCUMENT = [
+  ['a file nobody has written to yet', ''],
+  ['a file holding only spaces', '   '],
+  ['a file holding only blank lines', '\n\n'],
+  ['a file holding only a tab', '\t'],
+  ['a file holding only a comment', '# nothing yet\n'],
+  ['a duplicate whose speakers file is still its header', SPEAKERS_HEADER],
+  ['comments and blank lines together', '\n# one\n   \n#two\n'],
+] as const;
+
+/** Files that are a document, including the two whose content is nothing.
+ *  `loadDocument` must hand each of these straight to `js-yaml`. */
+const A_DOCUMENT = [
+  ['the document marker on its own', '---\n', null],
+  ['an explicit null', 'null', null],
+  ['an empty list', '[]', []],
+  ['a key under a comment', '# c\na: 1\n', { a: 1 }],
+] as const;
+
+/** Files that are malformed rather than empty. A reader that answered
+ *  `undefined` for these would turn a broken file into an absent one, which
+ *  is the shape `readSpeakers` and `readConfig` were written to tell apart. */
+const MALFORMED = [
+  ['a tab in the indentation', 'a:\n - 1\n\t- 2\n'],
+  ['a duplicated key', 'a: 1\na: 2\n'],
+] as const;
+
+describe('a YAML file with nothing in it', () => {
+  // The counter-proof, and the reason this block reads `js-yaml` directly
+  // rather than trusting the table above: every case below is measured
+  // against the parser on the day the suite runs, so the day js-yaml stops
+  // refusing an empty document -- or starts refusing something else -- this
+  // fails rather than going on describing a version nobody has installed.
+  it.each(NO_DOCUMENT)('%s is what js-yaml itself refuses', (_name, text) => {
+    expect(() => yaml.load(text)).toThrow(yaml.YAMLException);
+  });
+
+  it.each(NO_DOCUMENT)('%s reads as no document', (_name, text) => {
+    expect(loadDocument(text)).toBeUndefined();
+  });
+
+  it.each(A_DOCUMENT)('%s is a document', (_name, text, value) => {
+    expect(loadDocument(text)).toEqual(value);
+  });
+
+  it.each(MALFORMED)('%s is refused rather than read as empty', (_name, text) => {
+    expect(() => loadDocument(text)).toThrow(yaml.YAMLException);
+  });
+
+  // The two readings this repository had already chosen, which is why
+  // `loadDocument` exists at all rather than the exception being allowed
+  // through: a speakers file nobody has filled in is no speakers, and a
+  // config file nobody has filled in is refused by name.
+  it('is no speakers, which is where a new instance starts', () => {
+    expect(parseSpeakers('')).toEqual([]);
+    expect(parseSpeakers(SPEAKERS_HEADER)).toEqual([]);
+  });
+
+  it('is a config the app refuses to invent, in its own words', () => {
+    expect(() => parseConfig('')).toThrow(/config\.yml/);
   });
 });

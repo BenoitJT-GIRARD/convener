@@ -18,7 +18,7 @@
  * The Python half is `tools/tests/governance/test_validate_schema_v4.py`: the same keys, on
  * the side that writes the file.
  */
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { parseSpeakers } from '../../src/data/yaml';
 import { DATE_ANSWERS, SPEAKER_FIELDS } from '../../src/data/types';
@@ -32,7 +32,7 @@ const NEW_FIELDS = ['photo_url', 'bio', 'linkedin', 'seed_questions', 'candidate
  *  whole -- which is exactly what `speakersYaml` cannot express, because it
  *  fills in the model's defaults before serialising. */
 function toYaml(entries: Record<string, unknown>[]): string {
-  return yaml.dump(entries, { lineWidth: 1000, noRefs: true, sortKeys: false, noArrayIndent: true });
+  return yaml.dump(entries, { lineWidth: 1000, noRefs: true, sortKeys: false, seqNoIndent: true });
 }
 
 function record(overrides: Partial<Speaker> = {}): Record<string, unknown> {

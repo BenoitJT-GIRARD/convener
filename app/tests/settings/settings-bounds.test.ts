@@ -29,7 +29,7 @@ import { readFileSync } from 'node:fs';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import {
   ACTIONS_BUDGET_FILE,
   CronShapeRefused,

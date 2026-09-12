@@ -26,7 +26,7 @@
  * and -- for the integrations -- which secrets, and what breaks without
  * each.
  */
-import yaml from 'js-yaml';
+import { loadDocument } from '../data/yaml';
 
 /** Where the declaration lives, and the two directories whose
  *  configuration files answer for themselves. Named here rather than
@@ -164,7 +164,7 @@ export function handedFromData(data: unknown): Handed[] {
  * face.
  */
 export function configOwner(name: string, text: string): string {
-  const loaded: unknown = name.endsWith('.json') ? JSON.parse(text) : yaml.load(text);
+  const loaded: unknown = name.endsWith('.json') ? JSON.parse(text) : loadDocument(text);
   const declared = asRecord(loaded)?.owner;
   if (typeof declared !== 'string' || !OWNERS.includes(declared)) {
     throw new DeclarationRefused(

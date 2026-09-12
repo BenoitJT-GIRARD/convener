@@ -34,7 +34,7 @@
  * be the second source this project spends its time deleting -- one that
  * disagrees silently the day somebody moves the drain to twice a day.
  */
-import yaml from 'js-yaml';
+import { loadDocument } from '../data/yaml';
 import { gh } from '../github/client';
 import { getFile } from '../github/contents';
 import { isDemoMode } from '../data/demo';
@@ -106,7 +106,7 @@ function isConfigFile(entry: DirectoryEntry): boolean {
 function numberAt(text: string, key: string): number | null {
   let loaded: unknown;
   try {
-    loaded = yaml.load(text);
+    loaded = loadDocument(text);
   } catch {
     // A file that will not parse holds no number this can read, and the
     // screen already refuses to save while a bound is unavailable.
@@ -166,8 +166,8 @@ export function couplingOf(document: SettingsDocument): Coupling | null {
 function documentFrom(files: Record<string, string>, workflow: unknown): SettingsDocument {
   const owners: Record<string, string> = {};
   for (const [name, text] of Object.entries(files)) owners[name] = configOwner(name, text);
-  const handed = handedFromData(yaml.load(files[BOUNDARY_PATH] ?? ''));
-  const integrations = integrationsFromData(yaml.load(files[INTEGRATIONS_PATH] ?? ''));
+  const handed = handedFromData(loadDocument(files[BOUNDARY_PATH] ?? ''));
+  const integrations = integrationsFromData(loadDocument(files[INTEGRATIONS_PATH] ?? ''));
   return {
     files,
     owners,
@@ -218,5 +218,5 @@ export async function loadSettings(token: string): Promise<SettingsDocument> {
   names.forEach((name, index) => {
     files[name] = texts[index].text;
   });
-  return documentFrom(files, yaml.load(workflowText.text));
+  return documentFrom(files, loadDocument(workflowText.text));
 }

@@ -18,7 +18,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { carriedFrom } from '../../scripts/example-settings.mjs';
 import {
   BOUNDARY_PATH,
