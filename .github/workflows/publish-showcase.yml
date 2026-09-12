@@ -100,7 +100,7 @@ jobs:
           version: '0.5.x'
       - name: Build public data
         working-directory: tools
-        run: uv run convener-public-data
+        run: uv run --frozen convener-public-data
       # site/src/_data/events.json is committed as a build fixture
       # only (see site/README.md) -- overwritten here from the file the
       # step above just generated, so the build below always reflects
@@ -157,7 +157,7 @@ jobs:
       - name: Refuse to publish a page that leaks the room link
         run: |
           set -e
-          links=$(uv run --project tools python -c '
+          links=$(uv run --frozen --project tools python -c '
           from convener_ops.declaration.paths import repo_root
           from convener_ops.declaration.yaml_safe import safe_load
 
@@ -207,10 +207,10 @@ jobs:
           # Read through the Python reader that owns the derivation
           # (`published.Published.publish_repository`, which refuses rather
           # than guessing for an address that is not a Pages one) -- the
-          # same `uv run --project tools python -c` shape the room-link
+          # same `uv run --frozen --project tools python -c` shape the room-link
           # guard above already uses, rather than a fourth parser written
           # in shell.
-          target="$(uv run --project tools python -c \
+          target="$(uv run --frozen --project tools python -c \
             'from convener_ops.declaration.published import load; print(load().publish_repository)')"
           # Refuse a target that is the repository this build came from.
           # `publish_repository` derives `<owner>/<repository>` from the

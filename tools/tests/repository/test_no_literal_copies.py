@@ -219,7 +219,7 @@ def test_a_fenced_block_shared_by_two_pages_is_not_a_copy() -> None:
     that quietly swallowed everything would pass the first assertion alone.
     """
     command = (
-        "uv run convener-register --check --verbose --repository "
+        "uv run --frozen convener-register --check --verbose --repository "
         "example-instance/example-cockpit --since 2026-01-01 --until 2026-12-31"
     )
     assert len(normalise(command)) >= MIN_DUPLICATE_CHARS

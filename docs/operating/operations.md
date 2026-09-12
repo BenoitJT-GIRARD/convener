@@ -10,7 +10,7 @@ own section below says what its absence forbids and why: two of them
 protect personal data rather than a feature, and the third is a promise
 with legal weight that must not exit quietly.
 
-Run `uv run convener-check-config` from `tools/` at any time to see what is
+Run `uv run --frozen convener-check-config` from `tools/` at any time to see what is
 configured and what is still waiting. That declaration
 (`declarations/integrations.yml`) covers only what `tools/convener_ops` and `app/src`
 themselves read at runtime — three further secrets exist to gate CI
@@ -94,7 +94,7 @@ still holds.
 **To create:**
 1. Build the public form. Put the key in a file called `.env` at the
    repository root, as `TALLY_API_KEY=` and the key, then run
-   `uv run python scripts/create_tally_form.py --key-file ../.env` from
+   `uv run --frozen python scripts/create_tally_form.py --key-file ../.env` from
    `tools/`. The key travels in a file rather than on the command line,
    which a shell keeps in its history and every terminal recording keeps
    for ever; the script deletes the file as it reads it, whether the rest
@@ -632,7 +632,7 @@ credentials themselves, not the URL.
 
 **Secret to set:** `CONVENER_MEETING_API_TOKEN`.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Meeting
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Meeting
 platform* moves from `absent` to `production`.
 
 **Renewing the token — a step of the event's journey, not a secret set
@@ -794,7 +794,7 @@ the two from `CONVENER_SMTP_PORT` itself, so either works without a code change.
 **Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`, `CONVENER_SMTP_USER`,
 `CONVENER_SMTP_PASSWORD`, `CONVENER_SMTP_FROM`.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Outbound
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Outbound
 email* moves from `absent` to `production`.
 
 **Manual resend:** the `Resend a registration confirmation` workflow
@@ -815,7 +815,7 @@ address itself — produce it with:
 
 ```bash
 cd tools
-uv run convener-encrypt-identifier --event mrg-042 --email person@example.org
+uv run --frozen convener-encrypt-identifier --event mrg-042 --email person@example.org
 ```
 
 which needs no secret (`instance/keys/events/<id>.pub` is public data, not a
@@ -837,7 +837,7 @@ with the organisation address, and record its id.
 
 **Secret to set:** `CONVENER_VIDEO_CHANNEL_ID`.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Video
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Video
 channel* moves from `absent` to `production`.
 
 ## Board notifications
@@ -878,9 +878,9 @@ delivery mechanism.
 address, affiliation, country, talk title or board login is ever included —
 `tools/convener_ops/governance/notify.py` reads none of those fields.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Board
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Board
 notifications* moves from `absent` to `production`. Run
-`uv run convener-notify-digest --dry-run` to read the day's message without
+`uv run --frozen convener-notify-digest --dry-run` to read the day's message without
 sending anything.
 
 ## Event registration keys
@@ -927,7 +927,7 @@ nothing to accept until step 2 opens it.
 **Secrets to set:** `CONVENER_EVENT_KEY_<EVENT ID>`, one per event, set only for
 as long as that event's registrations need decrypting.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Event
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Event
 registration encryption* is always reported `absent` here, on every
 machine, because the declared name is a pattern (`CONVENER_EVENT_KEY_<ID>`) and
 not a literal secret — the real per-event check happens inside the job that
@@ -943,7 +943,7 @@ secrets. The encrypted registrations already committed under
 `instance/data/events/<event id>/` stay in git, with no history rewrite, and become
 permanently unreadable the moment the secret is gone — nothing else needs
 to happen to the repository itself. Record the destruction by running
-`uv run convener-record-destructions --ids <event id> --on <YYYY-MM-DD>`,
+`uv run --frozen convener-record-destructions --ids <event id> --on <YYYY-MM-DD>`,
 from `tools/`, so the register can tell "destroyed on purpose"
 apart from "this event never had a key" two years from now — the two look
 identical from the repository alone, and only the register carries the
@@ -1162,7 +1162,7 @@ confidentiality risk a missing signing key could expose, only a feature
 
 **To create:** a human operator runs `convener_ops.journey.signing.generate()`
 themselves, interactively, on their own machine — a Python shell is
-enough (`uv run python` from `tools/`, then `from convener_ops.journey.signing import
+enough (`uv run --frozen python` from `tools/`, then `from convener_ops.journey.signing import
 generate; private_pem, public_pem = generate()`). **Not an automated
 step, and not something to delegate to an agent or a CI job:** this mints
 the one key that every future certificate depends on, and it is minted
@@ -1208,7 +1208,7 @@ calendar day: the filename collides (see the module docstring).
 
 **Secrets to set:** `CONVENER_SIGNING_KEY`.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Certificate
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Certificate
 signing key* moves from `absent` to `production`.
 
 ## Handling a registration
@@ -1498,7 +1498,7 @@ full, including what to do instead if this secret ever leaks.
 
 **Secrets to set:** `CONVENER_MATCHING_SALT`.
 
-**To verify:** from `tools/`, run `uv run convener-check-config`; *Registration
+**To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Registration
 matching salt* moves from `absent` to `production`.
 
 ## Encrypting the manual attendance export
@@ -1515,7 +1515,7 @@ closes that gap:
    locally as `instance/data/events/<event id>/attendance-import.csv` (never
    committed).
 2. Run, on your own machine, no CI job and no secret needed, from `tools/`:
-   `uv run convener-encrypt-attendance-export --event <event id>`. This reads
+   `uv run --frozen convener-encrypt-attendance-export --event <event id>`. This reads
    only the event's already-published public key
    (`instance/keys/events/<event id>.pub`) and the plaintext file above, and writes
    `instance/data/events/<event id>/attendance-import.csv.enc` -- one independent
@@ -2312,7 +2312,7 @@ configuration** in the sense of decision D-13 — the state below is normal
 and expected, and all three are settled together rather than guessed at
 piecemeal. All three touch `instance/data/config.yml`, the first two
 `instance/data/speakers.yml` as well, and they are easiest done together, in one
-commit, with `uv run convener-validate` run from `tools/` before it is
+commit, with `uv run --frozen convener-validate` run from `tools/` before it is
 pushed.
 
 **What each costs while it is deferred** is below with the change that
@@ -2385,6 +2385,6 @@ a meeting to consider — nothing is applied automatically. Do not fill
 these in from guesswork: a date nobody confirmed would start a silence the
 member never had.
 
-Once the dates are in, run `uv run convener-sweep` from `tools/` and read
+Once the dates are in, run `uv run --frozen convener-sweep` from `tools/` and read
 what it prints under `Board inactivity (G-14)`. Nothing there is applied;
 it is the list the meeting discusses.

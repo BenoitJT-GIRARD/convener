@@ -78,7 +78,7 @@ jobs:
         working-directory: tools
         env:
           CONVENER_RETENTION_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
-        run: uv run convener-retention-sweep
+        run: uv run --frozen convener-retention-sweep
       - name: Delete the destroyed event keys from repository secrets
         id: delete
         if: steps.sweep.outputs.destroyed_secrets != ''
@@ -195,7 +195,7 @@ jobs:
           git config user.email "convener-retention@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-record-destructions)
+            (cd tools && uv run --frozen convener-record-destructions)
             git add instance/data/event-key-destructions.yml
             git add instance/keys/events
             if git diff --staged --quiet; then
@@ -274,7 +274,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
-            (cd tools && uv run convener-record-retention-run)
+            (cd tools && uv run --frozen convener-record-retention-run)
             git add instance/data/retention-last-run.yml
             if git diff --staged --quiet; then
               echo "instance/data/retention-last-run.yml already names today -- nothing to commit"

@@ -402,7 +402,7 @@ def test_deploy_commits_the_routing_file_it_generates() -> None:
     deploy = (_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
         encoding="utf-8"
     )
-    assert "uv run convener-registration-routing-public-data" in deploy
+    assert "uv run --frozen convener-registration-routing-public-data" in deploy
     assert f"git add {registration_routing.ROUTING_PATH.as_posix()}" in deploy
 
 

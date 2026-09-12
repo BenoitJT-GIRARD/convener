@@ -62,7 +62,7 @@ jobs:
           PROPOSAL_SIGNATURE: ${{ github.event.client_payload.signature }}
           TALLY_WEBHOOK_SECRET: ${{ secrets.TALLY_WEBHOOK_SECRET }}
         # The retry, on a rejected push, is a fetch-and-reset-hard followed
-        # by *re-running the handler* (`uv run convener-handle-proposal`), not
+        # by *re-running the handler* (`uv run --frozen convener-handle-proposal`), not
         # `git pull --rebase` -- see registration.yml's own comment for why
         # replaying a diff over instance/data/speakers.yml's own array conflicts
         # instead of applying. Re-running is safe specifically because
@@ -76,7 +76,7 @@ jobs:
           git config user.email "convener-form@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-handle-proposal)
+            (cd tools && uv run --frozen convener-handle-proposal)
             git add instance/data/speakers.yml
             if git diff --staged --quiet; then
               echo "no new lead"

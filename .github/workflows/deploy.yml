@@ -143,7 +143,7 @@ jobs:
       # are what a verifier's page actually depends on.
       - name: Build public data
         working-directory: tools
-        run: uv run convener-certificates-public-data
+        run: uv run --frozen convener-certificates-public-data
       # The post-event survey's per-event
       # switch, published as an operational fact rather than baked into
       # SurveyForm.tsx's own knowledge -- see convener_ops.cli.survey_status_
@@ -155,7 +155,7 @@ jobs:
       # uses for certificates.json.
       - name: Build survey status
         working-directory: tools
-        run: uv run convener-survey-status-public-data
+        run: uv run --frozen convener-survey-status-public-data
       # Committed here, not only baked into dist/ --
       # services/signup-relay reads this exact file, at this exact path,
       # through the GitHub Contents API against this repository (the same
@@ -185,7 +185,7 @@ jobs:
       # the array's tail, `git rebase` returns 1 on the conflict, and
       # `set -e` kills the step before the `::error::` line below is ever
       # reached, leaving the tree mid-rebase with no annotation at all.
-      # Re-running `uv run convener-survey-status-public-data` instead is safe
+      # Re-running `uv run --frozen convener-survey-status-public-data` instead is safe
       # specifically because it is a pure function of `instance/data/speakers.yml`
       # (deterministic, sorted, deduplicated): discarding the local
       # commit and re-deriving against whatever landed on `main` in the
@@ -201,7 +201,7 @@ jobs:
           git config user.email "convener-publisher@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-survey-status-public-data)
+            (cd tools && uv run --frozen convener-survey-status-public-data)
             git add instance/public-data/survey-status.json
             if git diff --staged --quiet; then
               echo "no change to commit"
@@ -255,7 +255,7 @@ jobs:
           git config user.email "convener-publisher@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-registration-routing-public-data)
+            (cd tools && uv run --frozen convener-registration-routing-public-data)
             git add instance/public-data/registration-routing.json
             if git diff --staged --quiet; then
               echo "no change to commit"
@@ -295,7 +295,7 @@ jobs:
           git config user.email "convener-publisher@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-agenda-internal)
+            (cd tools && uv run --frozen convener-agenda-internal)
             git add instance/public-data/agenda-internal.ics
             if git diff --staged --quiet; then
               echo "no change to commit"
@@ -351,10 +351,10 @@ jobs:
           # Read through the Python reader that owns the derivation
           # (`published.Published.publish_repository`, which refuses rather
           # than guessing for an address that is not a Pages one) -- the
-          # same `uv run --project tools python -c` shape
+          # same `uv run --frozen --project tools python -c` shape
           # `publish-showcase.yml`'s own room-link guard already uses, rather
           # than a fourth parser written in shell.
-          target="$(uv run --project tools python -c \
+          target="$(uv run --frozen --project tools python -c \
             'from convener_ops.declaration.published import load; print(load().publish_repository)')"
           # Refuse a target that is the repository this build came from.
           # `publish_repository` derives `<owner>/<repository>` from the

@@ -494,7 +494,7 @@ steps:
       prefix you chose.
     command: |-
       cd tools
-      uv run pytest tests/declaration/test_published.py -k literals
+      uv run --frozen pytest tests/declaration/test_published.py -k literals
     degraded: >-
       The showcase and the cockpit both announce that they are not configured,
       on every page, which is correct and is the point. Worse than the band is
@@ -528,7 +528,7 @@ steps:
       in the paragraph above them.
     command: |-
       cd tools
-      uv run convener-validate
+      uv run --frozen convener-validate
     degraded: >-
       The Board screen has nobody on it, no ballot can reach a threshold, and
       both gates — approving a speaker, publishing a recording — are
@@ -551,7 +551,7 @@ steps:
       archive page lists nothing.
     command: |-
       cd tools
-      uv run convener-validate
+      uv run --frozen convener-validate
     degraded: >-
       Your showcase publishes an invented series' sessions as though they were
       yours: three events with dates, an archive page, and a feed announcing
@@ -591,8 +591,8 @@ steps:
       carry that charter's colours and its motif.
     command: |-
       cd tools
-      uv run python scripts/generate_brand_css.py --check
-      uv run python scripts/generate_motif.py --check
+      uv run --frozen python scripts/generate_brand_css.py --check
+      uv run --frozen python scripts/generate_motif.py --check
     degraded: >-
       Your showcase, your cockpit, the poster announcing each of your talks
       and every certificate you issue are drawn in another series' colours and
@@ -840,7 +840,7 @@ steps:
       asking for a token.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - VITE_AUTH_PROXY_URL
       - VITE_GITHUB_APP_CLIENT_ID
@@ -870,7 +870,7 @@ steps:
       drain.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - VITE_SIGNUP_RELAY_URL
       - CONVENER_DISPATCH_TOKEN
@@ -955,7 +955,7 @@ steps:
       removes it.
     command: |-
       cd tools
-      uv run python scripts/create_tally_form.py --key-file ../.env
+      uv run --frozen python scripts/create_tally_form.py --key-file ../.env
     degraded: >-
       The form is built by hand, which is slower and, more to the point,
       unverifiable: the two dropdown questions deliver a closed vocabulary the
@@ -1026,7 +1026,7 @@ steps:
       red every single day.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - CONVENER_RETENTION_TOKEN
     integrations:
@@ -1066,13 +1066,13 @@ steps:
       named for the day it was generated.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - CONVENER_SIGNING_KEY
     integrations:
       - signing_key
     walkthrough:
-      - Open a Python shell inside `tools/` with `uv run python`, and generate
+      - Open a Python shell inside `tools/` with `uv run --frozen python`, and generate
         the pair with `from convener_ops.journey.signing import generate; private_pem,
         public_pem = generate()`.
       - Commit the public half first, as `instance/keys/signing/` plus the day it was
@@ -1108,7 +1108,7 @@ steps:
       their absences mean different things, not because there are two values.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - CONVENER_MATCHING_SALT
     integrations:
@@ -1177,7 +1177,7 @@ steps:
       command of its own.
     command: |-
       cd tools
-      uv run convener-notify-digest --dry-run
+      uv run --frozen convener-notify-digest --dry-run
     sets:
       - CONVENER_NOTIFY_THREAD
       - CONVENER_NOTIFY_MENTION
@@ -1198,7 +1198,7 @@ steps:
       `production`.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - CONVENER_SMTP_HOST
       - CONVENER_SMTP_PORT
@@ -1235,7 +1235,7 @@ steps:
       `production`.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - CONVENER_VIDEO_CHANNEL_ID
     integrations:
@@ -1262,7 +1262,7 @@ steps:
       `production`.
     command: |-
       cd tools
-      uv run convener-check-config
+      uv run --frozen convener-check-config
     sets:
       - CONVENER_MEETING_API_TOKEN
     integrations:

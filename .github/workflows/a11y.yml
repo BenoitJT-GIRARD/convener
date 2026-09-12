@@ -37,7 +37,7 @@ name: Accessibility
 #   no finer grain than "the package", so the whole package is watched
 #   rather than the two files this step names directly.
 # - `tools/pyproject.toml`, `tools/uv.lock` -- what that same step's own
-#   `uv run --project tools` resolves and installs.
+#   `uv run --frozen --project tools` resolves and installs.
 # - `.github/workflows/a11y.yml` -- this file.
 #
 # Deliberately absent: `instance/data/speakers.yml` and every other real,
@@ -142,7 +142,7 @@ jobs:
       # this one is discarded with the runner at the end of the job.
       - name: Generate throw-away event keys for accessibility testing
         run: |
-          uv run --project tools python -c '
+          uv run --frozen --project tools python -c '
           import json
 
           from convener_ops.journey import eventkeys

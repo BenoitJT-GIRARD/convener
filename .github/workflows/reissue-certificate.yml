@@ -80,7 +80,7 @@ jobs:
         working-directory: tools
         env:
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Reissue the named certificate
         env:
           EVENT_ID: ${{ steps.resolve.outputs.event_id }}
@@ -115,7 +115,7 @@ jobs:
           git config user.email "convener-certificates@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-reissue-certificate)
+            (cd tools && uv run --frozen convener-reissue-certificate)
             if [ -f "instance/data/events/$EVENT_ID/certificates.yml" ]; then
               git add "instance/data/events/$EVENT_ID/certificates.yml"
             fi

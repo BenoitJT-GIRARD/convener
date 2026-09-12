@@ -72,7 +72,7 @@ def test_the_send_step_exists_and_runs_only_on_success() -> None:
     once the store step has actually landed the record."""
     block = _step_block(_REGISTRATION, "Send the registration confirmation")
     assert "if: success()" in block
-    assert "uv run convener-send-confirmation" in block
+    assert "uv run --frozen convener-send-confirmation" in block
 
 
 def test_the_send_step_carries_every_confirmation_secret() -> None:

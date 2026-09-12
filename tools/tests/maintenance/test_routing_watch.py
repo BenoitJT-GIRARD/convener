@@ -576,7 +576,7 @@ def test_the_check_is_a_step_of_a_job_that_already_runs() -> None:
     assert isinstance(workflow, dict)
     assert sorted(workflow["jobs"]) == ["daily", "immediate"]
     step = _daily_step("Check that registrations can still be queued")
-    assert step["run"] == "uv run convener-check-registration-routing"
+    assert step["run"] == "uv run --frozen convener-check-registration-routing"
 
 
 def test_the_check_runs_even_when_the_sweep_or_the_drain_failed() -> None:

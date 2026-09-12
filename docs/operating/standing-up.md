@@ -2,7 +2,7 @@
 
 *This page is generated from* `declarations/standing-up.yml` — *the one
 declaration of this sequence, which the agent that carries it out reads too.
-Do not edit it: run* `uv run python scripts/generate_standing_up_doc.py` *from* `tools/` *and commit what it writes,
+Do not edit it: run* `uv run --frozen python scripts/generate_standing_up_doc.py` *from* `tools/` *and commit what it writes,
 and continuous integration refuses a page the declaration does not derive.
 Every step, actor, check, command and degradation below comes from that file;
 what an absent integration costs comes from*
@@ -62,7 +62,7 @@ normal state in this project, not an error, and an instance that stops
 halfway down this page is a working instance. The steps where that is *not*
 true say so in those words.
 
-**Run the report.** `uv run convener-check-config`, from `tools/`, prints
+**Run the report.** `uv run --frozen convener-check-config`, from `tools/`, prints
 every integration this product declares, what each one is waiting on, and
 what happens meanwhile. It is the same source the *Without it* paragraphs below
 quote, so it is worth running before the first step and after each of the
@@ -390,7 +390,7 @@ chose.
 
 ```bash
 cd tools
-uv run pytest tests/declaration/test_published.py -k literals
+uv run --frozen pytest tests/declaration/test_published.py -k literals
 ```
 
 **Without it.** The showcase and the cockpit both announce that they are not
@@ -424,7 +424,7 @@ logins nor in the paragraph above them.
 
 ```bash
 cd tools
-uv run convener-validate
+uv run --frozen convener-validate
 ```
 
 **Without it.** The Board screen has nobody on it, no ballot can reach a
@@ -448,7 +448,7 @@ the showcase's archive page lists nothing.
 
 ```bash
 cd tools
-uv run convener-validate
+uv run --frozen convener-validate
 ```
 
 **Without it.** Your showcase publishes an invented series' sessions as though
@@ -488,8 +488,8 @@ screen carry that charter's colours and its motif.
 
 ```bash
 cd tools
-uv run python scripts/generate_brand_css.py --check
-uv run python scripts/generate_motif.py --check
+uv run --frozen python scripts/generate_brand_css.py --check
+uv run --frozen python scripts/generate_motif.py --check
 ```
 
 **Without it.** Your showcase, your cockpit, the poster announcing each of
@@ -748,7 +748,7 @@ rather than a field asking for a token.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Authentication relay** *row of*
@@ -782,7 +782,7 @@ written to a queue branch and confirmed on the next daily drain.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Registration relay** *row of*
@@ -900,7 +900,7 @@ removes it.
 
 ```bash
 cd tools
-uv run python scripts/create_tally_form.py --key-file ../.env
+uv run --frozen python scripts/create_tally_form.py --key-file ../.env
 ```
 
 **Without it.** The form is built by hand, which is slower and, more to the
@@ -978,7 +978,7 @@ retention job is red every single day.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Retention sweep credential** *row of*
@@ -1038,7 +1038,7 @@ public half named for the day it was generated.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Certificate signing key** *row of*
@@ -1062,9 +1062,9 @@ this row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 **In a browser, in full:**
 
-1. Open a Python shell inside `tools/` with `uv run python`, and generate the
-   pair with `from convener_ops.journey.signing import generate; private_pem,
-   public_pem = generate()`.
+1. Open a Python shell inside `tools/` with `uv run --frozen python`, and
+   generate the pair with `from convener_ops.journey.signing import generate;
+   private_pem, public_pem = generate()`.
 2. Commit the public half first, as `instance/keys/signing/` plus the day it
    was generated and a `.pub` suffix. The order is load-bearing, because a
    private secret set before its public half is published lets a job sign a
@@ -1098,7 +1098,7 @@ absences mean different things, not because there are two values.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Registration matching salt** *row of*
@@ -1205,7 +1205,7 @@ it is a command of its own.
 
 ```bash
 cd tools
-uv run convener-notify-digest --dry-run
+uv run --frozen convener-notify-digest --dry-run
 ```
 
 **Without it.** *The* **Board notifications** *row of*
@@ -1235,7 +1235,7 @@ from `absent` to `production`.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Outbound email** *row of*
@@ -1299,7 +1299,7 @@ from `absent` to `production`.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Video channel** *row of*
@@ -1332,7 +1332,7 @@ from `absent` to `production`.
 
 ```bash
 cd tools
-uv run convener-check-config
+uv run --frozen convener-check-config
 ```
 
 **Without it.** *The* **Meeting platform** *row of*

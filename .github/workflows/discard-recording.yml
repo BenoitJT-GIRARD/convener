@@ -71,4 +71,4 @@ jobs:
           # convener-discard-recording finds the manual implementation instead,
           # which holds no recording storage of its own, and exits 0.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
-        run: uv run convener-discard-recording
+        run: uv run --frozen convener-discard-recording

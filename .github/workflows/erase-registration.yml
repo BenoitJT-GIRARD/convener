@@ -51,7 +51,7 @@ on:
         description: >-
           Fallback only, used when no matching code is given: the
           registrant's e-mail address, encrypted for this event with
-          `uv run convener-encrypt-identifier --event <id>
+          `uv run --frozen convener-encrypt-identifier --event <id>
           --email <address>`, from `tools/` -- never the address itself. See this
           file's own header comment for why (D-24).
         required: false
@@ -97,7 +97,7 @@ jobs:
           # trusted operator's own typed input, so a stray quote in
           # `inputs.event_id` cannot break out of this payload.
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Erase the named registration
         env:
           EVENT_ID: ${{ inputs.event_id }}
@@ -120,7 +120,7 @@ jobs:
           git config user.email "convener-erasure@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-erase-registration)
+            (cd tools && uv run --frozen convener-erase-registration)
             if [ -f "instance/data/events/$EVENT_ID/registrations.enc" ]; then
               git add "instance/data/events/$EVENT_ID/registrations.enc"
             fi

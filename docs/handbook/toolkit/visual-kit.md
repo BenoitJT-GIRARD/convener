@@ -64,7 +64,7 @@ the charter's and every name in it is this series'. The charter is
 `instance/data/brand.json` if your series wrote one and the directory under
 `assets/brand/` that `instance/config.json` names if it did not. To
 change one, change the charter or the declaration and run
-`uv run python scripts/generate_brand_css.py` from `tools/`; the same
+`uv run --frozen python scripts/generate_brand_css.py` from `tools/`; the same
 command's `--check` fails the build if a template stops agreeing with them.
 
 That is also how they stopped carrying a palette nobody had chosen. Both files

@@ -225,7 +225,7 @@ jobs:
       # job that only ever calls this one command.
       - name: Render the visual fixtures (pure Python/HTML, no browser yet)
         run: |
-          uv run --project tools convener-render-visual-fixtures "${{ runner.temp }}/visual-fixtures"
+          uv run --frozen --project tools convener-render-visual-fixtures "${{ runner.temp }}/visual-fixtures"
       # Restored *before* `npm ci` so its own postinstall download
       # (`puppeteer`'s pinned Chrome-for-Testing build) can be skipped
       # entirely on a cache hit -- keyed on this package's own lockfile,

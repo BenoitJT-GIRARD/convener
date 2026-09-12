@@ -658,7 +658,7 @@ def test_the_recording_step_is_a_step_of_a_job_that_already_runs() -> None:
     """The whole economy of the phase. A workflow or a job created to watch
     the queue would cost a billed run every single day, which is the cost
     this feature exists to remove."""
-    assert "uv run convener-record-queue-watch" in _SWEEP
+    assert "uv run --frozen convener-record-queue-watch" in _SWEEP
     jobs = safe_load(_SWEEP)
     assert isinstance(jobs, dict)
     assert sorted(jobs["jobs"]) == ["daily", "immediate"]

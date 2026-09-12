@@ -169,7 +169,7 @@ def test_the_workflow_generates_event_keys_before_building_the_app() -> None:
 
 def test_the_site_build_never_regenerates_data_from_the_private_repository() -> None:
     """Unlike `publish-showcase.yml`'s own "Refresh site data" step, this
-    job must never run `uv run convener-public-data` (or an equivalent) to
+    job must never run `uv run --frozen convener-public-data` (or an equivalent) to
     overwrite `site/src/_data/events.json` from `instance/data/speakers.yml` --
     that data is private, a fork PR has no access to it, and this preview
     exists to reread a template or layout change against the committed

@@ -609,7 +609,7 @@ def test_the_confirming_step_runs_only_after_a_drain_that_pushed() -> None:
         s for s in loaded["jobs"]["daily"]["steps"] if s.get("id") == "queue-confirm"
     )
     assert "steps.queue-drain.outcome == 'success'" in step["if"]
-    assert step["run"] == "uv run convener-confirm-queued-registrations"
+    assert step["run"] == "uv run --frozen convener-confirm-queued-registrations"
 
 
 def test_the_confirming_step_carries_the_transport_the_immediate_lane_uses() -> None:

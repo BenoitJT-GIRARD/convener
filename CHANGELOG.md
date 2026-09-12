@@ -38,7 +38,7 @@ disagree, so a release that bumps one and forgets the other never lands.
 *The lists below are generated from* `declarations/boundary.yml` *and from this
 repository's own index: the paths a merge can arrive at that are not
 upstream's to change. Do not edit this block — run*
-`uv run python scripts/generate_changelog.py`
+`uv run --frozen python scripts/generate_changelog.py`
 *from* `tools/` *and commit what it writes.*
 
 **Yours, by the declaration.** Upstream ships each of these filled in for
@@ -164,6 +164,13 @@ the day they were written; the lesson had never crossed into Python.
 - **The salt behind every matching code licensed any generator**, on the one
   value the sequence forbids rotating. Three exact commands now, Python
   first, and `Get-Random` named as the trap it is.
+- **Every documented command rewrote `tools/uv.lock` as you typed it.**
+  `gates.sh`'s header states the rule — an unfrozen `uv run` rewrites the
+  lockfile, which is a change to the environment made by the act of checking
+  it — and `gates.sh` was the only thing that followed it. 133 invocations
+  across 46 files now carry `--frozen`, and a reading in
+  `test_typed_commands.py` refuses the next one that does not. The lockfile
+  also names the version `pyproject.toml` names, which it had stopped doing.
 - **A step asked for a control that does not exist.** `dependency_updates`
   sent an operator to a Settings toggle for Dependabot version updates, and
   GitHub replaces that toggle with a *Configure* button whenever

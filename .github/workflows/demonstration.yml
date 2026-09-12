@@ -148,7 +148,7 @@ jobs:
       - name: Build the demonstration
         run: |
           set -euo pipefail
-          uv run --project tools python tools/scripts/demonstration_build.py \
+          uv run --frozen --project tools python tools/scripts/demonstration_build.py \
             "${RUNNER_TEMP}/demonstration" --url "${DEMONSTRATION_URL}"
         env:
           DEMONSTRATION_URL: ${{ steps.address.outputs.url }}

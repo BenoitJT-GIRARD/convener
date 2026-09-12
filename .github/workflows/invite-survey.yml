@@ -84,7 +84,7 @@ jobs:
           # trusted operator input: toJSON, never string interpolation, so
           # a stray quote in event_id cannot break out of the payload.
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Invite the post-event survey
         # id: so the recording step below can read this step's own
         # `record` output (written by convener-invite-survey itself, straight
@@ -117,7 +117,7 @@ jobs:
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
-        run: uv run convener-invite-survey
+        run: uv run --frozen convener-invite-survey
       - name: Record the invitation
         # Only once convener-invite-survey actually sent at least one message
         # this run -- see that command's own docstring for why the gate is
@@ -135,7 +135,7 @@ jobs:
           git config user.email "convener-survey-invite@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-record-survey-invitation)
+            (cd tools && uv run --frozen convener-record-survey-invitation)
             git add instance/data/survey-invitations.yml
             if git diff --staged --quiet; then
               echo "no change to commit"

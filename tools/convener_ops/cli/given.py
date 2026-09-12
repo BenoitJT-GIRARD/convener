@@ -7,7 +7,7 @@ under, the address it names, the event an attendance export belongs to,
 and the ids and day a key destruction is recorded for. All of them are
 driven by environment variable in continuous integration, because that is
 how a workflow passes a value into a step (`env:`), and every one of them
-was **only** that -- `EVENT_ID=<event id> uv run convener-...`, a shape
+was **only** that -- `EVENT_ID=<event id> uv run --frozen convener-...`, a shape
 Windows PowerShell 5.1 has no form of at all. It is not a wording
 problem: there is no third spelling both shells accept, so the page
 telling a Windows operator to run one of these was telling them to type

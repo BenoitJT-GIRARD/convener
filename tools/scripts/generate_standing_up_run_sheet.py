@@ -49,8 +49,8 @@ which is what `--check` refuses, without repairing it.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_standing_up_run_sheet.py            # write
-    uv run python scripts/generate_standing_up_run_sheet.py --check    # assert
+    uv run --frozen python scripts/generate_standing_up_run_sheet.py            # write
+    uv run --frozen python scripts/generate_standing_up_run_sheet.py --check    # assert
 
 There is no mode that prints the page, for the reason the page generator
 gives: nothing this repository's Python writes to a terminal is allowed to be
@@ -88,7 +88,7 @@ RUN_SHEET_PATH: Final = Path("docs") / "operating" / "standing-up-for-an-agent.m
 GENERATOR: Final = "tools/scripts/generate_standing_up_run_sheet.py"
 
 #: What to run to rewrite it.
-COMMAND: Final = "uv run python scripts/generate_standing_up_run_sheet.py"
+COMMAND: Final = "uv run --frozen python scripts/generate_standing_up_run_sheet.py"
 
 #: The page every agent reaches this one through, and now the only route in:
 #: nothing discovers a page under `docs/` on its own.
@@ -98,7 +98,7 @@ ENTRY_POINT: Final = "AGENTS.md"
 #: it is run from. Two constants rather than one string: `cd tools && ...`
 #: is one line a POSIX shell runs and one line Windows PowerShell 5.1
 #: refuses, and this page is written for whatever an agent is running on.
-REPORT: Final = "uv run convener-check-config"
+REPORT: Final = "uv run --frozen convener-check-config"
 REPORT_FROM: Final = "tools/"
 
 #: `actor`, translated into the one thing an agent does about it. Fixed

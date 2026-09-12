@@ -23,7 +23,7 @@ Skip this section entirely if the series' own meeting-platform account handled t
 Otherwise, before anyone can issue certificates: download the attendance export from wherever the session actually ran, then encrypt and commit it.
 
 1. Save it locally as `instance/data/events/<event id>/attendance-import.csv` (never commit this file directly — it holds names and addresses in the clear).
-2. From `tools/`, run `uv run convener-encrypt-attendance-export --event <event id>`. This needs no account and no secret; it only reads the event's already-published public key.
+2. From `tools/`, run `uv run --frozen convener-encrypt-attendance-export --event <event id>`. This needs no account and no secret; it only reads the event's already-published public key.
 3. Commit and push the `attendance-import.csv.enc` file this writes.
 
 See `docs/operating/operations.md` ("Encrypting the manual attendance export") for the full procedure. Tick the matching line below once this is done — issuing certificates re-reads this file, so nothing can proceed without it.

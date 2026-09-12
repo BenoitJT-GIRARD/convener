@@ -57,7 +57,7 @@ second answer is the one that goes quietly out of date.
 
 **Who is on the Board, whether every entry is a real GitHub login yet, and how
 today's headcount sits against the target** are all read from `instance/data/config.yml`
-— on the Board screen in the workspace, and by `uv run convener-validate`
+— on the Board screen in the workspace, and by `uv run --frozen convener-validate`
 run from `tools/`, which prints the headcount against the target as a plain
 `Note:` line beside its verdict. **Whether any speaker has been asked for
 publication consent** is read the same way, from `instance/data/speakers.yml`: nothing

@@ -1,7 +1,7 @@
 # Carrying out the standing-up sequence
 
 This page is generated from `declarations/standing-up.yml`, the one
-declaration of this sequence. Do not edit it: run `uv run python
+declaration of this sequence. Do not edit it: run `uv run --frozen python
 scripts/generate_standing_up_run_sheet.py` from `tools/` and commit what it
 writes, and continuous integration refuses a page the declaration does not
 derive. `docs/operating/standing-up.md` is the same declaration rendered for a
@@ -46,9 +46,10 @@ whoever minted it.
 1. Read `declarations/standing-up.yml` from its first line to its last, header
    included. The header states what each field means, why a step belongs to a
    person or to an agent, and the five places where the order carries weight.
-2. Run `uv run convener-check-config` from `tools/` and show the person what
-   it prints. Each row reported absent is a step below that has not happened
-   yet, and that row's `meanwhile:` line is what its absence costs today.
+2. Run `uv run --frozen convener-check-config` from `tools/` and show the
+   person what it prints. Each row reported absent is a step below that has
+   not happened yet, and that row's `meanwhile:` line is what its absence
+   costs today.
 3. Work out where the sequence has already got to from the checks, never from
    what anybody remembers doing. Resuming a half-standing instance is the
    ordinary case, not the exception.
@@ -103,8 +104,9 @@ The check belongs to the step, not to you. Satisfy the one the declaration
 gives, as it is written.
 
 - Where it names a command, run the command and read what it prints.
-- Where it names the configuration report, run `uv run convener-check-config`
-  from `tools/` and find the row the check names by its own label.
+- Where it names the configuration report, run `uv run --frozen
+  convener-check-config` from `tools/` and find the row the check names by its
+  own label.
 - Where it can only be read in a browser, ask the person what the page shows
   and take their answer. Asking is the check working; inferring is the check
   skipped.
@@ -242,8 +244,8 @@ or handing it over.
 
 ## When the sequence ends
 
-- Run `uv run convener-check-config` from `tools/` once more and show the
-  person every row and its state.
+- Run `uv run --frozen convener-check-config` from `tools/` once more and show
+  the person every row and its state.
 - Confirm no `.env` is left anywhere in the working tree.
 - Confirm the working tree holds nothing else you did not mean to leave in it.
 - List the steps that were not done and what each costs, from the declaration.

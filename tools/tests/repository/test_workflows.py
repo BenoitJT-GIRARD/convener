@@ -222,7 +222,7 @@ def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() ->
     assert 'git fetch origin "$GITHUB_REF_NAME"' in script
     assert 'git reset --hard "origin/$GITHUB_REF_NAME"' in script
     assert (
-        "uv run convener-survey-status-public-data"
+        "uv run --frozen convener-survey-status-public-data"
         in script.split("for attempt", 1)[-1]
     ), (
         "the retry loop must re-run the projection command on every "
@@ -4669,7 +4669,7 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 #      inputs under that directory is the registry's answer, not the
 #      directory listing.
 #   3. `_repository_paths_in_source` -- the `tools/` commands `deploy.yml`
-#      runs, read from the entry point each `uv run convener-...` names in
+#      runs, read from the entry point each `uv run --frozen convener-...` names in
 #      `tools/pyproject.toml` and parsed for the `repo_root() / ...`
 #      paths each one builds.
 #
@@ -4756,8 +4756,8 @@ _JS_INSTANCE_PATHS: Final = {
 #: An argument-less call, which is the form each of those names takes.
 _JS_NAMED_PATH_RE = re.compile(r"([A-Za-z_$][\w$]*)\(\)")
 
-#: `uv run convener-something` inside one of `deploy.yml`'s own `run:` blocks.
-_UV_RUN_RE = re.compile(r"\buv run (convener-[a-z0-9-]+)")
+#: `uv run --frozen convener-something` inside one of `deploy.yml`'s own `run:` blocks.
+_UV_RUN_RE = re.compile(r"\buv run --frozen (convener-[a-z0-9-]+)")
 
 #: The files under `app/` that the deploy build compiles or executes.
 #: `tests/` and `public/` are deliberately absent -- see this section's
@@ -5017,7 +5017,7 @@ def test_every_published_handbook_path_really_exists_under_docs() -> None:
 
 
 def _deploy_entry_points() -> list[tuple[str, Callable[[], int]]]:
-    """Every `uv run convener-...` command `deploy.yml` runs, resolved through
+    """Every `uv run --frozen convener-...` command `deploy.yml` runs, resolved through
     `tools/pyproject.toml`'s own `[project.scripts]` table to the function
     that command actually executes."""
     scripts = tomllib.loads(
@@ -5027,7 +5027,7 @@ def _deploy_entry_points() -> list[tuple[str, Callable[[], int]]]:
     resolved: list[tuple[str, Callable[[], int]]] = []
     for command in sorted(set(_UV_RUN_RE.findall(workflow))):
         assert command in scripts, (
-            f"deploy.yml runs `uv run {command}`, which "
+            f"deploy.yml runs `uv run --frozen {command}`, which "
             "tools/pyproject.toml declares no entry point for -- the "
             "workflow would fail at that step"
         )
@@ -5037,9 +5037,9 @@ def _deploy_entry_points() -> list[tuple[str, Callable[[], int]]]:
         )
         resolved.append((command, function))
     assert resolved, (
-        "no `uv run convener-...` command was found in deploy.yml -- the Python "
-        "half of the input derivation would then be empty and this whole "
-        "check would quietly narrow"
+        "no `uv run --frozen convener-...` command was found in deploy.yml -- "
+        "the Python half of the input derivation would then be empty and this "
+        "whole check would quietly narrow"
     )
     return resolved
 

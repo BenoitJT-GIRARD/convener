@@ -9,7 +9,7 @@ holds no source: every byte there is reproducible from this directory.
 
 `src/_data/events.json` is committed here as a build fixture only. In CI it is
 overwritten from `instance/public-data/events-public.json`
-(`uv run convener-public-data`, `tools/`) before every build; a local edit is not preserved.
+(`uv run --frozen convener-public-data`, `tools/`) before every build; a local edit is not preserved.
 
 The file is the product's, so every invented value in it is written to belong
 to no instance. The edition codes and the forum threads are the one exception

@@ -8,7 +8,7 @@ name: Quality
 # A path filter here would either cover so much of the repository that it
 # saved nothing, or risk exactly the "regression ships green" failure a
 # path filter exists to avoid: the `python` job's own "Decision register" step
-# (`uv run convener-register --check`) compares `docs/handbook/governance/register.md`
+# (`uv run --frozen convener-register --check`) compares `docs/handbook/governance/register.md`
 # against the *entire* commit history, not against any one file's diff --
 # a decision-grammar commit whose only change sits outside whatever a
 # filter watched would still need this check to run, and there is no path
@@ -215,25 +215,25 @@ jobs:
         # ruff hooks in `.pre-commit-config.yaml` cover the same set, and
         # `tools/tests/repository/test_lint_scope.py` reads both files and compares
         # what each one reaches file by file.
-        run: uv run ruff check .
+        run: uv run --frozen ruff check .
       - name: Format check
         working-directory: tools
-        run: uv run ruff format --check .
+        run: uv run --frozen ruff format --check .
       - name: Types
         working-directory: tools
-        run: uv run mypy
+        run: uv run --frozen mypy
       - name: Security patterns
         working-directory: tools
-        run: uv run bandit -q -r convener_ops
+        run: uv run --frozen bandit -q -r convener_ops
       - name: Dependency audit
         working-directory: tools
-        run: uv run pip-audit
+        run: uv run --frozen pip-audit
       - name: Tests
         working-directory: tools
-        run: uv run pytest --cov=convener_ops --cov-report=term-missing
+        run: uv run --frozen pytest --cov=convener_ops --cov-report=term-missing
       - name: Integration status
         working-directory: tools
-        run: uv run convener-check-config
+        run: uv run --frozen convener-check-config
       - name: Commit messages
         working-directory: tools
         env:
@@ -250,7 +250,7 @@ jobs:
           # here, because a range that quietly resolves to nothing is a green
           # check that read no commit, and shell in a workflow file is the one
           # place nothing can test.
-          range="$(uv run convener-commit-range)"
+          range="$(uv run --frozen convener-commit-range)"
           # Intentional, not an oversight: `commit_format.commit_range()`'s
           # own docstring says the workflow "reads them unquoted into
           # `git log`, so this prints one line and nothing else."
@@ -262,7 +262,7 @@ jobs:
           # project's own tests: PyYAML has no opinion on shell inside a
           # `run:` block.
           # shellcheck disable=SC2086
-          git log --format=%B%x00 $range | uv run convener-check-commits
+          git log --format=%B%x00 $range | uv run --frozen convener-check-commits
       - name: Decision register
         working-directory: tools
         # `docs/handbook/governance/register.md` is derived from the commit history and
@@ -272,7 +272,7 @@ jobs:
         # nothing and fails if the committed file is not what the history
         # gives. Byte-comparable because the rendering reads no clock and no
         # data file, only the commits.
-        run: uv run convener-register --check
+        run: uv run --frozen convener-register --check
       - name: Schema appendix
         working-directory: tools
         # `docs/engineering/schema.md` is derived from `app/src/data/types.ts`,
@@ -285,7 +285,7 @@ jobs:
         # Unlike the register above, this reads no history at all, only two
         # files in the tree, so it would be satisfied by the shallow clone the
         # other jobs take; it runs here because this is the job that has `uv`.
-        run: uv run python scripts/generate_schema_doc.py --check
+        run: uv run --frozen python scripts/generate_schema_doc.py --check
       - name: Standing-up guide
         working-directory: tools
         # `docs/operating/standing-up.md` is derived from
@@ -297,7 +297,7 @@ jobs:
         # assertion-only run as the two around it: writes nothing, fails if
         # the committed page is not what the declaration and
         # `declarations/integrations.yml` give.
-        run: uv run python scripts/generate_standing_up_doc.py --check
+        run: uv run --frozen python scripts/generate_standing_up_doc.py --check
       - name: Standing-up run sheet
         working-directory: tools
         # The second rendering of that same declaration:
@@ -308,7 +308,7 @@ jobs:
         # corrected without the run sheet beside it is the drift the step
         # above exists to refuse, one artefact further along. Assertion-only,
         # like the rest.
-        run: uv run python scripts/generate_standing_up_run_sheet.py --check
+        run: uv run --frozen python scripts/generate_standing_up_run_sheet.py --check
       - name: Brand tokens and templates
         working-directory: tools
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
@@ -326,7 +326,7 @@ jobs:
         # below WCAG AA rather than only one that disagrees with a file.
         # That last clause is what lets the product ship a default palette
         # at all, so it has to run here and not only in pytest.
-        run: uv run python scripts/generate_brand_css.py --check
+        run: uv run --frozen python scripts/generate_brand_css.py --check
       - name: Chrome motif
         working-directory: tools
         # site/src/_data/motif.json and app/src/design/motif.ts carry the
@@ -337,7 +337,7 @@ jobs:
         # left every public page drawing the old one. Same assertion-only
         # run as the checks around it: writes nothing, fails if either
         # committed file is not what the charter's family derives.
-        run: uv run python scripts/generate_motif.py --check
+        run: uv run --frozen python scripts/generate_motif.py --check
       - name: Directory map
         working-directory: tools
         # `docs/engineering/architecture.md` and `README.md` each carried a
@@ -356,7 +356,7 @@ jobs:
         # depth of checkout carries an index, so unlike the register above
         # this needs no history at all; it runs in this job because this is
         # the job that has `uv`.
-        run: uv run python scripts/generate_directory_map.py --check
+        run: uv run --frozen python scripts/generate_directory_map.py --check
       - name: Rule index
         working-directory: tools
         # Fifteen governance rules carry a number and no page listed them.
@@ -375,7 +375,7 @@ jobs:
         # sequence being closed up fails here. Assertion-only, like the
         # seven above: writes nothing, and reads the pages rather than the
         # index, so an index that agreed with a holed sequence still fails.
-        run: uv run python scripts/generate_rule_index.py --check
+        run: uv run --frozen python scripts/generate_rule_index.py --check
       - name: Changelog
         working-directory: tools
         # Two halves, and the second is what this step is really for.
@@ -389,7 +389,7 @@ jobs:
         # `tools/pyproject.toml` declares. Assertion-only, like the six
         # above: writes nothing, and fails on a release that bumped one of
         # the two numbers.
-        run: uv run python scripts/generate_changelog.py --check
+        run: uv run --frozen python scripts/generate_changelog.py --check
 
   # The former `typescript`, `site` and `spelling` jobs, merged.
   # Three jobs, one Node, one checkout -- and `app/`'s own `npm ci` run
@@ -525,7 +525,7 @@ jobs:
         working-directory: site
         run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs
       # The same quality chain this project already holds Python to
-      # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
+      # (`uv run --frozen pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
       # axe-core, puppeteer-core) went unaudited until this step existed.
       # Queries npm's own advisory database, the identical shape of network
       # call `pip-audit` already makes in this same chain; not a test, and

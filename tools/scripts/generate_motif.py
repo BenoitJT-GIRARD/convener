@@ -65,8 +65,8 @@ writes a colour.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_motif.py            # write the files
-    uv run python scripts/generate_motif.py --check    # assert only
+    uv run --frozen python scripts/generate_motif.py            # write the files
+    uv run --frozen python scripts/generate_motif.py --check    # assert only
 
 There is no mode that prints a file, and nothing this repository's Python
 writes to a terminal may be non-ASCII.
@@ -90,7 +90,7 @@ APP_MODULE_PATH: Final = Path("app") / "src" / "design" / "motif.ts"
 
 #: How the script is invoked, quoted in every failure message. One string,
 #: so the messages cannot come to name two different commands.
-COMMAND: Final = "uv run python scripts/generate_motif.py"
+COMMAND: Final = "uv run --frozen python scripts/generate_motif.py"
 
 #: The square the drawing is computed on. See the module docstring.
 CANVAS: Final = 400.0

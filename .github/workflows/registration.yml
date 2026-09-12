@@ -80,7 +80,7 @@ jobs:
           # substituted into a shell script -- the same discipline
           # candidate-form.yml already applies to PROPOSAL_PAYLOAD.
           REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Decrypt, store and commit the registration
         id: handle
         env:
@@ -122,7 +122,7 @@ jobs:
           git config user.email "convener-registration@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-handle-registration)
+            (cd tools && uv run --frozen convener-handle-registration)
             git add "instance/data/events/$EVENT_ID/registrations.enc"
             if git diff --staged --quiet; then
               echo "no change to commit"
@@ -178,4 +178,4 @@ jobs:
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
-        run: uv run convener-send-confirmation
+        run: uv run --frozen convener-send-confirmation

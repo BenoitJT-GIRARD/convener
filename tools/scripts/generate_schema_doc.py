@@ -41,8 +41,8 @@ page.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_schema_doc.py            # write the page
-    uv run python scripts/generate_schema_doc.py --check    # assert only
+    uv run --frozen python scripts/generate_schema_doc.py            # write the page
+    uv run --frozen python scripts/generate_schema_doc.py --check    # assert only
 
 There is no mode that prints the page: the appendix is written in the
 handbook's British English and the rest of it, and nothing this repository's
@@ -69,7 +69,7 @@ DOC_PATH: Final = Path("docs") / "engineering" / "schema.md"
 
 #: How the script is invoked, quoted in the page and in the failure message.
 #: One string, so the page and the message cannot come to name two commands.
-COMMAND: Final = "uv run python scripts/generate_schema_doc.py"
+COMMAND: Final = "uv run --frozen python scripts/generate_schema_doc.py"
 
 
 # --------------------------------------------------------------------------

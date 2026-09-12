@@ -56,4 +56,4 @@ jobs:
           enable-cache: true
       - name: Validate
         working-directory: tools
-        run: uv run convener-validate
+        run: uv run --frozen convener-validate

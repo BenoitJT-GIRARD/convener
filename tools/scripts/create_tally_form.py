@@ -76,7 +76,7 @@ each time for no reason other than the interpreter's own hash seed.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/create_tally_form.py --key-file ../.env
+    uv run --frozen python scripts/create_tally_form.py --key-file ../.env
 
 `--key-file` names a file holding `TALLY_API_KEY=` and the key, which
 `.gitignore` already refuses to track, rather than putting the key on the

@@ -49,8 +49,8 @@ a repository that still held the wrong page.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_standing_up_doc.py            # write it
-    uv run python scripts/generate_standing_up_doc.py --check    # assert
+    uv run --frozen python scripts/generate_standing_up_doc.py            # write it
+    uv run --frozen python scripts/generate_standing_up_doc.py --check    # assert
 
 There is no mode that prints the page: it is written in the handbook's British
 English and the rest of it, and nothing this repository's Python writes to a
@@ -84,7 +84,7 @@ DOC_PATH: Final = Path("docs") / "operating" / "standing-up.md"
 INTEGRATIONS_PATH: Final = Path("declarations") / "integrations.yml"
 
 #: What to run, named in the page itself so nobody edits the page instead.
-COMMAND: Final = "uv run python scripts/generate_standing_up_doc.py"
+COMMAND: Final = "uv run --frozen python scripts/generate_standing_up_doc.py"
 
 #: The declaration's own format version.
 DECLARATION_VERSION: Final = 1
@@ -644,7 +644,7 @@ normal state in this project, not an error, and an instance that stops
 halfway down this page is a working instance. The steps where that is *not*
 true say so in those words.
 
-**Run the report.** `uv run convener-check-config`, from `tools/`, prints
+**Run the report.** `uv run --frozen convener-check-config`, from `tools/`, prints
 every integration this product declares, what each one is waiting on, and
 what happens meanwhile. It is the same source the *Without it* paragraphs below
 quote, so it is worth running before the first step and after each of the
