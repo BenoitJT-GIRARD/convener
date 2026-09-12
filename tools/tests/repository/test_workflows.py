@@ -5865,13 +5865,18 @@ def _range_floor_major(spec: str) -> int | None:
     alternative -- `>=22.12.0` -- states a floor the toolchain cannot get
     under, and those are the ones the check below rests on.
 
-    A floor, and deliberately not a full range check. It cannot see that
+    A floor, and not a full range check. It cannot see that
     `^20.19.0 || ^22.13.0 || >=24` excludes 23 outright, so a repository
-    that moved to 23 would pass here and fail on the runner. Reading a
-    lock file's whole semver grammar to catch that would be a semver
-    implementation living in a test; the floor catches the drift this
-    section exists for -- staying on a runtime the packages have left --
-    and the gap is written down rather than left to be discovered.
+    that moved to 23 would pass here and fail on the runner. What it does
+    catch is the drift this section exists for -- staying on a runtime the
+    packages have left -- and it catches it in majors, which is the unit
+    `.nvmrc` is written in.
+
+    `test_node_floor.py` reads the rest of that grammar. It holds the
+    finer question inside the one line `.nvmrc` names: whether a
+    `package.json` admits a version of that line its own lock file
+    refuses, which is what `>=24` did against `jsdom`'s 24.15.0 until a
+    maintainer's machine happened to be old enough to be told.
     """
     floors = [
         floor

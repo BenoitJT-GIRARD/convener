@@ -277,8 +277,10 @@ ROOT_FILE_PURPOSE: Final[Mapping[str, str]] = {
         "can drift from it."
     ),
     ".nvmrc": (
-        "The Node version, written once and read by every workflow and "
-        "every local install."
+        "The Node line every workflow installs, read by name rather than "
+        "restated: a bare major, so a runner takes the newest release of "
+        "that line. What a tree needs of it is that tree's own "
+        "`engines.node`, measured from its lock file."
     ),
     ".pre-commit-config.yaml": (
         "The optional local hook: the formatting, linting, secret scanning "

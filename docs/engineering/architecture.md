@@ -100,7 +100,7 @@ And the files at the root, which no row above accounts for:
 | `.gitattributes` | product | How git treats each kind of file: line endings, which extensions are binary, and the one calendar file whose format requires the endings the blanket rule would otherwise strip. |
 | `.gitignore` | product | Everything a working copy grows that this repository does not track: both dependency trees, the virtual environment, every build output, and every shape of `.env` but the example. |
 | `.gitleaks.toml` | product | What the secret scanner may pass over, with the reason beside it. The workflow and the local hook both find it by name, so neither can drift from it. |
-| `.nvmrc` | product | The Node version, written once and read by every workflow and every local install. |
+| `.nvmrc` | product | The Node line every workflow installs, read by name rather than restated: a bare major, so a runner takes the newest release of that line. What a tree needs of it is that tree's own `engines.node`, measured from its lock file. |
 | `.pre-commit-config.yaml` | product | The optional local hook: the formatting, linting, secret scanning and British-English spelling continuous integration runs anyway, offered before a commit instead of after a push. |
 | `ADDITIONAL-TERM.md` | product | The one term section 7 of the licence adds: the name and the mark declined under its paragraph e. `LICENSE` says where to find it, below the licence text, where GitHub's detector does not read. |
 | `AGENTS.md` | product | The one page an agent reads first. It carries no procedure of its own; it says where each one lives. |

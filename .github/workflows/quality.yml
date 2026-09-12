@@ -594,9 +594,9 @@ jobs:
   # `wrangler` 4, whose own `engines.node` reads `>=22.0.0`, so the two on
   # 20 were the ones testing something other than what they ship. One
   # version is now the repository-wide rule
-  # (tools/tests/repository/test_workflows.py::test_every_workflow_installs_the_same_
-  # node_version), which is what makes a single step here correct rather
-  # than merely tidier.
+  # (tools/tests/repository/test_workflows.py::test_every_workflow_reads_the_
+  # node_version_from_the_one_file), which is what makes a single step here
+  # correct rather than merely tidier.
   relays:
     runs-on: ubuntu-latest
     # 10 + 10 + 10, the three jobs this replaces. See the header: the
