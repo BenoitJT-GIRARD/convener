@@ -77,7 +77,13 @@ interface Backend {
  * is none in the real answer either and a test that invented one would be
  * describing a screen this repository must never have.
  */
-function makeBackend(options: { secretNames?: string[]; refuseSecrets?: boolean } = {}): Backend {
+function makeBackend(
+  options: { secretNames?: string[]; refuseSecrets?: boolean; refuseWith?: number } = {},
+): Backend {
+  // 403 unless the test says otherwise: that is what a user-to-server token
+  // gets for a permission its App does not hold, and it is the refusal the
+  // screen has to read as a boundary rather than as a failure.
+  const refusalStatus = options.refuseWith ?? 403;
   const files = realConfig();
   const subjects: string[] = [];
   let counter = 0;
@@ -90,7 +96,7 @@ function makeBackend(options: { secretNames?: string[]; refuseSecrets?: boolean 
     }
     if (url.endsWith('/actions/secrets?per_page=100')) {
       if (options.refuseSecrets) {
-        return Promise.resolve({ ok: false, status: 403, text: async () => 'no access' });
+        return Promise.resolve({ ok: false, status: refusalStatus, text: async () => 'no access' });
       }
       return Promise.resolve({
         ok: true,
@@ -101,7 +107,7 @@ function makeBackend(options: { secretNames?: string[]; refuseSecrets?: boolean 
     }
     if (url.endsWith('/actions/variables?per_page=100')) {
       if (options.refuseSecrets) {
-        return Promise.resolve({ ok: false, status: 403, text: async () => 'no access' });
+        return Promise.resolve({ ok: false, status: refusalStatus, text: async () => 'no access' });
       }
       return Promise.resolve({ ok: true, json: async () => ({ variables: [] }) });
     }
@@ -436,12 +442,26 @@ describe('the integrations it reports and never accepts', () => {
     expect(screen.getAllByText(/Without it/).length).toBeGreaterThan(5);
   });
 
-  it('says it could not ask rather than reporting everything absent', async () => {
+  it('reads a refusal of rights as a boundary, and says there is nothing to do', async () => {
     renderSettings(makeBackend({ refuseSecrets: true }));
     expect(
-      await screen.findByText(/GitHub did not say which secrets and variables/, undefined, FIRST_RENDER),
+      await screen.findByText(/deliberately not allowed to list them/, undefined, FIRST_RENDER),
     ).toBeInTheDocument();
+    // The sentence a volunteer leaves on: not where they may not go.
+    expect(screen.getByText(/nothing here for you to do/)).toBeInTheDocument();
     expect(screen.queryByText(/Not set:/)).not.toBeInTheDocument();
+  });
+
+  it('reads any other failure as a call that failed, and says to try again', async () => {
+    // The distinction this screen would otherwise get wrong in the more
+    // costly direction: an outage rendered as a boundary tells an operator
+    // to stop trying, about something that would have worked in a minute.
+    renderSettings(makeBackend({ refuseSecrets: true, refuseWith: 500 }));
+    expect(
+      await screen.findByText(/GitHub did not answer/, undefined, FIRST_RENDER),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/worth trying again/)).toBeInTheDocument();
+    expect(screen.queryByText(/deliberately not allowed/)).not.toBeInTheDocument();
   });
 });
 

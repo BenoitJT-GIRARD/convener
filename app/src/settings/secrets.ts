@@ -35,13 +35,25 @@
  * silently reports "absent" for something it simply did not get to see --
  * that is the failure mode the whole file exists to avoid.
  */
-import { gh } from '../github/client';
+import { gh, GitHubError } from '../github/client';
 import type { Integration } from './declaration';
 
 /** Where an operator sets these, named once so the screen and its refusal
  *  sentence agree. */
 export const SECRETS_SETTINGS_PATH =
   "GitHub's Settings → Secrets and variables → Actions";
+
+/** Why the listing did not happen, which is not the same question as
+ *  whether an integration is set.
+ *
+ *  `not-permitted` is a boundary: GitHub answered, and the answer was that
+ *  this sign-in may not read the repository's Actions settings. Nothing is
+ *  wrong and nothing is worth retrying. `unanswered` is everything else --
+ *  a rate limit, an outage, a network that never reached a response -- and
+ *  it is worth retrying. They print differently because they are different
+ *  facts, and because a screen that called an outage a boundary would be
+ *  telling an operator to stop trying. */
+export type RefusalKind = 'not-permitted' | 'unanswered';
 
 /** The names GitHub answered with, or the sentence saying why it did not.
  *  Never a value of either kind. */
@@ -50,6 +62,9 @@ export interface SecretNames {
   variables: string[];
   /** Non-null when the question could not be asked. */
   refusal: string | null;
+  /** Which of the two it was, for the one statement the section prints.
+   *  `null` exactly when `refusal` is. */
+  refusalKind: RefusalKind | null;
 }
 
 /** A declared name carrying a `<...>` placeholder is a *family*, not a
@@ -87,30 +102,66 @@ export async function loadSecretNames(token: string): Promise<SecretNames> {
       secrets: namesOf(secrets, 'secrets'),
       variables: namesOf(variables, 'variables'),
       refusal: null,
+      refusalKind: null,
     };
   } catch (error) {
     const said = error instanceof Error ? error.message : String(error);
+    // 403 is what a user-to-server token gets for a permission its App does
+    // not hold; 404 is what GitHub answers for a resource a token may not
+    // know exists, which is the same refusal wearing a quieter hat. Anything
+    // else is a call that failed, and saying so is the whole point of
+    // telling the two apart.
+    const status = error instanceof GitHubError ? error.status : null;
+    const kind: RefusalKind =
+      status === 403 || status === 404 ? 'not-permitted' : 'unanswered';
     return {
       secrets: [],
       variables: [],
+      refusalKind: kind,
       refusal:
-        'GitHub did not say which secrets and variables this repository holds ' +
-        `(${said}). Listing them needs a token with access to the repository's ` +
-        'own Actions settings, and this screen only ever asks for their names ' +
-        '— never a value, which no endpoint would return anyway. What each ' +
-        'integration is for is below regardless.',
+        kind === 'not-permitted'
+          ? 'This screen is deliberately not allowed to list them. It runs in ' +
+            'your browser under the App you signed in with, and that App holds ' +
+            'Contents and nothing else — a sign-in able to read this ' +
+            "repository's Actions settings would be a right every Board member " +
+            'carried. So this is not a failure to retry or wait out: the answer ' +
+            "is not this screen's to have. It only ever asks for names, never a " +
+            'value — no endpoint would return one. Whoever administers this ' +
+            `repository can see the names in ${SECRETS_SETTINGS_PATH}, and ` +
+            'convener-check-config reports authoritatively from inside a ' +
+            'workflow. If you are not that person, there is nothing here for ' +
+            'you to do — and nothing is wrong.'
+          : 'GitHub did not answer when this screen asked which secrets and ' +
+            `variables this repository holds (${said}). That is a call that ` +
+            'failed rather than a boundary, so it is worth trying again. What ' +
+            'each integration is for is below regardless.',
     };
   }
 }
 
-/** Whether one integration's inputs are all set, and which are not. */
-export type ConfiguredState = 'configured' | 'absent' | 'partial' | 'unknown';
+/** Whether one integration's inputs are all set, and which are not.
+ *
+ *  `unknown` used to stand for two unrelated facts: that the listing was
+ *  refused, and that the integration declares no input to look for. The
+ *  first is a property of the *screen* -- when it happens, every row
+ *  carries it, so printing it per row implied per-row information that did
+ *  not exist -- and the second is a property of the integration, which is
+ *  true whatever GitHub answers. `not-looked` and `undeclared` are those
+ *  two facts, and the section prints the reason for the first once, above
+ *  the rows, where it belongs. */
+export type ConfiguredState =
+  | 'configured'
+  | 'absent'
+  | 'partial'
+  | 'undeclared'
+  | 'not-looked';
 
 export interface IntegrationReport {
   integration: Integration;
   state: ConfiguredState;
   /** The declared names that were not found. Empty when `state` is
-   *  `unknown`: nothing was found and nothing was looked for. */
+   *  `not-looked` or `undeclared`: nothing was found and nothing was
+   *  looked for. */
   missing: string[];
   /** For a declared family, how many names are set under its prefix.
    *  `null` when the integration declares no family. */
@@ -128,7 +179,7 @@ export interface IntegrationReport {
  */
 export function reportOn(integration: Integration, names: SecretNames): IntegrationReport {
   if (names.refusal !== null) {
-    return { integration, state: 'unknown', missing: [], family: null };
+    return { integration, state: 'not-looked', missing: [], family: null };
   }
   const known = new Set([...names.secrets, ...names.variables]);
   const missing: string[] = [];
@@ -144,7 +195,7 @@ export function reportOn(integration: Integration, names: SecretNames): Integrat
     if (count === 0) missing.push(declared);
   }
   if (integration.secrets.length === 0) {
-    return { integration, state: 'unknown', missing: [], family: null };
+    return { integration, state: 'undeclared', missing: [], family: null };
   }
   const state: ConfiguredState =
     missing.length === 0

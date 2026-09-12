@@ -207,7 +207,7 @@ function IntegrationRow({ report }: { report: IntegrationReport }) {
   const tone =
     state === 'configured'
       ? 'text-field-text'
-      : state === 'unknown'
+      : state === 'not-looked' || state === 'undeclared'
         ? 'text-ink-muted'
         : integration.absentIsNormal
           ? 'text-dominant'
@@ -216,10 +216,15 @@ function IntegrationRow({ report }: { report: IntegrationReport }) {
     <li className="py-3 border-t border-border">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <span className="font-medium text-sm">{integration.label}</span>
-        <span className={`font-mono text-[11px] uppercase tracking-wider ${tone}`}>
-          {state}
-          {!integration.absentIsNormal && state !== 'configured' && ' · not a normal state'}
-        </span>
+        {/* Nothing here when the listing was refused. Every row carries the
+            same answer in that case, so a word per row would suggest a fact
+            per row that nobody has; the section says it once, above. */}
+        {state !== 'not-looked' && (
+          <span className={`font-mono text-[11px] uppercase tracking-wider ${tone}`}>
+            {state}
+            {!integration.absentIsNormal && state !== 'configured' && ' · not a normal state'}
+          </span>
+        )}
       </div>
       <p className="mt-1 text-xs text-ink-muted">
         <span className="font-mono">{integration.secrets.join(', ') || 'no declared input'}</span>
