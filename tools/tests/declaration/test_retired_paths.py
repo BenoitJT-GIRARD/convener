@@ -114,11 +114,11 @@ DELETED_DIRECTORY: Final = "tools/migrations/"
 #: nothing at all there -- correctly, and for a reason no repository
 #: reading them can do anything about.
 #:
-#: Deliberately not a retired path, the way the same guard in
-#: `tools/tests/derivation/test_repository.py` is: every retired path is a
-#: subject of the readings below, so probing one of them would be the
-#: check excusing itself with its own finding. This is measured outside
-#: the declaration instead.
+#: Deliberately not a retired path. The other guard of this shape in this
+#: suite probes a retired path that its own checks say nothing about, and
+#: no such path exists here: every retired path is a subject of the
+#: readings below, so probing one would be the check excusing itself with
+#: its own finding. This is measured outside the declaration instead.
 #:
 #: Deliberately not `instance_identity.ships_the_example_as_its_instance`
 #: either, which is the condition twenty-seven other tests abstain on. It
