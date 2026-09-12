@@ -62,6 +62,34 @@ jobs:
         run: ./gitleaks git -v --exit-code 1
 
   codeql:
+    # Code scanning is free on a public repository and needs GitHub Advanced
+    # Security on a private one. An instance's cockpit is private by D-15 and
+    # its account is the free tier `declarations/standing-up.yml` declares
+    # this project is designed for, so in a duplicate `analyze` cannot upload
+    # a result: it ends "Resource not accessible by integration" and this
+    # workflow's own conclusion is failure from the duplicate's first commit
+    # onwards.
+    #
+    # That is what this condition is for, and it is not about tidiness. The
+    # `secrets` job above runs in this same workflow, and it is the one that
+    # catches a credential pasted into a repository holding participants'
+    # records. A workflow that has been red since its first commit for a
+    # reason nobody can fix is a workflow nobody reads -- including on the
+    # day gitleaks finds something real. A red that never means anything is
+    # worse than no check at all.
+    #
+    # Upstream is public, so this leaves CodeQL running exactly where it can
+    # run, and stops it exactly where it cannot.
+    #
+    # Written as "not private" rather than "is public", because the two
+    # differ exactly where this cannot be measured before the fact: a
+    # `schedule:` run carries its own event payload, and a condition that
+    # reads a field missing from it would be false. `== 'public'` would
+    # then take the Monday sweep off a public repository silently and for
+    # good -- the failure this repository calls a check that cannot fail --
+    # while "not private" fails the other way, loudly, in a duplicate, once,
+    # where somebody can see it and say so.
+    if: github.event.repository.visibility != 'private'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
