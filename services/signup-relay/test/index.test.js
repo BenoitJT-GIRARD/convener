@@ -531,6 +531,65 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
     expect(res.status).toBe(400);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
+
+  // `hasDuplicateKey` steps over an escaped quote as one unit. Get that
+  // wrong and a duplicate on the far side of an escape-heavy value goes
+  // unseen -- and *this* body would then be dispatched rather than
+  // refused, because `JSON.parse` keeps the last `"v"` and what it keeps
+  // is exactly the valid envelope every other test posts.
+  it('refuses a duplicated key on the far side of a value full of escaped quotes', async () => {
+    const decoy = `"v":"${'\\"'.repeat(200)}",`;
+    const dup = VALID_BODY.replace('"v":1,', `${decoy}"v":1,`);
+    expect(() => JSON.parse(dup)).not.toThrow();
+    // The premise: what this parses to is the accepted body, key for key.
+    expect(JSON.parse(dup)).toEqual(JSON.parse(VALID_BODY));
+    const res = await handle(post(dup), env());
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  // This check runs on every POST, before the event is even known to
+  // exist, so what it costs is an unauthenticated caller's to choose. It
+  // was a regular expression until CodeQL opened `js/polynomial-redos`
+  // against it: that pattern scanned the rest of the body from each
+  // offset it tried and then started again one character along, so a body
+  // of nothing but `\"` cost time quadratic in its own length -- 164 ms
+  // of processor time at `MAX_BODY_BYTES`, for one 32 KB POST.
+  //
+  // Asserted as a ratio rather than a wall-clock bound: a runner's own
+  // speed cancels out and what is left is the shape of the curve. The two
+  // bodies below are the same length, take the same route through
+  // `handle` and are refused at the same check, so the duplicate-key scan
+  // is the only thing between them. Measured here: about 1.5x on the scan
+  // that replaced the pattern, and about 900x on the pattern itself.
+  it('costs no more on a body of nothing but escaped quotes than on a plain one of the same length', async () => {
+    const pairs = 16_380; // `{"a":"` + two characters each + `"}` = 32,768
+    const escaped = `{"a":"${'\\"'.repeat(pairs)}"}`;
+    const plain = `{"a":"${'x'.repeat(pairs * 2)}"}`;
+    expect(escaped.length).toBe(32_768);
+    expect(plain.length).toBe(escaped.length);
+    // The premise: both are valid JSON, neither spells a key twice, and
+    // both are refused by the shape check that runs after this one.
+    expect(() => JSON.parse(escaped)).not.toThrow();
+    expect(() => JSON.parse(plain)).not.toThrow();
+    expect((await handle(post(escaped), env())).status).toBe(400);
+    expect((await handle(post(plain), env())).status).toBe(400);
+
+    const rounds = 5;
+    const cost = async (body) => {
+      const started = performance.now();
+      for (let i = 0; i < rounds; i++) await handle(post(body), env());
+      return performance.now() - started;
+    };
+    // Both warmed before either is measured, so the reading is not of a
+    // cold interpreter.
+    await cost(plain);
+    await cost(escaped);
+    const escapedCost = await cost(escaped);
+    const plainCost = await cost(plain);
+
+    expect(escapedCost / plainCost).toBeLessThan(25);
+  });
 });
 
 describe('signup relay -- the event must be known', () => {

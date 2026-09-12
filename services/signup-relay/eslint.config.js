@@ -23,10 +23,16 @@ export default [
     // Worker runtime this service actually deploys to has no `Buffer` at
     // all. Granting it above would let `src/` reference it and still lint
     // clean, failing only once deployed. Scoped here instead.
+    //
+    // `performance` is here for the opposite reason: the Worker runtime
+    // does have it, but only one test reaches for it -- the one that
+    // measures what the duplicate-key scan costs on a hostile body -- and
+    // `src/` has no business timing itself. Granted where it is used.
     files: ['test/**'],
     languageOptions: {
       globals: {
         Buffer: 'readonly',
+        performance: 'readonly',
       },
     },
   },
