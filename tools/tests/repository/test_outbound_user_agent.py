@@ -23,7 +23,9 @@ nobody working on a relay would find it.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.user_agent import USER_AGENT
@@ -149,11 +151,35 @@ def test_every_outbound_request_names_this_software() -> None:
     )
 
 
+def _homepage() -> str:
+    """The `(+URL)` comment a User-Agent is allowed to carry, read out of
+    the header rather than searched for inside it.
+
+    Reading it is the point. `"https://github.com/" in USER_AGENT` was the
+    first version of the rule below and CodeQL was right to refuse it: a
+    substring test on a URL passes for a host that merely contains the one
+    meant, and it would have passed just as happily on a value where the
+    address was not the comment at all."""
+    comment = re.search(r"\(\+(?P<url>[^)]+)\)", USER_AGENT)
+    assert comment, (
+        f"the User-Agent {USER_AGENT!r} carries no `(+URL)` comment. That "
+        "comment is the whole of what an operator on the receiving end can "
+        "follow back to whoever called them."
+    )
+    return comment.group("url")
+
+
 def test_the_header_names_the_software_and_where_to_find_it() -> None:
     """What an operator on the receiving end needs from a string in their
     logs: which software called, and where to go about it."""
     assert "convener-ops" in USER_AGENT
-    assert "https://github.com/" in USER_AGENT
+
+    home = urlsplit(_homepage())
+    assert home.scheme == "https", home
+    assert home.hostname == "github.com", home
+    # Owner and repository, so the address reaches this project rather than
+    # the host it is kept on.
+    assert len(home.path.strip("/").split("/")) == 2, home
 
 
 def test_the_header_impersonates_nothing() -> None:
