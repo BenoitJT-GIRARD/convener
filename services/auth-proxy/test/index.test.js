@@ -49,6 +49,17 @@ describe('auth proxy', () => {
     );
   });
 
+  it('names this software to GitHub on the call it forwards', async () => {
+    await handle(post('/login/device/code', { client_id: 'Iv1.x' }), env);
+
+    const [, init] = globalThis.fetch.mock.calls[0];
+    // services/form-relay measured GitHub's 403 for a User-Agent it does not
+    // like, against api.github.com. These two OAuth paths accept the runtime
+    // default today, and between them they are the whole of the device flow
+    // -- so the header goes in before the day that changes, not after it.
+    expect(init.headers['User-Agent']).toBe('convener-auth-proxy');
+  });
+
   it('answers preflight without calling GitHub', async () => {
     const req = new Request('https://relay.example/login/device/code', {
       method: 'OPTIONS',
