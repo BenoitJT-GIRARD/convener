@@ -1,11 +1,15 @@
 """The terms this work is under, and the notice its two interfaces display.
 
-Three files answer for three different things, and the whole point of
-D-29 is that they are three and not one:
+Four files answer for four different things, and the whole point of
+D-29 is that they are separate rather than one:
 
 * ``LICENSE`` -- the GNU Affero General Public License, version 3, in the
-  Free Software Foundation's own words, plus one added term at its head
-  declining the name under section 7's paragraph e.
+  Free Software Foundation's own words, from the file's first byte, with
+  this program's own notice below the licence text and, in that notice,
+  a pointer to the one added term.
+* ``ADDITIONAL-TERM.md`` -- that term: the name declined under section
+  7's paragraph e, what the declining does and does not withhold, and why
+  it is not a further restriction within the meaning of section 10.
 * ``TRADEMARK.md`` -- what that term reserves, what a duplicate names
   its own series, what the licence obliges it to keep, what it may then
   write about where its product came from, and that all of it is asked in
@@ -13,7 +17,26 @@ D-29 is that they are three and not one:
 * ``NOTICE.json`` -- the Appropriate Legal Notice both interfaces print in
   their footer, in the sense section 0 of the licence defines the phrase.
 
-**Why any of this needs a test at all.** Each of the three fails silently
+**Where the added term sits, and why it is not in ``LICENSE``.** GitHub
+detects a repository's licence with ``licensee``, which normalises the
+file -- copyright lines removed, everything from *END OF TERMS AND
+CONDITIONS* onwards removed -- and then compares what is left with the
+texts it knows. What survives that normalisation has to match, and the
+tolerance for prose this repository adds above the licence text is zero:
+measured on a branch through ``GET /repos/{owner}/{repo}/license``, a
+single 56-character line above the licence was enough to return
+``NOASSERTION``, and the same file with that line below the licence text
+returned ``AGPL-3.0``. So the term has a file of its own, and the notice
+saying where to find it -- which is the second of the two things section 7
+accepts, *state it, or say where it is to be found* -- sits below the
+licence text, where the detector does not read and a reader still does.
+
+**Why that is worth the detour.** An undetected licence reads as
+``Other`` in GitHub's own About panel and as ``NOASSERTION`` to every
+SPDX scanner, and this product exists to be picked up by volunteer-run
+societies who have no lawyer to ask what ``Other`` means.
+
+**Why any of this needs a test at all.** Each of the four fails silently
 when it fails. A ``LICENSE`` quietly replaced by a permissive one still
 looks like a licence file; a notice with its warranty sentence dropped
 still looks like a footer credit; a declaration moved into ``declarations/``
@@ -24,7 +47,7 @@ original's do**, so a notice that stops being one stops obliging anybody,
 and nothing anywhere goes red.
 
 **What is checked here, and what is checked elsewhere.** This module holds
-the three declarations and the two templates that read them. That the
+the four files and the two templates that read the last of them. That the
 notice actually reaches a *rendered* page is a different claim, made
 against real output on both sides: ``tools/tests/repository/test_site.py`` builds the
 showcase and reads its footer, and ``app/tests/components/notice.test.tsx`` renders
@@ -54,6 +77,7 @@ from convener_ops.declaration.paths import repo_root
 ROOT = repo_root()
 
 LICENCE = ROOT / "LICENSE"
+ADDED_TERM = ROOT / "ADDITIONAL-TERM.md"
 TRADE_MARKS = ROOT / "TRADEMARK.md"
 DECLARATION = ROOT / "NOTICE.json"
 
@@ -64,10 +88,17 @@ SHOWCASE_READER = ROOT / "site" / "scripts" / "notice.cjs"
 COCKPIT_READER = ROOT / "app" / "scripts" / "notice.mjs"
 
 #: The first line of the licence as the Foundation publishes it, indent
-#: included. Where the head this repository adds stops and the licence
-#: itself begins -- found rather than counted, so adding a paragraph to
-#: the head cannot silently move what the digest below is taken over.
+#: included, and the last. Where the Foundation's file starts and stops
+#: inside this one -- found rather than counted, so adding a paragraph to
+#: the notice below it cannot silently move what the digest is taken over.
+#:
+#: The first line is also the first line of `LICENSE`, and
+#: `test_the_licence_text_starts_at_the_first_byte_of_the_file` is what
+#: says so: everything this repository adds is below the Foundation's
+#: last line, which is the only arrangement GitHub's detector reads as
+#: the AGPL.
 AGPL_FIRST_LINE = "                    GNU AFFERO GENERAL PUBLIC LICENSE"
+AGPL_LAST_LINE = "<https://www.gnu.org/licenses/>."
 
 #: SHA-256 of https://www.gnu.org/licenses/agpl-3.0.txt, the whole file,
 #: LF line endings, trailing newline included.
@@ -104,23 +135,37 @@ def licence_text() -> str:
     return LICENCE.read_text(encoding="utf-8")
 
 
-def licence_head() -> str:
-    """Everything this repository added above the licence itself."""
+def _licence_bounds() -> tuple[int, int]:
+    """Where the Foundation's own file starts and stops inside this one."""
     text = licence_text()
-    marker = f"\n{AGPL_FIRST_LINE}\n"
-    assert marker in text, (
-        f"{LICENCE.name} carries no line reading {AGPL_FIRST_LINE!r} -- "
-        "either the licence text is not in it at all, or its first line "
-        "has been reflowed, and neither is a state this file may be in"
+    assert text.startswith(f"{AGPL_FIRST_LINE}\n"), (
+        f"{LICENCE.name} does not open on {AGPL_FIRST_LINE!r} -- either the "
+        "licence text is not in it at all, its first line has been "
+        "reflowed, or something has been written above it. The last of the "
+        "three is the one that costs: GitHub reads nothing above the "
+        "licence text as part of the licence, so a line there is a "
+        "repository whose terms report as NOASSERTION."
     )
-    return text[: text.index(marker) + 1]
+    end = text.rindex(f"\n{AGPL_LAST_LINE}\n")
+    return 0, end + len(AGPL_LAST_LINE) + 2
 
 
 def licence_body() -> str:
-    """The licence itself, from its own first line to the end of file."""
-    text = licence_text()
-    marker = f"\n{AGPL_FIRST_LINE}\n"
-    return text[text.index(marker) + 1 :]
+    """The licence itself, first line to last, and nothing else."""
+    start, end = _licence_bounds()
+    return licence_text()[start:end]
+
+
+def applied_notice() -> str:
+    """Everything this repository writes below the licence text.
+
+    This program's own notice -- what it is, whose it is, and that one
+    added term supplements the licence -- in the place the Foundation's
+    own closing section tells a program to write it, and below the line
+    GitHub's detector stops reading at.
+    """
+    _start, end = _licence_bounds()
+    return licence_text()[end:]
 
 
 # -------------------------------------------------------------------------- #
@@ -146,12 +191,33 @@ def test_the_licence_text_is_the_official_one_byte_for_byte() -> None:
     )
 
 
+def test_the_licence_text_starts_at_the_first_byte_of_the_file() -> None:
+    """Nothing above the licence, because GitHub reads nothing above it.
+
+    ``licensee``, which GitHub runs, throws away copyright lines and
+    everything from *END OF TERMS AND CONDITIONS* onwards, then compares
+    what is left with the licences it knows. Prose this repository adds
+    above the licence text survives that and so has to match too, which it
+    cannot: measured against
+    ``GET /repos/BenoitJT-GIRARD/convener/license?ref=<branch>``, one
+    56-character line above the licence returned ``NOASSERTION`` and the
+    same file with that line moved below the licence text returned
+    ``AGPL-3.0``. There is no budget to spend here, which is why the whole
+    of this program's own notice is below rather than trimmed to fit.
+    """
+    assert licence_text().startswith(AGPL_FIRST_LINE), (
+        f"{LICENCE.name} no longer opens on the licence's own first line. "
+        "Whatever is above it, GitHub's detector reads the file as an "
+        "unrecognised licence and the repository's terms report as "
+        "NOASSERTION to everybody who never opens the file."
+    )
+
+
 def test_the_licence_names_the_holder_and_the_year() -> None:
     """A copyright notice is the first thing section 0 asks a notice to
     carry, and the licence file is where the claim itself is made."""
-    head = licence_head()
-    assert re.search(r"^Copyright \(C\) \d{4} \S", head, re.MULTILINE), (
-        f"{LICENCE.name} states no copyright line above the licence text"
+    assert re.search(r"^Copyright \(C\) \d{4} \S", applied_notice(), re.MULTILINE), (
+        f"{LICENCE.name} states no copyright line in the notice below the licence text"
     )
 
 
@@ -161,13 +227,12 @@ def test_the_added_term_is_stated_as_one_section_7_permits() -> None:
     Section 7 admits five kinds of supplementary term and calls everything
     else a further restriction, which a recipient may strip and which
     would make the work non-free besides. So the term has to *say* which
-    kind it is, and say it where the licence it supplements is: this test
-    reads the head of the licence file for the section it invokes, the
-    right it declines, and the document that qualifies it.
+    kind it is: this test reads the file that carries it for the section
+    it invokes, the right it declines, and the document that qualifies it.
     """
-    head = licence_head()
+    text = ADDED_TERM.read_text(encoding="utf-8")
     for expected, why in (
-        ("SECTION 7", "the section that authorises an added term"),
+        ("section 7", "the section that authorises an added term"),
         ("paragraph e", "the one kind of term this actually is"),
         ("trademark law", "the words section 7's paragraph e uses"),
         ("Convener", "the name the term is about"),
@@ -175,24 +240,104 @@ def test_the_added_term_is_stated_as_one_section_7_permits() -> None:
         ("TRADEMARK.md", "where a reader is sent for what the term covers"),
         ("further restriction", "the thing it has to say it is not"),
     ):
-        assert expected in head, (
-            f"{LICENCE.name}'s added term does not name {expected!r} -- "
+        assert expected in text, (
+            f"{ADDED_TERM.name} does not name {expected!r} -- "
             f"{why}. Without it the term reads as a preference rather "
             "than as a term section 7 permits."
         )
 
 
-def test_the_added_term_sits_above_the_licence_it_supplements() -> None:
-    """Above, never inside.
+def test_nothing_this_repository_adds_sits_inside_the_licence_text() -> None:
+    """Below, never inside.
 
     A term interleaved with the licence's own clauses would make the text
-    below no longer the official one -- which the digest above would catch
-    -- and would also read, to anybody quoting a clause out of it, as part
-    of the Foundation's words rather than as this project's addition.
+    around it no longer the official one -- which the digest above would
+    catch -- and would also read, to anybody quoting a clause out of it,
+    as part of the Foundation's words rather than as this project's
+    addition.
     """
-    text = licence_text()
-    assert text.index("SECTION 7") < text.index(AGPL_FIRST_LINE)
-    assert "TRADEMARK.md" not in licence_body()
+    body = licence_body()
+    assert ADDED_TERM.name not in body
+    assert "TRADEMARK.md" not in body
+    assert "Convener" not in body
+
+
+# -------------------------------------------------------------------------- #
+# The licence and the term it names
+# -------------------------------------------------------------------------- #
+
+#: A file this repository owns, as `LICENSE` writes one: capitals, digits
+#: and hyphens, carrying a Markdown extension. Narrow on purpose -- the
+#: licence text quotes plenty of ordinary words and no URL is of this
+#: shape, so what this finds is a pointer at a file of ours and nothing
+#: else.
+NAMED_FILE = re.compile(r"\b[A-Z][A-Z0-9-]*\.md\b")
+
+
+def tracked_at_the_root() -> frozenset[str]:
+    """Every file `git ls-files` reports at the repository root.
+
+    The index rather than the directory: a pointer is kept by whoever
+    clones this repository, and a file sitting unstaged in somebody's
+    working copy reaches none of them.
+    """
+    listed = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    return frozenset(name for name in listed if "/" not in name)
+
+
+def test_the_licence_names_only_files_this_repository_carries() -> None:
+    """One half of the pair, and the half that decays quietly.
+
+    The term used to be inside `LICENSE`, where it could not go missing.
+    It is now a file with a pointer at it, and a pointer is a claim about
+    something else: rename the file, or drop it from a commit that moved
+    the rest, and `LICENSE` goes on telling every recipient to read a
+    document that is not there. A licence naming a file nobody can open
+    is worse than one naming none, because section 7 accepts *say where
+    it is to be found* and this would be a file that says it and does not.
+    """
+    named = sorted(set(NAMED_FILE.findall(licence_text())))
+    assert named, (
+        f"{LICENCE.name} names no file of this repository at all. The "
+        "added term lives outside it now, so a licence that points at "
+        "nothing is a licence that has quietly dropped the term."
+    )
+    missing = [name for name in named if name not in tracked_at_the_root()]
+    assert missing == [], (
+        f"{LICENCE.name} sends a reader to {missing}, which this "
+        "repository does not track at its root. Everybody who receives "
+        "this work receives that pointer, and section 7 lets a term be "
+        "carried by a notice saying where to find it -- so a pointer at "
+        "a file that is not there is the term itself going missing."
+    )
+
+
+def test_the_licence_is_what_points_at_the_added_term() -> None:
+    """The other half: a term nothing points at.
+
+    `ADDITIONAL-TERM.md` is not a page somebody finds by browsing; it is
+    the one document `LICENSE` has to hand a recipient, and it is
+    reachable only because `LICENSE` names it. A rewrite of the notice
+    below the licence text that drops the name leaves both files intact,
+    both readable, and the term attached to nothing.
+    """
+    assert ADDED_TERM.name in tracked_at_the_root(), (
+        f"{ADDED_TERM.name} is not tracked at the root of this "
+        "repository, and it is the file carrying the one term section 7 "
+        "adds to the licence."
+    )
+    assert ADDED_TERM.name in applied_notice(), (
+        f"{LICENCE.name} no longer names {ADDED_TERM.name} in the notice "
+        "below the licence text, so nothing in the licence says where the "
+        "added term is to be found. Section 7 admits a term stated in the "
+        "file or a notice saying where it lives; this is neither."
+    )
 
 
 # -------------------------------------------------------------------------- #

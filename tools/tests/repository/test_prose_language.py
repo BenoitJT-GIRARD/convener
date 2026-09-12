@@ -117,6 +117,13 @@ left to whoever reads the list next:
 * **`TRADEMARK.md` is gated.** It is this project's own prose, at the
   repository root, beside two pages that were already in the list. Nothing
   distinguished it but an oversight.
+* **`ADDITIONAL-TERM.md` is gated too**, and it is the one page in the
+  list whose words a spelling report may not be acted on lightly: it
+  carries the term section 7 of the licence adds, and correcting a word
+  in it changes a term recipients are under. It is the copyright
+  holder's own English rather than the Foundation's, so it belongs in a
+  British-English gate; what a report there asks for is the holder's
+  decision rather than an editor's.
 * **`LICENSE` is not, and must not be.** It is the Free Software
   Foundation's text, reproduced verbatim, American spellings and all;
   `test_notice.py::AGPL_SHA256` pins it byte for byte against the

@@ -97,10 +97,11 @@ later](../../LICENSE). Section 13 of it is the point: a hosted, *modified*
 version has to offer its source to the people using it, so this cannot
 quietly become somebody's closed fork.
 
-The name and the mark are **not** covered by that grant — a term at the head
-of `LICENSE`, under section 7 of the licence itself, declines them, and
-[`TRADEMARK.md`](../../TRADEMARK.md) says what a duplicate calls its own
-series, and what it keeps. Both the showcase and the cockpit display the
+The name and the mark are **not** covered by that grant — one term under
+section 7 of the licence itself declines them, in
+[`ADDITIONAL-TERM.md`](../../ADDITIONAL-TERM.md), which `LICENSE` names below
+its licence text, and [`TRADEMARK.md`](../../TRADEMARK.md) says what a
+duplicate calls its own series, and what it keeps. Both the showcase and the cockpit display the
 licence notice in their footer; its text is `NOTICE.json`, and no part of
 it is an instance's to configure.
 [D-29](../engineering/decisions/d-29-licence-and-attribution.md) is the whole

@@ -49,6 +49,7 @@
     "mypy",
     "neuroethological",
     "Neuroinformatics",
+    "NOASSERTION",
     "nojekyll",
     "noopener",
     "noscript",
@@ -118,6 +119,7 @@
   ],
   "files": [
     "docs/**/*.md",
+    "ADDITIONAL-TERM.md",
     "AGENTS.md",
     "CHANGELOG.md",
     "CLAUDE.md",
