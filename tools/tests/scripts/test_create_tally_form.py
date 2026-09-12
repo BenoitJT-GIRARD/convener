@@ -38,6 +38,8 @@ from conftest import config
 from create_tally_form import (
     FORM_TITLE,
     KEY_NAME,
+    THEME,
+    THEME_SLOTS,
     TallyClient,
     TallyError,
     _find_form_id,
@@ -47,6 +49,7 @@ from create_tally_form import (
     main,
     sync_form,
     take_key_file,
+    theme_from,
 )
 
 from convener_ops.journey.proposal import (
@@ -178,6 +181,16 @@ def _submission() -> dict[str, str]:
     }
 
 
+#: A theme this suite controls, so that a remeasured charter cannot move an
+#: assertion about what a PATCH carries. The readings *about* the charter
+#: build their own, and the one about the shipped value reads the real one.
+_THEME: dict[str, Any] = {
+    "theme": "CUSTOM",
+    "color": {"background": "#000001"},
+    "direction": "ltr",
+}
+
+
 class FakeTally:
     """An in-memory double for enough of the Tally API to test idempotence
     without a byte crossing the network: `GET /forms` (paginated exactly
@@ -226,6 +239,10 @@ class FakeTally:
             "name": "Untitled" if self.misname_new_forms else wanted_name,
             "status": payload.get("status"),
             "blocks": payload["blocks"],
+            # Stored because the service stores it: a create carrying
+            # `settings` comes back wearing them, and a double that dropped
+            # the key would let a form be created plain and pass.
+            "settings": payload.get("settings", {}),
         }
         self.forms[form_id] = form
         return dict(form)
@@ -658,7 +675,7 @@ def test_find_form_id_raises_when_a_matching_form_has_no_readable_id() -> None:
 
 def test_sync_form_creates_a_new_form_when_none_exists() -> None:
     fake = FakeTally(forms={})
-    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks(), _THEME)
     assert created is True
     assert fake.forms[form_id]["name"] == FORM_TITLE
     assert fake.forms[form_id]["blocks"] == build_blocks()
@@ -671,7 +688,7 @@ def test_sync_form_updates_the_existing_form_instead_of_creating_a_second_one() 
     fake = FakeTally(
         forms={"existing": {"id": "existing", "name": FORM_TITLE, "blocks": []}}
     )
-    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks(), _THEME)
     assert created is False
     assert form_id == "existing"
     assert len(fake.forms) == 1
@@ -680,8 +697,12 @@ def test_sync_form_updates_the_existing_form_instead_of_creating_a_second_one() 
 
 def test_running_sync_form_twice_never_creates_a_second_form() -> None:
     fake = FakeTally(forms={})
-    first_id, first_created = sync_form(fake.client(), FORM_TITLE, build_blocks())
-    second_id, second_created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    first_id, first_created = sync_form(
+        fake.client(), FORM_TITLE, build_blocks(), _THEME
+    )
+    second_id, second_created = sync_form(
+        fake.client(), FORM_TITLE, build_blocks(), _THEME
+    )
     assert first_created is True
     assert second_created is False
     assert first_id == second_id
@@ -692,7 +713,7 @@ def test_sync_form_never_touches_a_form_with_a_different_title() -> None:
     fake = FakeTally(
         forms={"other": {"id": "other", "name": "Some other form", "blocks": ["kept"]}}
     )
-    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks(), _THEME)
     assert created is True
     assert form_id != "other"
     assert fake.forms["other"]["blocks"] == ["kept"]
@@ -706,11 +727,13 @@ def test_sync_form_corrects_a_form_tally_named_differently_than_asked() -> None:
     # rather than silently leaving a form _find_form_id can never match
     # again.
     fake = FakeTally(forms={}, misname_new_forms=True)
-    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks(), _THEME)
     assert created is True
     assert fake.forms[form_id]["name"] == FORM_TITLE
 
-    second_id, second_created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    second_id, second_created = sync_form(
+        fake.client(), FORM_TITLE, build_blocks(), _THEME
+    )
     assert second_created is False
     assert second_id == form_id
     assert len(fake.forms) == 1
@@ -979,3 +1002,81 @@ def test_main_names_the_file_when_it_holds_no_key(
 
     assert main(["--key-file", str(path)], client_factory=never) == 1
     assert str(path) in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------- #
+# The theme: read from the charter, and carried to the form.
+# --------------------------------------------------------------------- #
+
+
+def test_the_theme_is_the_charter_s_own_colours_in_tally_s_five_slots() -> None:
+    """Every slot takes a role the charter names, and nothing is derived
+    here: `derived` in that file already carries six values somebody
+    measured, and a seventh invented at this end would be a colour no
+    charter records."""
+    charter = {
+        "colour": {
+            "band": "#f2f1eb",
+            "ink": "#3d3934",
+            "dominant": "#48127b",
+            "white": "#ffffff",
+            "field": "#82dbd7",
+        }
+    }
+    assert theme_from(charter) == {
+        "theme": "CUSTOM",
+        "color": {
+            "background": "#f2f1eb",
+            "text": "#3d3934",
+            "accent": "#48127b",
+            "buttonBackground": "#48127b",
+            "buttonText": "#ffffff",
+        },
+        "direction": "ltr",
+    }
+
+
+def test_a_charter_missing_a_role_is_refused_and_says_which() -> None:
+    """Refused rather than defaulted. A form drawn half in somebody's
+    charter and half in Tally's own factory palette is a third design
+    nobody chose, and the operator reading the failure needs the role."""
+    with pytest.raises(TallyError, match="dominant"):
+        theme_from({"colour": {"band": "#f2f1eb", "ink": "#3d3934"}})
+
+
+def test_a_charter_with_no_colours_at_all_is_refused() -> None:
+    with pytest.raises(TallyError, match="no palette"):
+        theme_from({})
+
+
+def test_this_repository_s_own_theme_is_five_colours_from_its_charter() -> None:
+    """The shipped value, held so that a charter whose roles were renamed
+    fails here rather than at the API."""
+    assert set(THEME["color"]) == {slot for slot, _ in THEME_SLOTS}
+    assert all(value.startswith("#") for value in THEME["color"].values())
+    assert THEME["theme"] == "CUSTOM"
+
+
+def test_an_update_carries_the_theme_beside_the_blocks() -> None:
+    """`settings` is sent with `styles` alone, and that is safe for a
+    reason this repository measured rather than assumed: a `PATCH` naming
+    one setting on a form holding 41 left the other forty untouched.
+    `blocks` is the opposite and replaces the list, which is why the
+    thank-you page is emitted from the builder."""
+    fake = FakeTally(forms={"f-1": {"id": "f-1", "name": FORM_TITLE, "blocks": []}})
+    sync_form(fake.client(), FORM_TITLE, build_blocks(), _THEME)
+
+    assert fake.forms["f-1"]["settings"] == {"styles": _THEME}
+    assert fake.forms["f-1"]["blocks"] == build_blocks()
+
+
+def test_a_new_form_is_created_already_wearing_the_theme() -> None:
+    """Rather than created plain and themed by a second call: a form that
+    existed for one round trip in Tally's factory palette is a form
+    somebody could open in that state."""
+    fake = FakeTally(forms={})
+    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks(), _THEME)
+
+    assert created is True
+    assert fake.forms[form_id]["settings"] == {"styles": _THEME}
+    assert fake.forms[form_id]["status"] == "DRAFT"

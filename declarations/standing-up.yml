@@ -938,7 +938,15 @@ steps:
       vocabularies behind *Gender* and *Career stage* are read from this
       project's own reader rather than retyped, so a label renamed on one side
       breaks a test rather than breaking the live form. Re-running it finds
-      the form by its title and updates it in place. The key reaches the
+      the form by its title and updates it in place.
+
+      **It also draws the form in your charter**, so there is nothing to set
+      in Tally's own theme editor. The five colours Tally offers are read
+      from the charter in force -- `instance/data/brand.json`, or whichever
+      of the product's own an instance named -- and re-asserted on every
+      run, the way every other surface drawn from that file is. A colour
+      typed into the editor instead is the one place this project's identity
+      would live outside the file that declares it. The key reaches the
       command through that file rather than through the command line, which a
       shell keeps in its history and every terminal recording keeps for ever;
       `.gitignore` already refuses the file, and the script deletes it as it

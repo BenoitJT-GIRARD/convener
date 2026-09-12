@@ -884,13 +884,19 @@ its label, whether it is required, and the closed vocabularies behind *Gender*
 and *Career stage* are read from this project's own reader rather than
 retyped, so a label renamed on one side breaks a test rather than breaking the
 live form. Re-running it finds the form by its title and updates it in place.
-The key reaches the command through that file rather than through the command
-line, which a shell keeps in its history and every terminal recording keeps
-for ever; `.gitignore` already refuses the file, and the script deletes it as
-it reads it, whether the rest of the run then succeeds or not, so it exists
-for one command and no longer. It is the only credential in this sequence ever
-put in a file on the machine running these commands: every other one is typed
-into a browser or into a prompt that reads it without showing it.
+**It also draws the form in your charter**, so there is nothing to set in
+Tally's own theme editor. The five colours Tally offers are read from the
+charter in force -- `instance/data/brand.json`, or whichever of the product's
+own an instance named -- and re-asserted on every run, the way every other
+surface drawn from that file is. A colour typed into the editor instead is the
+one place this project's identity would live outside the file that declares
+it. The key reaches the command through that file rather than through the
+command line, which a shell keeps in its history and every terminal recording
+keeps for ever; `.gitignore` already refuses the file, and the script deletes
+it as it reads it, whether the rest of the run then succeeds or not, so it
+exists for one command and no longer. It is the only credential in this
+sequence ever put in a file on the machine running these commands: every other
+one is typed into a browser or into a prompt that reads it without showing it.
 
 **Proves it is done.** Tally's dashboard shows one form, in `DRAFT`, whose
 questions match the reader's own field list. The script creates it as a draft

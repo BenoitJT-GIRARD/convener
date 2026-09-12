@@ -146,6 +146,15 @@ the day they were written; the lesson had never crossed into Python.
 - **A thank-you page on the proposal form**, emitted by the builder rather
   than added in Tally's editor — where the next run of the form command
   would have erased it, along with anything else a volunteer added there.
+- **The proposal form is drawn in your charter.** It was the one surface
+  carrying this project's identity that nothing generated and nothing
+  checked — the first thing a stranger proposing a talk sees, wearing
+  Tally's factory palette beside a showcase in your own colours, unless
+  somebody remembered to dress it by hand. The five colours Tally offers now
+  come from `instance/data/brand.json` and are re-asserted on every run of
+  the form command. Measured against the live service: the published page
+  served none of the charter's colours before and serves the dominant most
+  of all after, with no re-publish.
 - **[Taking an update](docs/operating/taking-an-update.md)**, which is the
   command this product is built around and had never written down.
 
