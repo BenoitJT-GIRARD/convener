@@ -12,10 +12,14 @@ one that is not true is the only way this template can do harm.
 
 ## Before it can be merged
 
-- [ ] **Every commit carries one `Signed-off-by`.** `git commit -s` writes
-      it, using your configured name and email. By adding it you certify
-      the Developer Certificate of Origin 1.1 and grant the one further
-      right `CONTRIBUTING.md` asks for, which it explains in full.
+- [ ] **Every commit this pull request brings carries one
+      `Signed-off-by`.** `git commit -s` writes it, using your configured
+      name and email. By adding it you certify the Developer Certificate
+      of Origin 1.1 and grant the one further right `CONTRIBUTING.md` asks
+      for, which it explains in full. Upstream's own commits carry none --
+      the certificate is a statement made *to* a project *by* somebody
+      contributing to it, so the copyright holder has nobody to make it to
+      -- and a pull request of theirs leaves this box untouched.
 - [ ] **`sh gates.sh` is green** on this branch, from the repository root.
       That is every check `.github/workflows/quality.yml` runs, and none of
       them needs an account or a secret. The four that live in workflows of
