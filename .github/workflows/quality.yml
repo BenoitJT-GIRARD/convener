@@ -474,12 +474,21 @@ jobs:
       # audit never ran" are the two outcomes that must not look alike,
       # and the exit code is what tells them apart now that a finding no
       # longer moves it.
+      #
+      # The same table is printed to the log as well, and that is not
+      # duplication for its own sake: a job summary is rendered on the run
+      # page and is reachable through no API at all, so the log is the only
+      # copy anything but a browser can read afterwards -- including
+      # whoever has to answer "what did the audit actually say on that
+      # commit" once the pull request is closed.
       - name: Dependency audit (development tooling, reported in the job summary)
         if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: |
           npm audit --json > "$RUNNER_TEMP/app-audit.json" || true
-          node scripts/audit-summary.mjs < "$RUNNER_TEMP/app-audit.json" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/audit-summary.mjs < "$RUNNER_TEMP/app-audit.json" > "$RUNNER_TEMP/app-audit.md"
+          cat "$RUNNER_TEMP/app-audit.md" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/app-audit.md"
       - name: Lint app
         if: always() && steps.install-app.outcome == 'success'
         working-directory: app

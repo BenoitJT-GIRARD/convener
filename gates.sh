@@ -81,15 +81,14 @@
 #   Validate workflows against GitHub's schema -> workflows
 #
 # The one `none`, and why. `Dependency audit (development tooling,
-# reported in the job summary)` does not report at a terminal at all: it
-# renders `npm audit --json` as a table into `$GITHUB_STEP_SUMMARY`, the
-# run's own page, and exits 0 on whatever it found. The findings are the
-# ones `audit`'s own `npm audit --omit=dev` leaves out by design, and
-# they do not block a merge -- so a target here would fail a run that
-# continuous integration passes, which is the opposite of mirroring it,
-# and it would have nowhere to write the thing that step exists to
-# produce. What a maintainer types to see the same list is `cd app && npm
-# audit`, which is the command that step runs before it renders it.
+# reported in the job summary)` renders `npm audit --json` as a table
+# into `$GITHUB_STEP_SUMMARY` -- the run's own page -- and exits 0 on
+# whatever it found. The findings are the ones `audit`'s own `npm audit
+# --omit=dev` leaves out by design, and they do not block a merge, so a
+# target here would fail a run that continuous integration passes, which
+# is the opposite of mirroring it. What a maintainer types to see the
+# same list is `cd app && npm audit`, which is the command that step runs
+# before it renders it.
 #
 # One thing does fail it, and `audit` does not mirror that either: a
 # report it cannot read. `app/scripts/audit-summary.mjs` exits non-zero
