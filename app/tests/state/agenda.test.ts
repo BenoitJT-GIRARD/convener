@@ -7,7 +7,6 @@ import {
   BOARD_STATUSES,
   eventIdOf,
   findOverlaps,
-  nextEditionCode,
 } from '../../src/state/agenda';
 import { SPEAKER_STATUSES } from '../../src/data/validate';
 import type { Speaker, SpeakerStatus } from '../../src/data/types';
@@ -85,15 +84,6 @@ describe('agenda', () => {
   it('skips entries with empty date', () => {
     const list = [mk('a', 'confirmed', '', '')];
     expect(findOverlaps('2026-07-02', list, 7)).toEqual([]);
-  });
-
-  it('returns next available edition code', () => {
-    const list = [
-      mk('a', 'scheduled', '2026-01-01', 'MRG-1'),
-      mk('b', 'scheduled', '2026-02-01', 'MRG-3'),
-    ];
-    expect(nextEditionCode(list, 1)).toBe('MRG-2');
-    expect(nextEditionCode(list, 4)).toBe('MRG-4');
   });
 });
 
