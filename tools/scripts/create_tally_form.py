@@ -118,6 +118,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from convener_ops.declaration.published import load_identity
+from convener_ops.declaration.user_agent import USER_AGENT
 from convener_ops.journey.proposal import (
     CAREER_STAGE_ORDER,
     FORM_FIELDS,
@@ -467,6 +468,7 @@ def _request(
     url = f"{API_BASE}{path}"
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(url, data=data, method=method)
+    request.add_header("User-Agent", USER_AGENT)
     request.add_header("Authorization", f"Bearer {api_key}")
     if data is not None:
         request.add_header("Content-Type", "application/json")

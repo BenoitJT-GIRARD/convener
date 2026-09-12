@@ -343,6 +343,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Final, Protocol
 
+from ..declaration.user_agent import USER_AGENT
 from .platform import (
     AttendanceRow,
     EventNotFoundError,
@@ -422,6 +423,7 @@ class _UrllibTransport:
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/json",
+                "User-Agent": USER_AGENT,
             },
         )
         try:
@@ -494,7 +496,9 @@ class _UrllibTransport:
             # to the provider's fixed `base_url` -- never from anything a
             # caller typed -- so this is not the "URL built from unchecked
             # input" bandit's urlopen check (B310) exists to catch.
-            request = urllib.request.Request(url, method="HEAD")
+            request = urllib.request.Request(
+                url, method="HEAD", headers={"User-Agent": USER_AGENT}
+            )
             with urllib.request.urlopen(  # nosec B310
                 request, timeout=self.timeout
             ) as response:
