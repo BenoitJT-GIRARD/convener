@@ -76,6 +76,70 @@ updates:
     groups:
       all:
         patterns: ['*']
+    # Three majors, held back, because a group is one pull request
+    # ------------------------------------------------------------
+    # `groups:` is what keeps this to one pull request per directory, and
+    # one pull request is also what it costs: a single package that needs
+    # source changed before it can build blocks every other bump in the
+    # same branch, and the same branch comes back next month carrying the
+    # same blockage. The first grouped npm round proposed twenty updates
+    # and three of them were source migrations, so none of the other
+    # seventeen could merge.
+    #
+    # A major of these three is proposed on its own terms instead -- by
+    # hand, in a branch that can be read as the migration it is -- and
+    # everything else goes on arriving monthly. Minors and patches of all
+    # three still come through this group; only
+    # `version-update:semver-major` is held, and each line below says what
+    # to look at before lifting it.
+    ignore:
+      # Nothing here can lift this one. `typescript-eslint` 8.70.0 is
+      # `latest`, and it and `@typescript-eslint/parser` both declare
+      # `peerDependencies.typescript: ">=4.8.4 <6.1.0"`; the `canary`
+      # line (8.70.1-alpha.0) declares the identical range. No published
+      # line admits TypeScript 7, or even 6.1, so a tree holding both
+      # ends at `npm error ERESOLVE` -- before a compiler runs, and with
+      # nothing in this repository that could answer it.
+      #
+      # Watch `npm view typescript-eslint peerDependencies`. The day that
+      # upper bound opens past `<6.1.0`, deleting these two lines is the
+      # whole of the migration.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # v5 is three separate breaks in one bump. Its ESM build exports no
+      # default, so `import yaml from 'js-yaml'` fails at load in every
+      # file that writes it -- including the two `app/scripts/*.mjs`
+      # `app/vite.config.ts` imports, which means the Vite config does not
+      # load and every app gate reports a startup error rather than a
+      # finding. `noArrayIndent` is renamed `seqNoIndent`, and v5 ignores
+      # the old spelling in silence rather than refusing it, which moves
+      # every block sequence two columns and breaks the byte-for-byte
+      # agreement with PyYAML that `tools/tests/fixtures/speakers-from-app.yml`
+      # pins. And `load('')` raises where v4 returned `undefined`, which
+      # is a question about what an empty `instance/data/speakers.yml`
+      # means rather than about a parser.
+      #
+      # Nothing upstream will lift this one either: it is source work,
+      # and it is ours.
+      - dependency-name: js-yaml
+        update-types: ['version-update:semver-major']
+      # Held for review rather than for work. Measured on this tree, v7
+      # costs nothing at all -- no type error, and the whole suite green
+      # -- once `app/tests/helpers/setup.ts` takes the matchers from
+      # `@testing-library/jest-dom/vitest` rather than from the package
+      # root, which it does, and which `vitest` 5 required of v6 just as
+      # much as of v7.
+      #
+      # What a major of this package changes is the vocabulary every
+      # assertion in `app/` is written in, and a matcher that quietly
+      # changes meaning inside a grouped bump of twenty packages is a
+      # failure nobody would attribute to the bump that caused it. So it
+      # arrives alone. To lift it: read the release's own list of removed
+      # and renamed matchers, then `npm install -D
+      # @testing-library/jest-dom@latest`, `npm run typecheck`,
+      # `npm test`.
+      - dependency-name: '@testing-library/jest-dom'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: uv
     directory: /tools
     schedule:
