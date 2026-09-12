@@ -385,6 +385,44 @@ def test_get_attendance_raises_a_platform_error_on_a_non_2xx_response() -> None:
         _platform(transport=transport).get_attendance("mrg-901")
 
 
+def test_get_attendance_reads_the_envelope_the_live_service_returns() -> None:
+    """The shape this endpoint actually answers in, pinned so that reading
+    it is a decision rather than an accident.
+
+    Measured 2026-09-12 against three conferences of a real account:
+    `{"calls": [...], "meta": ..., "retcode": 0}`. The fixtures elsewhere in
+    this module are bare arrays, which is what it returned when this module
+    was written -- so between the two shapes every instance of this product
+    would have raised at the moment of taking the register, on a path that
+    only runs once an event exists and had therefore never run anywhere.
+
+    Both shapes stay readable: the array is still what the fixtures use,
+    and dropping an accepted shape can break a caller while keeping one
+    cannot."""
+    transport = FakeTransport(
+        get_responses={
+            "/conferences/618515381/calls": {
+                "calls": [_call()],
+                "meta": {},
+                "retcode": 0,
+            }
+        }
+    )
+    rows = _platform(transport=transport).get_attendance("mrg-901")
+    assert len(rows) == 1
+
+
+def test_an_unrecognised_calls_envelope_names_the_keys_that_did_arrive() -> None:
+    """What the message has to carry, learned from this going unnoticed: an
+    operator meets it on a seminar day, with a register to take, and needs
+    to know what came back rather than only that something was wrong."""
+    transport = FakeTransport(
+        get_responses={"/conferences/618515381/calls": {"rows": [], "retcode": 0}}
+    )
+    with pytest.raises(FCCRequestError, match=r"\['retcode', 'rows'\]"):
+        _platform(transport=transport).get_attendance("mrg-901")
+
+
 def test_get_attendance_raises_when_the_response_shape_is_not_a_list() -> None:
     """The endpoint is not documented by the vendor -- it
     answers, verified, but nothing guarantees the shape stays a bare JSON
