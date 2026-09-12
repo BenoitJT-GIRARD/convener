@@ -106,7 +106,7 @@ import yaml
 from helpers import instance_identity, toolchain
 
 from convener_ops.declaration import boundary, published
-from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.paths import PUBLIC_DATA_DIR, repo_root
 from convener_ops.journey import certificate, registration, survey_invite
 from convener_ops.publication import agenda
 
@@ -407,6 +407,35 @@ _RELAY_DEPLOY_WORKFLOWS = (
 #: handbook moved onto the substitution vocabulary.
 _UNSWEPT: tuple[str, ...] = ()
 
+#: The instance's projections, exempt from the address sweep alone.
+#:
+#: `declarations/boundary.yml` calls this directory "everything the
+#: instance publishes about itself, derived from instance/data/ by the
+#: product's own commands". An address appearing there is this declaration
+#: being *read*, which is what it exists for, not copied: the next run of
+#: the command that writes the file rewrites it from the declaration
+#: again, so it cannot drift the way a source file can.
+#:
+#: Concretely, `agenda-internal.ics` puts the host in every `UID` -- the
+#: iCalendar convention for a globally unique identifier -- and in
+#: `LOCATION` and `URL` for a scheduled event. Upstream's own committed
+#: copy does it with the example instance's host, and this test never sees
+#: that because the skipif below excuses the one repository where the
+#: example *is* the instance. Every configured duplicate saw it instead,
+#: the first time its publisher refreshed the feed.
+#:
+#: Read from the declaration rather than written out here, and handed to
+#: the sweep rather than folded into `_UNSWEPT`, which two sweeps share.
+#: The identity sweep already skips whatever the boundary hands the
+#: instance, so it needs nothing -- and sharing this would have taken
+#: `public-data/README.md`, which is the product's, out of it.
+#:
+#: What stops this from outliving the directory it names: `paths.handed`
+#: raises when the declaration hands over no path ending in
+#: `public-data`, so an exemption for a tree the boundary has retired
+#: fails at import rather than quietly covering nothing.
+_PROJECTIONS: Final = (f"{PUBLIC_DATA_DIR.as_posix()}/",)
+
 _BINARY_SUFFIXES = frozenset(
     {".png", ".jpg", ".jpeg", ".ico", ".pdf", ".woff2", ".woff", ".ttf"}
 )
@@ -424,12 +453,14 @@ def _tracked_files() -> list[str]:
     return listing
 
 
-def _files_writing_the_address(allowed: set[str]) -> list[tuple[str, str]]:
+def _files_writing_the_address(
+    allowed: set[str], unswept: tuple[str, ...] = ()
+) -> list[tuple[str, str]]:
     """Every tracked file writing any form of the published address,
-    except the ones `allowed` names. Taking the exemptions as an argument
-    is what lets the test below the sweep prove the sweep works: it runs
-    the identical loop with nothing exempt and requires the declaration
-    itself to come back."""
+    except the ones `allowed` names and the trees `unswept` prefixes.
+    Taking the exemptions as arguments is what lets the test below the
+    sweep prove the sweep works: it runs the identical loop with nothing
+    exempt and requires the declaration itself to come back."""
     address = published.load()
     needles = (
         address.url,
@@ -439,7 +470,7 @@ def _files_writing_the_address(allowed: set[str]) -> list[tuple[str, str]]:
     )
     offending: list[tuple[str, str]] = []
     for name in _tracked_files():
-        if name.startswith(_UNSWEPT) or name in allowed:
+        if name.startswith(_UNSWEPT + unswept) or name in allowed:
             continue
         path = ROOT / name
         if path.suffix.lower() in _BINARY_SUFFIXES or not path.is_file():
@@ -476,8 +507,15 @@ def test_no_source_file_writes_the_published_address_a_second_time() -> None:
     origin they deploy stopped being written in them
     (`services/auth-proxy/wrangler.toml`); so a `[vars]` entry putting it
     back fails here, on the Python suite, with no Worker suite run.
+
+    The instance's own projections are not a second entry: `_PROJECTIONS`
+    is a tree this sweep does not read, for the reason stated there, and
+    a file that is *written* from the declaration cannot be a second copy
+    of it.
     """
-    offending = _files_writing_the_address({published.INSTANCE_PATH.as_posix()})
+    offending = _files_writing_the_address(
+        {published.INSTANCE_PATH.as_posix()}, _PROJECTIONS
+    )
     assert offending == [], (
         "these files write this project's published address a second time, "
         f"which instance/config.json exists to make impossible: {offending}"
@@ -1288,6 +1326,31 @@ def test_this_repository_declares_the_prefix_its_editions_are_numbered_under() -
     assert not editions.describes(f"{editions.code_prefix}00000")
 
 
+#: The fact this reading is about: an edition this instance has actually
+#: assigned. A series that has not held a session yet has assigned none --
+#: `next_edition_number` is still 1 and no row carries a code -- so there
+#: is no edition for a declared prefix to disagree with, and the freeze
+#: below has nothing yet to freeze. Every instance starts in that state,
+#: and a duplicate stays in it from the moment it carries out
+#: `declarations/standing-up.yml`'s `own_records` until it schedules its
+#: first event.
+#:
+#: Said rather than left to a green run, because abstaining is not
+#: passing: a reading that quietly checks nothing is how a guard stops
+#: guarding without anybody being told. `test_retired_paths.py` states the
+#: same thing for a history a duplicate does not have.
+#:
+#: Narrower than "the counter is 1", deliberately. A counter of 1 beside
+#: rows that do carry codes is the renumbering this check exists to
+#: refuse -- the counter reset while the editions it numbered stayed -- so
+#: that state is read here, never skipped.
+_NO_EDITION_ASSIGNED: Final = (
+    "this instance has assigned no edition yet: next_edition_number is still "
+    "1 and no row carries an edition code, so there is nothing here for the "
+    "declared prefix to be checked against"
+)
+
+
 def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
     """The freeze, seen from the repository rather than from the
     validator: every edition this instance has assigned is numbered under
@@ -1321,11 +1384,6 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
         (ROOT / "instance" / "data" / "config.yml").read_text(encoding="utf-8")
     )
     counter = config["next_edition_number"]
-    assert isinstance(counter, int) and counter > 1, (
-        "this instance has assigned no edition at all"
-    )
-    assert editions.describes(f"{editions.code_prefix}{counter - 1}")
-
     speakers = yaml.safe_load(
         (ROOT / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
     )
@@ -1334,6 +1392,14 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
         for entry in speakers or ()
         if isinstance(entry, dict) and entry.get("edition_code")
     ]
+
+    if counter == 1 and not assigned:
+        pytest.skip(_NO_EDITION_ASSIGNED)
+
+    assert isinstance(counter, int) and counter > 1, (
+        "this instance has assigned no edition at all"
+    )
+    assert editions.describes(f"{editions.code_prefix}{counter - 1}")
     assert [code for code in assigned if not editions.describes(code)] == []
 
 
@@ -1560,9 +1626,19 @@ def test_a_placeholder_in_a_degradable_field_is_not_this_warning(
     declaration = json.loads(
         (ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
     )
+    # The placeholder is put here rather than found here. This instance's
+    # own `proposal_form` is whatever it happens to declare, and
+    # standing-up's `proposal_form_live` is the step that fills it in -- so
+    # reading the live value made this claim hold only until a duplicate
+    # opened its form, and fail from that commit onwards, in the one place
+    # the skipif above lets this run at all. What is under test is a
+    # property of `unconfigured`, not a fact about anybody's declaration.
+    declaration[published.IDENTITY_KEY]["proposal_form"] = (
+        f"https://tally.so/r/{published.PLACEHOLDER_MARKER}"
+    )
     assert published.is_placeholder(
         declaration[published.IDENTITY_KEY]["proposal_form"]
-    ), "this instance no longer ships the placeholder this test is about"
+    )
     assert published.unconfigured(_laid_out(tmp_path, declaration)) == ()
 
 
