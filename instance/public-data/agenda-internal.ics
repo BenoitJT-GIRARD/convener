@@ -1,0 +1,34 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//The Example Collective//Monthly Reading Group (internal)//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:The Example Collective internal agenda
+BEGIN:VEVENT
+UID:https://example-instance.github.io/example-showcase/events/mrg-5/
+DTSTAMP:20261008T103000Z
+DTSTART:20261008T103000Z
+DTEND:20261008T120000Z
+SUMMARY:Anagnosis (ἀνάγνωσις): reading as a shared act\, from the
+  scriptorium to the group chat
+LOCATION:https://example-instance.github.io/example-showcase/events/mrg-5/
+URL:https://example-instance.github.io/example-showcase/events/mrg-5/
+END:VEVENT
+BEGIN:VEVENT
+UID:exm-004-forum-summary@example-instance.github.io
+DTSTAMP:20260910T000000Z
+DTSTART;VALUE=DATE:20260910
+SUMMARY:Forum summary due — exm-004
+END:VEVENT
+BEGIN:VEVENT
+UID:exm-011-board-decision@example-instance.github.io
+DTSTAMP:20260912T000000Z
+DTSTART;VALUE=DATE:20260912
+SUMMARY:Board decision due — exm-011
+END:VEVENT
+BEGIN:VEVENT
+UID:exm-008-invitation-follow-up@example-instance.github.io
+DTSTAMP:20260919T000000Z
+DTSTART;VALUE=DATE:20260919
+SUMMARY:Invitation follow-up due — exm-008
+END:VEVENT
+END:VCALENDAR
