@@ -104,15 +104,14 @@ with its registration form, the certificate verifier, the post-event survey
 and the cockpit — the same five surfaces a deployed instance has, with the
 same navigation between them.
 
-`.github/workflows/demonstration.yml` builds it and publishes it to this
-repository's own GitHub Pages. It runs on every push that reaches what it
-publishes and rebuilds every Thursday, and it publishes nothing until the
-repository variable `CONVENER_DEMONSTRATION_PAGES` is set to `true` and
-Pages is pointed at the `gh-pages` branch — two settings no workflow can
-make for itself. Once both are made, the demonstration is at
-<https://BenoitJT-GIRARD.github.io/convener/>.
+**It is running now, at <https://benoitjt-girard.github.io/convener/>.**
+Nothing to install and no account. The records in it are the example
+instance's, and what you do to them stays in the tab you did it in, for as
+long as that tab is open, and is never sent anywhere: the cockpit in
+demonstration mode reads only from the address that served it and writes
+nothing at all.
 
-Build it and serve it yourself, from a real build, with no account and no
+Or build and serve it yourself, from a real build, with no account and no
 data of anybody's:
 
 ```bash
@@ -131,10 +130,9 @@ example instance declares, prefix and all, because a build served at a bare
 root is a different topology from the deployed one
 ([why](docs/engineering/decisions/d-26-verify-deployed-shape.md)).
 
-The records are the example instance's. What you do to them stays in the
-tab you did it in, for as long as that tab is open, and is never sent
-anywhere: the cockpit in demonstration mode reads only from the address
-that served it and writes nothing at all.
+`.github/workflows/demonstration.yml` is what builds the published one and
+puts it there, on every push that reaches what it publishes and again every
+Thursday.
 
 > [!WARNING]
 > **Do not fork this repository — duplicate it.**
