@@ -170,6 +170,15 @@ the day they were written; the lesson had never crossed into Python.
 - Four readings only the example instance could satisfy, a stale assertion
   no duplicate could pass, and two configuration headers that contradicted
   the values a duplicate had just written under them.
+- **A reading measure had been put on things nobody reads.** The showcase's
+  colophon, the demonstration banner and the unconfigured banner were capped
+  at a character count, which froze them: measured at six viewport widths,
+  none moved a pixel between 820px and 1920px while the page around them
+  grew by 1 100px. The cockpit's own footer had it right all along and this
+  repository carried a comment arguing for the difference. A plate takes the
+  width; a text somebody reads keeps a measure. The cockpit's explanatory
+  paragraphs now move too, between 521px and 658px instead of standing at
+  521px everywhere.
 
 ### Before you merge this
 
