@@ -584,7 +584,20 @@ def check_credential_expiry() -> int:
         return 0
 
     for line in credential_expiry.annotation_lines(fired):
-        print(line)
+        # Each line names a credential that is about to stop working, which
+        # is this watchdog's entire purpose -- the *name* of one, never its
+        # value. `py/clear-text-logging-sensitive-data` classifies by the
+        # name of the field a value came from, and the field is
+        # `Renewal.secret_name`: accurate, and carrying the word the
+        # heuristic looks for. Renaming it further to avoid a regular
+        # expression would serve the scanner at the reader's expense.
+        #
+        # What makes this safe is not the comment. `credential_expiry`
+        # refuses anything not shaped like a repository secret's name, so a
+        # credential pasted where a name belongs never reaches this line --
+        # and the refusal that catches it deliberately repeats nothing,
+        # because this is where it would be repeated to.
+        print(line)  # codeql[py/clear-text-logging-sensitive-data]
     addressed = dispatch(credential_expiry.message(fired, today), os.environ)
     if addressed is not None:
         (root / RENEWALS_BODY).write_text(addressed.body, encoding="utf-8", newline="")
