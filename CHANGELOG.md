@@ -102,6 +102,85 @@ every entry carries the section, that no entry names a path under it which
 the declaration says is upstream's, and that the versions descend without
 repeating.
 
+## 1.1.0 — 2026-09-12
+
+The first release after 1.0.0, and almost all of it comes from one thing:
+somebody stood an instance up by following
+[`docs/operating/standing-up.md`](docs/operating/standing-up.md) end to end,
+as an operator with no knowledge of how any of this was built. Twenty-one
+defects came out of that walk. Nineteen are fixed here.
+
+**Two of them would have broken a seminar**, and neither was visible to any
+test, because both were about what a third-party service actually does
+rather than what this repository believes about it.
+
+- **Taking the register worked nowhere.** The meeting provider's calls
+  endpoint moved to a `{calls: [...]}` envelope and this code accepted only
+  a bare array. That path runs once an event exists, so the first time any
+  duplicate exercised it would have been the day of its first seminar, with
+  a room open. The error now also names the keys that did arrive — the old
+  one described the failure without describing the response, which is why
+  it went unnoticed.
+- **Every published proposal form was missing `phd`.** Tally enforces an
+  undocumented length limit on a dropdown option's `placeholder` and drops
+  the whole option carrying one that is too long — silently, with the API
+  returning success. A PhD student had no way to say so. The gloss rides in
+  a block of its own now.
+
+**Nothing this software calls could reach it.** `urllib` sends
+`Python-urllib/3.x` when nothing else is set, and Cloudflare refuses that
+string with a 403 the origin never sees, so the failure reads as an
+authentication problem it is not. The header is stated once and a sweep
+refuses a call site that does not send it. The relays had carried one from
+the day they were written; the lesson had never crossed into Python.
+
+### New
+
+- **A notice before a credential expires.** Four watchdogs already watched
+  things that *stop*; none watched a thing that *expires*, and an expiry
+  gives no signal until it is too late. The meeting token is the worst of
+  them — it falls back to the manual adapter and says nothing at all. Dates
+  are declared in `instance/data/credential-renewals.yml` and the daily
+  sweep posts to the board thread a fortnight ahead. See *Before you merge
+  this*.
+- **A thank-you page on the proposal form**, emitted by the builder rather
+  than added in Tally's editor — where the next run of the form command
+  would have erased it, along with anything else a volunteer added there.
+- **[Taking an update](docs/operating/taking-an-update.md)**, which is the
+  command this product is built around and had never written down.
+
+### Fixed
+
+- **The Actions budget alarm measured nothing.** It read the minutes GitHub
+  *charges*, which inside an included allowance are zero — so it reported
+  all was well, from a real number, and could not fire before the allowance
+  was spent. It reads each job's own elapsed time now.
+- **CodeQL turned every duplicate's security workflow red** from its first
+  commit, burying the gitleaks job beside it. It now runs where it can run
+  and stops where it cannot.
+- **The Board was a team created in an optional step**, while two mandatory
+  things read its handle. It is made with the organisation now, and given
+  Write on the cockpit at the step where the cockpit exists.
+- **The salt behind every matching code licensed any generator**, on the one
+  value the sequence forbids rotating. Three exact commands now, Python
+  first, and `Get-Random` named as the trap it is.
+- **The only monthly step had no written procedure.** The provider hides its
+  OAuth flow in prose inside an OpenAPI description; it is in
+  [`operations.md`](docs/operating/operations.md) now, measured.
+- Four readings only the example instance could satisfy, a stale assertion
+  no duplicate could pass, and two configuration headers that contradicted
+  the values a duplicate had just written under them.
+
+### Before you merge this
+
+- `instance/data/credential-renewals.yml` — **new, and it arrives empty.**
+  Nothing about the merge needs doing first and nothing breaks if you leave
+  it: an instance that declares no date is an ordinary state, said out loud
+  in every run's log rather than passed over. But it is empty because
+  upstream cannot know your dates, and it is the file that turns "somebody
+  has to notice" into the thing that notices. Write one line per credential
+  that expires, at the next renewal of each.
+
 ## 1.0.0 — 2026-09-02
 
 The first published state. What is in it is the whole product as this
