@@ -595,20 +595,46 @@ def _row_from_call(call: Mapping[str, Any]) -> AttendanceRow:
     )
 
 
+#: The envelopes this endpoint has been seen to use, newest first. It is
+#: undocumented by the vendor -- it appears in no path of their v4
+#: specification -- so every entry here is a reading of a real response
+#: rather than a contract.
+#:
+#: `calls` is what the live service returns today, measured 2026-09-12
+#: against three conferences of a real account: `{"calls": [...], "meta":
+#: ..., "retcode": 0}`. A bare array is what it returned when this module
+#: was written, and `test_platform_fcc.py`'s fixtures are still shaped that
+#: way. `data` was a guess, has never been observed, and stays only because
+#: removing an accepted shape can break a caller while adding one cannot.
+#:
+#: The shape changed under a module nothing exercised: the attendance path
+#: runs only once an event exists, so between the array and the object
+#: every duplicate of this product would have raised on the day of its
+#: first seminar, at the moment of taking the register.
+_CALL_ENVELOPES: Final = ("calls", "data")
+
+
 def _extract_calls(payload: Any) -> list[Mapping[str, Any]]:
-    """The endpoint is undocumented by the vendor -- everything verified
-    about it came from reading real responses, and every one of them was a
-    bare JSON array (`test_platform_fcc.py`'s fixtures are shaped that
-    way). The `data` key below is a defensive fallback only, never itself
-    verified against the real service -- see the module docstring."""
+    """The rows of a calls response, whichever envelope it arrived in."""
     if isinstance(payload, list):
         return payload
     if isinstance(payload, Mapping):
-        wrapped = payload.get("data")
-        if isinstance(wrapped, list):
-            return wrapped
+        for key in _CALL_ENVELOPES:
+            wrapped = payload.get(key)
+            if isinstance(wrapped, list):
+                return wrapped
+        # Naming what did arrive, because the reason this shape change went
+        # unnoticed is that the old message described the failure without
+        # describing the response: an operator reading it on a seminar day
+        # learned only that something was wrong.
+        raise FCCRequestError(
+            "the calls endpoint returned a shape this module does not "
+            f"recognise: a JSON object whose keys are {sorted(payload)}, "
+            f"with no list under any of {list(_CALL_ENVELOPES)}"
+        )
     raise FCCRequestError(
-        "the calls endpoint returned a shape this module does not recognise"
+        "the calls endpoint returned a shape this module does not "
+        f"recognise: {type(payload).__name__}, not a list or an object"
     )
 
 
