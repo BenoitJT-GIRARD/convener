@@ -23,7 +23,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 /** `declarations/boundary.yml`, from this file's own location -- the app's
  *  build runs with `app/` as its working directory, so a path relative

@@ -35,7 +35,7 @@
  *   is what decides between a plain and a quoted scalar, and the two
  *   writers have to make that call the same way.
  * - `candidate_dates`, a block sequence of *mappings* nested under a
- *   speaker -- the shape `noArrayIndent` governs, one level deeper than
+ *   speaker -- the shape `seqNoIndent` governs, one level deeper than
  *   `links` and `ballots` reach.
  * - `SPEAKERS[2].seed_questions: '12:30'`, the sexagesimal defect on a
  *   field nobody thinks of as a time.

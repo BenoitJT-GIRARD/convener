@@ -18,7 +18,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { channelItem, channelsOf } from '../../src/state/channels';
 import { itemAssignee } from '../../src/state/assignment';
 import { isItemDone } from '../../src/state/phases';

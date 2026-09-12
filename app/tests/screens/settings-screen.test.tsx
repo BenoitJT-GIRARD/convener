@@ -19,7 +19,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { AuthProvider } from '../../src/auth/AuthContext';
 import { Settings } from '../../src/screens/Settings';
 import {

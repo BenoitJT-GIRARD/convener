@@ -255,7 +255,7 @@ def test_an_apostrophe_and_an_accent_cross_together() -> None:
 
 def test_the_proposed_slots_cross_as_a_block_sequence_of_mappings() -> None:
     """A list of mappings nested under a speaker: one level deeper than any
-    list this fixture carried before, and the shape `noArrayIndent` governs.
+    list this fixture carried before, and the shape `seqNoIndent` governs.
 
     The hours are quoted for the same reason `time` is: `09:05` and `12:30`
     are text, and a slot read back as the integer 750 would be proposed to

@@ -26,7 +26,7 @@
  * is parsed and the value checked before it is offered to anybody, and a
  * mismatch throws rather than being written.
  */
-import yaml from 'js-yaml';
+import { loadDocument } from '../data/yaml';
 
 /** A file this module will not edit -- because the key is not there, is
  *  there twice, or does not read back. Its own class so the screen can show
@@ -85,7 +85,7 @@ export function setScalar(text: string, key: string, value: number): string {
     );
   }
   const next = text.replace(assignment(key), `${key}: ${renderScalar(value)}`);
-  const loaded: unknown = yaml.load(next);
+  const loaded: unknown = loadDocument(next);
   const readBack =
     loaded !== null && typeof loaded === 'object'
       ? (loaded as Record<string, unknown>)[key]
@@ -109,7 +109,7 @@ export function alreadySays(text: string, key: string, value: number): boolean {
   // means the save is attempted rather than skipped.
   let loaded: unknown;
   try {
-    loaded = yaml.load(text);
+    loaded = loadDocument(text);
   } catch {
     return false;
   }

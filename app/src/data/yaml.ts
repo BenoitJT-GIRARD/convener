@@ -1,4 +1,4 @@
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { readConfig, readSpeakers } from './validate';
 import type { Speaker, Config } from './types';
 
@@ -9,13 +9,54 @@ import type { Speaker, Config } from './types';
  * The two languages write the same two files -- the browser on every save,
  * the scheduled jobs on every sweep -- so a difference in *formatting* is a
  * difference in the file, and every alternating write would rewrite lines
- * neither side meant to touch. `noArrayIndent` is the one that mattered:
+ * neither side meant to touch. `seqNoIndent` is the one that mattered:
  * PyYAML puts a block sequence at its parent key's indentation, js-yaml
  * indented it by two, and `instance/data/speakers.yml` on disk is in PyYAML's shape.
  * `tools/tests/fixtures/speakers-from-app.yml` pins the agreement byte for
- * byte, from both sides.
+ * byte, from both sides. js-yaml 4 spelled the same option `noArrayIndent`,
+ * and 5 ignores that spelling in silence rather than refusing it -- the
+ * fixture is what would have caught the rename, and did.
  */
-const DUMP = { lineWidth: 1000, noRefs: true, sortKeys: false, noArrayIndent: true };
+const DUMP = { lineWidth: 1000, noRefs: true, sortKeys: false, seqNoIndent: true };
+
+/**
+ * Whether a file holds no document at all: blank lines, comment lines, and
+ * nothing else.
+ *
+ * A line whose first non-space character is `#` is a comment, and a file of
+ * those is a file somebody has started and not filled in -- the header
+ * `withSpeakersHeader` writes, on its own, is exactly that. Anything else
+ * on any line makes this a document, including `---` and `null`, which are
+ * both a document whose content is nothing.
+ */
+function holdsNoDocument(text: string): boolean {
+  return text
+    .split('\n')
+    .every(line => line.trim() === '' || line.trimStart().startsWith('#'));
+}
+
+/**
+ * Read one YAML document, where a file with nothing in it is no document.
+ *
+ * js-yaml 4 returned `undefined` for such a file; 5 raises `YAMLException`
+ * instead. This repository had already answered that question for its own
+ * files, in the two readers below: `readSpeakers` reads no document as no
+ * speakers, "that is where the repository starts", and `readConfig` refuses
+ * it by naming the file and what it wanted. An exception raised before
+ * either of them is handed a value replaces both answers with one sentence
+ * about a parser, and it replaces the first one with a stop -- a duplicate
+ * whose `instance/data/speakers.yml` is still empty could not open the
+ * cockpit at all.
+ *
+ * So the decision stays in the readers that made it and this hands them the
+ * value they were written against. Every other refusal passes through
+ * untouched: a tab in the indentation, or a duplicated key, is a malformed
+ * file rather than an empty one, and `tests/data/yaml.test.ts` reads the
+ * table of both kinds back out of js-yaml itself.
+ */
+export function loadDocument(text: string): unknown {
+  return holdsNoDocument(text) ? undefined : yaml.load(text);
+}
 
 /**
  * Read `instance/data/speakers.yml`.
@@ -26,7 +67,7 @@ const DUMP = { lineWidth: 1000, noRefs: true, sortKeys: false, noArrayIndent: tr
  * screens will then read `undefined` out of.
  */
 export function parseSpeakers(text: string): Speaker[] {
-  return readSpeakers(yaml.load(text));
+  return readSpeakers(loadDocument(text));
 }
 
 export function serializeSpeakers(items: Speaker[]): string {
@@ -41,7 +82,7 @@ export function serializeSpeakers(items: Speaker[]): string {
  * showed the board a governance model nobody had adopted.
  */
 export function parseConfig(text: string): Config {
-  return readConfig(yaml.load(text));
+  return readConfig(loadDocument(text));
 }
 
 export function serializeConfig(cfg: Config): string {

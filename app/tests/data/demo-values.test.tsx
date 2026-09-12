@@ -32,7 +32,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { AuthProvider } from '../../src/auth/AuthContext';
 import { DataProvider } from '../../src/data/DataContext';
 import { DatePanel } from '../../src/components/DatePanel';
