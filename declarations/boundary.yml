@@ -233,8 +233,10 @@ instance:
       the visual identity's measured values (brand.json), and every ledger the
       scheduled jobs write back (actions-usage.yml, retention-last-run.yml,
       queue-watch.yml, queue-ledger.yml, survey-invitations.yml,
-      event-key-destructions.yml). None of it is a value upstream could ship
-      correctly for anybody else.
+      event-key-destructions.yml) -- and credential-renewals.yml, which is
+      the one an operator writes rather than a job, because no workflow of
+      this repository's can read a credential's expiry. None of it is a
+      value upstream could ship correctly for anybody else.
     kept:
       - path: instance/data/schema.md
         reason: >-

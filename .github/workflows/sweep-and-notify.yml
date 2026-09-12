@@ -776,6 +776,50 @@ jobs:
         run: |
           echo "::error::instance/public-data/registration-routing.json can no longer route registrations to the queue -- see the annotations above; it is regenerated and committed by Deploy app, which nothing in this job starts"
           exit 1
+      - name: Check whether a credential is about to stop working
+        id: credential-expiry
+        # Guarded on the `uv` install alone, like the routing check above:
+        # it reads one committed file and a clock, so nothing earlier in
+        # this job failing is a reason to stop asking whether next week's
+        # seminar will have a room to open.
+        if: always() && steps.uv.outcome == 'success'
+        working-directory: tools
+        env:
+          # Step-level, never job-level: the checking code must not be able
+          # to see the board's channel except while it is composing a
+          # message for it.
+          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+        run: uv run convener-check-credential-expiry
+      - name: Tell the board a credential is about to stop working
+        # A fifth body file, for the reason there is a fourth: several
+        # messages composed in one job sharing one filename means whichever
+        # is written last silently replaces the rest.
+        if: >-
+          always() && steps.credential-expiry.outputs.renewal_alert == 'true' &&
+          hashFiles('renewals-body.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+        run: gh issue comment "$THREAD" --body-file renewals-body.md
+      - name: Fail if a credential is about to stop working
+        # D-25, and in YAML rather than in an exit code for the same reason
+        # the three alarms above are: this job goes red whenever the finding
+        # fired, whether or not a channel was configured to also post to. An
+        # unconfigured integration must never be able to turn a real finding
+        # into silence.
+        #
+        # Red for a notice rather than only for an expiry, and that is the
+        # decision rather than an oversight: this is the one watchdog here
+        # whose subject gives no signal of its own. The retention token fails
+        # loudly, the publish token logs a line, and the meeting token falls
+        # back to the manual adapter and says nothing at all -- so the red
+        # has to arrive while there is still time to act on it, not on the
+        # day it stops working.
+        if: always() && steps.credential-expiry.outputs.renewal_alert == 'true'
+        run: |
+          echo "::error::a credential declared in instance/data/credential-renewals.yml is inside its notice window or already past it -- see the annotations above, and docs/operating/operations.md for the renewal each one names"
+          exit 1
       - name: Compose
         id: compose
         # `always()`, guarded on the install rather than on the sweep: a
