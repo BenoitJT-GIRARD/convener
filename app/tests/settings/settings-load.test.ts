@@ -213,16 +213,32 @@ describe('the integration report', () => {
     };
   }
 
-  const answered = { secrets: [] as string[], variables: [] as string[], refusal: null };
+  const answered = {
+    secrets: [] as string[],
+    variables: [] as string[],
+    refusal: null,
+    refusalKind: null,
+  };
 
-  it('is unknown when the question could not be asked', () => {
-    const report = reportOn(row(), { secrets: [], variables: [], refusal: 'no access' });
-    expect(report.state).toBe('unknown');
-    expect(report.missing).toEqual([]);
+  it('is not-looked when the listing was refused, whichever way it was', () => {
+    // The same state for both refusals on purpose: this row was not looked
+    // at, and why it was not is the section's fact rather than this row's.
+    for (const refusalKind of ['not-permitted', 'unanswered'] as const) {
+      const report = reportOn(row(), {
+        secrets: [],
+        variables: [],
+        refusal: 'no access',
+        refusalKind,
+      });
+      expect(report.state).toBe('not-looked');
+      expect(report.missing).toEqual([]);
+    }
   });
 
-  it('is unknown for a row declaring no input at all', () => {
-    expect(reportOn(row({ secrets: [] }), answered).state).toBe('unknown');
+  it('is undeclared for a row declaring no input at all', () => {
+    // A different fact from the one above, and true whatever GitHub
+    // answers: there was nothing here to look for in the first place.
+    expect(reportOn(row({ secrets: [] }), answered).state).toBe('undeclared');
   });
 
   it('reads a variable name as readily as a secret one', () => {

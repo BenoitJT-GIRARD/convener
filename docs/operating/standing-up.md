@@ -504,7 +504,14 @@ browser form, start to finish, which is why this step is written out in full.
 **Proves it is done.** The App's own settings page shows *Enable Device Flow*
 ticked, one repository permission, and a client id beginning `Iv`. The client
 id is not a secret — it ships inside the browser bundle by construction — and
-it is what the next steps set as a repository variable.
+it is what the next steps set as a repository variable. One consequence of
+*Set nothing else*, said here so that nobody spends an afternoon on it: the
+cockpit's Settings screen will never list this repository's secrets and
+variables. Listing them needs rights this App deliberately does not hold, so
+that section reports a boundary rather than an answer, permanently and
+correctly. It is not a symptom of a half-finished App. `convener-check-config`
+answers that question authoritatively from inside a workflow, where the values
+are.
 
 **Without it.** Half of the sign-in relay is missing, so the relay row stays
 absent whatever else is deployed, and every volunteer signs in with a personal
