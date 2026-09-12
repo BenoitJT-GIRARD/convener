@@ -70,7 +70,14 @@ def _question_groups(
     the leading FORM_TITLE block. A plain question has one body block; a
     DROPDOWN question has one DROPDOWN_OPTION block per offered value, so
     this scans from each TITLE to the next one rather than assuming a fixed
-    number of blocks per question."""
+    number of blocks per question.
+
+    TEXT blocks are dropped before the scan. One belongs to no question: it
+    captures nothing, sits in a group of its own, and appears in no webhook
+    payload -- so counting it as part of whichever question it happens to
+    follow would be an artefact of this positional scan rather than
+    something Tally would agree with."""
+    blocks = [b for b in blocks if b["type"] != "TEXT"]
     title_indices = [i for i, b in enumerate(blocks) if b["type"] == "TITLE"]
     groups = []
     for position, start in enumerate(title_indices):
@@ -102,6 +109,25 @@ def _first_option_payload(blocks: list[dict[str, Any]], label: str) -> dict[str,
     """The first option's payload for a DROPDOWN question -- where the
     group-level settings (`isRequired`, `placeholder`) live."""
     return dict(_body_blocks(blocks, label)[0]["payload"])
+
+
+def _gloss_html(blocks: list[dict[str, Any]], label: str) -> str:
+    """The disambiguating gloss a DROPDOWN question carries, read where it
+    lives: the TEXT block emitted immediately before that question's TITLE,
+    in a group of its own. It sits there rather than on the first option's
+    `placeholder` because Tally silently drops an option whose placeholder
+    grows long -- Career stage lost `phd` that way -- and rather than in the
+    question's own wording because that wording is what `proposal.py`
+    matches a submission's label against."""
+    for index, block in enumerate(blocks):
+        if (
+            block["type"] == "TITLE"
+            and block["payload"]["html"] == label
+            and index
+            and blocks[index - 1]["type"] == "TEXT"
+        ):
+            return str(blocks[index - 1]["payload"]["html"])
+    raise AssertionError(f"no gloss block before the question titled {label!r}")
 
 
 def _option_texts(blocks: list[dict[str, Any]], label: str) -> list[str]:
@@ -360,27 +386,38 @@ def test_every_question_has_a_non_empty_placeholder() -> None:
     # questions already
     # carry a placeholder; this pins that Gender and Career stage's first
     # option does too, across all eleven in one assertion.
-    for title, body in _question_groups(build_blocks()):
+    blocks = build_blocks()
+    dropdowns = {"Gender", "Career stage"}
+    for title, body in _question_groups(blocks):
         label = title["payload"]["html"]
-        assert body[0]["payload"].get("placeholder"), label
+        if label in dropdowns:
+            # A dropdown's disambiguation is a TEXT block of its own now,
+            # not a placeholder on its first option: Tally accepted Gender's
+            # 77-character gloss there and silently dropped the whole option
+            # carrying Career stage's 181-character one, taking `phd` out of
+            # the published form.
+            assert _gloss_html(blocks, label), label
+        else:
+            assert body[0]["payload"].get("placeholder"), label
 
 
 def test_the_gender_placeholder_explains_nb_and_offers_undisclosed_legitimately() -> (
     None
 ):
-    placeholder = _first_option_payload(build_blocks(), "Gender")["placeholder"]
-    assert "NB" in placeholder
-    assert "non-binary" in placeholder
-    assert "undisclosed if you'd rather not say" in placeholder
+    gloss = _gloss_html(build_blocks(), "Gender")
+    assert "NB" in gloss
+    assert "non-binary" in gloss
+    assert "undisclosed if you'd rather not say" in gloss
 
 
 def test_the_career_stage_placeholder_distinguishes_independent_from_group_leader() -> (
     None
 ):
-    placeholder = _first_option_payload(build_blocks(), "Career stage")["placeholder"]
-    assert "no lab" in placeholder
-    assert "runs a lab" in placeholder
-    assert "undisclosed if you'd rather not say" in placeholder
+    gloss = _gloss_html(build_blocks(), "Career stage")
+    assert "PhD student" in gloss
+    assert "no lab" in gloss
+    assert "runs a lab" in gloss
+    assert "undisclosed if you'd rather not say" in gloss
 
 
 def test_the_dropdown_placeholder_glosses_never_touch_the_bare_option_text() -> None:
