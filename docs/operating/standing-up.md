@@ -143,7 +143,13 @@ alternative.
 
 Create the GitHub account, or the organisation, that will own both
 repositories, using the address from the first step. The free tier is the tier
-this project is designed for; nothing below needs a paid plan.
+this project is designed for; nothing below needs a paid plan. Then, in that
+organisation, create a team named exactly `editorial-board` and put the Board
+in it. The slug is not a label: `.github/CODEOWNERS` routes every review
+request to it, `app/src/auth/role.ts` asks GitHub about it to decide who signs
+in as a Board member, and `board_notifications` mentions it. All three read
+the same handle, and a team named anything else is three silent failures
+rather than one loud one.
 
 **Proves it is done.** Signed in as that account, the *New repository* button
 offers it as an owner. If a team of people will run the series, an
@@ -151,9 +157,10 @@ organisation is what makes that possible without sharing one login.
 
 **Without it.** There is nothing to create the two repositories under, so the
 sequence stops here. An organisation rather than a personal account also
-decides whether the Board can ever be a team rather than a list of names: the
-board-notification step below needs an organisation team, and a personal
-account has none.
+decides whether the Board can ever be a team rather than a list of names, and
+a personal account has none: review requests reach nobody, every volunteer
+signs in as an ordinary member however the Board list reads, and the
+notification step later has no team to mention.
 
 **In a browser, in full:**
 
@@ -162,8 +169,12 @@ account has none.
 2. If more than one person will ever run this series, create an organisation
    as well — Settings → Organizations → New organisation, and choose the free
    plan.
-3. Store both logins and their recovery codes in the shared store.
-4. Turn on two-factor authentication. GitHub requires it, and the recovery
+3. Create the team, under Organisation → Teams → New team. Its name has to be
+   exactly `editorial-board`, copied rather than typed — three separate things
+   read that handle, and a team named anything else fails three times quietly
+   rather than once loudly.
+4. Store both logins and their recovery codes in the shared store.
+5. Turn on two-factor authentication. GitHub requires it, and the recovery
    codes belong in the store beside the password.
 
 ## Stage 2 — The two repositories
@@ -181,7 +192,21 @@ in it, with no fork relationship to the product. GitHub offers *Fork* as the
 obvious action and it is the wrong one here: a fork of a public repository
 cannot be made private, and repositories in one fork network share an object
 store, so a commit pushed to a fork stays reachable from the public parent
-permanently and after the fork is deleted.
+permanently and after the fork is deleted. Then give the `editorial-board`
+team **Write** on it — Settings → Collaborators and teams → Add team. Write is
+enough for everything a Board member does: the cockpit writes files with the
+signed-in person's own token, and Write also permits running a workflow by
+hand. Nothing here needs Admin. **Grant it to the team rather than to
+people**, and the gain is not only least privilege. Once the team carries the
+access, adding somebody to the Board gives them the cockpit and removing them
+takes it away — one list instead of two kept in step by hand. Two lists drift,
+and the first instance to walk this sequence had them already disagreeing.
+**Board membership is not a reason to own the organisation.** An owner holds
+admin on every repository it has, which on this one means the right to read or
+replace any secret, to make the repository public — publishing
+`instance/data/speakers.yml` — and to delete it. Keep ownership to the people
+who administer the organisation, and keep at least two of them, for the reason
+`mail_account` gives about a mailbox only one person can reach.
 
 **Proves it is done.** The repository's own page shows *Private* and carries
 no *forked from* line under its name. Both have to be true; either one alone
@@ -205,7 +230,14 @@ git merge-base HEAD upstream/main
 fork instead, or created public and made private afterwards, it publishes
 participants' names and addresses by a route nobody would think to check — and
 no setting inside the repository closes that route once it is open. D-15 has
-the reasoning in full.
+the reasoning in full. Without the team grant the repository still works, and
+that is the trouble: Board members reach it by whatever access they happen to
+have, which on an organisation whose members are all owners is admin on the
+data. Nothing warns, every check here passes, and
+`app/src/settings/secrets.ts` goes on arguing that the cockpit must never hold
+a secret because "a token that could write a repository secret would be a
+right every Board member held" — while they hold it already, through GitHub's
+own settings page.
 
 ### 5. The public repository the site is published into
 
@@ -1112,9 +1144,14 @@ rather than a queue.
 **Who:** an agent, or a person.
 
 Open a standing issue in the private repository to serve as the notification
-thread, create an organisation team named `editorial-board` and put the Board
-in it, and set the issue's number and the team's handle as repository secrets.
-No external service and no account: GitHub itself is the delivery mechanism.
+thread, and set the issue's number and the `editorial-board` team's handle as
+repository secrets. No external service and no account: GitHub itself is the
+delivery mechanism. The team itself is made in `github_owner` and given Write
+in `private_cockpit`, both of which run whatever an instance decides about
+this step — it used to be made here, in a stage a duplicate may skip entirely,
+while `instance_declaration` writes that same handle into `.github/CODEOWNERS`
+and `app/src/auth/role.ts` reads it at every sign-in. Two mandatory things
+depended on an optional one.
 
 **Proves it is done.** Run the configuration report: *Board notifications*
 moves from `absent` to `production`. Reading the day's message without sending
