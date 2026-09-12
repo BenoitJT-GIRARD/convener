@@ -15,7 +15,19 @@
 # a target would invite running the gates before them.
 #
 # `--frozen` on every `uv run`: an unfrozen one rewrites `tools/uv.lock`,
-# which is a change to the environment made by the act of checking it.
+# which is a change to the environment made by the act of checking it. Every
+# command this repository writes down carries it too, and
+# `test_typed_commands.py` refuses one that does not -- a reader who types a
+# documented command should not be handed a modified tracked file for having
+# read the documentation.
+#
+# **It prevents; it does not detect.** That distinction cost something: while
+# the commands ran unfrozen, a stale lockfile announced itself as a dirty
+# tree, and freezing them took the signal away with the nuisance. The
+# detector is a reading of its own now --
+# `test_package_layout.py::test_the_lockfile_names_the_version_pyproject_names`
+# -- because the version is the one field that can drift in silence, a
+# dependency added without a re-lock failing loudly at import instead.
 #
 # The claim, and what holds it
 # ----------------------------
