@@ -296,13 +296,21 @@ edition prefix your talks are numbered under, and the nine identity values a
 stranger reads — the organisation and its short form, the series, its
 strapline and its tagline, the forum, the contact address, the proposal form,
 and the cockpit's own repository. Leave `proposal_form` as it is for now; the
-intake stage writes it once the form exists. Then correct the one product file
-carrying a value nothing can derive for it: `.github/CODEOWNERS` arrives with
-a single account on its catch-all rule, the product's own maintainer, who is
-not a collaborator here. Replace it with `@<organisation>/editorial-board`,
-where `<organisation>` is the owner half of the repository just declared.
-GitHub parses that file itself, before any code of this project's can run,
-which is why it holds a literal at all.
+intake stage writes it once the form exists. Rewrite the `_comment` and
+`_edition_prefix_comment` above those values as well, rather than only the
+values: they describe the invented series this file ships with — its `.test`
+addresses, reserved by RFC 2606, and the `MRG` prefix and its reasoning — and
+left alone they sit above yours, in a file that then contradicts itself from
+this step onwards. Keep the `owner: instance` argument, which
+`boundary.py::config_owners` requires of every file `instance/` holds
+directly; that argument is about who maintains the file and does not depend on
+the values being invented. Then correct the one product file carrying a value
+nothing can derive for it: `.github/CODEOWNERS` arrives with a single account
+on its catch-all rule, the product's own maintainer, who is not a collaborator
+here. Replace it with `@<organisation>/editorial-board`, where
+`<organisation>` is the owner half of the repository just declared. GitHub
+parses that file itself, before any code of this project's can run, which is
+why it holds a literal at all.
 
 **Proves it is done.** After the first publish, open any page of the showcase
 and the cockpit's sign-in screen: the band naming unfilled keys is gone from
@@ -310,7 +318,10 @@ both. The band compares each value against the worked example's own
 declaration, value by value, so a half-filled file still shows it and names
 exactly which keys are left. `.github/CODEOWNERS` has a check of its own, and
 it answers long before the first publish: the command below refuses any
-organisation but the declared one.
+organisation but the declared one. The header has a reading of its own and it
+is a search rather than a judgement: `.test` no longer appears in
+`instance/config.json`, and neither does `MRG` unless it is the prefix you
+chose.
 
 ```bash
 cd tools
@@ -335,10 +346,16 @@ that cannot arrive.
 Edit `instance/data/config.yml`: the Editorial Board's GitHub logins, the
 season, and the thresholds a vote is counted against. Logins, not names — the
 cockpit asks GitHub who is signed in, and a first name is not an answer to
-that question.
+that question. Rewrite the header above them too: it states that every login
+below is prefixed `example-` and that nothing ever calls GitHub with one, both
+of which stop being true at the moment you replace them — and the cockpit does
+call GitHub with these. The sentence about the thresholds stays true if you
+keep the defaults and has to go if you do not.
 
-**Proves it is done.** `convener-validate` exits 0, and the *Validate data*
-workflow is green on the commit that changed the file.
+**Proves it is done.** `convener-validate` exits 0, the *Validate data*
+workflow is green on the commit that changed the file, and `example-` no
+longer appears anywhere in `instance/data/config.yml` — neither among the
+logins nor in the paragraph above them.
 
 ```bash
 cd tools
