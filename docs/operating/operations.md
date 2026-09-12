@@ -564,6 +564,72 @@ provider, granted after a manual request. The value to set is
 a bearer **access token**, not a client id and secret — this project does
 not exchange credentials for one itself.
 
+A **trial** key may not be enough to begin. Walking this with trial
+credentials, every authorization request was refused with the provider's
+generic message, and nothing distinguishes that from a malformed one — see
+the table below. If production credentials turn out to be a precondition for
+the OAuth client to exist at all, an operator reading only "granted after a
+manual request" can spend an afternoon on a URL that was never going to work.
+
+### Getting the token, and every one after it
+
+Needed twice over: once to set the secret, and again at each renewal below.
+It is written out here because it is nowhere else. The provider's own v4
+OpenAPI document declares `securityDefinitions: {}` and carries no
+`/authorize` and no `/token` path — the whole OAuth description lives in
+prose inside `info.description`, so it is invisible to every tool that reads
+that document structurally and to anybody browsing the endpoint list.
+
+**1. Ask for consent.** In a browser, signed in to the meeting account:
+
+```text
+https://www.freeconferencecall.com/api/v4/authorize?client_id=<public API key>&response_type=code&redirect_uri=<uri>
+```
+
+Use `response_type=code`. The implicit scheme (`response_type=token`) is
+also offered and returns an access token with **no refresh token**, which
+makes it the wrong one here: the renewal design below depends on a refresh
+token living in the vault.
+
+**2. Read the code out of the address bar.** Consent sends the browser to
+`<redirect_uri>?code=<code>`. Nothing has to be listening there — with no
+server the page fails to load, and the code is still in the address bar,
+which is the whole of what this step needs.
+
+**3. Exchange it.**
+
+```text
+POST https://www.freeconferencecall.com/api/v4/token
+  client_id=<public API key>
+  client_secret=<private API key>
+  grant_type=authorization_code
+  redirect_uri=<the same uri as step 1>
+  code=<the code from step 2>
+```
+
+The response carries the access token to paste into the secret, and the
+refresh token that goes into the vault. Its `expires_in` is `2678397`
+seconds — **31 days**, which is where the figure in the renewal note below
+comes from, now from the provider's own answer rather than from one
+observation.
+
+**What the error messages do and do not tell you.** `/authorize` names a
+genuinely absent parameter and says nothing useful about anything else:
+
+| request | response |
+|---|---|
+| no `client_id` | `invalid_request` — `"client_id" missing` |
+| no `response_type` | `invalid_request` — `'response_type' required.` |
+| everything present, but refused | the generic `invalid_request` |
+
+So a well-formed request that is refused anyway is, from outside,
+indistinguishable between an unrecognised client and a `redirect_uri` the
+client has not registered. Measured: that generic message came back for
+`response_type=code` and `response_type=token` alike, with and without
+`redirect_uri`, and identically from a signed-in browser and an
+unauthenticated client. If you meet it, the next thing to check is the
+credentials themselves, not the URL.
+
 **Secret to set:** `CONVENER_MEETING_API_TOKEN`.
 
 **To verify:** from `tools/`, run `uv run convener-check-config`; *Meeting
