@@ -207,6 +207,18 @@ the day they were written; the lesson had never crossed into Python.
   width; a text somebody reads keeps a measure. The cockpit's explanatory
   paragraphs now move too, between 521px and 658px instead of standing at
   521px everywhere.
+- **`sh gates.sh` needed six trees installed and named three.** Its header
+  listed `app/`, `site/` and `tools/`, and said they were ordered for a
+  reason a page states — no page states one, and the trees are independent.
+  The three relays were the ones it left out, so `relays` and `audit` both
+  died on `'vitest' is not recognised`, a message naming neither the missing
+  install nor the tree it was missing from, for anyone who followed [taking
+  an update](docs/operating/taking-an-update.md) straight to the runner
+  after a merge. That page carries the list now as well, and both are held
+  against `.github/workflows/quality.yml`'s own `Install …` steps — the one
+  place that cannot go stale, because a workflow cannot check a tree it has
+  not installed. The commands run from the repository root and chain nothing,
+  because Windows PowerShell 5.1 refuses the operator that would.
 
 ### Before you merge this
 

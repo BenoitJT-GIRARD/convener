@@ -114,12 +114,28 @@ releases will not bring a conflict here at all.
 
 ## After a merge
 
+Install first, once per tree and in any order, every one of them from the
+repository root. An update can bring a tree that was not there when you last
+did this, and a gate that runs in a tree with no dependencies installed fails
+on a missing tool rather than on anything your merge did.
+
+```sh
+npm ci --prefix app
+npm ci --prefix site
+npm ci --prefix services/auth-proxy
+npm ci --prefix services/form-relay
+npm ci --prefix services/signup-relay
+uv sync --all-extras --project tools
+```
+
+Then, from the repository root:
+
 ```sh
 sh gates.sh
 ```
 
-That is every check continuous integration runs, from the repository root,
-and none of them needs an account or a secret.
+That is every check continuous integration runs, and none of them needs an
+account or a secret.
 
 Then push. A push runs every workflow this repository has, which on a private
 repository is billed against your organisation's Actions allowance — so batch
