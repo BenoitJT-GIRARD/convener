@@ -19,8 +19,8 @@ by itself, prove:
   justifies, not a threshold that happens to pass today. `app/` has a real
   `dependencies` tree that ships to a real (if gated) surface, so its
   blocking gate is `npm audit --omit=dev` -- production only -- with a
-  second, `continue-on-error` step surfacing (never blocking on) the
-  purely tooling-side findings. The three relays and `site/` declare no
+  second step that renders the purely tooling-side findings into the run's
+  own job summary and blocks on none of them. The three relays and `site/` declare no
   `dependencies` at all -- every package they carry is a
   `devDependency` by npm's own label, but for them that label names their
   *entire* dependency tree, not a carved-out subset that never ships --
@@ -122,38 +122,55 @@ def test_the_app_lane_surfaces_development_findings_without_blocking() -> None:
     typescript-eslint, `@babel/core`, the compiler and the bundler)
     never reaches any built output, but a finding
     nothing ever surfaces is just as much the D-25 shape as a check that
-    cannot fail: this step is not the gate, but it must exist, run the
-    *full* audit (no `--omit=dev`, or it would just repeat the production
-    step above and never show a dev-only finding at all), and be marked
-    `continue-on-error` so it cannot itself fail the job."""
-    lines = _APP_LANE.splitlines()
-    audit_lines = [i for i, line in enumerate(lines) if "run: npm audit" in line]
-    assert len(audit_lines) == 2, (
-        "expected exactly two `npm audit` invocations in the app lane "
-        "-- one production gate, one informational full audit"
+    cannot fail: this step is not the gate, but it must exist and must run
+    the *full* audit (no `--omit=dev`, or it would just repeat the
+    production step above and never show a dev-only finding at all).
+
+    Where it reports is the other half, and it is the half that had gone
+    wrong. The step carried `continue-on-error: true`, which stops the job
+    failing and still records the step as failed, so every green run was
+    stamped with a red annotation -- a finding written where it reads as
+    breakage and is therefore skipped. It writes the audit into the run's
+    own job summary now, and that is what this pins: the full audit, and
+    an append to `$GITHUB_STEP_SUMMARY` in the same step.
+    """
+    assert "npm audit --json" in _APP_LANE, (
+        "the app lane no longer runs a full `npm audit` -- the production "
+        "gate above omits `devDependencies` by design, so nothing would "
+        "look at the compiler, the bundler or the test runner at all"
     )
-    full_audit_line = [i for i in audit_lines if lines[i].strip() == "run: npm audit"]
-    assert full_audit_line, (
-        "no bare `npm audit` (full, no --omit) step found in the "
-        "app lane -- the informational step must run the full "
-        "audit, not repeat the production-only one"
+    assert "GITHUB_STEP_SUMMARY" in _APP_LANE, (
+        "the full audit's finding is not written into the run's job "
+        "summary any more. A finding nothing surfaces is not reported "
+        "(D-25), and this step does not block, so the summary is the "
+        "only place it is read"
     )
-    # The step's own preceding lines (name: / continue-on-error: /
-    # working-directory:) must carry the informational marker -- a step
-    # that runs the full audit but is not marked `continue-on-error`
-    # would silently become a second blocking gate on findings this
-    # policy deliberately does not block on.
-    preceding = "\n".join(lines[max(0, full_audit_line[0] - 4) : full_audit_line[0]])
-    assert "continue-on-error: true" in preceding
+    # The key, never the word: the step's own comment argues about
+    # `continue-on-error` at length, and a check that read the comment
+    # would fail on the sentence explaining why the key is gone.
+    marked = [
+        line
+        for line in _APP_LANE.splitlines()
+        if "continue-on-error" in line and not line.lstrip().startswith("#")
+    ]
+    assert not marked, (
+        f"a step of the app lane declares {marked}, which records it as "
+        "failed on a run that passes. That is the red annotation this "
+        "step was rewritten to stop stamping on every green pull request "
+        "-- exit 0 and write the finding down instead"
+    )
 
 
 def test_the_app_lanes_two_audit_steps_are_not_the_same_step() -> None:
-    """The production gate must not itself be marked `continue-on-error`
-    -- that would silently turn the one check that has to block
-    into another step nothing can fail."""
-    omit_dev_index = _APP_LANE.index("npm audit --omit=dev")
-    preceding = _APP_LANE[max(0, omit_dev_index - 200) : omit_dev_index]
-    assert "continue-on-error" not in preceding
+    """The production gate blocks and the summary step does not, so they
+    cannot be one step: the blocking one takes `--omit=dev` and is not the
+    one that writes the summary."""
+    blocking = _APP_LANE[: _APP_LANE.index("npm audit --omit=dev")]
+    assert "GITHUB_STEP_SUMMARY" not in blocking, (
+        "the production gate and the job-summary audit have become the "
+        "same step -- the gate that has to fail a merge is then reporting "
+        "findings it must not fail on"
+    )
 
 
 def test_relay_jobs_have_no_production_dependencies_to_omit() -> None:

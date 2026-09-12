@@ -59,7 +59,7 @@
 #   Rule index -> generated
 #   Changelog -> generated
 #   Dependency audit (production) -> audit
-#   Dependency audit (development tooling, informational) -> none
+#   Dependency audit (development tooling, reported in the job summary) -> none
 #   Lint app -> app
 #   Types app -> app
 #   Tests and coverage app -> app
@@ -81,12 +81,21 @@
 #   Validate workflows against GitHub's schema -> workflows
 #
 # The one `none`, and why. `Dependency audit (development tooling,
-# informational)` carries `continue-on-error: true` -- that step reports
-# the findings in `app/`'s own `devDependencies` and cannot fail the job,
-# deliberately, for the reason written beside it in `quality.yml`. A
-# target here would fail a run that continuous integration passes, which
-# is the opposite of mirroring it. The findings it prints are the ones
-# `audit`'s own `npm audit --omit=dev` leaves out by design.
+# reported in the job summary)` does not report at a terminal at all: it
+# renders `npm audit --json` as a table into `$GITHUB_STEP_SUMMARY`, the
+# run's own page, and exits 0 on whatever it found. The findings are the
+# ones `audit`'s own `npm audit --omit=dev` leaves out by design, and
+# they do not block a merge -- so a target here would fail a run that
+# continuous integration passes, which is the opposite of mirroring it,
+# and it would have nowhere to write the thing that step exists to
+# produce. What a maintainer types to see the same list is `cd app && npm
+# audit`, which is the command that step runs before it renders it.
+#
+# One thing does fail it, and `audit` does not mirror that either: a
+# report it cannot read. `app/scripts/audit-summary.mjs` exits non-zero
+# rather than printing an empty table for an audit that never ran, which
+# is the distinction D-25 asks every control to keep -- what was
+# inspected, apart from what is concluded from it.
 #
 # Two places where the same check is not the same command
 # -------------------------------------------------------
