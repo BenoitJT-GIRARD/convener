@@ -35,3 +35,15 @@ npm run check
 `npm run update-references` rewrites the committed reference images, and is
 run deliberately after a change to what is drawn, never to make a failing
 comparison pass.
+
+A reference belongs to the platform that drew it, and `references/` holds
+one directory per platform — `linux/` is what the runner compares against,
+`win32/` what a maintainer's own machine does. The engine is pinned and the
+rasteriser underneath it is not: the same page, the same fonts and the same
+Chromium build differ by 2.3% of `square`'s pixels between DirectWrite and
+FreeType, which is many times the budget a real design change has to clear.
+Each set is exact on its own platform, so nothing is loosened to hold both;
+`render-and-compare.mjs`'s own comment carries the measurement and what was
+tried before splitting them. On a platform with neither directory the check
+says so and stops, and `npm run update-references` there writes the set that
+platform is missing.
