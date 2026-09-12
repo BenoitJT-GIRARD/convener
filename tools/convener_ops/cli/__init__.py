@@ -53,6 +53,7 @@ from convener_ops.cli.journey.survey import (
 from convener_ops.cli.maintenance import (
     actions_usage_window,
     check_actions_usage_liveness,
+    check_credential_expiry,
     check_queue_liveness,
     check_registration_routing,
     check_retention_liveness,
@@ -79,6 +80,7 @@ __all__ = [
     "certificates_public_data",
     "check_actions_usage_liveness",
     "check_config",
+    "check_credential_expiry",
     "check_queue_liveness",
     "check_registration_routing",
     "check_retention_liveness",

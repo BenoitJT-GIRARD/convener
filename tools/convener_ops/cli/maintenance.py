@@ -42,6 +42,7 @@ from convener_ops.journey import (
 )
 from convener_ops.maintenance import (
     actions_usage,
+    credential_expiry,
     queue_watch,
     retention_liveness,
     routing_watch,
@@ -439,6 +440,11 @@ def check_queue_liveness() -> int:
 #: second message.
 ROUTING_BODY: Final = "routing-body.md"
 
+#: A fifth body file, for the reason there is a fourth: several messages
+#: composed in one job sharing one filename means whichever is written last
+#: silently replaces the rest.
+RENEWALS_BODY: Final = "renewals-body.md"
+
 
 def _published_routing(root: Path) -> tuple[dict[str, str], str | None]:
     """`(cutoffs, None)` for a projection the relay can read, or
@@ -537,6 +543,60 @@ def check_registration_routing() -> int:
             "nowhere but this run's own red status"
         )
     step_output.write("routing_alert=true\n")
+    return 0
+
+
+def check_credential_expiry() -> int:
+    """`convener-check-credential-expiry`: is a credential about to stop
+    working?
+
+    The watchdog for the failure the other four cannot see. They each
+    recompute a signal from something this repository holds; an expiry can
+    only be *declared*, because GitHub reports a fine-grained token's expiry
+    to its owner alone and a credential held at a third party is further out
+    of reach still. `instance/data/credential-renewals.yml` is that
+    declaration and
+    `tools/convener_ops/maintenance/credential_expiry.py` carries the
+    argument for it.
+
+    Prints what it read even when nothing is due, so that a run's log
+    distinguishes "nothing is due" from "nothing was looked at" -- only one
+    of which is good news, and an undeclared date looks exactly like a
+    healthy one from here.
+
+    Returns 0 even when a finding fires, the same split the three alarms
+    above use: the workflow's own last step is what turns the job red, so an
+    unconfigured channel can never turn a real finding into silence. Returns
+    1 only for a declaration this repository owns and cannot read.
+    """
+    root = repo_root()
+    try:
+        renewals = credential_expiry.load(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+    fired = credential_expiry.due(renewals, today)
+    print(credential_expiry.summary(renewals, fired, today))
+    if not fired:
+        step_output.write("renewal_alert=false\n")
+        return 0
+
+    for line in credential_expiry.annotation_lines(fired):
+        print(line)
+    addressed = dispatch(credential_expiry.message(fired, today), os.environ)
+    if addressed is not None:
+        (root / RENEWALS_BODY).write_text(addressed.body, encoding="utf-8", newline="")
+        print(
+            f"addressed to thread {addressed.channel.thread}; left in {RENEWALS_BODY}"
+        )
+    else:
+        print(
+            "no notification channel is configured -- this finding reaches "
+            "nowhere but this run's own red status"
+        )
+    step_output.write("renewal_alert=true\n")
     return 0
 
 
