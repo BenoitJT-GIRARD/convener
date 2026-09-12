@@ -220,8 +220,11 @@ later](LICENSE). Section 13 of it is the point: a hosted, *modified* version
 has to offer its source to the people using it, so this cannot quietly
 become somebody's closed fork. If those terms do not suit your use, a
 separate licence can be negotiated with the copyright holder. The name and
-the mark are not covered by that grant — [`TRADEMARK.md`](TRADEMARK.md) says
-what a duplicate names for itself, and what it keeps.
+the mark are not covered by that grant: one additional term under section 7
+of the licence declines them, in
+[`ADDITIONAL-TERM.md`](ADDITIONAL-TERM.md), which `LICENSE` names below its
+licence text, and [`TRADEMARK.md`](TRADEMARK.md) says what a duplicate names
+for itself, and what it keeps.
 
 **[What you take on](docs/operating/what-you-take-on.md)** is the other half
 and is worth the five minutes: run an instance and *you* are the data

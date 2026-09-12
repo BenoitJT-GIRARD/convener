@@ -9,9 +9,10 @@ word of it. The software carries its own name, and it does not change name
 because you installed it.
 
 Everything here is licensed except that name and the mark that goes with
-it. [`LICENSE`](LICENSE) carries both halves — the GNU Affero General
-Public License, and above it the one additional term section 7 permits,
-which reserves the name in the licence's own language.
+it. [`LICENSE`](LICENSE) carries the GNU Affero General Public License, and
+names [`ADDITIONAL-TERM.md`](ADDITIONAL-TERM.md) below it: the one
+additional term section 7 permits, which reserves the name in the licence's
+own language.
 
 Respect these decisions in good faith.
 

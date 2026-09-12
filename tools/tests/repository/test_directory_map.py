@@ -91,6 +91,7 @@ FAKE_ROOT_FILES: tuple[str, ...] = (
     ".gitleaks.toml",
     ".nvmrc",
     ".pre-commit-config.yaml",
+    "ADDITIONAL-TERM.md",
     "AGENTS.md",
     "CHANGELOG.md",
     "CITATION.cff",

@@ -289,6 +289,12 @@ ROOT_FILE_PURPOSE: Final[Mapping[str, str]] = {
         "The one page an agent reads first. It carries no procedure of its "
         "own; it says where each one lives."
     ),
+    "ADDITIONAL-TERM.md": (
+        "The one term section 7 of the licence adds: the name and the "
+        "mark declined under its paragraph e. `LICENSE` says where to "
+        "find it, below the licence text, where GitHub's detector does "
+        "not read."
+    ),
     "CHANGELOG.md": (
         "What each released state changed and what a merge asks of a "
         "duplicate. Its list of the paths a duplicate owns is generated "
@@ -311,9 +317,10 @@ ROOT_FILE_PURPOSE: Final[Mapping[str, str]] = {
         "which gates a change has to leave green."
     ),
     "LICENSE": (
-        "The AGPL-3.0-or-later, word for word, with the copyright at its "
-        "head. An edited copy stops being recognised as this licence by "
-        "GitHub and by every detection tool."
+        "The AGPL-3.0-or-later, word for word, from the first byte of the "
+        "file, with this program's own notice below it. Anything above it "
+        "stops the licence being recognised by GitHub and by every "
+        "detection tool."
     ),
     "NOTICE.json": (
         "The attribution both interfaces show in their footer, and the "

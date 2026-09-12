@@ -56,12 +56,29 @@ who had ever contributed.
 
 Paragraph e of section 7 exists for precisely this — declining to grant rights
 under trade-mark law — and it is the only way to hold a name back without
-damaging the licence. The term sits at the head of `LICENSE`, above the
-licence text, because section 7 requires an added term to be stated in the
-files it applies to or to say where it is to be found; this one applies to the
-covered work as a whole, so the file that carries the licence is where a
-reader looks for it and where it can be read against the paragraph that
-authorises it.
+damaging the licence. Section 7 asks one of two things of whoever adds a
+term: state it in the files it applies to, or say where it is to be found.
+This one applies to the covered work as a whole rather than to particular
+files in it, so it has a file of its own at the root of the repository —
+`ADDITIONAL-TERM.md` — and `LICENSE` carries the notice saying where to find
+it, below the licence text.
+
+**Which of the two, and why it moved.** The term was stated in `LICENSE`
+itself, above the licence text, for as long as that cost nothing. It cost
+something. GitHub detects a repository's licence with `licensee`, which
+normalises the file — copyright lines dropped, everything from *END OF TERMS
+AND CONDITIONS* onwards dropped — and compares what is left against the texts
+it knows; prose added above the licence survives that normalisation and has to
+match too, which it cannot. Sixty-one lines above the licence text did not
+survive it, and neither does one: measured through
+`GET /repos/{owner}/{repo}/license` on a branch, a 56-character line above the
+licence text returned `NOASSERTION`, and the same file with that line moved
+below the licence text returned `AGPL-3.0`. An undetected licence shows as
+*Other* in GitHub's About panel, is invisible to the licence filter, and
+reaches every SPDX scanner as `NOASSERTION` — which is what an unpaid society
+arriving with *under what terms may we use this* gets instead of an answer. So
+the file opens on the licence, and everything this project says about applying
+it sits below, where the detector stops reading and a reader does not.
 
 `TRADEMARK.md` is that term written for the person it lands on, and it turns
 on one distinction: a series and the software it runs on are two different
@@ -151,6 +168,21 @@ the warranty disclaimer, the permission to convey, or the pointer to the
 licence text is precisely the decoration a fork deletes without breaking a
 single rule.
 
+**Naming the additional term in the notice.** It is the most visible sentence
+this work has — the footer of every page of both interfaces, in every instance
+ever derived from here — so a term nobody reads would be read there. Three
+things are against it. Section 0 defines an Appropriate Legal Notice as four
+elements and a pointer to an added term is none of them, so the line would
+grow without becoming more of a notice. The showcase is a static build
+carrying no file of this repository, which is why the licence link in that
+footer is an address at gnu.org rather than a relative one; there is no
+off-site address for this project's own term, so the line would name a file
+the page cannot open. And section 5 carries the notice into every modified
+version, which would oblige a fork to go on printing the name of a file its
+own repository need not carry. Somebody deciding what they may call their
+product reads `LICENSE` and `TRADEMARK.md`; somebody attending a webinar reads
+the footer.
+
 **Letting an instance configure the notice.** It would turn the one thing a
 modified version must not quietly empty into a field with a form beside it,
 and it would file the product's own statement about itself among the values a
@@ -176,6 +208,14 @@ anyway.
 **A good-faith fork has to name its own series**, which costs somebody an
 afternoon and a little goodwill, and the thing it buys — a reader always
 knowing whose software they are running — is invisible when it works.
+
+**The term and the licence are two files now, and two files drift.** A
+pointer is a claim about something else: rename `ADDITIONAL-TERM.md`, or leave
+it out of a commit that moved the rest, and `LICENSE` goes on sending every
+recipient to a document that is not there. `tools/tests/repository/test_notice.py`
+refuses a `LICENSE` naming a file this repository does not track and an
+`ADDITIONAL-TERM.md` the licence does not name, which is machinery that would
+not exist if the term were still inside the file it supplements.
 
 **The trade-mark position is weak, and stays weak.** An unregistered name
 constrains nobody in advance, so what `TRADEMARK.md` asks of a fork acting in

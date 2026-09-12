@@ -102,13 +102,14 @@ And the files at the root, which no row above accounts for:
 | `.gitleaks.toml` | product | What the secret scanner may pass over, with the reason beside it. The workflow and the local hook both find it by name, so neither can drift from it. |
 | `.nvmrc` | product | The Node version, written once and read by every workflow and every local install. |
 | `.pre-commit-config.yaml` | product | The optional local hook: the formatting, linting, secret scanning and British-English spelling continuous integration runs anyway, offered before a commit instead of after a push. |
+| `ADDITIONAL-TERM.md` | product | The one term section 7 of the licence adds: the name and the mark declined under its paragraph e. `LICENSE` says where to find it, below the licence text, where GitHub's detector does not read. |
 | `AGENTS.md` | product | The one page an agent reads first. It carries no procedure of its own; it says where each one lives. |
 | `CHANGELOG.md` | product | What each released state changed and what a merge asks of a duplicate. Its list of the paths a duplicate owns is generated from `declarations/boundary.yml`. |
 | `CITATION.cff` | product | How to cite this software, in the format behind GitHub's *Cite this repository* button. |
 | `CLAUDE.md` | product | A bridge and nothing else: one agent's tooling reads this name and does not read `AGENTS.md`, so this file points at it. |
 | `CODE_OF_CONDUCT.md` | product | The behaviour expected of anybody taking part, and what enforcement here actually is. |
 | `CONTRIBUTING.md` | product | What a contribution certifies, how a commit is signed off, and which gates a change has to leave green. |
-| `LICENSE` | product | The AGPL-3.0-or-later, word for word, with the copyright at its head. An edited copy stops being recognised as this licence by GitHub and by every detection tool. |
+| `LICENSE` | product | The AGPL-3.0-or-later, word for word, from the first byte of the file, with this program's own notice below it. Anything above it stops the licence being recognised by GitHub and by every detection tool. |
 | `NOTICE.json` | product | The attribution both interfaces show in their footer, and the notice section 7 of the licence makes enforceable. |
 | `README.md` | product | The front page: what this runs, what it looks like, how an instance is stood up, and what the licence asks. |
 | `SECURITY.md` | product | Where a vulnerability is reported privately, and what a report can and cannot expect. |

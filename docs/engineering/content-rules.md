@@ -35,7 +35,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Which paths belong to this series rather than to the code | `declarations/boundary.yml`, and each configuration file's own `owner:` key |
 | The address this project is published at | `instance/config.json`, read by `tools/convener_ops/declaration/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
 | A second, invented instance to build as | `examples/the-example-collective/`, one file per path `declarations/boundary.yml` hands to the instance |
-| The terms this software is under, and what the name is not under | `LICENSE`, whose head carries the term declining the name, and `TRADEMARK.md` |
+| The terms this software is under, and what the name is not under | `LICENSE`, `ADDITIONAL-TERM.md`, which the notice below its licence text names, and `TRADEMARK.md` |
 | How to report a vulnerability, and what a report can expect | `SECURITY.md` |
 | What a contributor certifies, and what an issue can expect | `CONTRIBUTING.md` |
 | The behaviour expected of anybody taking part, and what enforcement here actually is | `CODE_OF_CONDUCT.md` |
