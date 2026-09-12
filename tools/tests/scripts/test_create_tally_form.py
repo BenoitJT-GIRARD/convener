@@ -26,11 +26,13 @@ from __future__ import annotations
 
 import http.client
 import io
+import re
 import urllib.error
 from email.message import Message
 from pathlib import Path
 from typing import Any
 
+import create_tally_form
 import pytest
 from conftest import config
 from create_tally_form import (
@@ -72,12 +74,14 @@ def _question_groups(
     this scans from each TITLE to the next one rather than assuming a fixed
     number of blocks per question.
 
-    TEXT blocks are dropped before the scan. One belongs to no question: it
-    captures nothing, sits in a group of its own, and appears in no webhook
-    payload -- so counting it as part of whichever question it happens to
-    follow would be an artefact of this positional scan rather than
-    something Tally would agree with."""
-    blocks = [b for b in blocks if b["type"] != "TEXT"]
+    TEXT and PAGE_BREAK blocks are dropped before the scan. Neither belongs
+    to a question: both capture nothing, each sits in a group of its own,
+    and neither appears in a webhook payload -- so counting one as part of
+    whichever question it happens to follow would be an artefact of this
+    positional scan rather than something Tally would agree with. The
+    thank-you page is both at once, and sits after the last question, which
+    is where that artefact would land."""
+    blocks = [b for b in blocks if b["type"] not in {"TEXT", "PAGE_BREAK"}]
     title_indices = [i for i, b in enumerate(blocks) if b["type"] == "TITLE"]
     groups = []
     for position, start in enumerate(title_indices):
@@ -373,6 +377,65 @@ def test_the_career_stage_options_are_exactly_the_imported_vocabulary_in_order()
     None
 ):
     assert _option_texts(build_blocks(), "Career stage") == list(CAREER_STAGE_ORDER)
+
+
+def _thank_you(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every block from the thank-you page break to the end."""
+    for index, block in enumerate(blocks):
+        if block["type"] == "PAGE_BREAK":
+            return blocks[index:]
+    raise AssertionError("no page break, so no thank-you page")
+
+
+def test_the_form_carries_its_own_thank_you_page() -> None:
+    """Emitted by this script rather than added in Tally's editor, because
+    a PATCH replaces the form's blocks entirely: a page added by hand is
+    destroyed by the next run, and the sequence tells an operator to run it
+    again. Measured -- a hand-made thank-you page was published and gone
+    after one run.
+
+    `isThankYouPage` is Tally's own flag, read from `PageBreakPayload` in
+    their OpenAPI spec, not inferred from the field's name."""
+    page = _thank_you(build_blocks())
+    assert page[0]["type"] == "PAGE_BREAK"
+    assert page[0]["groupType"] == "PAGE_BREAK"
+    assert page[0]["payload"]["isThankYouPage"] is True
+    assert [b["type"] for b in page[1:]] == ["TEXT", "TEXT"]
+
+
+def test_the_thank_you_page_says_it_arrived_and_what_happens_next() -> None:
+    """Both halves, because a page that only confirms leaves the proposer
+    where they were, and one that only links has not said the thing they
+    came for. The wording is the promise `site/src/propose.njk` already
+    makes to the same person before they start."""
+    texts = [b["payload"]["html"] for b in _thank_you(build_blocks())[1:]]
+    assert "recorded" in texts[0]
+    assert "Editorial Board" in texts[0]
+    assert "https://" in texts[1]
+
+
+def test_the_thank_you_link_survives_a_stripped_anchor() -> None:
+    """Tally converts `html` into its own `safeHTMLSchema`, and whether an
+    anchor survives that is undocumented. Written `<a href="U">U</a>` so
+    the worst case is a bare address a reader can copy, never a link whose
+    text says nothing."""
+    link = _thank_you(build_blocks())[2]["payload"]["html"]
+    href = re.search(r'href="([^"]+)"', link)
+    assert href is not None
+    assert f">{href.group(1)}<" in link
+
+
+def test_the_thank_you_page_drops_its_link_when_no_address_is_declared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`published.load` refuses a declaration with no address, and nothing
+    in the standing-up sequence makes `instance_declaration` happen before
+    `tally_form`. A form builder is not where that failure belongs: the
+    confirmation is the half that matters and is printed either way."""
+    monkeypatch.setattr(create_tally_form, "_THANK_YOU_LINK", None)
+    page = _thank_you(build_blocks())
+    assert [b["type"] for b in page[1:]] == ["TEXT"]
+    assert "recorded" in page[1]["payload"]["html"]
 
 
 def test_every_question_has_a_non_empty_placeholder() -> None:

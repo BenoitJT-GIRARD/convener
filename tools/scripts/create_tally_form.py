@@ -117,7 +117,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-from convener_ops.declaration.published import load_identity
+from convener_ops.declaration.published import load, load_identity
 from convener_ops.declaration.user_agent import USER_AGENT
 from convener_ops.journey.proposal import (
     CAREER_STAGE_ORDER,
@@ -143,6 +143,67 @@ from convener_ops.journey.proposal import (
 #: The form a proposer lands on names whoever runs the series. Read
 #: from `instance/config.json` like every other public name.
 FORM_TITLE: Final = f"Propose a speaker for {load_identity().organisation}"
+
+
+def _published_url() -> str | None:
+    """This series' own address, or `None` when it cannot be read.
+
+    `published.load` refuses a declaration whose address is absent,
+    malformed or of an unsupported version, and refusing is right: every
+    other address this project prints is derived from that one. But nothing
+    in `declarations/standing-up.yml` makes `instance_declaration` happen
+    before `tally_form`, so an instance can reach this command with its
+    showcase not yet declared -- and a form builder is not the place that
+    failure belongs. D-13's ordinary shape applies: the confirmation is the
+    half that matters and it is printed either way; the way back is offered
+    when there is one.
+
+    `ValueError` is the whole of what has to be caught, checked rather than
+    assumed: `from_data` reads with `data.get(...)` throughout, so no
+    `KeyError` is reachable, every refusal it makes raises `ValueError`, and
+    `json.JSONDecodeError` inherits from it. A missing file would raise
+    `FileNotFoundError` instead, and cannot arrive here: `FORM_TITLE` reads
+    the same declaration at import, so the module would not have loaded.
+    """
+    try:
+        return load().url
+    except ValueError:
+        return None
+
+
+#: The page a proposer sees after submitting, in two blocks rather than one
+#: with a line break in it: a confirmation, and a way back. Two flat blocks
+#: leave one unverified thing (does Tally keep an anchor?) instead of three.
+#:
+#: Product text, not a configuration key. What it says is what
+#: `site/src/propose.njk` already tells the same person before they start --
+#: "a volunteer from the Editorial Board reads every proposal and gets back
+#: to you" -- and a series that had to write its own would be writing the
+#: product's promise in its own words, in a sequence that already asks an
+#: operator for thirty steps' worth of values.
+#:
+#: The anchor is written `<a href="U">U</a>` so that the address is legible
+#: whether or not Tally keeps the tag through its own html -> safeHTMLSchema
+#: conversion. That conversion is not documented, and this is the shape that
+#: cannot fail silently: the worst case is a bare URL a reader can copy.
+_THANK_YOU_CONFIRMATION: Final = (
+    "Your proposal has been recorded. A volunteer from the Editorial Board "
+    "reads every proposal and gets back to you."
+)
+
+
+#: The second block: the way back, or nothing at all. `None` rather than an
+#: empty string, so that `build_blocks` emits one block instead of an empty
+#: one -- a blank paragraph on a page that exists to say two things.
+def _thank_you_link() -> str | None:
+    """The second block's text, or `None` when there is no address to give."""
+    url = _published_url()
+    if url is None:
+        return None
+    return f'Back to {load_identity().organisation}: <a href="{url}">{url}</a>'
+
+
+_THANK_YOU_LINK: Final = _thank_you_link()
 
 #: `api.tally.so`, the one host this script ever talks to.
 API_BASE: Final = "https://api.tally.so"
@@ -443,6 +504,33 @@ def build_blocks() -> list[dict[str, Any]]:
     ]
     for question in _QUESTIONS:
         blocks.extend(question.blocks())
+    # The page a proposer lands on after submitting. `isThankYouPage` is
+    # Tally's own flag for it (`PageBreakPayload` in their OpenAPI spec:
+    # "this page break represents a custom thank-you page shown after form
+    # submission"), read there rather than inferred -- the last thing this
+    # file inferred from that spec cost the form an option.
+    #
+    # It is emitted here because it has to be: a PATCH sends this list and
+    # replaces the form's blocks entirely, so a thank-you page added in
+    # Tally's editor is destroyed by the next run of this script, and the
+    # sequence tells an operator to run it again.
+    blocks.append(
+        _block(
+            "PAGE_BREAK",
+            "PAGE_BREAK",
+            "thank-you:break",
+            {"index": 0, "isFirst": True, "isLast": True, "isThankYouPage": True},
+        )
+    )
+    blocks.append(
+        _block(
+            "TEXT", "TEXT", "thank-you:confirmation", {"html": _THANK_YOU_CONFIRMATION}
+        )
+    )
+    if _THANK_YOU_LINK is not None:
+        blocks.append(
+            _block("TEXT", "TEXT", "thank-you:link", {"html": _THANK_YOU_LINK})
+        )
     return blocks
 
 
