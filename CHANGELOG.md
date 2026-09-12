@@ -164,6 +164,14 @@ the day they were written; the lesson had never crossed into Python.
 - **The salt behind every matching code licensed any generator**, on the one
   value the sequence forbids rotating. Three exact commands now, Python
   first, and `Get-Random` named as the trap it is.
+- **A step asked for a control that does not exist.** `dependency_updates`
+  sent an operator to a Settings toggle for Dependabot version updates, and
+  GitHub replaces that toggle with a *Configure* button whenever
+  `.github/dependabot.yml` is present — which a duplicate inherits two steps
+  earlier. No endpoint exposes it either, so the step could never have been
+  walked to its end on a real duplicate. It is a file edit now:
+  `open-pull-requests-limit: 0` on each entry, measured on two repositories
+  differing only by those lines.
 - **The only monthly step had no written procedure.** The provider hides its
   OAuth flow in prose inside an OpenAPI description; it is in
   [`operations.md`](docs/operating/operations.md) now, measured.
