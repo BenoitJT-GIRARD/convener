@@ -497,7 +497,7 @@ jobs:
       - name: Lint site
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
-        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/published.cjs scripts/print-published.cjs
+        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs
       # The same quality chain this project already holds Python to
       # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
       # axe-core, puppeteer-core) went unaudited until this step existed.
