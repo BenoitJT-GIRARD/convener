@@ -20,8 +20,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from helpers import instance_identity
 
 from convener_ops.cli.maintenance import check_credential_expiry
+from convener_ops.declaration.paths import repo_root
 from convener_ops.maintenance import credential_expiry
 
 TODAY = date(2026, 9, 12)
@@ -181,24 +183,44 @@ def test_an_expired_one_annotates_as_error_and_a_coming_one_as_warning() -> None
 
 
 # ------------------------------------------------------------------ #
-# The file this repository ships, and why it is empty.
+# The file this repository ships, and the one clause that is upstream's alone.
 # ------------------------------------------------------------------ #
 
 
-def test_this_repository_ships_the_declaration_and_declares_nothing_in_it() -> None:
-    """Empty on purpose, and held here so that nobody fills it in with a
-    worked date: this repository's instance is invented and holds no
-    credential that expires, so a shipped date would go stale and every
-    duplicate would inherit an alarm about a token nobody ever minted.
-
-    The shape a reader needs is in the file's own header instead, where an
-    operator meets it at the moment of writing the first entry."""
-    from convener_ops.declaration.paths import repo_root
-
+def test_every_repository_carries_the_declaration_and_its_shape() -> None:
+    """True wherever this code runs, upstream and in every duplicate: the
+    file is there and it still explains itself. A merge that dropped
+    either would leave an operator with a watchdog and nowhere to write
+    the date it watches."""
     path = repo_root() / credential_expiry.RENEWALS_PATH
     assert path.is_file()
-    assert credential_expiry.load() == []
     assert "renewed_by:" in path.read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(
+    not instance_identity.ships_the_example_as_its_instance(),
+    reason=(
+        "upstream ships the example as its instance, and only upstream's own "
+        "copy of this file has to be empty. A duplicate's copy is the "
+        "duplicate's to fill in -- that is the whole feature, and this "
+        "repository's release notes tell it to."
+    ),
+)
+def test_upstream_declares_no_date_of_its_own() -> None:
+    """Empty on purpose, and held so that nobody fills it in with a worked
+    date: this repository's instance is invented and holds no credential
+    that expires, so a shipped date would go stale and every duplicate
+    would inherit an alarm about a token nobody ever minted.
+
+    **Upstream only**, and the guard is the correction rather than a
+    detail. Without it this read `load()` in whatever repository ran it,
+    so the first duplicate to write the line the feature exists for --
+    the line `CHANGELOG.md` tells it to write under *Before you merge
+    this* -- turned its own suite red. A test that forbids the use its
+    own release note prescribes is the defect this project has spent a
+    walk-through collecting, and this one shipped in the release that
+    collected them."""
+    assert credential_expiry.load() == []
 
 
 # ------------------------------------------------------------------ #
