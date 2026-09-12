@@ -25,7 +25,7 @@ payload below is a fixture written in this file.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -75,7 +75,13 @@ def _run(
 ) -> dict[str, Any]:
     """One collected payload, in the exact shape the workflow's collector
     step writes: the run as `GET /actions/runs` reports it, paired with
-    what `GET /actions/runs/<id>/timing` answered for it."""
+    what `GET /actions/runs/<id>/jobs` answered for it.
+
+    `jobs` is still given here as durations in milliseconds, and the
+    timestamps are composed from them -- the arithmetic under test is about
+    durations, and a test that spelled out two instants per job would put
+    its own subtraction between the fixture and the assertion."""
+    began = datetime(2026, 1, 1, 5, 0, 12, tzinfo=UTC)
     return {
         "run": {
             "id": run_id,
@@ -83,17 +89,19 @@ def _run(
             "event": event,
             "created_at": f"{day}T05:00:12Z",
         },
-        "timing": {
-            "billable": {
-                runner: {
-                    "total_ms": sum(jobs),
-                    "jobs": len(jobs),
-                    "job_runs": [
-                        {"job_id": i, "duration_ms": ms} for i, ms in enumerate(jobs)
-                    ],
+        "jobs": {
+            "total_count": len(jobs),
+            "jobs": [
+                {
+                    "id": index,
+                    "started_at": began.isoformat().replace("+00:00", "Z"),
+                    "completed_at": (began + timedelta(milliseconds=ms))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    "labels": [f"{runner.lower()}-latest"],
                 }
-            },
-            "run_duration_ms": sum(jobs),
+                for index, ms in enumerate(jobs)
+            ],
         },
     }
 
@@ -230,14 +238,17 @@ def test_the_rounding_is_per_job_which_is_the_whole_point() -> None:
     eight_short_jobs = _run(jobs=(20_000,) * 8)
     usage = _summarise([eight_short_jobs])
     assert usage.billed_minutes == 8
-    assert eight_short_jobs["timing"]["run_duration_ms"] == 160_000
+    assert len(eight_short_jobs["jobs"]["jobs"]) == 8
 
 
 def test_a_skipped_job_bills_nothing() -> None:
     """`sweep-and-notify.yml`'s own two jobs exclude each other on an
-    `if:`. A job GitHub skips never gets a runner, and GitHub reports it
-    with no billable entry at all -- an ordinary answer, so zero, not
-    unreadable."""
+    `if:`. Measured against a real skipped job rather than assumed: GitHub
+    lists it with `started_at` and `completed_at` equal, so it reads as
+    zero milliseconds and bills nothing, which is what it costs. No special
+    case handles it, and one written on a guess would have been wrong in
+    whichever direction the guess went."""
+    instant = "2026-08-24T05:00:02Z"
     payload = {
         "run": {
             "id": 9,
@@ -245,8 +256,29 @@ def test_a_skipped_job_bills_nothing() -> None:
             "event": "schedule",
             "created_at": "2026-08-24T05:00:00Z",
         },
-        "timing": {"billable": {}, "run_duration_ms": 0},
+        "jobs": {
+            "total_count": 1,
+            "jobs": [
+                {
+                    "id": 1,
+                    "conclusion": "skipped",
+                    "started_at": instant,
+                    "completed_at": instant,
+                    "labels": ["ubuntu-latest"],
+                }
+            ],
+        },
     }
+    usage = _summarise([payload])
+    assert usage.billed_minutes == 0
+    assert usage.unreadable == 0
+
+
+def test_a_run_whose_every_job_was_skipped_is_zero_and_not_unreadable() -> None:
+    """An empty *list* is an answer -- the run happened and cost nothing.
+    A missing list is not, and the test below holds that apart."""
+    payload = _run(run_id=11)
+    payload["jobs"] = {"total_count": 0, "jobs": []}
     usage = _summarise([payload])
     assert usage.billed_minutes == 0
     assert usage.unreadable == 0
@@ -294,7 +326,7 @@ def test_a_submission_still_counts_towards_the_rate_when_its_cost_is_unreadable(
     it from the rate because one API call failed would hide the burst as
     well as the bill."""
     payload = _run(run_id=7, event="repository_dispatch")
-    payload["timing"] = None
+    payload["jobs"] = None
     usage = _summarise([payload])
     assert usage.busiest_submissions == 1
     assert usage.unreadable == 1
@@ -323,40 +355,47 @@ def test_a_run_this_cannot_read_is_counted_as_a_run_it_could_not_cost(
     assert usage.unreadable == 1
 
 
-def test_a_timing_answer_with_no_job_breakdown_falls_back_to_the_os_total() -> None:
-    """Rounds once instead of once per job, so it understates a multi-job
-    run -- named in the code rather than passed off as exact."""
-    payload = {
-        "run": {
-            "id": 3,
-            "name": "Quality",
-            "event": "push",
-            "created_at": "2026-08-20T05:00:00Z",
-        },
-        "timing": {"billable": {"UBUNTU": {"total_ms": 150_000, "jobs": 4}}},
-    }
-    usage = _summarise([payload])
-    assert usage.billed_minutes == 3
-
-
-def test_a_timing_answer_with_no_billable_section_at_all_is_zero_not_unreadable() -> (
-    None
-):
-    """The same call as a skipped job, in the shape GitHub uses when it
-    omits the section entirely. An ordinary answer either way."""
+def test_a_run_with_no_jobs_list_at_all_is_unreadable_not_zero() -> None:
+    """The answer that is not an answer. A run counted as free because one
+    call failed understates the bill by an unknown amount, which is the
+    direction this module refuses in every other place too."""
     payload = _run(run_id=4)
-    payload["timing"] = {"run_duration_ms": 0}
+    payload["jobs"] = {"total_count": 0}
     usage = _summarise([payload])
+    assert usage.unreadable == 1
     assert usage.billed_minutes == 0
+
+
+def test_a_job_missing_its_instants_makes_the_whole_run_unreadable() -> None:
+    """One job of eight going unread would otherwise leave a run reported
+    as seven-eighths of its cost, with nothing saying which fraction --
+    worse than saying the run could not be read, because it looks exact."""
+    payload = _run(run_id=5, jobs=(60_000, 60_000))
+    payload["jobs"]["jobs"][1]["completed_at"] = None
+    usage = _summarise([payload])
+    assert usage.unreadable == 1
+    assert usage.billed_minutes == 0
+
+
+def test_a_job_entry_that_is_not_a_mapping_is_skipped_not_guessed_at() -> None:
+    payload = _run(run_id=6)
+    payload["jobs"]["jobs"].append("nonsense")
+    usage = _summarise([payload])
+    assert usage.billed_minutes == 1
     assert usage.unreadable == 0
 
 
-def test_a_billable_entry_that_is_not_a_mapping_is_skipped_not_guessed_at() -> None:
-    payload = _run(run_id=5)
-    payload["timing"] = {"billable": {"UBUNTU": "nonsense"}}
-    usage = _summarise([payload])
-    assert usage.billed_minutes == 0
-    assert usage.foreign_runner_oses == ()
+def test_the_runner_family_comes_from_the_labels_and_an_unknown_one_stays_itself() -> (
+    None
+):
+    """GitHub's rate is set by the family, so that is what is recorded --
+    and a runner this project has never used appears as the word GitHub
+    used for it rather than as a guess."""
+    assert actions_usage.runner_family(["ubuntu-24.04"]) == "UBUNTU"
+    assert actions_usage.runner_family(["windows-latest"]) == "WINDOWS"
+    assert actions_usage.runner_family(["macos-14"]) == "MACOS"
+    assert actions_usage.runner_family(["fleet-xl"]) == "FLEET-XL"
+    assert actions_usage.runner_family(None) == "(unknown)"
 
 
 def test_the_projection_turns_a_window_into_a_monthly_rate() -> None:
@@ -449,7 +488,7 @@ def test_an_uncosted_run_is_its_own_loud_alarm() -> None:
     (D-25). Every figure is an undercount by an unknown amount when this
     fires, and saying so is the point."""
     payload = _run(run_id=1)
-    payload["timing"] = "not a mapping"
+    payload["jobs"] = "not a mapping"
     usage = _summarise([payload])
     kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _real_budget())}
     assert actions_usage.UNREADABLE_ALARM in kinds
@@ -947,11 +986,21 @@ def test_the_daily_job_measures_and_the_push_job_does_not() -> None:
     assert "convener-record-actions-usage" not in _runs(_SWEEP_PATH, "immediate")
 
 
-def test_the_daily_job_reads_the_billed_timing_not_a_wall_clock() -> None:
-    """GitHub bills per job, rounded up. Only `/timing` reports the
-    per-job durations that rounding applies to."""
+def test_the_daily_job_reads_each_job_rather_than_a_wall_clock() -> None:
+    """GitHub bills per job, rounded up, so the per-job durations are what
+    the rounding applies to -- and `/jobs` is where they are reported as
+    *elapsed* time.
+
+    Not `/timing`, and this assertion is the one that keeps it that way:
+    that endpoint's `billable` section reports what GitHub **charges**, and
+    inside an included allowance it charges nothing. Measured on a real
+    private repository, every job of every run reported `duration_ms: 0`
+    while the organisation's billing page showed 370 minutes consumed that
+    month. This step read it for a long time and fed a guard that could not
+    fire until the allowance was already spent."""
     script = _runs(_SWEEP_PATH, "daily")
-    assert "/timing" in script
+    assert "/jobs" in script
+    assert "/timing" not in script
     assert "actions/runs" in script
 
 
