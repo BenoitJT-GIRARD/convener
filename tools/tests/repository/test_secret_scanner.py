@@ -259,3 +259,63 @@ def test_this_module_writes_neither_the_path_nor_the_value_it_is_about() -> None
     assert entry["paths"][0] not in source
     assert entry["regexes"][0] not in source
     assert exempted_path() not in source
+
+
+# ------------------------------------------------------------------ #
+# What this scanner is not for, and what holds that instead.
+# ------------------------------------------------------------------ #
+
+#: The working directory `wrangler` writes into whichever service
+#: directory it is run from. One entry, because one tool writes one.
+_TOOL_WORKING_DIRECTORIES: Final = (".wrangler/",)
+
+
+def test_no_tool_working_directory_is_tracked() -> None:
+    """`declarations/standing-up.yml` tells every duplicate to run
+    `wrangler` once per relay, and `wrangler` writes `.wrangler/` beside
+    the configuration it was run from. `cache/wrangler-account.json` then
+    holds the Cloudflare account id and the account's own name -- which,
+    for an instance that followed the sequence, is the organisation's
+    mailbox.
+
+    **None of that is a credential**, so none of it is a rule the scanner
+    above came with. Measured in a real duplicate: gitleaks read both
+    files without a word, on every commit, for as long as they were
+    tracked. An account identifier and a mailbox are not a secret, are
+    still not something a repository should carry, and a duplicate that
+    chose a public cockpit would have published both.
+
+    So the guard is `.gitignore` rather than the scanner, and this is what
+    holds `.gitignore`: a rule nobody measures is a rule somebody deletes,
+    and the rule was missing here in the first place.
+    """
+    tracked = [
+        name
+        for name in _tracked()
+        for directory in _TOOL_WORKING_DIRECTORIES
+        if f"/{name}".find(f"/{directory}") != -1
+    ]
+
+    assert tracked == [], (
+        f"these files belong to a tool's own working directory: {tracked}. "
+        "They are written by a command the standing-up sequence orders, "
+        "carry an account identifier rather than a credential -- so the "
+        "secret scanner passes over them in silence -- and belong in "
+        ".gitignore, not in a commit."
+    )
+
+
+def test_the_ignore_rule_those_directories_depend_on_is_present() -> None:
+    """The rule itself, because the sweep above passes just as happily on
+    a repository where the rule was deleted and nothing has been run
+    since. One reads the outcome, the other the mechanism."""
+    rules = {
+        line.strip()
+        for line in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    }
+
+    missing = [d for d in _TOOL_WORKING_DIRECTORIES if d not in rules]
+    assert missing == [], (
+        f".gitignore carries no rule for {missing}, so the next run of the "
+        "command that writes it puts it in front of `git add` again."
+    )
