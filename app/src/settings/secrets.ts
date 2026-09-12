@@ -11,6 +11,18 @@
  * has no field for a secret, no place to paste one, and no code path that
  * could send one anywhere.
  *
+ * **That argument rests on something outside this file**, and it is worth
+ * saying which: it assumes a Board member does not already hold the right
+ * it declines to introduce. Whether they do is decided by how the
+ * repository grants them access. `declarations/standing-up.yml` gives the
+ * `editorial-board` team Write, which is enough for everything the cockpit
+ * does and carries no access to secrets -- and says, at the same step, that
+ * Board membership is not a reason to own the organisation, because an
+ * owner holds admin on every repository it has. An instance that grants
+ * access some other way can make this restraint moot without changing a
+ * line of it. The first instance to walk that sequence did, before the step
+ * said so.
+ *
  * Reporting is a different act, and it is the useful one. GitHub's own
  * Actions endpoints answer *which names exist* and never a value: the
  * secrets endpoint is documented as listing secrets "without revealing
