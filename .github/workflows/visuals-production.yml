@@ -1,5 +1,23 @@
 name: Visuals production
 
+# Dispatching this on a branch stops that branch's checks
+# -------------------------------------------------------
+# A pull request whose newest commit came from this job shows **no checks
+# at all** -- not failing, not queued, not skipped. The merge box says the
+# checks have not run, nothing times out, and nothing anywhere says why.
+#
+# This job commits `site/src/banners/` back to the branch it ran on, as
+# `convener-visuals`, using the `GITHUB_TOKEN` -- and a commit pushed by
+# that token starts no workflow run at all, which is GitHub's own guard
+# against a workflow triggering itself. Every check on the pull request
+# therefore sits in `action_required` and never begins. The branch is
+# waiting for a commit a person authored, and pushing one is what releases
+# it.
+#
+# So dispatch this on `main`, which is the only branch its push trigger
+# names anyway. A branch with a pull request open on it is the one place
+# where it costs somebody an hour.
+#
 # The trigger for the production seam
 # (`convener-render-visuals`, `tools/convener_ops/cli/publication.py`), run against real, *scheduled*
 # editions in `instance/data/speakers.yml` -- locking a date, receiving a
