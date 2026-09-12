@@ -185,10 +185,20 @@ permanently and after the fork is deleted.
 
 **Proves it is done.** The repository's own page shows *Private* and carries
 no *forked from* line under its name. Both have to be true; either one alone
-is not the thing being checked.
+is not the thing being checked. Then one more, because those two pass just as
+happily on a repository that can never take an update. `--source=.` copies
+whatever you have locally: a clone of the product carries its history, while
+an extracted archive has no `.git` at all, so `gh repo create` begins one with
+`git init` and it shares no commit with upstream. Both are private, neither is
+a fork, and only one of them can merge. The last line below answers which you
+have — a commit id, printed silently, is the answer you want. It is worth
+asking now rather than on the day of the first release.
 
 ```bash
 gh repo create <owner>/<name> --private --source=. --remote=origin --push
+git remote add upstream https://github.com/BenoitJT-GIRARD/convener.git
+git fetch upstream
+git merge-base HEAD upstream/main
 ```
 
 **Without it.** Nothing else in this sequence has anywhere to live. Done as a

@@ -8,6 +8,9 @@ accounts and secrets, and keeps it running once volunteers are using it.
 - **[Standing up an instance](standing-up.md)** — the ordered path from no
   repositories and no accounts to a running instance, walkable with a
   browser and a text editor. Generated from `declarations/standing-up.yml`.
+- **[Taking an update](taking-an-update.md)** — an update is a merge, and
+  this is the command: the remote to add once, the two lines to run each
+  time, and what to do with the only conflicts a release can bring.
 - **[What a duplicate edits](what-a-duplicate-edits.md)** — the six files,
   and what everything else is that nobody has to touch.
 - **[What you take on](what-you-take-on.md)** — the personal data you

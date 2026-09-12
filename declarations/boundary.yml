@@ -2,10 +2,43 @@
 #
 # This repository is meant to be duplicated. For a duplicate, an update is a
 # **merge**: it succeeds when upstream's commits and the instance's commits
-# never touch the same file, and it fails into a field of conflicts otherwise
-# -- at which point people stop updating. So "instance" cannot stay an
-# intention. It is a set of paths, and this file is where that set is written
-# down once.
+# never touch the same **region of a file**, and it fails into a field of
+# conflicts otherwise -- at which point people stop updating. So "instance"
+# cannot stay an intention. It is a set of paths, and this file is where that
+# set is written down once.
+#
+# `region` rather than `file`, and the difference is not pedantry
+# ---------------------------------------------------------------
+# This paragraph said "the same file" for a long time, which is stricter than
+# git and than this repository. Measured on a real duplicate's first merge:
+# eleven product paths carry a value that is the instance's, none of them
+# named below, and the list above would call every one of them a fork. Git
+# calls four of them nothing at all.
+#
+# They divide by *how much of the file* each side writes, which is the
+# question that decides whether a merge is readable:
+#
+#   Four are one line. `.github/CODEOWNERS`'s catch-all rule names the
+#   Board's own team; each relay's `wrangler.toml` carries a KV namespace id
+#   -- both shipped as `REPLACE_WITH_KV_NAMESPACE_ID`, which is the
+#   product's own word for a value it cannot supply; and
+#   `.github/dependabot.yml` carries whatever a duplicate did to stop
+#   version updates. Upstream can rewrite the rest of any of those files
+#   without ever reaching the line, and on most releases does.
+#
+#   Seven are written whole, by `tools/scripts/generate_brand_css.py` and
+#   `generate_motif.py`, from the charter in force. A change to either
+#   generator rewrites the file on both sides at once, so these conflict
+#   every time and conflict unreadably. They are also the only ones with a
+#   resolution that needs no judgement: take either side, re-run the
+#   generator, and `--check` -- in `gates.sh` and in `quality.yml` -- proves
+#   it was done.
+#
+# Neither group is declared below, and neither should be: handing a
+# generated file to the instance would freeze that instance's own design
+# against every correction upstream makes to the generator, remeasured
+# contrasts included. What they needed was the resolution written down, and
+# `docs/operating/taking-an-update.md` is where it now is.
 #
 # The default is the product
 # --------------------------
