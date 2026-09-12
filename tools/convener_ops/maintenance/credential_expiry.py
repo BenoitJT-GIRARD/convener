@@ -81,9 +81,24 @@ class Renewal:
     `renewed_by` is a pointer rather than a procedure: the procedures live
     in `docs/operating/operations.md`, one per integration, and copying a
     line of one here would make two homes for it.
+
+    **`secret_name`, not `secret`.** It holds a credential's name --
+    `CONVENER_MEETING_API_TOKEN` -- and never its value, which
+    `instance/data/credential-renewals.yml` has no way to carry and no
+    reason to. The field was called `secret` and the shorter word was
+    false: printing the name is the whole point of this watchdog, and
+    `py/clear-text-logging-sensitive-data` read the name of the field
+    rather than what it holds and reported a high-severity leak on a
+    public repository. An alert that has to be explained away is an alert
+    the next reader learns to skip, which is the one thing this
+    repository refuses to let a security control become.
+
+    The declaration's own key stays `secret`: it reads correctly in YAML
+    -- *which* secret -- and renaming it would break a file every
+    duplicate has already written.
     """
 
-    secret: str
+    secret_name: str
     expires: date
     renewed_by: str
 
@@ -101,22 +116,22 @@ class Finding:
 
     @property
     def secret_name(self) -> str:
-        return self.renewal.secret
+        return self.renewal.secret_name
 
 
-def parse_date(value: Any, secret: str) -> date:
+def parse_date(value: Any, secret_name: str) -> date:
     """One parser, so a malformed date is one message rather than a
     traceback from wherever it was first compared."""
     if not isinstance(value, str):
         raise ValueError(
-            f"{RENEWALS_PATH.as_posix()}: {secret} has expires {value!r}, "
+            f"{RENEWALS_PATH.as_posix()}: {secret_name} has expires {value!r}, "
             "which is not a date written as YYYY-MM-DD"
         )
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
         raise ValueError(
-            f"{RENEWALS_PATH.as_posix()}: {secret} has expires {value!r} "
+            f"{RENEWALS_PATH.as_posix()}: {secret_name} has expires {value!r} "
             f"({exc}). Dates are ISO 8601: YYYY-MM-DD."
         ) from exc
 
@@ -147,22 +162,22 @@ def from_data(data: Any) -> list[Renewal]:
                 f"{RENEWALS_PATH.as_posix()}: a renewals entry is "
                 f"{type(row).__name__} rather than a mapping"
             )
-        secret = row.get("secret")
-        if not isinstance(secret, str) or not secret.strip():
+        secret_name = row.get("secret")
+        if not isinstance(secret_name, str) or not secret_name.strip():
             raise ValueError(
                 f"{RENEWALS_PATH.as_posix()}: a renewals entry names no secret"
             )
         renewed_by = row.get("renewed_by")
         if not isinstance(renewed_by, str) or not renewed_by.strip():
             raise ValueError(
-                f"{RENEWALS_PATH.as_posix()}: {secret} says nothing about how "
+                f"{RENEWALS_PATH.as_posix()}: {secret_name} says nothing about how "
                 "it is renewed. Point at the section of "
                 "docs/operating/operations.md that does."
             )
         renewals.append(
             Renewal(
-                secret=secret,
-                expires=parse_date(row.get("expires"), secret),
+                secret_name=secret_name,
+                expires=parse_date(row.get("expires"), secret_name),
                 renewed_by=renewed_by,
             )
         )
@@ -229,7 +244,7 @@ def message(findings: list[Finding], today: date) -> str:
             if finding.expired
             else f"expires in {finding.days_left} day(s)"
         )
-        lines.append(f"- `{renewal.secret}` — {when}, on {renewal.expires}.")
+        lines.append(f"- `{renewal.secret_name}` — {when}, on {renewal.expires}.")
         lines.append(f"  Renewed through: {renewal.renewed_by}")
     lines += [
         "",
@@ -247,7 +262,7 @@ def annotation_lines(findings: list[Finding]) -> list[str]:
     return [
         (
             f"::{'error' if finding.expired else 'warning'}::"
-            f"{finding.renewal.secret} "
+            f"{finding.renewal.secret_name} "
             + (
                 f"expired on {finding.renewal.expires}"
                 if finding.expired

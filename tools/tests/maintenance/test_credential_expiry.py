@@ -29,9 +29,9 @@ from convener_ops.maintenance import credential_expiry
 TODAY = date(2026, 9, 12)
 
 
-def entry(secret: str, expires: str) -> dict[str, str]:
+def entry(secret_name: str, expires: str) -> dict[str, str]:
     return {
-        "secret": secret,
+        "secret": secret_name,
         "expires": expires,
         "renewed_by": "docs/operating/operations.md, Meeting platform",
     }
@@ -132,7 +132,7 @@ def test_findings_come_out_most_urgent_first() -> None:
         ),
         TODAY,
     )
-    assert [finding.renewal.secret for finding in fired] == [
+    assert [finding.renewal.secret_name for finding in fired] == [
         "EXPIRED",
         "SOONER",
         "LATER",
