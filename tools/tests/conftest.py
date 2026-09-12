@@ -50,8 +50,24 @@ def _isolate_environment() -> Iterator[None]:
     this fixture snapshots and restores, so a write made that way is
     invisible here and leaks into every later child process for the rest
     of the session. Nothing in this tree calls `os.putenv`; if that ever
-    changes, this fixture does not cover it."""
+    changes, this fixture does not cover it.
+
+    **It also takes `$GITHUB_OUTPUT` away before every test**, which is
+    the other direction: not a value one test leaks to the next, but one
+    the machine leaks to all of them. `cli/step_output.write` appends to
+    that file when it is set and prints when it is not, so a test that
+    reads a command's answer off stdout is reading the fallback -- and
+    inside Actions the variable is always set, so the answer goes to the
+    file and stdout is empty. Four tests in
+    `tests/maintenance/test_actions_usage.py` asserted on stdout and
+    passed for as long as the only machine that ran them was outside
+    Actions; the first run that reached them on a runner failed all four,
+    on a command that was working. Cleared here rather than in each of
+    them because the next test to read stdout will not know to ask. A
+    test that wants the file writes `monkeypatch.setenv` for itself,
+    which still works: this runs first."""
     before = dict(os.environ)
+    os.environ.pop("GITHUB_OUTPUT", None)
     yield
     for key in set(os.environ) - set(before):
         del os.environ[key]
