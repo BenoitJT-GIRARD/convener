@@ -103,6 +103,14 @@ on:
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'
       - 'tools/uv.lock'
+      # `site/scripts/check-a11y.mjs` launches its browser through this
+      # module, which is the one place in the repository that says what a
+      # browser is launched with. It gives this checker no argument at all
+      # -- the browser here is the runner's own packaged Chrome -- but a
+      # change to it can still decide whether this job's browser starts,
+      # so it is watched rather than left out on the strength of what it
+      # does today (D-25).
+      - 'tools/visuals/browser.mjs'
       - '.github/workflows/preview.yml'
 
 # A newer push to a pull request supersedes

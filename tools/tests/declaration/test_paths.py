@@ -50,6 +50,7 @@ what this fixes is the part of it that is one import away from a constant.
 from __future__ import annotations
 
 import ast
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -75,11 +76,26 @@ PACKAGE = "tools/convener_ops/"
 HOME = "tools/convener_ops/declaration/paths.py"
 
 
+@cache
 def declared_instance_paths() -> tuple[str, ...]:
     """The paths `declarations/boundary.yml` hands to the instance, read now.
 
     The declaration's own list, parsed by the module that owns its format.
     Adding an entry there adds a refusal here on the same commit.
+
+    Read once per session rather than once per question. `offence` below
+    asks this twice for every string constant in the package, and the
+    package has tens of thousands of them, so the sweep was re-opening and
+    re-parsing `declarations/boundary.yml` tens of thousands of times: 451
+    seconds of one test, against 4 with the answer kept. That is not a
+    figure anybody chose. It was the difference between a suite that
+    finishes on a runner and one that is killed at its ceiling with no
+    test having failed, which is how it was found.
+
+    The cache does not weaken what this reads. "At run time" is about
+    where the list comes from -- the declaration, on the commit under
+    test, rather than a copy written here -- and a declaration does not
+    change under a test session.
     """
     return tuple(entry.path for entry in boundary.load(ROOT).handed)
 

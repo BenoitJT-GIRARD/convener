@@ -99,6 +99,58 @@ EXAMPLE_CHARTER: Final = "examples/the-example-collective/instance/data/brand.js
 #: started the third one.
 DELETED_DIRECTORY: Final = "tools/migrations/"
 
+#: Whether this repository holds the half that produces the product
+#: repository. `declarations/boundary.yml` keeps `convener_ops/derivation/`
+#: out of what it produces, so this is present here and absent in the
+#: product and in every duplicate made from it.
+#:
+#: It is the precondition of every reading in this module, stated as the
+#: one fact that distinguishes the two. Each reading asks this
+#: repository's own commits where the instance's files used to be, and
+#: a derived history is not the history those moves happened in: the
+#: derivation filters the instance's paths out of every commit it carries
+#: over, so a move it did carry arrives with the place it left already
+#: empty. `keys/`, `config/instance.json` and five more entries name
+#: nothing at all there -- correctly, and for a reason no repository
+#: reading them can do anything about.
+#:
+#: Deliberately not a retired path. The other guard of this shape in this
+#: suite probes a retired path that its own checks say nothing about, and
+#: no such path exists here: every retired path is a subject of the
+#: readings below, so probing one would be the check excusing itself with
+#: its own finding. This is measured outside the declaration instead.
+#:
+#: Deliberately not `instance_identity.ships_the_example_as_its_instance`
+#: either, which is the condition twenty-seven other tests abstain on. It
+#: lifts the moment a duplicate declares its own values -- and a
+#: duplicate's history is still the derived one, so these three would come
+#: back red on the day that duplicate was configured, for the one reason
+#: it can never fix.
+AUTHORS_THE_DECLARATION: Final = (
+    ROOT / "tools" / "convener_ops" / "derivation"
+).is_dir()
+
+NOT_THE_HISTORY_THESE_MOVES_HAPPENED_IN: Final = (
+    "this repository does not hold the derivation, so its history is one "
+    "the derivation produced: the instance's paths were filtered out of "
+    "every commit, and the acts `retired:` describes are not in it to be "
+    "read. The declaration is still inherited whole and is still checked "
+    "where it is written"
+)
+
+#: The whole module and not the three that went red. Four of the seven
+#: readings below pass in a derived repository by finding nothing, which
+#: is a check that cannot fail -- the shape this project treats as worse
+#: than a missing one, because it passes on the day it is written and
+#: again on the day the defect comes back. Three of them find nothing and
+#: say so. All seven read the same history, so all seven abstain on the
+#: same fact rather than three abstaining and four reporting green about
+#: a history they never had.
+pytestmark = pytest.mark.skipif(
+    not AUTHORS_THE_DECLARATION,
+    reason=NOT_THE_HISTORY_THESE_MOVES_HAPPENED_IN,
+)
+
 
 def _git(*args: str) -> str:
     return subprocess.run(  # nosec B603 B607

@@ -114,12 +114,27 @@ jobs:
     # Every job in this repository declares a ceiling --
     # test_workflows.py::test_every_job_declares_a_timeout guards that.
     #
-    # 12, not 10: this job also installs
-    # `app/`'s own `node_modules` and runs a whole second-instance build
-    # inside `pytest` (see the "Install app" step below). Raised rather
-    # than left to run close to the edge -- a timeout that trips on a slow
-    # runner is a red build that says nothing about the code.
-    timeout-minutes: 12
+    # 90, and every figure before it was a guess. 10 became 12 because
+    # this job also installs `app/`'s own `node_modules` and runs a whole
+    # second-instance build inside `pytest` (see the "Install app" step
+    # below); 12 was never measured against a runner, because until the
+    # product was published there was no runner to measure it on. The
+    # first two runs both stopped at the same place, one at twelve
+    # minutes and one at forty:
+    #
+    #   python  Tests  ....ss......  [  9%]
+    #   python  Tests  ##[error]The operation was canceled.
+    #
+    # Nothing had failed. Both were killed inside one test, which is now
+    # a thousand times faster than it was
+    # (`tools/tests/declaration/test_paths.py::declared_instance_paths`
+    # says what it was doing), and the suite has still never run to the
+    # end on a runner. So this ceiling is deliberately far above the
+    # measurement there is -- the whole suite on the maintainer's own
+    # machine -- rather than close to a measurement there is not. A job
+    # minute costs nothing on a public repository; a ceiling that trips
+    # costs a red build that says nothing about the code, twice now.
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:

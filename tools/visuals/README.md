@@ -13,6 +13,13 @@ written out; `render-readme-shots.mjs` takes the pictures the repository's
 front page shows. `check-templates.mjs` and `check-posters.mjs` are the two
 checks run over what comes out.
 
+`browser.mjs` renders nothing and opens no page. It is the one place this
+repository says what a browser is launched with, and it carries the whole
+of the argument for the single flag it ever passes. All five scripts above
+launch through it, and so does `site/scripts/check-a11y.mjs`, which is
+handed a browser the machine already had and is given no flag at all. Read
+that file before adding an argument to any launch.
+
 `puppeteer` — the full package, with its own bundled Chromium — is the one
 dependency, and it is isolated here rather than added to `site/` or `app/`
 so that only the jobs that actually render pay for the download. Pinning
@@ -28,3 +35,15 @@ npm run check
 `npm run update-references` rewrites the committed reference images, and is
 run deliberately after a change to what is drawn, never to make a failing
 comparison pass.
+
+A reference belongs to the platform that drew it, and `references/` holds
+one directory per platform — `linux/` is what the runner compares against,
+`win32/` what a maintainer's own machine does. The engine is pinned and the
+rasteriser underneath it is not: the same page, the same fonts and the same
+Chromium build differ by 2.3% of `square`'s pixels between DirectWrite and
+FreeType, which is many times the budget a real design change has to clear.
+Each set is exact on its own platform, so nothing is loosened to hold both;
+`render-and-compare.mjs`'s own comment carries the measurement and what was
+tried before splitting them. On a platform with neither directory the check
+says so and stops, and `npm run update-references` there writes the set that
+platform is missing.

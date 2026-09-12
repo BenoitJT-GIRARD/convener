@@ -573,14 +573,23 @@ async function main() {
   let browser;
   let written = 0;
   try {
-    // Imported here rather than at the top of the file, so that the
+    // Both imported here rather than at the top of the file, so that the
     // refusal above runs on a machine that has never installed this
     // package. A top-level import fails first, with a resolver error
     // about puppeteer, which tells a reader nothing about the thing this
     // script actually stopped for -- and it would put the one heavy
     // dependency in the way of the one check that costs nothing.
+    //
+    // `browser.mjs` is beside this file and needs no install at all, and
+    // it is still imported here for the other half of that sentence: the
+    // smallest tree this script can be driven in is the two declarations
+    // and this file (`tools/tests/scripts/test_readme_shots.py`), and a
+    // top-level import of it turned that test's refusal into a resolver
+    // error about a path -- which is the exact failure the paragraph
+    // above was written about, arriving through the other import.
     const { default: puppeteer } = await import('puppeteer');
-    browser = await puppeteer.launch({ headless: true });
+    const { launch: launchBrowser } = await import('./browser.mjs');
+    browser = await launchBrowser(puppeteer);
     for (const shot of shots) {
       const page = await browser.newPage();
       try {

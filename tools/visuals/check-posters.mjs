@@ -76,6 +76,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import puppeteer from 'puppeteer';
+import { launch as launchBrowser } from './browser.mjs';
 
 /** How close the painted edge of the drawing may come to a line of type or
  *  to a plate, in the page's own pixels.
@@ -327,7 +328,7 @@ async function main() {
   let browser;
   const results = [];
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await launchBrowser(puppeteer);
     for (const entry of manifest) {
       const page = await browser.newPage();
       try {

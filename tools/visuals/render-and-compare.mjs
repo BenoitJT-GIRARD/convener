@@ -51,8 +51,8 @@
  *    on a fast one, which is exactly the kind of run-to-run instability
  *    that would make this comparison meaningless before a single design
  *    change is even in question.
- * 4. Compares each screenshot against `references/<name>.png`, a versioned
- *    image already committed to this repository. Decoded through the
+ * 4. Compares each screenshot against `references/<platform>/<name>.png`, a
+ *    versioned image already committed to this repository. Decoded through the
  *    *browser's own* `<canvas>`/`getImageData` -- no image-diffing
  *    dependency was added for this (no `pixelmatch`, no `pngjs`): the
  *    engine already pinned to render is the same engine asked to
@@ -66,9 +66,37 @@
  *    where", not merely "different".
  *
  * `--update` (only ever run by a human, never by CI -- `visuals.yml` never
- * passes it) overwrites `references/<name>.png` with the current render
- * instead of comparing against it, for a deliberate, reviewed design
+ * passes it) overwrites `references/<platform>/<name>.png` with the current
+ * render instead of comparing against it, for a deliberate, reviewed design
  * change. Every other invocation only ever reads the references directory.
+ *
+ * Why a reference belongs to a platform
+ * -------------------------------------
+ * Pinning the engine is what makes a red comparison mean *the picture
+ * changed*. It pins the engine and not the machine, and for as long as
+ * this repository had run on one machine there was nothing to tell the
+ * two apart. The first run on Linux did: 2.3% of `square`'s pixels
+ * differed from a reference that a Windows run reproduces exactly, worst
+ * single-channel delta 254, clustered on glyph edges across the whole
+ * canvas -- the same fonts, the same layout, the same engine, and a
+ * different rasteriser underneath it (DirectWrite against FreeType).
+ * Chrome's own font flags do not close that gap: `--font-render-hinting=
+ * none`, `--disable-lcd-text`, `--disable-font-subpixel-positioning` and
+ * `--force-color-profile=srgb` together move the Windows render by 1.5%
+ * of `square` and leave the two platforms as far apart as they were.
+ *
+ * So the reference is per platform, keyed on `process.platform`, and both
+ * sets are exact: a runner compares against the pictures a runner makes,
+ * a maintainer against the pictures their own machine makes, and neither
+ * budget is loosened by one pixel to accommodate the other. The
+ * alternative was one set and a tolerance wide enough to swallow a
+ * rasteriser, which is a tolerance wide enough to swallow a font-weight
+ * change as well.
+ *
+ * A platform with no directory here fails with the missing-reference
+ * error below, naming the directory it wanted. That is the honest answer:
+ * a picture nobody has ever looked at is not a baseline, and D-25 is the
+ * rule that a check may not supply its own.
  *
  * One series, at one charter, and the gap that leaves
  * ------------------------------------------------------
@@ -147,6 +175,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
+import { launch as launchBrowser } from './browser.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -236,7 +265,12 @@ function parseArgs(argv) {
     );
   }
   args.fixtures = path.resolve(args.fixtures);
-  args.references = path.resolve(args.references || path.join(__dirname, 'references'));
+  // `process.platform` and not a flag: which rasteriser drew the picture
+  // in front of you is not a thing anybody should have to remember to
+  // declare. See this module's own comment for the measurement.
+  args.references = path.resolve(
+    args.references || path.join(__dirname, 'references', process.platform)
+  );
   if (args.actual) args.actual = path.resolve(args.actual);
   return args;
 }
@@ -402,7 +436,7 @@ async function main() {
   let browser;
   const results = [];
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await launchBrowser(puppeteer);
     for (const entry of manifest) {
       const page = await browser.newPage();
       try {
@@ -452,7 +486,8 @@ async function main() {
     if (result.missingReference) {
       failed = true;
       console.log(
-        `::error::${result.name} -- no reference image at ${path.join(args.references, `${result.name}.png`)}. ` +
+        `::error::${result.name} -- no reference image at ${path.join(args.references, `${result.name}.png`)}, ` +
+          `which is where this platform (${process.platform}) keeps its own. ` +
           'Run `npm run update-references` by hand and commit the result only after reviewing it -- ' +
           'this script never creates one on its own (D-25: a check that supplies its own missing baseline cannot fail).'
       );
