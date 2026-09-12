@@ -12,10 +12,15 @@
 # and the catch-all rule carries that maintainer's own account: the whole
 # of what this file earns there is that an outside contributor's pull
 # request reaches them without anybody having to watch the repository.
-# Nothing here can be that value and nothing here can derive it, because
-# the repository it belongs to does not exist until the first push -- so
-# the tool that produces the product writes it, out of the account that
-# tool is run as, and refuses a result naming any other.
+#
+# That line is maintained by hand here, and held by
+# `tools/tests/declaration/test_published.py::
+# test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`,
+# which reads both shapes this file can correctly take. Nothing writes it.
+# It used to be written by the tool that produced the product from its
+# source, out of the account that tool was run as -- that tool is not part
+# of this repository and there is nothing here to run, so a reader looking
+# for it would have been looking for something that does not exist.
 #
 # Which is what a duplicate finds when it first opens this file: a single
 # account on the catch-all rather than a team, belonging to somebody who
