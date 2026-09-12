@@ -124,10 +124,28 @@ def link_node_modules(root: Path, packages: Iterable[str]) -> list[Path]:
 
 
 def unlink_node_modules(links: Iterable[Path]) -> None:
-    """Undo `link_node_modules`. `os.rmdir` unlinks a junction and a
-    symbolic link alike; it never descends into one."""
+    """Undo `link_node_modules`, and the two platforms need two calls.
+
+    `link_directory` makes a *junction* on Windows and a *symbolic link*
+    everywhere else, and only the first is a directory. `os.rmdir`
+    unlinks a junction without descending into it; handed a POSIX
+    symbolic link it raises `NotADirectoryError`, because a symbolic
+    link is not a directory to remove. `Path.unlink` is what removes
+    one.
+
+    The order below is the one that works: a symbolic link is tested for
+    first, because `Path.exists()` follows it and answers about its
+    *target* -- False for a broken one, which still has to be removed.
+    A junction is not a symbolic link to `Path.is_symlink`, so Windows
+    takes the second branch.
+
+    This read `os.rmdir` alone until the first run on a POSIX runner,
+    where every caller of this function failed at its own `finally`.
+    """
     for link in links:
-        if link.exists():
+        if link.is_symlink():
+            link.unlink()
+        elif link.exists():
             os.rmdir(link)
 
 
