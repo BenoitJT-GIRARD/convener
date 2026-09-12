@@ -27,6 +27,7 @@
  */
 @layer theme, base, components, utilities;
 
+
 @import 'tailwindcss/theme.css' layer(theme);
 @import './design/tokens.css' layer(base);
 @import 'tailwindcss/preflight.css' layer(base);
@@ -34,6 +35,27 @@
 
 @source '../index.html';
 @source './**/*.{ts,tsx}';
+
+/* The reading measure every explanatory paragraph in this application is
+   set to, decided here rather than at forty call sites.
+   Tailwind v4 compiles `max-w-prose` to a literal `65ch` -- it does not
+   read the `--container-*` scale, so a value put in `@theme` next to
+   `--container-content` is inert, which is worth saying because it looks
+   as though it would work. Overriding the utility is what reaches it.
+   65ch at `text-sm` renders 400px, measured identical at every viewport
+   from 600px to 1920px in a column that reaches 1180px: frozen, and
+   frozen narrow. `clamp` lets it move where a reader expects movement and
+   stops it where reading needs a ceiling -- never under 65 characters,
+   never over 82, growing with the window between them.
+   What no value here can fix, stated rather than papered over: at 14px
+   no readable measure fills a 1180px column, since 82 characters of 14px
+   type is about 510px. A paragraph that looks narrow beside a full-width
+   table is the price of 14px type, not of this line. */
+@layer utilities {
+  .max-w-prose {
+    max-width: clamp(65ch, 46vw, 82ch);
+  }
+}
 
 /* Every colour the cockpit's utilities name, against the custom property
  * `design/tokens.css` carries it in. `tools/scripts/generate_brand_css.py`
@@ -69,4 +91,5 @@
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --container-content: 1180px;
+
 }
