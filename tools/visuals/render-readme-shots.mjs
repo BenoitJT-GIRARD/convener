@@ -155,6 +155,11 @@ import { readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// `browser.mjs` states the one launch argument this repository ever
+// passes, and why. Imported at the top even though `puppeteer` below is
+// not: this module has no dependencies of its own, so it costs nothing
+// on a machine that never installed the renderer.
+import { launch as launchBrowser } from './browser.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
@@ -580,7 +585,7 @@ async function main() {
     // script actually stopped for -- and it would put the one heavy
     // dependency in the way of the one check that costs nothing.
     const { default: puppeteer } = await import('puppeteer');
-    browser = await puppeteer.launch({ headless: true });
+    browser = await launchBrowser(puppeteer);
     for (const shot of shots) {
       const page = await browser.newPage();
       try {

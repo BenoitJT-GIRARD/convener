@@ -107,6 +107,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
+import { launch as launchBrowser } from './browser.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -560,7 +561,7 @@ async function main() {
   const results = [];
   let advances = [];
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await launchBrowser(puppeteer);
     for (const entry of manifest) {
       const page = await browser.newPage();
       try {

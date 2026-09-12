@@ -80,6 +80,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import puppeteer from 'puppeteer-core';
+// The one place this repository states what a browser is launched
+// with, and the only file in it that names a launch argument. This
+// checker is handed a packaged browser through `--chrome`, so the rule
+// written there gives it nothing and leaves its sandbox on; the import
+// is what makes that a decision taken in one place rather than an
+// absence anyone reading this line has to account for. `browser.mjs`
+// has no dependencies of its own, so reaching across to `tools/` costs
+// this package no install it did not already have.
+import { launch as launchBrowser } from '../../tools/visuals/browser.mjs';
 // The instance's own published address, read through the same module
 // `.eleventy.js` reads it through -- so this checker serves the tree at the
 // address the build itself was configured for, and cannot drift from it.
@@ -485,7 +494,7 @@ async function main() {
   let pagesChecked = 0;
 
   try {
-    browser = await puppeteer.launch({ executablePath: args.chrome, headless: true });
+    browser = await launchBrowser(puppeteer, { executablePath: args.chrome });
     const showcaseRoot = path.join(publishRoot, prefixSegment);
     const htmlFiles = await discoverHtmlPages(showcaseRoot);
 

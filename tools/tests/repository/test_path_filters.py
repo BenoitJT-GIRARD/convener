@@ -37,6 +37,7 @@ _EXPECTED_PATHS = [
     "tools/convener_ops/**",
     "tools/pyproject.toml",
     "tools/uv.lock",
+    "tools/visuals/browser.mjs",
 ]
 
 _PATH_ITEM_RE = re.compile(r"^\s*-\s*'([^']+)'\s*$", re.MULTILINE)

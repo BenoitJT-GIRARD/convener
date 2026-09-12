@@ -38,6 +38,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import puppeteer from 'puppeteer';
+import { launch as launchBrowser } from './browser.mjs';
 
 function parseArgs(argv) {
   const args = { fixtures: undefined, out: undefined };
@@ -116,7 +117,7 @@ async function main() {
   let browser;
   let written = 0;
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await launchBrowser(puppeteer);
     for (const entry of manifest) {
       const page = await browser.newPage();
       try {

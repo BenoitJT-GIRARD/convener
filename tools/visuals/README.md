@@ -13,6 +13,13 @@ written out; `render-readme-shots.mjs` takes the pictures the repository's
 front page shows. `check-templates.mjs` and `check-posters.mjs` are the two
 checks run over what comes out.
 
+`browser.mjs` renders nothing and opens no page. It is the one place this
+repository says what a browser is launched with, and it carries the whole
+of the argument for the single flag it ever passes. All five scripts above
+launch through it, and so does `site/scripts/check-a11y.mjs`, which is
+handed a browser the machine already had and is given no flag at all. Read
+that file before adding an argument to any launch.
+
 `puppeteer` — the full package, with its own bundled Chromium — is the one
 dependency, and it is isolated here rather than added to `site/` or `app/`
 so that only the jobs that actually render pay for the download. Pinning
