@@ -15,11 +15,13 @@ built for -- the meeting token -- fails silently by design.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from convener_ops.cli.maintenance import check_credential_expiry
 from convener_ops.maintenance import credential_expiry
 
 TODAY = date(2026, 9, 12)
@@ -167,9 +169,7 @@ def test_the_notice_names_the_secret_the_date_and_where_the_procedure_is() -> No
     assert "8 day(s)" in said
 
 
-def test_an_expired_credential_annotates_as_an_error_and_a_coming_one_as_a_warning() -> (
-    None
-):
+def test_an_expired_one_annotates_as_error_and_a_coming_one_as_warning() -> None:
     """Two severities, because a run's own summary is where this is read
     first and the two call for different things that morning."""
     fired = credential_expiry.due(
@@ -199,3 +199,127 @@ def test_this_repository_ships_the_declaration_and_declares_nothing_in_it() -> N
     assert path.is_file()
     assert credential_expiry.load() == []
     assert "renewed_by:" in path.read_text(encoding="utf-8")
+
+
+# ------------------------------------------------------------------ #
+# The command the daily job runs.
+# ------------------------------------------------------------------ #
+
+
+class _FixedDatetime:
+    """A stand-in for the `datetime` class `cli/maintenance.py` imports,
+    whose `now()` always returns the same instant -- the same idiom
+    `test_routing_watch.py::_FixedDatetime` uses."""
+
+    def __init__(self, fixed: datetime) -> None:
+        self._fixed = fixed
+
+    def now(self, tz: Any = None) -> datetime:
+        return self._fixed
+
+
+def _repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, declared: str | None
+) -> Path:
+    if declared is not None:
+        path = tmp_path / credential_expiry.RENEWALS_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(declared, encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("CONVENER_NOTIFY_THREAD", raising=False)
+    monkeypatch.delenv("CONVENER_NOTIFY_MENTION", raising=False)
+    monkeypatch.setattr(
+        "convener_ops.cli.maintenance.datetime",
+        _FixedDatetime(datetime(2026, 9, 12, 9, 0, tzinfo=UTC)),
+    )
+    return tmp_path
+
+
+def _outputs(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, _, value = line.partition("=")
+        values[key] = value
+    return values
+
+
+def _github_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    out = tmp_path / "github-output.txt"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    return out
+
+
+def test_a_credential_inside_the_window_fires_and_names_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The case this was built for: the meeting token, a week out, on an
+    instance where nothing else would say so."""
+    _repo(
+        tmp_path,
+        monkeypatch,
+        "v: 1\nrenewals:\n"
+        "  - secret: CONVENER_MEETING_API_TOKEN\n"
+        "    expires: 2026-09-20\n"
+        "    renewed_by: docs/operating/operations.md, Meeting platform\n",
+    )
+    out = _github_output(tmp_path, monkeypatch)
+
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "true"
+    printed = capsys.readouterr().out
+    assert "::warning::CONVENER_MEETING_API_TOKEN" in printed
+    assert "2026-09-20" in printed
+
+
+def test_a_healthy_declaration_is_quiet_but_still_says_what_it_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An alarm that cries wolf about a working repository costs more
+    credibility than this failure costs anybody -- and a run that says
+    nothing at all cannot be told from one that looked at nothing."""
+    _repo(
+        tmp_path,
+        monkeypatch,
+        "v: 1\nrenewals:\n"
+        "  - secret: CONVENER_RETENTION_TOKEN\n"
+        "    expires: 2027-07-15\n"
+        "    renewed_by: docs/operating/operations.md\n",
+    )
+    out = _github_output(tmp_path, monkeypatch)
+
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "false"
+    printed = capsys.readouterr().out
+    assert "1 declared renewal date(s)" in printed
+    assert "::warning::" not in printed
+
+
+def test_an_instance_declaring_nothing_is_quiet_and_says_that_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Every duplicate starts here, so this must not fire -- and it must
+    not be silent either, or a repository nobody ever wrote a date into
+    reads exactly like a healthy one."""
+    _repo(tmp_path, monkeypatch, None)
+    out = _github_output(tmp_path, monkeypatch)
+
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "false"
+    assert "declares no renewal dates" in capsys.readouterr().out
+
+
+def test_a_declaration_that_cannot_be_read_is_this_repository_s_own_fault(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """1 rather than 0, and the split is the one the three alarms beside it
+    use: a finding is the workflow's to turn red, and a broken declaration
+    is the command's."""
+    _repo(
+        tmp_path,
+        monkeypatch,
+        "v: 1\nrenewals:\n  - secret: A\n    expires: soon\n    renewed_by: x\n",
+    )
+    _github_output(tmp_path, monkeypatch)
+
+    assert check_credential_expiry() == 1
+    assert "::error::" in capsys.readouterr().err

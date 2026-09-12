@@ -22,9 +22,8 @@ different ways, and only one of them is loud:
 **The design was written down and not built.** `platform_fcc.py` describes
 exactly this -- "*a notice is posted to the board thread ... rather than the
 integration failing silently on the day of a seminar*" -- and then says
-"*None of that renewal or notice logic lives in this module*", and
-`operations.md` agrees that it is "not wired up yet". This module is that
-paragraph, built.
+"*None of that renewal or notice logic lives in this module*". This module
+is that paragraph, built; both documents point here now.
 
 Declared rather than discovered, and why there is no choice
 -----------------------------------------------------------

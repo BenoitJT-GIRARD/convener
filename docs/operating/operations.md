@@ -591,11 +591,19 @@ rather than automated:
    integration failing silently on the day of a seminar.
 
 Skipping the step costs one event's manual attendance import through the
-fallback above, never a cancelled seminar and never a security incident. The
-journey line and the board notice that drive this are not wired up yet;
-this section documents the procedure a volunteer, or whatever eventually
-wires it, follows, and `tools/convener_ops/journey/platform_fcc.py`'s module docstring
-documents the same reasoning from the code's side.
+fallback above, never a cancelled seminar and never a security incident.
+
+**The notice in step 3 is wired up.** Declare the date in
+`instance/data/credential-renewals.yml` and the daily sweep posts to the
+board thread a fortnight before it, and turns its own run red from that
+point on — `tools/convener_ops/maintenance/credential_expiry.py` carries the
+argument for why the date is declared rather than discovered, which is that
+nothing in this repository can read it. The date has to be written back at
+each renewal, in the same sitting, by whoever renews it; that is the whole
+cost of the arrangement and the only one that buys anything.
+
+`tools/convener_ops/journey/platform_fcc.py`'s module docstring documents
+the same reasoning from the code's side.
 
 **Two routes free the recording quota, never one.** The provider's free
 tier is 1 GB; a 90-minute recording alone is roughly 1,645 MB, so freeing

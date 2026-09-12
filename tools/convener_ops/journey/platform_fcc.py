@@ -89,8 +89,12 @@ costs a manual attendance import for that one event, through
 incident. None of that renewal or notice logic lives in this module: this
 module only ever *uses* whatever token it is given, the same "receives what
 it needs, does not go looking" rule `platform.py` already follows for
-speaker records and config. See `docs/operating/operations.md`'s "Meeting
-platform" section for the renewal procedure as a reader would follow it.
+speaker records and config. The notice itself lives in
+`maintenance/credential_expiry.py`, which reads a date declared in
+`instance/data/credential-renewals.yml` -- declared because no workflow of
+this repository's can read a token's expiry, not even the one it is running
+under. See `docs/operating/operations.md`'s "Meeting platform" section for
+the renewal procedure as a reader would follow it.
 
 Which FCC conference is which event -- the one thing this module does
 not attempt, and why release_recording stays a manual, per-event step
