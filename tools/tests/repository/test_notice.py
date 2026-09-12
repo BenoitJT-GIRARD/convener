@@ -219,6 +219,11 @@ def trade_mark_prose() -> str:
 TRADE_MARK_STATEMENTS: tuple[tuple[str, str], ...] = (
     ("however it is cased or spaced", "what the grant does not hand over"),
     ("naming its own series", "what a duplicate is doing, in its own name"),
+    ("identity.series", "the field that name actually goes in"),
+    (
+        "names the software, not the series",
+        "what `product` in `NOTICE.json` is, and the inversion it is not",
+    ),
     ("kept intact", "the obligation sections 4 and 5 put on the notice"),
     (
         "an accurate description of an origin",
@@ -229,7 +234,7 @@ TRADE_MARK_STATEMENTS: tuple[tuple[str, str], ...] = (
 
 
 def test_the_trade_mark_document_states_what_it_reserves_asks_and_permits() -> None:
-    """Five statements, and the file is not doing its job without all five.
+    """Seven statements, and the file is not doing its job without all seven.
 
     It has one reader -- somebody about to take this code and make their
     own product of it -- and one job: tell them what the licence does not
@@ -254,8 +259,27 @@ def test_the_trade_mark_document_states_what_it_reserves_asks_and_permits() -> N
     one would have gone on passing: the sentence that replaced it still
     contains the word ``rename``, in the clause that refuses it.
 
-    The fourth of them is the one that earns this project its attribution.
-    A reader who does not know they may write "built on Convener" either
+    **The third and the fourth are here because the row of five passed
+    green over a sentence that was wrong.** ``Naming your own series`` said
+    one field carried the series' name into the software -- ``product`` in
+    ``NOTICE.json`` -- and every word of that was checkable and false. The
+    footer prints ``{{ notice.product }} . {{ notice.copyright }}``, and
+    ``copyright`` is the line the licence obliges a duplicate to keep, so a
+    duplicate following that sentence published its own series' name
+    against this project's copyright: the exact inversion of the axis the
+    page exists to state. The series' name was already displayed anyway,
+    from the instance's own declaration, at the top of every page. Two
+    needles rather than one, because the correction is two claims and
+    either could be dropped on its own: ``identity.series`` is where the
+    name goes, and ``names the software, not the series`` is what the field
+    a reader was being sent to is actually for. Neither is a phrase the old
+    sentence contained, which is what makes them needles rather than notes
+    -- a sweep for ``product`` or for ``NOTICE.json`` would have passed
+    over the defect word for word.
+
+    ``an accurate description of an origin`` is the one that earns this
+    project its attribution. A reader who does not know they may write
+    "built on Convener" either
     omits the credit or opens an issue to ask; the right to describe an
     origin accurately exists whether this file says so or not, so saying
     nothing buys no protection and costs a good-faith reader the line.
@@ -435,6 +459,151 @@ def test_both_readers_answer_with_the_same_notice() -> None:
         ".then(m => console.log(JSON.stringify(m.notice())))"
     )
     assert json.loads(from_mjs) == expected
+
+
+# -------------------------------------------------------------------------- #
+# The one field a duplicate edits
+# -------------------------------------------------------------------------- #
+
+#: Declarations this repository does not ship, with what each one makes
+#: `product` a second spelling of. The first is the exact defect
+#: `TRADEMARK.md` sent a duplicate into for as long as it said one field
+#: carried the series' name into the software.
+_EXAMPLE_IDENTITY = {
+    "series": "Monthly Reading Group",
+    "organisation": "The Example Collective",
+}
+
+TAKES_THE_INSTANCES_NAME: tuple[tuple[str, dict[str, str], str], ...] = (
+    ("Monthly Reading Group", _EXAMPLE_IDENTITY, "series"),
+    ("The Example Collective", _EXAMPLE_IDENTITY, "organisation"),
+    # Case and surrounding space are a rendering of a name, never a
+    # different name, and the failure this refuses is not a typo.
+    ("  the EXAMPLE collective ", _EXAMPLE_IDENTITY, "organisation"),
+)
+
+NAMES_THE_SOFTWARE: tuple[tuple[str, dict[str, str]], ...] = (
+    ("Convener", _EXAMPLE_IDENTITY),
+    # A name of the software that merely contains one of the instance's --
+    # this is equality, not a substring sweep, because "Monthly Reading
+    # Group Tools" is a plausible name for a fork and refusing it would be
+    # a control somebody turns off.
+    ("Monthly Reading Group Tools", _EXAMPLE_IDENTITY),
+    # A declaration with no identity in it at all: unreadable is refused
+    # where it is read, and an identity that declares no name is nothing
+    # for `product` to be a second spelling of.
+    ("Convener", {}),
+    # Both sides empty. An empty `product` is already refused a few lines
+    # earlier, and this says the emptiness never becomes a match of its own.
+    ("", {"series": "", "organisation": ""}),
+)
+
+
+def _asked_of_both(
+    cases: tuple[tuple[str, dict[str, str]], ...],
+) -> tuple[list[str | None], list[str | None]]:
+    """The same list of declarations put to both readers, each in its own
+    runtime, one process per side.
+
+    One call rather than one per case, and one list of answers rather than
+    a boolean: an answer that names the *wrong* field would pass a test
+    that only asked whether something was refused.
+    """
+    argument = json.dumps([[product, declared] for product, declared in cases])
+    from_cjs = _node(
+        f"const cases = {argument};"
+        f"const m = require({str(SHOWCASE_READER.as_posix())!r});"
+        "console.log(JSON.stringify("
+        "cases.map(([p, d]) => m.namesTheInstance(p, d))))"
+    )
+    from_mjs = _node(
+        f"const cases = {argument};"
+        f"import({COCKPIT_READER.as_uri()!r}).then(m => console.log(JSON.stringify("
+        "cases.map(([p, d]) => m.namesTheInstance(p, d)))))"
+    )
+    return json.loads(from_cjs), json.loads(from_mjs)
+
+
+def test_both_readers_refuse_a_product_that_is_the_instances_own_name() -> None:
+    """`product` names the software, and a build stops when it names the
+    series instead.
+
+    **Why a control at all, beside a sentence in `TRADEMARK.md`.** The
+    sentence was there, it was wrong, and its own author was the reader it
+    misled: it said one field carried the series' name into the software
+    and named `product`. A duplicate following it published its own
+    series' name against this project's `copyright`, which sections 4 and
+    5 oblige it to keep. A rewritten sentence fixes the page; it does not
+    stop the next reader, so the build refuses as well.
+
+    **Where it lives, and why not somewhere new.** In the two readers that
+    already refuse a missing or empty field, because those are what every
+    build of either interface goes through -- so a duplicate that edits
+    the notice and builds learns it there rather than in a suite it may
+    never run.
+
+    **Its relation to `test_the_notice_writes_nothing_this_instance_
+    declared` above**, which sweeps every field of the notice for every
+    value this instance declares and would already fail on this one. That
+    sweep is broader and this is not a second copy of it: it runs here,
+    over this repository, and says a value leaked; this runs in the build
+    a duplicate is doing, over the duplicate's own declaration, and says
+    what the field is for.
+    """
+    cases = tuple(
+        (product, declared) for product, declared, _ in TAKES_THE_INSTANCES_NAME
+    )
+    expected = [field for _, _, field in TAKES_THE_INSTANCES_NAME]
+    assert _asked_of_both(cases) == (expected, expected)
+
+
+def test_neither_reader_refuses_a_product_that_names_the_software() -> None:
+    """Narrowness, proved rather than asserted -- including the shipped
+    answer, which is what makes the sweep above a control and not a rule
+    that would refuse this repository's own notice."""
+    empty: list[str | None] = [None] * len(NAMES_THE_SOFTWARE)
+    assert _asked_of_both(NAMES_THE_SOFTWARE) == (empty, empty)
+
+
+def test_both_readers_refuse_in_the_same_words() -> None:
+    """Two refusals, one message, and what it has to say.
+
+    The message is the whole of the control's value: a build that stops
+    without saying which field is wrong, what it is for, and where the
+    series' name was supposed to go leaves a duplicate guessing at the
+    file the licence obliges it to keep. So the text is read here, and
+    both sides are read, because two readers drifting is D-14's own named
+    risk.
+    """
+    argument = json.dumps(["Monthly Reading Group", "series"])
+    from_cjs = _node(
+        f"const a = {argument};"
+        f"console.log(require({str(SHOWCASE_READER.as_posix())!r}).refusal(a[0], a[1]))"
+    )
+    from_mjs = _node(
+        f"const a = {argument};"
+        f"import({COCKPIT_READER.as_uri()!r})"
+        ".then(m => console.log(m.refusal(a[0], a[1])))"
+    )
+    assert from_cjs == from_mjs, (
+        "the two readers refuse the same declaration in different words, so "
+        "which build a duplicate happens to run decides what it is told"
+    )
+
+    for expected, why in (
+        ("product names the software", "what the field is for"),
+        ("never the series running on it", "what it is not"),
+        (
+            "identity.organisation and identity.series",
+            "where the series' name is already printed, and has been all along",
+        ),
+        ("sections 4 and 5", "why the line beside it cannot simply be edited"),
+        ("TRADEMARK.md", "the page that carries the whole of the distinction"),
+    ):
+        assert expected in from_cjs, (
+            f"the refusal does not name {expected!r} -- {why}. A build that "
+            "stops without it is a build somebody works around."
+        )
 
 
 def test_the_showcase_prints_every_field_of_the_notice() -> None:

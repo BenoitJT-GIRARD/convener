@@ -27,9 +27,20 @@ Respect these decisions in good faith.
 
 Call it whatever you like: the repository, the title on its pages, the
 words in its charter. A duplicate is not renaming Convener; it is naming
-its own series, which never was called Convener. One field carries that
-name into the software — `product` in `NOTICE.json`, the name both
-interfaces print in their footer.
+its own series, which never was called Convener. That name goes in your
+own declaration — `identity.series` in `instance/config.json`, beside the
+organisation running it — and both interfaces already print it at the top
+of every page, which is where a reader looks for it.
+
+`product` in `NOTICE.json` is not that field. It names the software, not
+the series it is running, and the footer prints it against a copyright
+line the licence obliges you to keep: a series' name there would hang
+somebody else's copyright on your series. So `product` stays `Convener`
+for as long as what you are running is Convener — naming the software you
+are actually running is accurate, and nothing here is reserved against
+that. Change it the day you have modified this software into a product of
+your own rather than an instance of this one, and the name you change it
+to is what *What is reserved* above then has something to say about.
 
 ## The software's name, in its place
 
