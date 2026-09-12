@@ -159,10 +159,10 @@
 # `instance/config.json` and the file deleted. Both entries are correct,
 # and a control that fires on a correct entry is one somebody turns off.
 # What can be measured without an exemption is the declaration against
-# the move, and `test_retirement.py` measures exactly that: every rename
-# git can see out of a retired path has to land at or under that entry's
-# `became:`, and the commit that emptied the retired path has to be the
-# commit that wrote `became:`.
+# the move, and `tools/tests/declaration/test_retired_paths.py` measures
+# exactly that: every rename git can see out of a retired path has to land
+# at or under that entry's `became:`, and the commit that emptied the
+# retired path has to be the commit that wrote `became:`.
 #
 # That second reading used to be about *lines* -- something of what was
 # stored under the path had to still be readable at its destination --
