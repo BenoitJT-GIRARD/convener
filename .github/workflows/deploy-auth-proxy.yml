@@ -45,7 +45,7 @@ jobs:
           cache-dependency-path: services/auth-proxy/package-lock.json
       # For the one derivation the Deploy step below makes. The relay's own
       # tests need no Python at all.
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: '0.5.x'
       - name: Check whether the integration is configured
