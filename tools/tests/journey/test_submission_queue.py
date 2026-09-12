@@ -847,8 +847,8 @@ def test_the_drain_runs_as_steps_of_a_job_that_already_runs() -> None:
     """The whole economy of the feature. A workflow of its own, or a job of
     its own, would cost a billed run every day -- more than the runs it
     saves for any series that is not extremely busy."""
-    assert "uv run convener-plan-queue-drain" in _SWEEP
-    assert "uv run convener-drain-queue" in _SWEEP
+    assert "uv run --frozen convener-plan-queue-drain" in _SWEEP
+    assert "uv run --frozen convener-drain-queue" in _SWEEP
     jobs = _SWEEP.split("jobs:")[1]
     declared = [
         line.strip()

@@ -472,7 +472,7 @@ SAMPLE: dict[str, Any] = {
             "actor": "agent",
             "does": "Write your own values into it.",
             "check": "The banner is gone.",
-            "command": "cd tools\nuv run convener-validate",
+            "command": "cd tools\nuv run --frozen convener-validate",
             "degraded": "Every page says it is not configured.",
             "sets": ["A_TOKEN"],
         },
@@ -637,16 +637,16 @@ def test_a_command_keeps_its_line_breaks_where_the_prose_does_not() -> None:
     parsed = sequence_from_data(sample())
     step = parsed.steps[1]
 
-    assert step.command == "cd tools\nuv run convener-validate"
+    assert step.command == "cd tools\nuv run --frozen convener-validate"
     assert "\n" not in step.does
     rendered = render_page(parsed, integration_rows(ROOT))
-    assert "```bash\ncd tools\nuv run convener-validate\n```" in rendered
+    assert "```bash\ncd tools\nuv run --frozen convener-validate\n```" in rendered
 
 
 def test_a_command_with_a_gap_in_it_is_refused() -> None:
     """A fenced block a reader copies whole has no blank line in it."""
     data = sample()
-    data["steps"][1]["command"] = "cd tools\n\nuv run convener-validate"
+    data["steps"][1]["command"] = "cd tools\n\nuv run --frozen convener-validate"
     with pytest.raises(ValueError, match="blank line"):
         sequence_from_data(data)
 
@@ -771,8 +771,8 @@ def test_a_command_drifted_in_the_declaration_makes_the_check_fail(
     assert main([]) == 0
     _mutate_declaration(
         fake_repo,
-        "      uv run convener-validate\n",
-        "      uv run convener-validate --strict\n",
+        "      uv run --frozen convener-validate\n",
+        "      uv run --frozen convener-validate --strict\n",
     )
     assert main(["--check"]) == 1
 

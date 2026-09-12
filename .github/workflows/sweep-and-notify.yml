@@ -127,7 +127,7 @@ jobs:
           # is covered rather than only the last. The all-zero name GitHub
           # sends for a branch's first push falls back to the parent of HEAD.
           BEFORE: ${{ github.event.before }}
-        run: uv run convener-notify-immediate
+        run: uv run --frozen convener-notify-immediate
       - name: Post
         if: hashFiles('notify-body.md') != ''
         env:
@@ -234,7 +234,7 @@ jobs:
           git config user.email "convener-sweep@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-sweep)
+            (cd tools && uv run --frozen convener-sweep)
             git add instance/data/speakers.yml
             if git diff --staged --quiet; then
               echo "nothing to commit"
@@ -350,7 +350,7 @@ jobs:
         # secret can only be selected by an expression in this file, reading
         # a *previous* step's output -- never by a name a running step
         # computed. This step names them; the next one spends them.
-        run: uv run convener-plan-queue-drain
+        run: uv run --frozen convener-plan-queue-drain
       - name: Drain the submission queue
         id: queue-drain
         if: >-
@@ -428,7 +428,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
-            (cd tools && uv run convener-drain-queue)
+            (cd tools && uv run --frozen convener-drain-queue)
             git add -- instance/data/queue-ledger.yml
             # Conditional, because `git add` on a pathspec that matches
             # nothing is a *failure*, and `set -e` would end the step
@@ -515,7 +515,7 @@ jobs:
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
-        run: uv run convener-confirm-queued-registrations
+        run: uv run --frozen convener-confirm-queued-registrations
       - name: Clear what the drain handled
         id: queue-clear
         # Only ever after a drain that pushed. A clear that ran without one
@@ -653,7 +653,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
-            (cd tools && uv run convener-record-queue-watch)
+            (cd tools && uv run --frozen convener-record-queue-watch)
             git add -- instance/data/queue-watch.yml
             if git diff --staged --quiet; then
               echo "instance/data/queue-watch.yml already says this -- nothing to commit"
@@ -748,7 +748,7 @@ jobs:
           # budget measurement below hold themselves to.
           CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
-        run: uv run convener-check-registration-routing
+        run: uv run --frozen convener-check-registration-routing
       - name: Tell the board registrations are no longer being queued
         # The same channel as the digest, the queue alarm and the budget
         # alarm -- same thread, same team mention (D-07). A fourth body
@@ -790,7 +790,7 @@ jobs:
           # message for it.
           CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
-        run: uv run convener-check-credential-expiry
+        run: uv run --frozen convener-check-credential-expiry
       - name: Tell the board a credential is about to stop working
         # A fifth body file, for the reason there is a fourth: several
         # messages composed in one job sharing one filename means whichever
@@ -833,7 +833,7 @@ jobs:
         env:
           CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
-        run: uv run convener-notify-digest
+        run: uv run --frozen convener-notify-digest
       - name: Post
         # No file means the day was quiet, or no channel is configured. Both
         # are ordinary, and both post nothing.
@@ -874,7 +874,7 @@ jobs:
         # that makes a job stop in the first place.
         if: always() && steps.uv.outcome == 'success'
         working-directory: tools
-        run: uv run convener-actions-usage-window
+        run: uv run --frozen convener-actions-usage-window
       - name: Collect what the last runs actually consumed
         id: usage-collect
         if: always() && steps.usage-window.outcome == 'success'
@@ -983,7 +983,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
-            (cd tools && uv run convener-record-actions-usage)
+            (cd tools && uv run --frozen convener-record-actions-usage)
             git add instance/data/actions-usage.yml
             if git diff --staged --quiet; then
               echo "instance/data/actions-usage.yml already says this -- nothing to commit"

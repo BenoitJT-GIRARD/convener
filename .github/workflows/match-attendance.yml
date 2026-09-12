@@ -83,7 +83,7 @@ jobs:
           # apply to a trusted operator's own typed input, so a stray quote
           # in event_id cannot break out of this payload.
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Match attendance against registrations
         working-directory: tools
         env:
@@ -101,7 +101,7 @@ jobs:
           # instance/data/events/<id>/attendance-import.csv.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
-        run: uv run convener-match-attendance
+        run: uv run --frozen convener-match-attendance
       - name: Preserve the unmatched-attendance list for the host to resolve
         # `always()`: this file exists exactly when the step above ran and
         # found at least one unmatched or unreachable attendee -- kept even

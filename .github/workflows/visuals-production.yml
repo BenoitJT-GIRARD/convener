@@ -24,7 +24,7 @@ name: Visuals production
 # portrait's consent, or correcting a title all land here through that one
 # file -- plus a GitHub-side manual command (`workflow_dispatch`)
 # mirroring the one this command already offers on the command line with
-# no workflow at all (`uv run --project tools convener-render-visuals
+# no workflow at all (`uv run --frozen --project tools convener-render-visuals
 # OUTPUT_DIR`).
 #
 # It also runs `convener-render-announcements`
@@ -210,7 +210,7 @@ jobs:
       # one-step idiom visuals.yml's own render step already relies on.
       - name: Render the scheduled editions (pure Python/HTML, no browser yet)
         run: |
-          uv run --project tools convener-render-visuals "${{ runner.temp }}/production-visuals"
+          uv run --frozen --project tools convener-render-visuals "${{ runner.temp }}/production-visuals"
       # Writes straight into `production-visuals-out`, the
       # same directory `render-production.mjs` writes each edition's own
       # `<format>.png` into below -- one Markdown file per channel, nested
@@ -226,7 +226,7 @@ jobs:
       # run that has nothing else to render.
       - name: Render the announcement texts (pure Python, no browser)
         run: |
-          uv run --project tools convener-render-announcements "${{ runner.temp }}/production-visuals-out"
+          uv run --frozen --project tools convener-render-announcements "${{ runner.temp }}/production-visuals-out"
       # D-13: no scheduled edition is a normal state, not a failure -- the
       # command above already said so on its own stdout and wrote an empty
       # manifest.json. Counted here, once, from the *pages actually

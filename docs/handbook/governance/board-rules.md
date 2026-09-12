@@ -234,7 +234,7 @@ Where the record does not hold the day a clock would start from, **there is no d
 *The table below is generated from the pages themselves: every rule that
 carries a number, what its own page calls it, and where it is stated. Do not
 edit this block — run*
-`uv run python scripts/generate_rule_index.py`
+`uv run --frozen python scripts/generate_rule_index.py`
 *from `tools/` and commit what it writes.*
 
 | Rule | What it is | Stated in |

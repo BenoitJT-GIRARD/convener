@@ -77,7 +77,7 @@ jobs:
           git config user.email "convener-certificates@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-revoke-certificate)
+            (cd tools && uv run --frozen convener-revoke-certificate)
             if [ -f "instance/data/events/$EVENT_ID/certificates.yml" ]; then
               git add "instance/data/events/$EVENT_ID/certificates.yml"
             fi

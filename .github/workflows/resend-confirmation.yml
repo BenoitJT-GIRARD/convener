@@ -34,7 +34,7 @@ on:
         # boundary is no longer what this input's safety rests on.
         description: >-
           The registrant's e-mail address, encrypted for this event with
-          `uv run convener-encrypt-identifier --event <id>
+          `uv run --frozen convener-encrypt-identifier --event <id>
           --email <address>`, from `tools/` -- never the address itself.
         required: true
         type: string
@@ -64,7 +64,7 @@ jobs:
           # reads, here applied to a value a trusted operator typed by
           # hand instead of one a stranger's browser produced.
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Re-send the confirmation
         working-directory: tools
         env:
@@ -82,4 +82,4 @@ jobs:
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
-        run: uv run convener-resend-confirmation
+        run: uv run --frozen convener-resend-confirmation

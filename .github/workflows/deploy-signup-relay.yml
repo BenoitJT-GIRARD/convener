@@ -82,16 +82,16 @@ jobs:
           # `instance/config.json`, through the Python readers that own the
           # derivations (`published.Published.origin` and
           # `published.Identity.repository`). The same
-          # `uv run --project tools python -c` shape `deploy.yml` already
+          # `uv run --frozen --project tools python -c` shape `deploy.yml` already
           # uses for the repository it pushes a built site into, rather
           # than a second parser written in shell.
-          origin="$(uv run --project tools python -c \
+          origin="$(uv run --frozen --project tools python -c \
             'from convener_ops.declaration.published import load; print(load().origin)')"
           if [ -z "$origin" ]; then
             echo "::error::instance/config.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
             exit 1
           fi
-          repository="$(uv run --project tools python -c \
+          repository="$(uv run --frozen --project tools python -c \
             'from convener_ops.declaration.published import load_identity; print(load_identity().repository)')"
           if [ -z "$repository" ]; then
             echo "::error::instance/config.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"

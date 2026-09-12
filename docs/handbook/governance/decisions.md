@@ -19,8 +19,8 @@ Regenerate it locally with:
 
 ```bash
 cd tools
-uv run convener-register --dry-run   # print it
-uv run convener-register             # rewrite the file
+uv run --frozen convener-register --dry-run   # print it
+uv run --frozen convener-register             # rewrite the file
 ```
 
 | Date | Decision | Why |

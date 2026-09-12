@@ -164,7 +164,7 @@ jobs:
       # at the end of the job).
       - name: Generate throw-away event keys for the preview
         run: |
-          uv run --project tools python -c '
+          uv run --frozen --project tools python -c '
           import json
 
           from convener_ops.journey import eventkeys
@@ -355,7 +355,7 @@ jobs:
       - name: Refuse to package a preview that leaks a room link
         run: |
           set -e
-          links=$(uv run --project tools python -c '
+          links=$(uv run --frozen --project tools python -c '
           import json
 
           with open("site/src/_data/events.json", encoding="utf-8") as fh:

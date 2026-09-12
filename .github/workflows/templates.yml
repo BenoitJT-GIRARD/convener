@@ -184,7 +184,7 @@ jobs:
           version: '0.5.x'
       - name: Render the template fixtures (pure Python/SVG, no browser yet)
         run: |
-          uv run --project tools convener-render-template-fixtures "${{ runner.temp }}/template-fixtures"
+          uv run --frozen --project tools convener-render-template-fixtures "${{ runner.temp }}/template-fixtures"
       # The same cross product, applied to the composition nobody
       # downloads and every duplicate publishes: the poster the cockpit
       # generates for each event. `visuals.yml` renders that composition
@@ -194,7 +194,7 @@ jobs:
       # duplicate may choose was never drawn into it by anything.
       - name: Render the poster fixtures (pure Python/HTML, no browser yet)
         run: |
-          uv run --project tools convener-render-poster-fixtures "${{ runner.temp }}/poster-fixtures"
+          uv run --frozen --project tools convener-render-poster-fixtures "${{ runner.temp }}/poster-fixtures"
       # Restored *before* `npm ci` so its own postinstall download can be
       # skipped entirely on a cache hit -- the same key `visuals.yml` uses,
       # so whichever of the two runs first pays for the download.

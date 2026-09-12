@@ -179,5 +179,5 @@ def test_the_workflow_computes_the_range_with_this_function() -> None:
         encoding="utf-8"
     )
 
-    assert "uv run convener-commit-range" in workflow
+    assert "uv run --frozen convener-commit-range" in workflow
     assert "$from..$HEAD" not in workflow

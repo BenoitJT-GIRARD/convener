@@ -78,10 +78,10 @@ jobs:
           # literal that used to be there is gone -- so it is derived here,
           # from `instance/config.json`, through the Python reader that
           # owns the derivation (`published.Identity.repository`). The same
-          # `uv run --project tools python -c` shape `deploy.yml` already
+          # `uv run --frozen --project tools python -c` shape `deploy.yml` already
           # uses for the repository it pushes a built site into, rather
           # than a second parser written in shell.
-          repository="$(uv run --project tools python -c \
+          repository="$(uv run --frozen --project tools python -c \
             'from convener_ops.declaration.published import load_identity; print(load_identity().repository)')"
           if [ -z "$repository" ]; then
             echo "::error::instance/config.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"

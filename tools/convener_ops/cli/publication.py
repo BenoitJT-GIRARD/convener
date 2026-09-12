@@ -658,7 +658,7 @@ def render_visuals() -> int:
     (D-25) instead of shipping a poster nobody can scan.
 
     This is also the "manual command" the trigger requires, independently
-    of any workflow: `uv run --project tools convener-render-visuals
+    of any workflow: `uv run --frozen --project tools convener-render-visuals
     OUTPUT_DIR` renders the current, real state of `instance/data/speakers.yml` on
     demand, from a plain checkout, no CI needed.
 
@@ -760,7 +760,7 @@ def render_announcements() -> int:
     open, through `app/src/content/render.ts`'s gated `{{ public.… }}`
     vocabulary (`app/src/state/consent.ts::toPublicFields`). This command
     is the second, independent route to the identical four texts that
-    needs no browser and no authenticated session -- `uv run --project
+    needs no browser and no authenticated session -- `uv run --frozen --project
     tools convener-render-announcements OUTPUT_DIR` renders the current, real
     state of `instance/data/speakers.yml` on demand, from a plain checkout, exactly
     the same "manual command, independent of any workflow" property

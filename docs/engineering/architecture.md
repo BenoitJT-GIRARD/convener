@@ -64,7 +64,7 @@ that up.
 *The rows below are generated: every tracked top-level directory and every
 tracked file at the root, with the owner `declarations/boundary.yml` gives it. Do not
 edit this block — run*
-`uv run python scripts/generate_directory_map.py`
+`uv run --frozen python scripts/generate_directory_map.py`
 *from `tools/` and commit what it writes. What each one holds or is is the
 one line nothing derives, and it is written in
 `tools/scripts/generate_directory_map.py`, beside the code that
@@ -288,8 +288,8 @@ does:
 
 ```bash
 cd tools
-uv run convener-validate       # do the records hold together?
-uv run convener-check-config   # which integrations are set up?
+uv run --frozen convener-validate       # do the records hold together?
+uv run --frozen convener-check-config   # which integrations are set up?
 ```
 
 The optional local hook runs the formatting, linting, secret detection and

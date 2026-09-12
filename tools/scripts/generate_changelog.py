@@ -72,8 +72,8 @@ path in it.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_changelog.py            # write the page
-    uv run python scripts/generate_changelog.py --check    # assert only
+    uv run --frozen python scripts/generate_changelog.py            # write the page
+    uv run --frozen python scripts/generate_changelog.py --check    # assert only
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ DECLARATION: Final = "declarations/boundary.yml"
 
 #: How the script is invoked, quoted in the page and in every failure
 #: message. One string, so the two cannot come to name two commands.
-COMMAND: Final = "uv run python scripts/generate_changelog.py"
+COMMAND: Final = "uv run --frozen python scripts/generate_changelog.py"
 
 #: The heading each release entry carries the duplicate's own half under.
 MERGE_HEADING: Final = "### Before you merge this"

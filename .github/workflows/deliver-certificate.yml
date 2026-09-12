@@ -71,7 +71,7 @@ jobs:
           # interpolation, so a stray quote in `event_id` cannot break out
           # of the payload.
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Deliver the named certificate
         working-directory: tools
         env:
@@ -95,4 +95,4 @@ jobs:
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
-        run: uv run convener-deliver-certificate
+        run: uv run --frozen convener-deliver-certificate

@@ -37,8 +37,8 @@ is, so a second run is a no-op and a re-run can never move a deadline.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/open_vote_window.py --dry-run   # print the diff
-    uv run python scripts/open_vote_window.py             # write the file
+    uv run --frozen python scripts/open_vote_window.py --dry-run   # print the diff
+    uv run --frozen python scripts/open_vote_window.py             # write the file
 """
 
 from __future__ import annotations

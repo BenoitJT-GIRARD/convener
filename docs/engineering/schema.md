@@ -1,7 +1,7 @@
 # Data schema
 
 *This page is generated from `app/src/data/types.ts` — the model the browser
-and `convener-validate` both read. Do not edit it: run* `uv run python scripts/generate_schema_doc.py` *from `tools/`
+and `convener-validate` both read. Do not edit it: run* `uv run --frozen python scripts/generate_schema_doc.py` *from `tools/`
 and commit what it writes, and CI refuses a page the types do not derive.
 Every field, type, enumerated value and note below comes from the model; the
 prose between the tables lives in `tools/scripts/generate_schema_doc.py`.*

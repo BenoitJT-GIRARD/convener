@@ -82,16 +82,16 @@ and re-run the generators:
 
 ```sh
 cd tools
-uv run python scripts/generate_brand_css.py
-uv run python scripts/generate_motif.py
+uv run --frozen python scripts/generate_brand_css.py
+uv run --frozen python scripts/generate_motif.py
 ```
 
 Then let the checks prove it, which is the point of resolving this way rather
 than by reading:
 
 ```sh
-uv run python scripts/generate_brand_css.py --check
-uv run python scripts/generate_motif.py --check
+uv run --frozen python scripts/generate_brand_css.py --check
+uv run --frozen python scripts/generate_motif.py --check
 ```
 
 Both run in `gates.sh` and in continuous integration, so a file left

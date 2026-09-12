@@ -198,7 +198,7 @@ def test_no_inline_program_reaches_a_path_the_instance_has_left() -> None:
         ("from convener_ops import cli", ("convener_ops", "cli")),
         ("import convener_ops.cli", ("convener_ops", "cli")),
         (
-            "URL=$(uv run python -c "
+            "URL=$(uv run --frozen python -c "
             "'from convener_ops.declaration.published import load; "
             "print(load().origin)')",
             ("convener_ops.declaration.published", "load"),

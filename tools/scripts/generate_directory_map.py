@@ -126,8 +126,8 @@ inputs -- which is what `--check` refuses, without repairing it.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    uv run python scripts/generate_directory_map.py            # write the page
-    uv run python scripts/generate_directory_map.py --check    # assert only
+    uv run --frozen python scripts/generate_directory_map.py            # write the page
+    uv run --frozen python scripts/generate_directory_map.py --check    # assert only
 
 There is no mode that prints the block: the page is written in the handbook's
 British English, and nothing this repository's Python writes to a terminal is
@@ -156,7 +156,7 @@ DECLARATION: Final = "declarations/boundary.yml"
 
 #: How the script is invoked, quoted in the page and in every failure
 #: message. One string, so the two cannot come to name two commands.
-COMMAND: Final = "uv run python scripts/generate_directory_map.py"
+COMMAND: Final = "uv run --frozen python scripts/generate_directory_map.py"
 
 #: Markers wrapping the generated block inside the hand-authored page.
 #: Everything outside them is this script's to leave alone.

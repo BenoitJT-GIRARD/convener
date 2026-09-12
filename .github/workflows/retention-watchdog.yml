@@ -136,7 +136,7 @@ jobs:
       - name: Check that the retention sweep ran recently
         id: retention
         working-directory: tools
-        run: uv run convener-check-retention-liveness
+        run: uv run --frozen convener-check-retention-liveness
       # The Actions budget alarm lives inside
       # sweep-and-notify.yml's own daily job, and a control hosted inside
       # the job it watches cannot report that job going quiet -- least of
@@ -157,7 +157,7 @@ jobs:
       - name: Check that the Actions budget is still being watched
         if: always() && steps.retention.conclusion != 'skipped'
         working-directory: tools
-        run: uv run convener-check-actions-usage-liveness
+        run: uv run --frozen convener-check-actions-usage-liveness
       # See this file's own header for why the "an entry
       # is stuck" half of that control lives in the daily job and only this
       # half can live out here.
@@ -176,4 +176,4 @@ jobs:
       - name: Check that the public submissions are still being drained
         if: always() && steps.retention.conclusion != 'skipped'
         working-directory: tools
-        run: uv run convener-check-queue-liveness
+        run: uv run --frozen convener-check-queue-liveness

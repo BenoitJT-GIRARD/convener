@@ -32,7 +32,7 @@ by anybody.
 The fix is never `;`. A command a reader types is one command, and where
 it needs a directory the directory is a line of its own inside the block
 (`cd tools`, then the command) or a phrase in the prose beside an inline
-span (*run `uv run convener-validate` from `tools/`*). Both spellings work
+span (*run `uv run --frozen convener-validate` from `tools/`*). Both spellings work
 on every shell this product is opened on, and neither asks the reader to
 know which shell they are on.
 
@@ -225,16 +225,38 @@ def test_the_sweep_reads_the_pages_and_finds_the_commands_on_them() -> None:
     ):
         assert found.get(page), f"no command was read out of {page}"
     everything = [command for lines in found.values() for _, command in lines]
-    assert sum("uv run convener-check-config" in one for one in everything) > 10, (
+    # `--frozen` on every documented invocation, for the reason `gates.sh`'s
+    # own header gives: an unfrozen run rewrites `tools/uv.lock`, so a
+    # command written without it hands an operator a modified tracked file
+    # for having read the documentation. The needle carries the flag because
+    # a needle that matched both spellings would go on passing the day one
+    # of them came back.
+    assert (
+        sum("uv run --frozen convener-check-config" in one for one in everything) > 10
+    ), (
         "the reader found almost none of the configuration report's own "
         "invocations, so it is not reading the pages that give them"
+    )
+    # Spelled in halves so that a sweep over this repository's own sources
+    # cannot rewrite the needle into one that matches nothing. It did
+    # exactly that once: a pass adding the flag everywhere turned the test
+    # below into `"uv run --frozen " in one and "--frozen" not in one`,
+    # which is empty by construction, and only a mutation caught it.
+    unfrozen = [
+        one for one in everything if "uv " + "run " in one and "--frozen" not in one
+    ]
+    assert not unfrozen, (
+        f"these documented commands run unfrozen: {unfrozen}. An unfrozen run "
+        "rewrites tools/uv.lock, so a reader who types one hands themselves a "
+        "modified tracked file for having read the documentation -- which is "
+        "the rule gates.sh's own header states and, until this, followed alone."
     )
 
 
 def test_the_detector_reads_a_command_out_of_each_shape_a_page_uses() -> None:
     """Both doors: a fenced block, labelled or bare, and an inline span."""
     page = (
-        "Run `cd tools && uv run convener-validate` first.\n"
+        "Run `cd tools && uv run --frozen convener-validate` first.\n"
         "\n"
         "```bash\n"
         "cd app && npm install\n"
@@ -246,7 +268,7 @@ def test_the_detector_reads_a_command_out_of_each_shape_a_page_uses() -> None:
     )
 
     assert offences([("made-up.md", page)]) == [
-        "made-up.md:1: cd tools && uv run convener-validate",
+        "made-up.md:1: cd tools && uv run --frozen convener-validate",
         "made-up.md:4: cd app && npm install",
         "made-up.md:8: cd site && npm ci",
     ]
@@ -265,10 +287,10 @@ def test_the_second_operator_is_refused_as_well() -> None:
     """`||` is the other one PowerShell 5.1 has no form of, and this
     repository has never published it -- which is exactly why nothing
     would notice it arriving."""
-    page = "```bash\nuv run convener-validate || echo failed\n```\n"
+    page = "```bash\nuv run --frozen convener-validate || echo failed\n```\n"
 
     assert offences([("made-up.md", page)]) == [
-        "made-up.md:2: uv run convener-validate || echo failed"
+        "made-up.md:2: uv run --frozen convener-validate || echo failed"
     ]
 
 

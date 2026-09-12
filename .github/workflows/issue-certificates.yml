@@ -95,7 +95,7 @@ jobs:
           # trusted operator input: `toJSON`, never string interpolation,
           # so a stray quote in `event_id` cannot break out of the payload.
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
-        run: uv run convener-registration-secret-name
+        run: uv run --frozen convener-registration-secret-name
       - name: Issue certificates for this event
         # `id` so the delivery step below can read this
         # step's own `issued_ids` output (written by
@@ -150,7 +150,7 @@ jobs:
           git config user.email "convener-certificates@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-issue-certificates)
+            (cd tools && uv run --frozen convener-issue-certificates)
             if [ -f "instance/data/events/$EVENT_ID/certificates.yml" ]; then
               git add "instance/data/events/$EVENT_ID/certificates.yml"
             fi
@@ -255,4 +255,4 @@ jobs:
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
-        run: uv run convener-deliver-certificates
+        run: uv run --frozen convener-deliver-certificates

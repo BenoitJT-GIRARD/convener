@@ -52,7 +52,7 @@ jobs:
           git config user.email "convener-register@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            (cd tools && uv run convener-register)
+            (cd tools && uv run --frozen convener-register)
             git add docs/handbook/governance/register.md
             if git diff --staged --quiet; then
               echo "nothing to commit"
