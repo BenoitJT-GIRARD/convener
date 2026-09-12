@@ -114,12 +114,26 @@ jobs:
     # Every job in this repository declares a ceiling --
     # test_workflows.py::test_every_job_declares_a_timeout guards that.
     #
-    # 12, not 10: this job also installs
-    # `app/`'s own `node_modules` and runs a whole second-instance build
-    # inside `pytest` (see the "Install app" step below). Raised rather
-    # than left to run close to the edge -- a timeout that trips on a slow
-    # runner is a red build that says nothing about the code.
-    timeout-minutes: 12
+    # 40, and the first three figures here were guesses. 10 became 12
+    # because this job also installs `app/`'s own `node_modules` and runs
+    # a whole second-instance build inside `pytest` (see the "Install app"
+    # step below), and 12 was never measured against a runner, because
+    # until the product was published there was no runner to measure it
+    # on. The first run cancelled the suite at 9%, ten minutes into a
+    # single test:
+    #
+    #   python  Tests  ....ss......  [  9%]
+    #   python  Tests  ##[error]The operation was canceled.
+    #
+    # Nothing was wrong with the code. `pytest` here reads the repository
+    # as its own fixtures -- it builds the showcase, builds this whole
+    # repository as a second instance, and sweeps every module for a path
+    # of this instance, which is twenty minutes on the maintainer's own
+    # machine on its own. The whole suite is around twenty-five there.
+    # This ceiling is the first one above what the job actually needs
+    # rather than above what it was assumed to need; a timeout that trips
+    # is a red build that says nothing about the code.
+    timeout-minutes: 40
     permissions:
       contents: read
     steps:
