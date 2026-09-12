@@ -345,3 +345,115 @@ def test_a_declaration_that_cannot_be_read_is_this_repository_s_own_fault(
 
     assert check_credential_expiry() == 1
     assert "::error::" in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------- #
+# Names only, never values.
+# --------------------------------------------------------------------- #
+
+#: Shaped like a credential somebody pasted where its name belongs. Not a
+#: real token of anything: a random string in the alphabet real tokens use.
+PASTED = "ghp_4Kd2wQ9xLmN7vZ1aB8cE3fH6jR0tY5uI2oP"
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        PASTED,
+        "convener_meeting_api_token",
+        "1_LEADING_DIGIT",
+        "CONVENER MEETING TOKEN",
+        "CONVENER-MEETING-TOKEN",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abc",
+    ],
+)
+def test_a_value_written_where_a_name_belongs_is_refused(written: str) -> None:
+    """The control the header only asked for.
+
+    Nothing structural stopped a credential being pasted under `secret:`,
+    and the file lives in a repository whose duplicates are public by
+    design. A convention nobody can check is a convention that drifts --
+    and this one drifts into a committed token that a watchdog then reads
+    aloud into a run log.
+    """
+    with pytest.raises(ValueError, match="does not name a secret"):
+        credential_expiry.from_data(
+            {
+                "v": 1,
+                "renewals": [
+                    {
+                        "secret": written,
+                        "expires": "2026-10-13",
+                        "renewed_by": "operations.md",
+                    }
+                ],
+            }
+        )
+
+
+def test_the_refusal_never_repeats_what_it_read() -> None:
+    """The reading that matters most here, and the one easiest to lose.
+
+    Every other message in this module names the secret, which is right,
+    because by the line that raises them it is a name. This one runs
+    *before* that is known. If what was written is the credential, the
+    message is headed for a run log on a public repository, and a message
+    that quoted it would finish the leak it exists to stop.
+    """
+    with pytest.raises(ValueError) as raised:
+        credential_expiry.from_data(
+            {
+                "v": 1,
+                "renewals": [
+                    {
+                        "secret": PASTED,
+                        "expires": "2026-10-13",
+                        "renewed_by": "operations.md",
+                    }
+                ],
+            }
+        )
+
+    said = str(raised.value)
+    assert PASTED not in said
+    for run in (PASTED[:12], PASTED[4:20], PASTED[-12:]):
+        assert run not in said
+    assert "rotate it" in said
+
+
+def test_the_refusal_says_which_entry_so_it_can_be_found() -> None:
+    """Naming nothing it read leaves the operator with a file and no line.
+    The position is what is left, and it is enough: `renewals` is a list
+    they can count down.
+    """
+    with pytest.raises(ValueError, match="entry 2 does not name a secret"):
+        credential_expiry.from_data(
+            {
+                "v": 1,
+                "renewals": [
+                    entry("CONVENER_MEETING_API_TOKEN", "2026-10-13"),
+                    {
+                        "secret": PASTED,
+                        "expires": "2026-11-01",
+                        "renewed_by": "operations.md",
+                    },
+                ],
+            }
+        )
+
+
+def test_the_names_this_repository_actually_uses_are_accepted() -> None:
+    """Non-vacuity, and the shape of a rule that refuses too much: a
+    pattern that let nothing through would pass every test above and take
+    the watchdog with it."""
+    for name in (
+        "CONVENER_MEETING_API_TOKEN",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_SMTP_PASSWORD",
+        "TALLY_API_KEY",
+        "A",
+    ):
+        loaded = credential_expiry.from_data(
+            {"v": 1, "renewals": [entry(name, "2026-10-13")]}
+        )
+        assert [one.secret_name for one in loaded] == [name]

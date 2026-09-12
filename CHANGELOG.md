@@ -220,19 +220,33 @@ the day they were written; the lesson had never crossed into Python.
   not installed. The commands run from the repository root and chain nothing,
   because Windows PowerShell 5.1 refuses the operator that would.
 
-- **A high-severity security alert on a field that holds no secret.** The
-  credential watchdog's `Renewal.secret` carries a credential's *name* —
-  `CONVENER_MEETING_API_TOKEN` — and never its value, which
-  `instance/data/credential-renewals.yml` has no way to hold; naming the one
-  it expires is the entire point of the watchdog. CodeQL read the field's
-  name rather than its contents and reported clear-text logging of sensitive
-  data on the public repository. The field is `secret_name` now, which is
-  what it always held and the word the code already used one line below it.
-  The declaration's key stays `secret` — it reads correctly in YAML and
-  renaming it would break a file every duplicate has written. Fixed rather
-  than dismissed: an alert explained away is one the next reader learns to
-  skip, which is what this release already fixed once when CodeQL's own
-  failures were burying the secret scan beside them.
+- **A high-severity alert that read as a false positive and was not
+  entirely one.** CodeQL reported the credential watchdog logging a secret
+  in clear text. It reads the *name* of a field, and that field held a
+  credential's name — `CONVENER_MEETING_API_TOKEN` — never its value;
+  naming the credential about to expire is the whole point of the watchdog.
+  So far, a false positive.
+
+  What nobody had checked is that the field would go on holding a name.
+  Nothing structural stopped a credential being pasted under `secret:` in
+  `instance/data/credential-renewals.yml` — the only defence was a sentence
+  in that file's own header, and a convention nobody can check is a
+  convention that drifts. Here it drifts into a credential committed to a
+  repository whose duplicates are public by design, and then read aloud by
+  the watchdog into a run log. The loader now refuses anything not shaped
+  like a repository secret's name, and that one refusal deliberately says
+  nothing about what it read: if what was written there is the credential,
+  this message is bound for the same log. Every other message in the module
+  may name the secret, because by the line that raises them it is a name.
+
+  The field is `secret_name` now — what it always held, and the word the
+  code already used one line below it. The declaration's key stays `secret`:
+  it reads correctly in YAML and renaming it would break a file every
+  duplicate has written. Renaming did not silence the alert, and that was
+  measured rather than assumed — CodeQL re-analysed and reported the same
+  line, because the heuristic reads the word and an accurate name keeps it.
+  What changed is the thing the alert was pointing at without being able to
+  see it.
 
 ### Before you merge this
 

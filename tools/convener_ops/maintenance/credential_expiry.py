@@ -53,6 +53,7 @@ looked at".
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -72,6 +73,26 @@ RENEWALS_PATH: Final = DATA_DIR / "credential-renewals.yml"
 #: "alongside the other T-7 preparations" -- a notice arriving after that
 #: point would arrive after the moment it was meant to inform.
 NOTICE_DAYS: Final = 14
+
+#: The shape of a repository secret's name, which is all this file may
+#: hold. GitHub's own rule: letters, digits and underscores, never opening
+#: on a digit, and stored in capitals.
+#:
+#: **The point is not the shape, it is what the shape excludes.** Nothing
+#: structural stopped somebody pasting the credential itself under
+#: `secret:` -- the only defence was a sentence in that file's header, and
+#: a convention nobody can check is a convention that drifts. A pasted
+#: token would have been committed to a repository whose duplicates are
+#: public by design, and then read aloud by the watchdog into a run log.
+#: No real token survives this pattern: they carry lower case, punctuation
+#: or length that a name does not.
+#:
+#: The alert that led here was reported as a false positive and was not
+#: entirely one. `py/clear-text-logging-sensitive-data` flagged a field
+#: named for secrets flowing into `print`. What it could not see is that
+#: the field holds a name -- and what nobody had checked is that it would
+#: go on holding one.
+SECRET_NAME: Final = re.compile(r"[A-Z][A-Z0-9_]{0,99}")
 
 
 @dataclass(frozen=True)
@@ -156,7 +177,7 @@ def from_data(data: Any) -> list[Renewal]:
             "and it has to be a list"
         )
     renewals: list[Renewal] = []
-    for row in rows:
+    for position, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             raise ValueError(
                 f"{RENEWALS_PATH.as_posix()}: a renewals entry is "
@@ -166,6 +187,20 @@ def from_data(data: Any) -> list[Renewal]:
         if not isinstance(secret_name, str) or not secret_name.strip():
             raise ValueError(
                 f"{RENEWALS_PATH.as_posix()}: a renewals entry names no secret"
+            )
+        if not SECRET_NAME.fullmatch(secret_name):
+            # Deliberately says nothing about what it read. If what was
+            # pasted there is the credential, this message is headed for a
+            # run log on a public repository, and repeating it would finish
+            # the leak this check exists to stop. Every message below may
+            # name the secret, because by this line it is a name.
+            raise ValueError(
+                f"{RENEWALS_PATH.as_posix()}: entry {position} does not name a "
+                "secret. This file holds names and never values: a repository "
+                "secret's name is capitals, digits and underscores, opening on "
+                "a letter (CONVENER_MEETING_API_TOKEN). What it read is not "
+                "repeated here on purpose -- if you pasted the credential "
+                "itself, rotate it, then write its name."
             )
         renewed_by = row.get("renewed_by")
         if not isinstance(renewed_by, str) or not renewed_by.strip():
