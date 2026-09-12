@@ -8,6 +8,27 @@ module is the half of closing that gap that can be computed offline: the
 arithmetic that turns what the Actions API reports into a billed figure, a
 rate, and the reasons an alarm should go off.
 
+Consumed, not charged, and the difference was this module's worst bug
+---------------------------------------------------------------------
+This read `GET /actions/runs/<id>/timing` and its `billable` section for a
+long time, which was the obvious endpoint and the wrong one. `billable`
+reports what GitHub **charges**, and inside an account's included
+allowance it charges nothing: measured on a real private repository,
+`billable.total_ms` was `0` on every job of every run while
+`run_duration_ms` reported 165 seconds, and the organisation's own billing
+page showed 370 minutes consumed that month.
+
+So every figure this module produced was zero, `uncosted_runs` was zero
+beside it -- GitHub answered with a number, so nothing looked unreadable --
+and the alarm could not fire until the allowance was already spent, which
+is the one moment a warning is worth nothing. A guard reporting that all is
+well is worse than no guard, and this one reported it from a real number.
+
+The source is `GET /actions/runs/<id>/jobs` now, and the minutes are each
+job's own elapsed time rounded up, which is GitHub's own billing rule
+applied to a duration it always reports. Measured against the same nine
+workflows of one push: 20 minutes, where `billable` said 0.
+
 Two questions, deliberately kept apart
 --------------------------------------
 **What did it cost.** `summarise` reduces a window of runs to billed
@@ -68,7 +89,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from math import ceil
 from pathlib import Path
 from typing import Any, Final
@@ -295,6 +316,64 @@ def billed_minutes(duration_ms: Any) -> int:
     return ceil(duration_ms / BILLED_MINUTE_MS)
 
 
+#: The runner families GitHub bills separately, and the label fragment
+#: each one is recognised by. Read from `labels` because that is what the
+#: jobs endpoint reports; `billable`'s own keys were these words, and
+#: keeping them means nothing downstream had to change.
+RUNNER_FAMILIES: Final = (
+    ("windows", "WINDOWS"),
+    ("macos", "MACOS"),
+    ("ubuntu", "UBUNTU"),
+)
+
+
+def runner_family(labels: Any) -> str:
+    """Which runner a job ran on, from its labels.
+
+    Only the family matters -- GitHub's per-minute rate is set by it, and
+    nothing here needs to know whether a job asked for `ubuntu-latest` or
+    `ubuntu-24.04`. An unrecognised label is reported as itself rather than
+    guessed at, so a runner this project has never used appears in the
+    record as the word GitHub used for it.
+    """
+    if not isinstance(labels, Sequence) or isinstance(labels, str | bytes):
+        return "(unknown)"
+    for label in labels:
+        if not isinstance(label, str):
+            continue
+        lowered = label.lower()
+        for fragment, family in RUNNER_FAMILIES:
+            if fragment in lowered:
+                return family
+        return label.upper()
+    return "(unknown)"
+
+
+def elapsed_ms(job: Mapping[str, Any]) -> float | None:
+    """One job's own elapsed time, or `None` when it cannot be read.
+
+    `None` rather than zero, for the reason `Run.billed_minutes` gives: a
+    question that could not be answered is not the answer "nothing".
+
+    A job GitHub skipped reports `started_at` and `completed_at` equal --
+    measured, not assumed -- so it reads as zero milliseconds and bills
+    nothing, which is what it costs. No special case is needed for it, and
+    one written on a guess would have been wrong in whichever direction the
+    guess went.
+    """
+    started = job.get("started_at")
+    completed = job.get("completed_at")
+    if not isinstance(started, str) or not isinstance(completed, str):
+        return None
+    try:
+        began = datetime.fromisoformat(started)
+        ended = datetime.fromisoformat(completed)
+    except ValueError:
+        return None
+    seconds = (ended - began).total_seconds()
+    return max(seconds, 0.0) * 1000
+
+
 def _day_of(created_at: Any) -> str | None:
     if not isinstance(created_at, str):
         return None
@@ -331,8 +410,13 @@ def run_from_payload(payload: Any) -> Run | None:
     name = run.get("name")
     event = run.get("event")
 
-    timing = payload.get("timing")
-    if not isinstance(timing, Mapping):
+    answered = payload.get("jobs")
+    listing = answered.get("jobs") if isinstance(answered, Mapping) else None
+    if not isinstance(listing, Sequence) or isinstance(listing, str | bytes):
+        # The jobs endpoint could not be read for this run. Unreadable
+        # rather than zero: see `Run.billed_minutes`. An empty *list* is a
+        # different answer and is handled below as the zero it is -- a run
+        # whose every job GitHub skipped.
         return Run(
             run_id=run_id,
             workflow=name if isinstance(name, str) and name else "(unnamed)",
@@ -342,34 +426,30 @@ def run_from_payload(payload: Any) -> Run | None:
             jobs=0,
             runner_oses=(),
         )
-    billable = timing.get("billable")
-    if not isinstance(billable, Mapping):
-        # An empty `billable` is what GitHub returns for a run that billed
-        # nothing at all -- every job skipped by an `if:`. That is a real,
-        # ordinary answer (`sweep-and-notify.yml`'s own two jobs exclude
-        # each other exactly that way), so it is zero, not unreadable.
-        billable = {}
     total = 0
     jobs = 0
-    oses: list[str] = []
-    for runner_os, entry in sorted(billable.items()):
-        if not isinstance(entry, Mapping):
+    oses: set[str] = set()
+    for job in listing:
+        if not isinstance(job, Mapping):
             continue
-        oses.append(str(runner_os))
-        job_runs = entry.get("job_runs")
-        if isinstance(job_runs, Sequence) and not isinstance(job_runs, str | bytes):
-            for job in job_runs:
-                if isinstance(job, Mapping):
-                    total += billed_minutes(job.get("duration_ms"))
-                    jobs += 1
-            continue
-        # No per-job breakdown: fall back to the OS total, which rounds
-        # once instead of once per job and therefore **understates** a
-        # multi-job run. Named here so nobody reads the resulting figure
-        # as exact.
-        total += billed_minutes(entry.get("total_ms"))
-        count = entry.get("jobs")
-        jobs += count if isinstance(count, int) and not isinstance(count, bool) else 0
+        spent = elapsed_ms(job)
+        if spent is None:
+            # One unreadable job makes the whole run unreadable, which is
+            # the same direction every other refusal here takes: a run
+            # counted as cheaper than it was understates the bill, and this
+            # module exists to stop exactly that.
+            return Run(
+                run_id=run_id,
+                workflow=name if isinstance(name, str) and name else "(unnamed)",
+                event=event if isinstance(event, str) and event else "(unknown)",
+                day=day,
+                billed_minutes=None,
+                jobs=0,
+                runner_oses=(),
+            )
+        total += billed_minutes(spent)
+        jobs += 1
+        oses.add(runner_family(job.get("labels")))
     return Run(
         run_id=run_id,
         workflow=name if isinstance(name, str) and name else "(unnamed)",
@@ -377,7 +457,7 @@ def run_from_payload(payload: Any) -> Run | None:
         day=day,
         billed_minutes=total,
         jobs=jobs,
-        runner_oses=tuple(oses),
+        runner_oses=tuple(sorted(oses)),
     )
 
 

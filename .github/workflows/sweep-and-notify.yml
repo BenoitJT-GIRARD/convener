@@ -859,7 +859,7 @@ jobs:
       # `actions: read` is not added below because this job already
       # declares `actions: write` for its publish-showcase dispatch, and
       # write includes read. Nothing here writes: the two endpoints called
-      # are GET /actions/runs and GET /actions/runs/<id>/timing.
+      # are GET /actions/runs and GET /actions/runs/<id>/jobs.
       #
       # The three steps are separate on purpose. The middle one is the
       # only thing in this feature that touches the network -- every line
@@ -875,18 +875,29 @@ jobs:
         if: always() && steps.uv.outcome == 'success'
         working-directory: tools
         run: uv run convener-actions-usage-window
-      - name: Collect what the last runs actually billed
+      - name: Collect what the last runs actually consumed
         id: usage-collect
         if: always() && steps.usage-window.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           SINCE: ${{ steps.usage-window.outputs.since }}
           MAX_RUNS: ${{ steps.usage-window.outputs.max_runs }}
-        # `/timing` per run, not the run's own wall clock: GitHub bills
-        # per job, rounded up to the whole minute, and only that endpoint
-        # reports the per-job durations the rounding applies to. A run's
-        # elapsed time would understate a parallel eight-job run by a
-        # factor of eight and overstate a single job that queued.
+        # `/jobs` per run, not the run's own wall clock and not
+        # `/timing`. GitHub bills per job, rounded up to the whole minute,
+        # so a run's elapsed time would understate a parallel eight-job run
+        # by a factor of eight and overstate a single job that queued --
+        # per-job durations are what the rounding applies to.
+        #
+        # `/timing` reports them and reports the wrong ones. Its `billable`
+        # section is what GitHub **charges**, and inside an account's
+        # included allowance it charges nothing: measured on a real private
+        # repository, every job of every run reported `duration_ms: 0`
+        # while the organisation's billing page showed 370 minutes consumed
+        # that month. This step read that endpoint for a long time and fed
+        # a guard that could not fire until the allowance was already
+        # spent. `/jobs` reports each job's `started_at` and `completed_at`
+        # whatever the billing says, and those are the durations
+        # actions_usage.py rounds.
         #
         # A failed listing fails this step rather than being read as "no
         # runs" -- the same lesson retention.yml carries one file over: a
@@ -932,13 +943,13 @@ jobs:
           : > actions-usage-input.jsonl
           while IFS= read -r run; do
             id="$(printf '%s' "$run" | jq -r '.id')"
-            if timing="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/timing")"; then
-              jq -c -n --argjson run "$run" --argjson timing "$timing" '{run: $run, timing: $timing}' >> actions-usage-input.jsonl
+            if jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=100")"; then
+              jq -c -n --argjson run "$run" --argjson jobs "$jobs" '{run: $run, jobs: $jobs}' >> actions-usage-input.jsonl
             else
               # Not dropped and not zeroed: recorded as a run whose cost
               # could not be read, which convener-record-actions-usage reports
               # as its own loud alarm instead of folding into the total.
-              jq -c -n --argjson run "$run" '{run: $run, timing: null}' >> actions-usage-input.jsonl
+              jq -c -n --argjson run "$run" '{run: $run, jobs: null}' >> actions-usage-input.jsonl
             fi
           done < runs.jsonl
           echo "collected $(wc -l < actions-usage-input.jsonl) runs since $SINCE"
