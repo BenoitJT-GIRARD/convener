@@ -9,6 +9,15 @@
 const UPSTREAM = 'https://github.com';
 const ALLOWED_PATHS = new Set(['/login/device/code', '/login/oauth/access_token']);
 
+// Named rather than left to the runtime's default, for the reason
+// services/form-relay states beside its own: GitHub answers 403 to a
+// request whose User-Agent it does not like, before the call is evaluated.
+// Measured there against api.github.com; unmeasured here, because these two
+// OAuth paths accept the default today. They are also the whole of the
+// device flow, so the day that changes every Board member is locked out at
+// once, and the header costs a line.
+const USER_AGENT = 'convener-auth-proxy';
+
 function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': origin,
@@ -43,7 +52,11 @@ export async function handle(request, env) {
 
   const upstream = await fetch(`${UPSTREAM}${pathname}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': USER_AGENT,
+    },
     body: await request.text(),
   });
 
