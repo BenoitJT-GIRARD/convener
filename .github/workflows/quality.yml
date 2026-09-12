@@ -146,7 +146,7 @@ jobs:
           # history, so against a shallow clone it would compare the committed
           # register with a truncated derivation and fail for the wrong reason.
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: '0.5.x'
           # Caches uv's own download/resolve step, keyed on tools/uv.lock --
