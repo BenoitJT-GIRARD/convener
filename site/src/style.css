@@ -1235,6 +1235,12 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   flex-wrap: wrap;
   gap: 1.25rem;
 }
+/* 48ch, and the measure is the point rather than the pixel count. A line
+   much past 75 characters loses the reader on the return sweep, and this
+   one is a short credit in a row that also holds the navigation -- so it is
+   capped well under that, at roughly a third of --content-w on a wide
+   screen. Stopping short of the rule above it is what it is for; it is not
+   a width somebody forgot to finish. */
 .colophon__credit {
   font-size: .88rem;
   color: var(--ink-mute);
@@ -1262,7 +1268,22 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
 /* The licence notice: a full-width row under the credit and the navigation,
    set on the same --ink-mute over --surface pairing .colophon__credit and
    .colophon__nav already use, so it introduces no colour and no contrast
-   figure that was not already measured. */
+   figure that was not already measured.
+
+   Two widths here, and the sentence above names only the first. `flex-basis:
+   100%` makes the **row** full width -- it takes a line of its own rather
+   than sitting beside the navigation -- and `max-width` then bounds the
+   **text** inside that row at a reading measure. Both are deliberate, and
+   saying only the first is how a reader comparing this comment against the
+   rendering concludes the rendering is wrong. It was read that way once.
+
+   78ch rather than the 48ch above, because this is prose to be read through
+   where the credit is a line to be glanced at.
+
+   The cockpit's own footer caps neither, and that is not an inconsistency
+   to reconcile: the showcase is a reading surface and the cockpit an
+   operating one, where a notice is a thing you locate rather than a thing
+   you read. */
 .colophon__legal {
   flex-basis: 100%;
   border-top: 1px solid var(--rule);
