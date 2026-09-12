@@ -278,6 +278,11 @@ cd ../tools     # the Python tooling
 uv sync
 ```
 
+Those three are what runs the thing. `sh gates.sh` needs more trees
+installed than these, and its own header lists every one with the command
+for it — held against the installs `.github/workflows/quality.yml` makes
+before it checks each tree, so that list cannot go stale the way it did.
+
 The cockpit asks for a GitHub fine-grained personal access token scoped to
 this repository (`Contents: read & write`, `Issues: read & write`) — or
 `?demo=1` for the same application on the example instance's records, with

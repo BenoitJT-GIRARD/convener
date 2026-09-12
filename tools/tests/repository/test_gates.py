@@ -28,12 +28,24 @@ step's name is what `quality.yml` calls a check. So the table in
 `gates.sh` names every step of that workflow and the target that runs it,
 this module reads both files, and a step in one and not the other is red.
 
-**`Install ...` is not a check.** `gates.sh`'s header says why the three
-installs are not targets -- they are run once per tree, in an order that
-page states, and a target would invite running the gates before them --
-so a step whose name begins with `Install` is left out of the comparison
-by both sides. It is a rule about a word, stated here because it is the
-one assumption in this module that a reader cannot see in either file.
+**`Install ...` is not a check.** `gates.sh`'s header says why its
+installs are not targets -- a target would invite running the gates
+before them -- so a step whose name begins with `Install` is left out of
+the comparison above by both sides. It is a rule about a word, stated
+here because it is the one assumption in this module that a reader cannot
+see in either file.
+
+**And read for a second comparison.** Left out of the table, those steps
+are still the only place anything states which trees a full run needs
+installed: a workflow cannot check a tree it has not installed, so its
+installs are the list, derived rather than declared. `gates.sh`'s header
+named three of them while `sh gates.sh` needed six, so `relays` and
+`audit` died on `'vitest' is not recognised` -- a message naming neither
+the missing install nor the tree it was missing from -- for whoever
+followed `docs/operating/taking-an-update.md` straight to the runner
+after a merge. A stale instruction is the same defect as a stale table
+and goes stale the same way, so the last assertions below hold the header
+and that page against the workflow's own installs.
 """
 
 from __future__ import annotations
@@ -58,6 +70,27 @@ QUALITY: Final = Path(".github/workflows/quality.yml")
 #: be edited for it.
 INSTALL: Final = "Install"
 
+#: The page that sends an operator to the runner, and therefore the one
+#: that has to name what the runner needs installed before it will run.
+PAGE: Final = Path("docs/operating/taking-an-update.md")
+
+#: What installing a tree looks like, on either side. `Install actionlint`
+#: matches neither: it puts a binary on the runner's `PATH` and has no
+#: tree, which is why it is excluded by what it runs rather than by being
+#: quietly dropped for having no `working-directory`.
+_INSTALLER: Final = "npm ci|uv sync"
+_INSTALL_RUN: Final = re.compile(rf"\b(?:{_INSTALLER})\b")
+
+#: The written-down form, which names its tree as an option rather than by
+#: standing in it. Both alternatives the house style offers were worse for
+#: a list of six: `&&` is refused outright on Windows PowerShell 5.1
+#: (`test_typed_commands.py`), and a chain of `cd ../..` lines makes the
+#: order load-bearing when the six are independent. These run from the
+#: repository root, which is where the reader already is.
+_INSTALL_COMMAND: Final = re.compile(
+    rf"(?:{_INSTALLER})[^\n]*?--(?:prefix|project) (?P<tree>[\w./-]+)"
+)
+
 #: What a table line says when the step deliberately has no target.
 NONE: Final = "none"
 
@@ -75,6 +108,42 @@ _USAGE: Final = re.compile(r"usage: sh \$0 \[(?P<targets>[a-z|]+)\]")
 
 def _gates_text() -> str:
     return (ROOT / GATES).read_text(encoding="utf-8")
+
+
+def _quality_text() -> str:
+    return (ROOT / QUALITY).read_text(encoding="utf-8")
+
+
+def install_trees(text: str) -> set[str]:
+    """Every tree one workflow installs before it checks anything in it.
+
+    Unordered on purpose: the six are independent of one another, and the
+    three places that write them down disagree about the order today --
+    which is exactly how much the order is worth.
+    """
+    loaded = yaml.safe_load(text)
+    trees: set[str] = set()
+    for job in loaded["jobs"].values():
+        for step in job["steps"]:
+            if not step.get("name", "").startswith(INSTALL):
+                continue
+            if not _INSTALL_RUN.search(step.get("run", "")):
+                continue
+            tree = step.get("working-directory")
+            assert tree, (
+                f"{QUALITY.as_posix()} runs {step['run'].strip()!r} with no "
+                "`working-directory`, so this reader cannot say which tree it "
+                "installs and would have dropped it in silence. Give the step "
+                "the directory it installs, or widen this reader with the "
+                "reason it has none"
+            )
+            trees.add(tree)
+    return trees
+
+
+def installs_written(text: str) -> set[str]:
+    """Every tree a written-down install command enters."""
+    return {match["tree"] for match in _INSTALL_COMMAND.finditer(text)}
 
 
 def workflow_steps(text: str) -> list[str]:
@@ -123,9 +192,12 @@ def test_the_readers_find_something_in_both_files() -> None:
     `gates.sh` itself from having.
     """
     text = _gates_text()
-    assert workflow_steps((ROOT / QUALITY).read_text(encoding="utf-8"))
+    assert workflow_steps(_quality_text())
     assert gates_table(text)
     assert gates_targets(text)
+    assert install_trees(_quality_text())
+    assert installs_written(text)
+    assert installs_written((ROOT / PAGE).read_text(encoding="utf-8"))
 
 
 def test_every_check_the_workflow_runs_has_a_line_in_the_runner() -> None:
@@ -267,3 +339,56 @@ def test_the_comparison_reproduces_the_drift_it_exists_for(
     claimed = {step for step, _target in gates_table(without)}
     assert expected in steps
     assert expected not in claimed
+
+
+# --------------------------------------------------------------------- #
+# The installs: not a check, and the thing a check cannot run without.
+# --------------------------------------------------------------------- #
+
+
+def test_the_runner_names_every_tree_its_gates_need_installed() -> None:
+    """The drift this was written for. `gates.sh` names its installs in
+    prose because they are deliberately not targets, and prose is what
+    goes stale: it said three while `relays` and `audit` reached six.
+    """
+    needed = install_trees(_quality_text())
+    named = installs_written(_gates_text())
+    assert named == needed, (
+        f"{GATES.as_posix()} writes down installs for {sorted(named)} and "
+        f"{QUALITY.as_posix()} installs {sorted(needed)} before it checks "
+        "them. A tree missing from the header is one a maintainer will not "
+        "install, and the gate that reaches it fails on a missing tool "
+        "rather than on anything they changed"
+    )
+
+
+def test_the_page_that_sends_an_operator_to_the_runner_names_them_too() -> None:
+    """`docs/operating/taking-an-update.md` is the one path to `sh
+    gates.sh` that does not go through reading the runner first: an
+    operator merges an upstream release and types it. An update can bring
+    a tree that was not there last time, which is the case where knowing
+    the list from memory is exactly wrong.
+    """
+    needed = install_trees(_quality_text())
+    named = installs_written((ROOT / PAGE).read_text(encoding="utf-8"))
+    assert named == needed, (
+        f"{PAGE.as_posix()} tells an operator to install {sorted(named)} "
+        f"before running the gates, and {QUALITY.as_posix()} installs "
+        f"{sorted(needed)}"
+    )
+
+
+@pytest.mark.parametrize("dropped", ["services/form-relay", "tools"])
+def test_dropping_one_install_line_comes_back_missing(dropped: str) -> None:
+    """Positive control, on the real texts rather than a fixture: take one
+    line out and the tree must go. A reader that matched nothing would
+    otherwise agree with every list, including an empty one -- and the
+    non-vacuity test above only proves it matches *something*.
+    """
+    assert dropped in install_trees(_quality_text())
+    for text in (_gates_text(), (ROOT / PAGE).read_text(encoding="utf-8")):
+        assert dropped in installs_written(text)
+        without = "\n".join(
+            line for line in text.splitlines() if dropped not in installs_written(line)
+        )
+        assert dropped not in installs_written(without)

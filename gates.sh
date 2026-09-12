@@ -9,12 +9,39 @@
 # was already typing, from the directory it was already typed in, so a
 # gate that passes by hand passes here and the two cannot drift into
 # different checks.
-# The installs are not here: they are three commands run once per tree
-# (`npm ci` in `app/` and `site/`, `uv sync --all-extras` in `tools/`),
-# ordered for a reason that page states, and a runner that hid them behind
-# a target would invite running the gates before them.
 #
-# `--frozen` on every `uv run`: an unfrozen one rewrites `tools/uv.lock`,
+# The installs, and why they are not targets
+# ------------------------------------------
+# Run once per tree, in any order, from the repository root, before any
+# gate:
+#
+#     npm ci --prefix app
+#     npm ci --prefix site
+#     npm ci --prefix services/auth-proxy
+#     npm ci --prefix services/form-relay
+#     npm ci --prefix services/signup-relay
+#     uv sync --all-extras --project tools
+#
+# Not targets, because a runner that hid them behind one would invite
+# running the gates before them.
+#
+# This paragraph named three of them for as long as it existed -- `app/`,
+# `site/` and `tools/` -- and said they were "ordered for a reason that
+# page states" when no page states an order and none exists: the trees
+# are independent of each other. The relays were the ones it left out,
+# so `relays` and `audit` both died on `'vitest' is not recognised`,
+# which names neither the missing install nor the tree it is missing
+# from, and `docs/operating/taking-an-update.md` sends an operator
+# straight here after a merge with nothing else to read.
+#
+# What holds it now: `quality.yml` has to install each tree before it can
+# check it, so its own `Install ...` steps are the list, and
+# `test_gates.py` reads them and compares. A tree added later lands
+# red here and on that page, rather than quietly.
+#
+# `--frozen` on every `uv run`
+# ----------------------------
+# An unfrozen one rewrites `tools/uv.lock`,
 # which is a change to the environment made by the act of checking it. Every
 # command this repository writes down carries it too, and
 # `test_typed_commands.py` refuses one that does not -- a reader who types a
