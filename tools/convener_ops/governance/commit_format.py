@@ -68,6 +68,11 @@ ACTS: Final[dict[str, str]] = {
     # the overnight sweep. The day is not in the subject: it is already on
     # the record, and `lock-date` sets the same precedent.
     "mark-delivered": "record the delivery of",
+    # A talk that was announced and will not happen. The *why* rides in the
+    # qualifier below rather than in free text: a commit subject is permanent
+    # and unrewritable, and a reason typed at a keyboard is the one thing in
+    # this grammar that could name a person's illness.
+    "cancel-edition": "cancel",
     # Publishing a recording (G-07, G-08).
     "consent-set": "record the recording consent of",
     "publication-approve": "approve publication of",
@@ -120,6 +125,18 @@ QUALIFIERS: Final[dict[str, frozenset[str]]] = {
     # ""`. The act records what happened, so it has a word the field does
     # not.
     "date-answer": frozenset({"accepted", "declined", "cleared"}),
+    # Four, and deliberately no catch-all: a vocabulary with an `other` in it
+    # is a vocabulary that stops being read. Between them they cover who
+    # withdrew -- the speaker, the Board -- and what made the slot impossible,
+    # whether the day itself or the series pausing.
+    "cancel-edition": frozenset(
+        {
+            "speaker-withdrew",
+            "board-withdrew",
+            "date-unworkable",
+            "series-paused",
+        }
+    ),
     "publication-resolve": frozenset({"lift", "withhold"}),
     "override": frozenset(
         {
@@ -130,6 +147,7 @@ QUALIFIERS: Final[dict[str, frozenset[str]]] = {
             "scheduled",
             "delivered",
             "archived",
+            "cancelled",
             "parked",
             "decline-board",
             "decline-speaker",

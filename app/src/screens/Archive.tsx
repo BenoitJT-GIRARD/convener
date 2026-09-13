@@ -21,6 +21,7 @@ export function Archive() {
     };
     const result: Record<ArchiveGroup['key'], Speaker[]> = {
       past: [],
+      cancelled: [],
       parked: [],
       'declined-board': [],
       'declined-speaker': [],

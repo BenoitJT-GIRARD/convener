@@ -1,0 +1,143 @@
+name: Tell the registrants of a cancelled edition
+
+# A seminar that was announced and does not happen owes exactly one thing, and
+# it is the one thing this repository cannot heal on its own.
+#
+# Everything else follows from the status. `cli/publication.py` filters the
+# events feed to `scheduled`, so the edition leaves the showcase; `mint-event-
+# keys.yml` selects on the same value, so no key is minted for it; and
+# `retention.yml` computes destruction from the date that was announced, so
+# the registrations are destroyed on the day they always would have been. The
+# *people* are the part nothing else reaches: somebody who registered,
+# received a confirmation naming a date, and was promised a certificate.
+#
+# **Why a push and a ledger rather than a dispatch.** The cockpit writes files
+# and dispatches nothing -- its token carries `contents` and no more -- so the
+# trigger is the push that carries the cancellation. A workflow reacting to a
+# push has to answer "which of these have not been told yet", and
+# `instance/data/cancellations.yml` is that answer, in the same shape and for
+# the same reason as `instance/data/event-key-destructions.yml`. The schedule
+# below is the catch-up: a push that failed, or a cancellation written by hand
+# and pushed while this workflow was disabled, is found the next morning
+# rather than never.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'instance/data/speakers.yml'
+  schedule:
+    - cron: '47 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: cancel-edition
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  # Which editions are waiting, as a JSON array the matrix below expands.
+  # A job of its own because a matrix cannot be built from a step of the job
+  # it runs in.
+  pending:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      ids: ${{ steps.waiting.outputs.ids }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.5.x'
+          enable-cache: true
+      - name: Find the cancellations nobody has been told about
+        id: waiting
+        working-directory: tools
+        run: |
+          ids="$(uv run --frozen convener-cancellations-pending)"
+          json="$(printf '%s\n' "$ids" | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          echo "ids=$json" >> "$GITHUB_OUTPUT"
+
+  tell:
+    needs: pending
+    if: needs.pending.outputs.ids != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    strategy:
+      # One at a time. Each of these commits the ledger, and two of them
+      # racing would spend their retries re-deriving around each other for no
+      # gain -- there is never a hurry here, and the messages have already
+      # gone out by the time the ledger is written.
+      max-parallel: 1
+      # A cancellation that cannot be told about must not stop the next one:
+      # two editions cancelled together are two sets of people, and one
+      # unreachable SMTP host is not a reason to leave the second set
+      # uninformed.
+      fail-fast: false
+      matrix:
+        event: ${{ fromJSON(needs.pending.outputs.ids) }}
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.5.x'
+          enable-cache: true
+
+      # GitHub Actions can only select a secret through an expression
+      # evaluated in the workflow file itself, never from a string a step
+      # computed -- so this step hands back the *name*, and the step below
+      # looks it up. The same arrangement `registration.yml` uses, for the
+      # same reason. A name, never a value.
+      - name: Resolve this edition's key secret
+        id: secret
+        working-directory: tools
+        run: |
+          name="$(uv run --frozen convener-event-key-secret-name --event '${{ matrix.event }}')"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Tell everyone who registered
+        id: tell
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ matrix.event }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.secret.outputs.name] }}
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run --frozen convener-tell-cancelled
+
+      # Separate from the sending, and the separation is the point: this step
+      # is the one a rejected push makes run again, and it must be safe to run
+      # again. It reads no registration, needs no key and sends nothing.
+      - name: Record that they were told
+        if: always() && steps.tell.outcome == 'success'
+        run: |
+          git config user.name 'convener-cancellations'
+          git config user.email 'convener-cancellations@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            (cd tools && EVENT_ID='${{ matrix.event }}' uv run --frozen convener-record-cancellation)
+            git add instance/data/cancellations.yml
+            if git diff --cached --quiet; then
+              echo "::notice::${{ matrix.event }} was already recorded"
+              exit 0
+            fi
+            git commit -m "data: record that the registrants of ${{ matrix.event }} were told"
+            if git push origin "HEAD:$TARGET_BRANCH"; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving and retrying"
+          done
+          echo "::error::could not record that ${{ matrix.event }}'s registrants were told; the next run will try to tell them again"
+          exit 1

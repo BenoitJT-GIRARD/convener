@@ -1076,6 +1076,24 @@ Fine-grained tokens → generate one scoped only to this repository, with
 only the Secrets permission, set to read and write; paste the value into
 this repository's own `CONVENER_RETENTION_TOKEN` secret.
 
+**A cancelled edition** is written to its registrants by
+`.github/workflows/cancel-edition.yml`, which runs on the push that carries
+the cancellation and again every morning as a catch-up. It uses the same
+per-event key every other reader of `registrations.enc` uses, and the same
+SMTP settings the confirmations use; it needs nothing set that a running
+instance does not already have.
+
+What makes it safe to run twice is `instance/data/cancellations.yml`: one line
+per edition, written *after* the messages go out, and the difference between
+that list and the cancelled editions is the work still to do. A run that fails
+halfway is re-run and reaches exactly the people it missed. The sending and the
+recording are two commands for that reason — the recording is the half a
+rejected push makes run again, so it is the half that does nothing to anybody.
+
+An edition nobody registered for reports that and exits green. It is the
+commonest case, and a red run for a series doing nothing wrong is how an
+operator learns to stop reading that tab.
+
 **Early erasure**, the other right (erasure before the retention
 deadline): a participant's own registration removed from
 `registrations.enc` before

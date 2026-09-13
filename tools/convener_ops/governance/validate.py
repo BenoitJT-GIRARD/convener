@@ -31,6 +31,9 @@ STATUSES = frozenset(
         "scheduled",
         "delivered",
         "archived",
+        # Announced and will not happen -- see the union in
+        # `app/src/data/types.ts`, which carries the argument.
+        "cancelled",
         "parked",
         "decline-board",
         "decline-speaker",

@@ -1,13 +1,6 @@
 import { useState } from 'react';
-import {
-  canTransition,
-  applyTransition,
-  type Transition,
-  type Role,
-  type LockDatePayload,
-  type OverridePayload,
-  type BallotPayload,
-} from '../state/transitions';
+import type { CancelPayload, CancellationReason } from '../state/transitions';
+import { CANCELLATION_REASONS, applyTransition, canTransition, type BallotPayload, type LockDatePayload, type OverridePayload, type Role, type Transition } from '../state/transitions';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { activeBoard } from '../state/board';
@@ -46,7 +39,10 @@ export function ActionButtons({ speaker, role }: Props) {
     ballots: speaker.selection.ballots,
   });
 
-  async function fire(t: Transition, payload?: LockDatePayload | OverridePayload | BallotPayload) {
+  async function fire(
+    t: Transition,
+    payload?: LockDatePayload | OverridePayload | BallotPayload | CancelPayload,
+  ) {
     if (!login || !config || !canTransition(speaker, t, role)) return;
     setBusy(true);
     try {
@@ -72,13 +68,6 @@ export function ActionButtons({ speaker, role }: Props) {
       setBusy(false);
     }
   }
-
-  const btnCls = (variant: 'primary' | 'danger' | 'ghost') =>
-    variant === 'danger'
-      ? 'px-3 py-1.5 text-sm rounded border border-danger text-danger hover:bg-danger hover:text-white disabled:opacity-50'
-      : variant === 'ghost'
-        ? 'px-3 py-1.5 text-sm rounded border border-border text-ink-muted hover:text-ink disabled:opacity-50'
-        : 'px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50';
 
   function btn(
     label: string,
@@ -168,6 +157,18 @@ export function ActionButtons({ speaker, role }: Props) {
           </span>,
         );
       }
+      // The other way out of `scheduled`, and until it existed there was
+      // none: a seminar that was announced and did not happen could only
+      // leave through Force status, which writes a status and records no act.
+      if (role === 'board') {
+        buttons.push(
+          <CancelForm
+            key="cancel-edition"
+            disabled={locked}
+            onCancel={reason => fire('cancel-edition', { reason })}
+          />,
+        );
+      }
       break;
     }
     case 'parked':
@@ -216,6 +217,99 @@ const BALLOT_CHOICES: { value: BallotValue; label: string; help: string }[] = [
  * `ballots.castBallot` refuses a recusal without one, and a volunteer should
  * meet that rule as a field to fill in, not as a failed save.
  */
+/** The three button shapes this screen uses. A module constant rather than a
+ *  closure, because two components in this file draw the same buttons and a
+ *  second copy of these strings is how two controls come to look different
+ *  for no reason. */
+const btnCls = (variant: 'primary' | 'danger' | 'ghost') =>
+  variant === 'danger'
+    ? 'px-3 py-1.5 text-sm rounded border border-danger text-danger hover:bg-danger hover:text-white disabled:opacity-50'
+    : variant === 'ghost'
+      ? 'px-3 py-1.5 text-sm rounded border border-border text-ink-muted hover:text-ink disabled:opacity-50'
+      : 'px-3 py-1.5 text-sm rounded bg-dominant text-white hover:opacity-90 disabled:opacity-50';
+
+/** Cancelling an announced edition, with the reason the register records.
+ *
+ *  A select rather than a free text box, and the four values are the same
+ *  closed vocabulary `commit_format.py` holds: the reason goes into a commit
+ *  subject, which is permanent and unrewritable, and a sentence typed here
+ *  could name a person's illness.
+ *
+ *  Two steps rather than one, like nothing else on this screen. Every other
+ *  control here is reversible or reachable again; this one tells everybody
+ *  who registered that the talk is off, and there is no putting that back.
+ */
+function CancelForm({
+  disabled,
+  onCancel,
+}: {
+  disabled: boolean;
+  onCancel: (reason: CancellationReason) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<CancellationReason>('speaker-withdrew');
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        className={btnCls('ghost')}
+      >
+        Cancel this edition…
+      </button>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-3 border border-danger p-3">
+      <p className="text-sm">
+        <strong>This tells everyone who registered that the talk is off.</strong> They are
+        written to at the address their confirmation went to, and nothing here can be taken
+        back. The edition code stays used, and the record moves to the archive.
+      </p>
+      <label className="block text-sm">
+        <span className="text-xs uppercase tracking-wider text-ink-muted">Reason</span>
+        <select
+          className="mt-1 block w-full px-2 py-1 border border-border bg-surface text-sm"
+          value={reason}
+          onChange={e => setReason(e.target.value as CancellationReason)}
+        >
+          {CANCELLATION_REASONS.map(value => (
+            <option key={value} value={value}>
+              {CANCELLATION_LABELS[value]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex gap-2 flex-wrap">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onCancel(reason)}
+          className={btnCls('danger')}
+        >
+          Cancel the edition and tell the registrants
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className={btnCls('ghost')}>
+          Keep it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The four reasons, as a person reads them. The values themselves are the
+ *  register's words and are never shown: `speaker-withdrew` is a commit
+ *  subject, not a sentence. */
+const CANCELLATION_LABELS: Record<CancellationReason, string> = {
+  'speaker-withdrew': 'The speaker withdrew',
+  'board-withdrew': 'The Board withdrew the edition',
+  'date-unworkable': 'The date turned out to be unworkable',
+  'series-paused': 'The series is paused',
+};
+
 function BallotForm({
   speaker,
   login,

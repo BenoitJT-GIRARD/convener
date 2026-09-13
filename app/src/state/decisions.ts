@@ -39,6 +39,8 @@ import type {
 import type { FieldKey } from './phases';
 import type {
   BallotPayload,
+  CancelPayload,
+  CancellationReason,
   ConsentPayload,
   OverridePayload,
   ResolutionPayload,
@@ -172,6 +174,12 @@ export type Decision =
     }
   | { kind: 'date-answer'; entity: Identifier; actor: Identifier; detail: DateReply }
   | { kind: 'override'; entity: Identifier; actor: Identifier; detail: SpeakerStatus }
+  | {
+      kind: 'cancel-edition';
+      entity: Identifier;
+      actor: Identifier;
+      detail: CancellationReason;
+    }
   | { kind: PlainDecisionKind; entity: Identifier; actor: Identifier };
 
 export type DecisionKind = Decision['kind'];
@@ -193,6 +201,7 @@ export const ACTS: Record<DecisionKind, string> = {
   'date-answer': 'record a date reply for',
   'lock-date': 'lock the date of',
   'mark-delivered': 'record the delivery of',
+  'cancel-edition': 'cancel',
   'consent-set': 'record the recording consent of',
   'publication-approve': 'approve publication of',
   'publication-object': 'record an objection to publishing',
@@ -476,6 +485,8 @@ export function transitionDecision(
       return { kind: t, entity, actor, detail: (payload as ResolutionPayload).resolution };
     case 'override':
       return { kind: t, entity, actor, detail: (payload as OverridePayload).status };
+    case 'cancel-edition':
+      return { kind: t, entity, actor, detail: (payload as CancelPayload).reason };
     default:
       return { kind: t, entity, actor };
   }

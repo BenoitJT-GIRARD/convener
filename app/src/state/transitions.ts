@@ -31,6 +31,7 @@ export type Transition =
   | 'invited-decline'
   | 'lock-date'
   | 'mark-delivered'
+  | 'cancel-edition'
   | 'finalize-archive'
   | 'archive-unpublished'
   | 'consent-set'
@@ -117,10 +118,38 @@ export type TransitionPayload =
   | HiddenCoiPayload
   | ConsentPayload
   | ObjectionPayload
-  | ResolutionPayload;
+  | ResolutionPayload
+  | CancelPayload;
+
+/** Why an announced edition was cancelled, as the register records it.
+ *
+ *  A closed vocabulary, mirrored in `commit_format.py::QUALIFIERS` and pinned
+ *  across the boundary by `tools/tests/fixtures/governance-cases.json`. It is
+ *  closed for the reason every other qualifier is: a commit subject is
+ *  permanent and unrewritable, and a reason typed at a keyboard is the one
+ *  thing in this grammar that could name a person's illness.
+ *
+ *  Four, and deliberately no catch-all. A vocabulary with an `other` in it is
+ *  a vocabulary that stops being read.
+ */
+export const CANCELLATION_REASONS = [
+  'speaker-withdrew',
+  'board-withdrew',
+  'date-unworkable',
+  'series-paused',
+] as const;
+export type CancellationReason = (typeof CANCELLATION_REASONS)[number];
+
+export interface CancelPayload {
+  reason: CancellationReason;
+}
 
 const BOARD_ONLY: Transition[] = [
   'ballot-cast',
+  // Withdrawing a commitment the series has already made in public, to a
+  // speaker and to everyone who registered. The same weight as declining a
+  // lead, and the same hand.
+  'cancel-edition',
   'ballot-withdraw',
   'lead-park',
   'lead-decline',
@@ -157,6 +186,12 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       // arrives before it is refused; this is what decides whether the
       // control is drawn at all.
       return s.status === 'scheduled' && !!s.date;
+    case 'cancel-edition':
+      // `scheduled` and nowhere else. Before it there is nothing announced to
+      // withdraw -- a confirmed speaker who falls through is the date
+      // negotiation's business, and a lead is `lead-decline`'s. After it the
+      // talk has happened, and a talk that happened cannot be cancelled.
+      return s.status === 'scheduled';
     case 'finalize-archive':
       // `delivered` and nowhere else. It used to be reachable from
       // `archived` as well, for the record whose recording an objection had
@@ -305,6 +340,19 @@ export function applyTransition(
       }
       return lockDate(s, accepted, p.edition_code);
     }
+    case 'cancel-edition':
+      // The status and nothing else. The edition code stays on the record and
+      // stays consumed: it was announced under that code, and a second
+      // edition wearing it would make two different talks share one address.
+      // `next_edition_number` is a high-water mark for exactly this reason
+      // (`state/agenda.ts::raisedEditionCounter`), so nothing has to be
+      // wound back here.
+      //
+      // What the public sees follows on its own: `cli/publication.py` filters
+      // the events feed to `scheduled`, and `mint-event-keys.yml` selects on
+      // the same value, so a cancelled edition leaves the showcase and stops
+      // being minted for without either of them learning a new word.
+      return { ...s, status: 'cancelled' };
     case 'mark-delivered': {
       // The hand on the transition the clock used to make on its own. It
       // writes exactly what `tools/convener_ops/maintenance/sweep.py` writes

@@ -122,6 +122,7 @@ export function ClosedRecord({ speaker, config }: { speaker: Speaker; config: Co
  *  it is closed. */
 const TITLES: Partial<Record<Speaker['status'], string>> = {
   archived: 'How this event closed',
+  cancelled: 'Why this edition did not happen',
   parked: 'Why this lead is parked',
   'decline-board': 'Why the board declined this lead',
   'decline-speaker': 'Why this invitation ended here',
@@ -132,6 +133,13 @@ function whyLine(s: Speaker): string {
   switch (s.status) {
     case 'archived':
       return outcomeLine(s);
+    case 'cancelled':
+      return (
+        'This edition was announced and did not happen. Everyone who had registered was ' +
+        'told, by the same address their confirmation came from, when it was cancelled. ' +
+        `${when(s, 'the day it was cancelled is not on the record')} Why it was cancelled ` +
+        'is in the commit that did it, which is what the decision register reads.'
+      );
     case 'parked':
       return (
         'The board set this lead aside rather than deciding it. That is not a refusal, and ' +
@@ -217,6 +225,14 @@ function reopenLine(s: Speaker): string {
         'If the speaker changes their mind, or the board does, Reopen the publication decision ' +
         'puts this record back to delivered, where the two permissions are recorded. It changes ' +
         'nothing else, and only a board member can press it.'
+      );
+    case 'cancelled':
+      return (
+        'Nothing here. The edition code it used stays used, and its registrations stay ' +
+        'encrypted until their retention window closes on the date that was announced. ' +
+        'A talk that finds a new date is a new edition, with a new code and a new key: ' +
+        'reviving this one would send a second set of people to a room the first set was ' +
+        'told not to come to.'
       );
     case 'parked':
     case 'decline-board':

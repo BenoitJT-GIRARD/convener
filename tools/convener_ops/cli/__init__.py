@@ -19,6 +19,11 @@ from convener_ops.cli.journey.attendance import (
     match_attendance,
     release_recording,
 )
+from convener_ops.cli.journey.cancellation import (
+    cancellations_pending,
+    record_cancellation,
+    tell_cancelled,
+)
 from convener_ops.cli.journey.certificate import (
     certificates_public_data,
     deliver_certificate,
@@ -82,6 +87,7 @@ __all__ = [
     "actions_usage_window",
     "agenda_internal",
     "alert_secret_workflow_run",
+    "cancellations_pending",
     "certificates_public_data",
     "check_actions_usage_liveness",
     "check_config",
@@ -110,6 +116,7 @@ __all__ = [
     "plan_queue_drain",
     "public_data",
     "record_actions_usage",
+    "record_cancellation",
     "record_destructions",
     "record_queue_watch",
     "record_retention_run",
@@ -130,5 +137,6 @@ __all__ = [
     "send_confirmation",
     "survey_status_public_data",
     "sweep",
+    "tell_cancelled",
     "validate",
 ]

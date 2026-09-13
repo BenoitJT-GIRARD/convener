@@ -1780,6 +1780,38 @@
       "actor": "ada",
       "detail": "cleared",
       "message": "data: record a date reply for spk-007 by ada (cleared)"
+    },
+    {
+      "name": "a speaker who withdraws cancels the edition they were announced for",
+      "kind": "cancel-edition",
+      "entity": "mrg-042",
+      "actor": "ada",
+      "detail": "speaker-withdrew",
+      "message": "data: cancel mrg-042 by ada (speaker-withdrew)"
+    },
+    {
+      "name": "the board withdrawing an announced edition records that it was theirs",
+      "kind": "cancel-edition",
+      "entity": "mrg-042",
+      "actor": "ada",
+      "detail": "board-withdrew",
+      "message": "data: cancel mrg-042 by ada (board-withdrew)"
+    },
+    {
+      "name": "a day that turns out to be impossible is its own reason",
+      "kind": "cancel-edition",
+      "entity": "mrg-042",
+      "actor": "ada",
+      "detail": "date-unworkable",
+      "message": "data: cancel mrg-042 by ada (date-unworkable)"
+    },
+    {
+      "name": "a series pausing cancels the editions it had announced",
+      "kind": "cancel-edition",
+      "entity": "mrg-042",
+      "actor": "ada",
+      "detail": "series-paused",
+      "message": "data: cancel mrg-042 by ada (series-paused)"
     }
   ],
   "commit_message_rejects": [

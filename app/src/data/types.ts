@@ -18,6 +18,13 @@ export type SpeakerStatus =
   | 'scheduled' // date locked and edition code assigned, the runbook drives the rest
   | 'delivered' // event date passed (automatic transition, see `convener-sweep`)
   | 'archived' // post-event items done (an explicit gesture, never automatic)
+  // Not `archived`, which means closed and complete: a cancellation is a
+  // commitment withdrawn rather than a talk finished. Not `parked` or either
+  // `decline-` either -- those belong to the lead stage, before a date and an
+  // edition code exist, and cancelling only starts to have consequences where
+  // they do. The trailing gloss is what the generated schema page reads, so
+  // it says what the status is rather than what it is not.
+  | 'cancelled' // announced and will not happen; registrants are told when it is
   | 'parked' // board paused this lead (reversible)
   | 'decline-board' // board collectively declined (reversible)
   | 'decline-speaker'; // speaker declined the invitation
