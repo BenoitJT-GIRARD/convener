@@ -180,6 +180,7 @@ jobs:
             if git push origin "HEAD:$TARGET_BRANCH"; then
               exit 0
             fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving and retrying"
           done
           echo "::error::could not publish the public halves after three attempts"
           exit 1
