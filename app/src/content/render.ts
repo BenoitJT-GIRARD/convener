@@ -5,10 +5,10 @@ import {
   toPublicFields,
   type PublicSpeakerFields,
 } from '../state/consent';
-import { dateLine, dateTimeLine } from '../state/derived';
+import { dateLine, dateTimeLine, roomText } from '../state/derived';
 import { agreedSlot, offeredDatesLine } from '../state/dates';
 import { eventIdOf } from '../state/agenda';
-import type { Speaker } from '../data/types';
+import type { Config, Speaker } from '../data/types';
 // `docs/handbook/toolkit/`'s templates used to write the
 // organisation's name, the series' title, its forum and its contact
 // address out in full. They read them as `{{ instance.* }}` now,
@@ -28,6 +28,13 @@ export interface SubstitutionContext {
   speaker?: Speaker;
   host?: string;
   today?: string;
+  /** The loaded configuration, for the one token that is not a field of the
+   *  record: the way into the room is the record's own link *or* the
+   *  series-wide joining instructions, and only this carries the second.
+   *  `null` -- a screen drawn before the data arrived -- resolves the token
+   *  to the record's own link alone, which is the same answer a config with
+   *  no instructions would give. */
+  config?: Config | null;
 }
 
 const MISSING = (path: string) => `«missing: ${path}»`;
@@ -165,6 +172,16 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       date: s.date,
       time: s.time,
       zoom_link: s.zoom_link,
+      // How to get into this edition's room, composed from the record's own
+      // link and the series-wide instructions exactly as `confirmation.py`
+      // composes it for a registrant -- `state/derived.ts::roomText`.
+      //
+      // `zoom_link` above is the raw field and stays: a template wanting the
+      // per-event link alone can still have it. This is the one a *message*
+      // should use, because on a permanent-room instance the raw field is
+      // empty by design and a template reading it would promise an address
+      // and print nothing.
+      room: roomText(s, ctx.config ?? null),
       youtube_url: s.youtube_url,
       forum_thread: s.forum_thread,
       signup_link: signupLink(s.edition_code),

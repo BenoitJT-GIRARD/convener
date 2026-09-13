@@ -18,7 +18,7 @@ test instead of being published by omission.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 PUBLIC_STATUSES = frozenset({"scheduled", "delivered", "archived"})
@@ -327,6 +327,53 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
         out.append(row)
     out.sort(key=lambda row: row.get("date", ""), reverse=True)
     return out
+
+
+#: The shortest string worth searching a built site for. A room's joining
+#: instructions are free text and can hold a line like "Dial in" that would
+#: match a hundred innocent pages; a line this short is not evidence of a
+#: leak and a guard that failed on one would be turned off within a week.
+#: Every real secret in this position -- a URL, an access code, a PIN -- is
+#: comfortably longer.
+MIN_SECRET_LENGTH = 8
+
+
+def room_strings(speakers: Sequence[object], config: object) -> list[str]:
+    """Every string that would be a leak if it reached a published page.
+
+    **Both sources, because an instance uses either.** A room is the
+    record's own `zoom_link` *or* the series-wide `instructions` in
+    `instance/data/config.yml` -- D-06 makes the chosen platform's account
+    the permanent room, so on such an instance the per-event field is empty
+    by design and the address, with its access code, is one value for the
+    whole series.
+
+    The guard in `publish-showcase.yml` read `zoom_link` alone. On a
+    permanent-room instance that is empty on every record, so the guard
+    printed "nothing to check" and checked nothing -- on the one shape of
+    instance where the thing it protects is a standing access code rather
+    than a single event's URL.
+
+    `instructions` is prose, so it is taken a line at a time: each non-blank
+    line is a candidate, which catches the address and the access code
+    separately and does not depend on how an operator laid them out. Lines
+    shorter than `MIN_SECRET_LENGTH` are dropped -- see that constant.
+
+    Returned sorted and without duplicates, so a caller's output is stable
+    and the same URL written in both places is searched for once.
+    """
+    found: set[str] = set()
+    for entry in speakers:
+        if isinstance(entry, Mapping):
+            link = str(entry.get("zoom_link") or "").strip()
+            if len(link) >= MIN_SECRET_LENGTH:
+                found.add(link)
+    if isinstance(config, Mapping):
+        for line in str(config.get("instructions") or "").splitlines():
+            stripped = line.strip()
+            if len(stripped) >= MIN_SECRET_LENGTH:
+                found.add(stripped)
+    return sorted(found)
 
 
 def to_survey_status(speakers: Sequence[object]) -> list[str]:

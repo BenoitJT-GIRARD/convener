@@ -32,7 +32,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { CONTENT_REGISTRY } from '../../src/content/registry';
 import { substitute } from '../../src/content/render';
 import { PHASES, itemByKey } from '../../src/state/phases';
-import { filledSpeaker as invented, speaker as double } from '../helpers/data-doubles';
+import {
+  config as configDouble,
+  filledSpeaker as invented,
+  speaker as double,
+} from '../helpers/data-doubles';
 import type { Speaker } from '../../src/data/types';
 // The rule the build actually applies, so the sweep below covers exactly the
 // pages a volunteer can open and no more.
@@ -340,5 +344,119 @@ describe('the drafts that name an evening follow the negotiation', () => {
     expect(out).toContain('talk on 2026-11-12');
     expect(out).toContain('Thursday, 12 November 2026 at 18:00 CET');
     expect(out).not.toContain('«missing');
+  });
+});
+
+describe('the room, and the one message that carries it', () => {
+  const REMINDER_KEY = 'toolkit/emails/reminder';
+  const PROMOTION = 'toolkit/emails/promotion-starting';
+
+  const SERIES_ROOM = configDouble({
+    instructions: 'Join online: https://join.example.test/series\nAccess code: 8842798',
+  });
+
+  /** Everything above the volunteer's own notes. A template's notes talk
+   *  *about* the message -- naming the registration confirmation it must not
+   *  duplicate, for instance -- and a reading about what the speaker is sent
+   *  must not be satisfied or broken by them. */
+  function bodyOf(rendered: string): string {
+    return rendered.split('## Notes for the volunteer')[0];
+  }
+
+  function scheduled(overrides: Partial<Speaker> = {}): Speaker {
+    return double({
+      status: 'scheduled',
+      title: 'A talk',
+      date: '2027-03-16',
+      time: '12:30',
+      edition_code: 'MRG-09',
+      forum_thread: 'https://forum.example.test/t/1',
+      // The reminder signs off as `{{ host_1.name }}`, which resolves from
+      // the record rather than from the context's `host`.
+      host_1: 'Alice Organiser',
+      ...overrides,
+    });
+  }
+
+  it('gives the speaker the series room when the record carries no link', () => {
+    // The gap #96 named: nothing in the journey ever sent the speaker the
+    // way into their own seminar. The reminder pointed at "your registration
+    // confirmation", which is a message the speaker never receives -- nothing
+    // asks them to register for their own talk.
+    const out = substitute(source(REMINDER_KEY), {
+      speaker: scheduled({ zoom_link: '' }),
+      host: 'alice',
+      config: SERIES_ROOM,
+    });
+
+    expect(out).toContain('https://join.example.test/series');
+    expect(out).toContain('Access code: 8842798');
+    expect(out).not.toMatch(/«missing: /);
+  });
+
+  it('gives the speaker the record’s own link when there is one', () => {
+    const out = substitute(source(REMINDER_KEY), {
+      speaker: scheduled({ zoom_link: 'https://meet.example.test/j/9' }),
+      host: 'alice',
+      config: configDouble({ instructions: '' }),
+    });
+
+    expect(out).toContain('https://meet.example.test/j/9');
+  });
+
+  it('no longer points at a registration confirmation the speaker never gets', () => {
+    // Two untruths in one sentence, both removed. The second --
+    // "the same room and access code every session uses" -- asserted one
+    // instance's room model as though it were a property of the product; it
+    // is false of an instance that opens a room per seminar, and the product
+    // cannot know which it is talking to. Same shape as the hardcoded
+    // "12:30 CET" removed from the line above it.
+    const body = bodyOf(source(REMINDER_KEY));
+
+    expect(body).not.toContain('registration confirmation');
+    expect(body).not.toContain('every session uses');
+  });
+
+  it('keeps the room out of the message written to be forwarded', () => {
+    // The promotion says, in its own words, "anything we post is yours to
+    // repost". A room link in it is a room anyone can enter without
+    // registering -- and this series recognises attendance through
+    // registration and nothing else, so such an audience cannot be matched,
+    // cannot be certified, and is not covered by the data-protection record.
+    const out = substitute(source(PROMOTION), {
+      speaker: scheduled({ zoom_link: 'https://meet.example.test/j/9' }),
+      host: 'alice',
+      config: SERIES_ROOM,
+    });
+
+    expect(out).not.toContain('https://meet.example.test/j/9');
+    expect(out).not.toContain('https://join.example.test/series');
+    expect(out).not.toContain('8842798');
+  });
+
+  it('tells the speaker in the promotion that the details are coming', () => {
+    // Benoît's own point, and it is not only comfort: a speaker who does not
+    // know the details are coming asks for them, and the easiest thing for a
+    // volunteer to do then is to paste the room into the reply that is least
+    // safe to paste it into.
+    const out = substitute(source(PROMOTION), {
+      speaker: scheduled(),
+      host: 'alice',
+      config: SERIES_ROOM,
+    });
+
+    expect(out).toMatch(/joining details/i);
+    expect(out).toMatch(/few days before|in your reminder/i);
+  });
+
+  it('is the reminder, and only the reminder, that carries the token', () => {
+    // Non-vacuity in the direction that would be silent. A second template
+    // gaining `{{ speaker.room }}` is a second message putting the room in
+    // front of somebody, and which messages do that is the whole subject.
+    const carrying = Object.keys(CONTENT_REGISTRY)
+      .filter(key => key.startsWith('toolkit/emails/'))
+      .filter(key => source(key).includes('{{ speaker.room }}'));
+
+    expect(carrying).toEqual([REMINDER_KEY]);
   });
 });

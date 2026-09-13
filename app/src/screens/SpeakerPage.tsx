@@ -14,9 +14,9 @@ import { InlineContent } from '../content/InlineContent';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
 import { assignItem } from '../state/assignment';
 import { dataEdit, identifier, itemKey } from '../state/decisions';
-import { effectiveStatus, parisToday } from '../state/derived';
+import { effectiveStatus, parisToday, roomText } from '../state/derived';
 import { LoadError } from '../components/LoadError';
-import type { Speaker } from '../data/types';
+import type { Config, Speaker } from '../data/types';
 
 export function SpeakerPage() {
   const { id } = useParams();
@@ -212,7 +212,7 @@ export function SpeakerPage() {
           `ClosedRecord` above says so, and `ActionButtons` draws the door. */}
       {s.status === 'delivered' && <PublicationGate speaker={s} role={role} />}
 
-      <SpeakerDetails speaker={s} />
+      <SpeakerDetails speaker={s} config={config} />
 
       {role === 'board' && (
         <details className="mt-12 border-t border-border pt-6">
@@ -230,12 +230,21 @@ export function SpeakerPage() {
   );
 }
 
-function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
+function SpeakerDetails({ speaker: s, config }: { speaker: Speaker; config: Config | null }) {
   const eventFields: { label: string; value: string }[] = [
     { label: 'Edition', value: s.edition_code },
     { label: 'Date', value: s.date },
     { label: 'Time (Paris)', value: s.time },
-    { label: 'Zoom link', value: s.zoom_link },
+    // The way into the room, from whichever source has it. This read
+    // `s.zoom_link` alone, so on an instance whose account is one permanent
+    // room -- where that field is empty by design (D-06) -- the panel a
+    // volunteer checks before the seminar showed no room at all, while every
+    // registrant was being sent one. The record and the message now answer
+    // from the same composition (`state/derived.ts::roomText`).
+    //
+    // Safe to draw here because this cockpit is private (D-15), and
+    // `publish-showcase.yml` refuses to publish a build carrying a room.
+    { label: 'Room', value: roomText(s, config) },
     { label: 'YouTube URL', value: s.youtube_url },
     { label: 'Forum thread', value: s.forum_thread },
   ].filter(f => f.value);

@@ -181,9 +181,9 @@ jobs:
       # mode. A field can be non-empty in production and still be empty
       # in every fixture a test happens to carry.
       #
-      # Reads `instance/data/speakers.yml`'s own `zoom_link`
-      # directly, never `instance/public-data/events-public.json` -- that file no
-      # longer carries the room link under any name. It used to, as
+      # Reads the private records directly, never
+      # `instance/public-data/events-public.json` -- that file no longer
+      # carries the room link under any name. It used to, as
       # `registration_link` (`public_data.py::PUBLIC_FIELD_SOURCES`), a
       # name that read as exactly the opposite of what it carried once
       # the event page gained its own registration form. Somebody working
@@ -191,22 +191,37 @@ jobs:
       # register at. The mapping is gone rather than renamed, so the one
       # place left to learn what a leak would look like is the private
       # record the room link actually lives in.
-      - name: Refuse to publish a page that leaks the room link
+      #
+      # **Both sources.** This step used to read `speakers.yml`'s own
+      # `zoom_link` and nothing else. On an instance whose account is one
+      # permanent room that field is empty on every record by design (D-06)
+      # and the address, with its access code, lives in
+      # `instance/data/config.yml` -- so the guard printed "nothing to
+      # check" and checked nothing, on the one shape of instance where what
+      # it protects is a standing code rather than a single event's URL.
+      # Measured on the instance this product was derived for: two editions
+      # at `scheduled`, both with an empty `zoom_link`, and a series room in
+      # the configuration that this step never looked at.
+      #
+      # The reading itself is `public_data.room_strings`, not a script in
+      # this file: inline Python in YAML is Python no test can run, and this
+      # one decides whether a build ships.
+      - name: Refuse to publish a page that leaks the room
         run: |
           set -e
           links=$(uv run --frozen --project tools python -c '
           from convener_ops.declaration.paths import repo_root
           from convener_ops.declaration.yaml_safe import safe_load
+          from convener_ops.publication.public_data import room_strings
 
-          speakers = safe_load(
-              (repo_root() / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
-          )
-          for entry in speakers:
-              if isinstance(entry, dict) and entry.get("zoom_link"):
-                  print(entry["zoom_link"])
+          root = repo_root() / "instance" / "data"
+          print("\n".join(room_strings(
+              safe_load((root / "speakers.yml").read_text(encoding="utf-8")) or [],
+              safe_load((root / "config.yml").read_text(encoding="utf-8")) or {},
+          )))
           ')
           if [ -z "$links" ]; then
-            echo "no speaker record carries a room link -- nothing to check"
+            echo "no record and no series instructions carry a room -- nothing to check"
             exit 0
           fi
           leaked=0

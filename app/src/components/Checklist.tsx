@@ -122,7 +122,7 @@ interface RowProps {
 function Row({ item, speaker, config, inWindow, disabled, onToggle, onField }: RowProps) {
   switch (item.form) {
     case 'content':
-      return <ContentRow item={item} speaker={speaker} />;
+      return <ContentRow item={item} speaker={speaker} config={config} />;
     case 'field':
       return <FieldRow item={item} speaker={speaker} disabled={disabled} onField={onField} />;
     case 'checkbox':
@@ -201,7 +201,18 @@ function Owner({
   );
 }
 
-function ContentRow({ item, speaker }: { item: RunbookItem; speaker: Speaker }) {
+function ContentRow({
+  item,
+  speaker,
+  config,
+}: {
+  item: RunbookItem;
+  speaker: Speaker;
+  // Carried this far for one token: `{{ speaker.room }}` is composed from
+  // the record's own link *and* the series-wide joining instructions, and
+  // the second of those lives only here.
+  config: Config | null;
+}) {
   if (!item.contentKey) return null;
   const today = parisToday();
   return (
@@ -212,7 +223,7 @@ function ContentRow({ item, speaker }: { item: RunbookItem; speaker: Speaker }) 
       <div className="mt-3">
         <InlineContent
           contentKey={item.contentKey}
-          ctx={{ speaker, host: speaker.host_1, today }}
+          ctx={{ speaker, host: speaker.host_1, today, config }}
         />
       </div>
     </details>
@@ -429,7 +440,7 @@ function CheckboxRow({
         <div className="mt-2">
           <InlineContent
             contentKey={item.contentKey}
-            ctx={{ speaker, host: speaker.host_1, today }}
+            ctx={{ speaker, host: speaker.host_1, today, config }}
           />
         </div>
       )}
