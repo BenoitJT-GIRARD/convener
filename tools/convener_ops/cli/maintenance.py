@@ -592,12 +592,22 @@ def check_credential_expiry() -> int:
         # heuristic looks for. Renaming it further to avoid a regular
         # expression would serve the scanner at the reader's expense.
         #
-        # What makes this safe is not the comment. `credential_expiry`
+        # What makes this safe is not this comment. `credential_expiry`
         # refuses anything not shaped like a repository secret's name, so a
         # credential pasted where a name belongs never reaches this line --
         # and the refusal that catches it deliberately repeats nothing,
         # because this is where it would be repeated to.
-        print(line)  # codeql[py/clear-text-logging-sensitive-data]
+        #
+        # A `# codeql[py/clear-text-logging-sensitive-data]` marker was
+        # tried here and is not worth trying again: code scanning ignored
+        # it, and the alert merely moved down the file with the line, which
+        # closed it at the old position and opened it at the new one. That
+        # is easy to read as a fix and is not one. The alert is dismissed
+        # on the record above instead, and only this repository ever raises
+        # it: `security.yml` runs CodeQL on a repository that is not
+        # private, and every duplicate's cockpit is private by design
+        # (D-15).
+        print(line)
     addressed = dispatch(credential_expiry.message(fired, today), os.environ)
     if addressed is not None:
         (root / RENEWALS_BODY).write_text(addressed.body, encoding="utf-8", newline="")
