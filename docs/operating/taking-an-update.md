@@ -152,6 +152,20 @@ One line per clone, and the section below is what it buys. Without it git
 still merges, but it falls back to an ordinary conflict on paths that are
 yours — which is loud and safe, and simply more work than it needs to be.
 
+**And once more, only for the release that introduces a rule.** Git reads
+`.gitattributes` from your working tree, so a merge that brings a new rule is
+judged by the file it is about to replace. Take that file first when a
+release says it changed:
+
+```sh
+git fetch upstream
+git checkout upstream/main -- .gitattributes
+git commit -m "repo: take the merge rules before merging"
+```
+
+Then merge. Each release's *Before you merge this* section says whether this
+applies to it.
+
 ## What never conflicts
 
 Everything the boundary declares: `instance/data/`, `instance/keys/`,
