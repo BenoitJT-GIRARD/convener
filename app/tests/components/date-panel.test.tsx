@@ -123,14 +123,23 @@ function renderFor(record: Speaker, mode: DateMode, backend: { fetchMock: unknow
 
 /** A record at the status the lock-in belongs to, with the talk details in:
  *  `dates.lockBlockers` asks for those alongside the edition number. */
-function confirmed(candidate_dates: Speaker['candidate_dates']): Speaker {
+function confirmed(
+  candidate_dates: Speaker['candidate_dates'],
+  overrides: Partial<Speaker> = {},
+): Speaker {
   return speaker({
     id: 'spk-001',
     name: 'Confirmed One',
     status: 'confirmed',
     title: 'A talk',
     abstract: 'About something',
+    // A record ready to lock carries a way into the room, because locking is
+    // what opens registration. `BOARD_YAML` above has no series
+    // `instructions`, so this is the only source here -- which is the shape
+    // of an instance that opens a room per seminar.
+    zoom_link: 'https://example.test/room/spk-001',
     candidate_dates,
+    ...overrides,
   });
 }
 
@@ -377,6 +386,41 @@ describe('what the speaker replies while the invitation is out', () => {
     for (const line of BOARD_YAML.split('\n').filter(l => l.startsWith('#'))) {
       expect(backend.configWrites[0], line).toContain(line);
     }
+  });
+
+  it('will not lock a date until there is a way into the room', async () => {
+    // The panel's own wiring, not the rule underneath it. `BOARD_YAML` here
+    // declares no series `instructions`, so this is an instance that opens a
+    // room per seminar -- and a record with no link of its own has nowhere
+    // to send the first person who registers, which locking is what allows.
+    const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }], {
+      zoom_link: '',
+    });
+    const backend = makeBackend([s]);
+    renderFor(s, 'lock', backend);
+
+    // The edition first, so the only thing still missing is the room and the
+    // reading below cannot pass for the wrong reason.
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest the next code' }));
+      const box = screen.getByPlaceholderText(`${editionCodePrefix()}N`) as HTMLInputElement;
+      expect(box.value).not.toBe('');
+    });
+    expect(screen.getByText(/^A way into the room/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Lock this date/ })).toBeDisabled();
+
+    // And typing one in the box clears it, in the same write -- the link is
+    // carried in the lock-in's own payload rather than saved separately.
+    fireEvent.change(screen.getByPlaceholderText('https://…'), {
+      target: { value: 'https://example.test/room/typed' },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => expect(backend.current()[0].status).toBe('scheduled'));
+    expect(backend.current()[0].zoom_link).toBe('https://example.test/room/typed');
   });
 
   it('decides a suggested code against the records the write lands on', async () => {

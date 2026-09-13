@@ -307,7 +307,7 @@ export const PHASES: PhaseDef[] = [
         // e-mail asking a contact at another institute to open the room; the
         // series holds the meeting account itself now, so the link is either
         // the platform's or one somebody types in, and there is nobody left
-        // to write to. The line itself stays: the link still has to exist.
+        // to write to.
         key: 'scheduled/T-14/zoom-link',
         // A field, not a tick. Ticking "in hand" left the link in somebody's
         // hand and not on the record: `ManualPlatform.get_room` reads it,
@@ -317,6 +317,17 @@ export const PHASES: PhaseDef[] = [
         // which `SpeakerPage` opens for the Board alone -- so a host who is
         // an organizer could not record the fact their own step exists to
         // produce.
+        //
+        // **This is no longer where the room is obtained.** A record cannot
+        // reach `scheduled` at all without a way into it
+        // (`state/dates.ts::lockBlockers`), because locking the date is what
+        // publishes the edition and opens registration -- two weeks before
+        // this line comes round. What is left here is where it is *changed*:
+        // a room moved after the announcement, an edition held somewhere
+        // other than the series room. A `field` is a `fact` rather than a
+        // `task` (`itemKind`), it carries no owner and the inbox never asks
+        // for it, so a line that is already satisfied sits here quietly
+        // rather than reading as work outstanding.
         form: 'field',
         fieldKey: 'zoom_link',
         label: 'Meeting link (leave empty if the series room is used)',

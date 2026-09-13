@@ -33,9 +33,9 @@
  * rest of the agenda are parameters, so every function here can run inside a
  * `mutate` transformation replayed against a freshly-read value.
  */
-import type { CandidateDate, DateAnswer, Speaker } from '../data/types';
+import type { CandidateDate, Config, DateAnswer, Speaker } from '../data/types';
 import { findOverlaps } from './agenda';
-import { dateTimeLine } from './derived';
+import { dateTimeLine, roomOnRecord } from './derived';
 
 declare const acceptedBrand: unique symbol;
 
@@ -232,11 +232,31 @@ export function answerDate(current: Speaker, date: string, answer: DateAnswer): 
  * The order is the screen's own, top to bottom, so the sentence reads down
  * the page rather than across an order chosen here.
  */
-export function lockBlockers(current: Speaker, editionCode: string): string[] {
+export function lockBlockers(
+  current: Speaker,
+  editionCode: string,
+  config: Config | null,
+): string[] {
   const missing: string[] = [];
   if (!current.title) missing.push('Title');
   if (!current.abstract) missing.push('Abstract');
   if (!editionCode) missing.push('Edition');
+  // **Why a way into the room belongs here and not three weeks later.**
+  // Locking a date is what moves the record to `scheduled`, and `scheduled`
+  // is what the whole publication chain keys on: the showcase publishes the
+  // edition, `mint-event-keys.yml` mints its key, the signup relay starts
+  // accepting registrations against it, and `confirmation.py` sends each
+  // registrant the way in. So the first person can be registered, and owed an
+  // address, minutes after this button is pressed.
+  //
+  // The runbook asked for the link at T-14, two weeks *after* all of that.
+  // On an instance whose account is a permanent room the gap was invisible,
+  // because the series instructions carried the address the whole time; on an
+  // instance that opens a room per seminar, a registrant was confirmed for a
+  // seminar and told nothing about where it happened.
+  //
+  // Either source satisfies it -- see `derived.ts::roomOnRecord`.
+  if (!roomOnRecord(current, config)) missing.push('A way into the room');
   return missing;
 }
 
@@ -256,7 +276,12 @@ export function lockBlockers(current: Speaker, editionCode: string): string[] {
  * field: a lock-in that could name an hour other than the one offered is a
  * contradiction the caller should not be able to write.
  */
-export function lockDate(current: Speaker, accepted: AcceptedDate, editionCode: string): Speaker {
+export function lockDate(
+  current: Speaker,
+  accepted: AcceptedDate,
+  editionCode: string,
+  config: Config | null,
+): Speaker {
   const slot = current.candidate_dates.find(c => c.date === accepted && c.answer === 'accepted');
   if (!slot) {
     throw new DateRejected(
@@ -264,12 +289,14 @@ export function lockDate(current: Speaker, accepted: AcceptedDate, editionCode: 
         'locking a date commits them to that evening.',
     );
   }
-  const missing = lockBlockers(current, editionCode);
+  const missing = lockBlockers(current, editionCode, config);
   if (missing.length > 0) {
     throw new DateRejected(
       `${missing.join(', ')} — still to fill in before this date can be locked. ` +
         'The announcement, the poster and the event page are all written from ' +
-        'them, and none of the three can be issued twice.',
+        'them, and none of the three can be issued twice; and registration ' +
+        'opens on this button, so the first person to sign up is owed a way ' +
+        'into the room.',
     );
   }
 

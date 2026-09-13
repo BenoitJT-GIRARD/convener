@@ -69,11 +69,22 @@ export function DatePanel({ speaker, role, mode }: Props) {
   // stale the moment anybody else locks a date; a code somebody typed is a
   // decision, and is written exactly as given. See `fire`.
   const [suggested, setSuggested] = useState(false);
+  // The room for *this* edition, which starts as whatever the record already
+  // carries -- empty, on an instance whose series instructions hold the
+  // address for every session. It is written with the lock-in rather than on
+  // its own, because it is what satisfies that write's own precondition.
+  const [room, setRoom] = useState(speaker.zoom_link);
   const [busy, setBusy] = useState(false);
   const today = parisToday();
   const locked = busy || !login || !config;
 
   const slots = speaker.candidate_dates.map(c => ({ date: c.date, time: c.time }));
+  // The joining instructions the whole series uses, when this instance has
+  // any. One value for every session, never per event -- D-06 makes the
+  // account itself the permanent room, and `journey/platform.py` spends a
+  // paragraph on why putting it on a record would invite writing different
+  // instructions for a room that is the same room every time.
+  const seriesRoom = (config?.instructions ?? '').trim();
 
   // Asked of the rule, not restated: `proposeDates` is pure, so the offer
   // about to be made is tried here on the values on screen and its refusal
@@ -243,7 +254,11 @@ export function DatePanel({ speaker, role, mode }: Props) {
     }
   }
 
-  const missing = lockBlockers(speaker, edition);
+  // Read against the values on screen, so the star clears as the volunteer
+  // fills the box rather than after a refused save. `zoom_link` is the one
+  // this panel now owns; `config` carries the series instructions, which
+  // satisfy the same requirement on an instance that has them.
+  const missing = lockBlockers({ ...speaker, zoom_link: room }, edition, config);
   const canOffer = mode !== 'lock';
 
   return (
@@ -282,7 +297,9 @@ export function DatePanel({ speaker, role, mode }: Props) {
               <button
                 type="button"
                 disabled={locked}
-                onClick={() => fire('invited-accept', { date: c.date, edition_code: '' })}
+                onClick={() =>
+                  fire('invited-accept', { date: c.date, edition_code: '', zoom_link: '' })
+                }
                 className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-dominant text-white border-2 border-dominant hover:bg-dominant-hover disabled:opacity-50"
               >
                 They can make this one &rarr;
@@ -302,7 +319,9 @@ export function DatePanel({ speaker, role, mode }: Props) {
               <button
                 type="button"
                 disabled={locked || missing.length > 0}
-                onClick={() => fire('lock-date', { date: c.date, edition_code: edition })}
+                onClick={() =>
+                  fire('lock-date', { date: c.date, edition_code: edition, zoom_link: room })
+                }
                 className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-dominant text-white border-2 border-dominant hover:bg-dominant-hover disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Lock this date &rarr;
@@ -376,6 +395,40 @@ export function DatePanel({ speaker, role, mode }: Props) {
           >
             Suggest the next code
           </button>
+        </div>
+      )}
+
+      {mode === 'lock' && (
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-mono uppercase text-ink-muted">
+              Room
+              {/* Starred only when nothing else answers for it. On an
+                  instance whose series instructions carry the address, this
+                  box is an override and leaving it empty is the ordinary
+                  case -- so a star here would mark a field nobody needs to
+                  fill. */}
+              {!seriesRoom && !room && <span className="text-danger ml-1">*</span>}
+            </span>
+            <input
+              type="text"
+              placeholder={seriesRoom ? 'only if this edition uses a different room' : 'https://…'}
+              value={room}
+              onChange={e => setRoom(e.target.value)}
+              className="px-2 py-1 text-sm font-mono flex-1 min-w-48"
+            />
+          </label>
+          {/* What the registrants will be told when the box is left empty.
+              Shown rather than assumed: the address lives in
+              `instance/data/config.yml` and no screen exposed it, so a
+              volunteer locking a date could not see what the person signing
+              up an hour later would receive. */}
+          {seriesRoom && !room && (
+            <p className="text-xs text-ink-muted">
+              Registrants are sent the series room:{' '}
+              <span className="font-mono whitespace-pre-line">{seriesRoom}</span>
+            </p>
+          )}
         </div>
       )}
 

@@ -10,8 +10,8 @@ import {
   proposeDates,
   type AcceptedDate,
 } from '../../src/state/dates';
-import type { CandidateDate, DateAnswer, Speaker } from '../../src/data/types';
-import { speaker as double, speakersYaml } from '../helpers/data-doubles';
+import type { CandidateDate, Config, DateAnswer, Speaker } from '../../src/data/types';
+import { config as configDouble, speaker as double, speakersYaml } from '../helpers/data-doubles';
 import cases from '../../../tools/tests/fixtures/governance-cases.json';
 import { parseSpeakers } from '../../src/data/yaml';
 
@@ -29,10 +29,26 @@ function withCandidates(candidate_dates: CandidateDate[], overrides: Partial<Spe
     status: 'confirmed',
     title: 'A talk with a title',
     abstract: 'And an abstract.',
+    // A record ready to be locked has a way into the room on it, because
+    // that is now part of what ready means: locking is what opens
+    // registration, and the first person to sign up is owed an address.
+    // The overrides below take it away again where that is the subject.
+    zoom_link: 'https://example.test/room/spk-001',
     candidate_dates,
     ...overrides,
   });
 }
+
+/** An instance whose series instructions carry the address for every
+ *  session -- the permanent-room account of D-06, where a record's own
+ *  `zoom_link` is empty by design. */
+const SERIES_ROOM: Config = configDouble({
+  instructions: 'Join online: https://example.test/series\nAccess code: 123456',
+});
+
+/** An instance that opens a room per seminar, so nothing series-wide
+ *  answers for one edition. */
+const NO_SERIES_ROOM: Config = configDouble({ instructions: '' });
 
 /** Somebody else's evening, already in the diary. `scheduled` is one of the
  *  statuses `findOverlaps` counts. */
@@ -181,19 +197,19 @@ describe('locking a date', () => {
   it('cannot lock a date the speaker did not accept', () => {
     const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: '' }]);
     // @ts-expect-error a date that was not accepted is not an AcceptedDate
-    expect(() => lockDate(s, '2026-10-01', 'MRG-09')).toThrow(DateRejected);
+    expect(() => lockDate(s, '2026-10-01', 'MRG-09', NO_SERIES_ROOM)).toThrow(DateRejected);
   });
 
   it('cannot lock a date the speaker declined', () => {
     const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'declined' }]);
     // @ts-expect-error a declined date is not an AcceptedDate
-    expect(() => lockDate(s, '2026-10-01', 'MRG-09')).toThrow(/not a date this speaker has accepted/);
+    expect(() => lockDate(s, '2026-10-01', 'MRG-09', NO_SERIES_ROOM)).toThrow(/not a date this speaker has accepted/);
   });
 
   it('cannot lock a date that was never offered at all', () => {
     const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
     // @ts-expect-error free text is not an AcceptedDate
-    expect(() => lockDate(s, '2026-12-24', 'MRG-09')).toThrow(DateRejected);
+    expect(() => lockDate(s, '2026-12-24', 'MRG-09', NO_SERIES_ROOM)).toThrow(DateRejected);
   });
 
   it('re-reads the answer from the record it is given, not from the brand in hand', () => {
@@ -203,7 +219,7 @@ describe('locking a date', () => {
     // acceptance. `mutate` replays the transformation against what the
     // record says now, and what it says now is no.
     const afterWithdrawal = answerDate(s, '2026-10-01', 'declined').speaker;
-    expect(() => lockDate(afterWithdrawal, accepted, 'MRG-09')).toThrow(DateRejected);
+    expect(() => lockDate(afterWithdrawal, accepted, 'MRG-09', NO_SERIES_ROOM)).toThrow(DateRejected);
   });
 
   it('takes the hour from the slot the speaker accepted', () => {
@@ -212,7 +228,7 @@ describe('locking a date', () => {
       { date: '2026-10-08', time: '20:30', answer: 'accepted' },
     ]);
     const [accepted] = acceptedDates(s);
-    const next = lockDate(s, accepted, 'MRG-09');
+    const next = lockDate(s, accepted, 'MRG-09', NO_SERIES_ROOM);
     expect(next.status).toBe('scheduled');
     expect(next.date).toBe('2026-10-08');
     expect(next.time).toBe('20:30');
@@ -224,7 +240,7 @@ describe('locking a date', () => {
 
   it('refuses to lock without an edition number, and names it', () => {
     const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
-    expect(() => lockDate(s, acceptedDates(s)[0], '')).toThrow(/^Edition — still to fill in/);
+    expect(() => lockDate(s, acceptedDates(s)[0], '', NO_SERIES_ROOM)).toThrow(/^Edition — still to fill in/);
   });
 
   it('refuses to lock without the talk details, and names each of them', () => {
@@ -236,14 +252,78 @@ describe('locking a date', () => {
       title: '',
       abstract: '',
     });
-    expect(lockBlockers(s, '')).toEqual(['Title', 'Abstract', 'Edition']);
-    expect(lockBlockers(s, 'MRG-09')).toEqual(['Title', 'Abstract']);
-    expect(() => lockDate(s, acceptedDates(s)[0], 'MRG-09')).toThrow(/^Title, Abstract —/);
+    expect(lockBlockers(s, '', NO_SERIES_ROOM)).toEqual(['Title', 'Abstract', 'Edition']);
+    expect(lockBlockers(s, 'MRG-09', NO_SERIES_ROOM)).toEqual(['Title', 'Abstract']);
+    expect(() => lockDate(s, acceptedDates(s)[0], 'MRG-09', NO_SERIES_ROOM)).toThrow(
+      /^Title, Abstract —/,
+    );
   });
 
-  it('has nothing left to name once the three are in', () => {
+  it('has nothing left to name once the four are in', () => {
     const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
-    expect(lockBlockers(s, 'MRG-09')).toEqual([]);
+    expect(lockBlockers(s, 'MRG-09', NO_SERIES_ROOM)).toEqual([]);
+  });
+
+  it('refuses to lock with no way into the room, and names it', () => {
+    // The chain this guards, each link verified rather than assumed:
+    // lock-date -> `scheduled`; `scheduled` -> the showcase publishes the
+    // edition and `mint-event-keys.yml` mints its key; a published key ->
+    // the signup relay accepts registrations; a registration ->
+    // `confirmation.py` sends the way in. So a lock-in with no room means a
+    // person is confirmed for a seminar and told nothing about where it is.
+    const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }], {
+      zoom_link: '',
+    });
+    expect(lockBlockers(s, 'MRG-09', NO_SERIES_ROOM)).toEqual(['A way into the room']);
+    expect(() => lockDate(s, acceptedDates(s)[0], 'MRG-09', NO_SERIES_ROOM)).toThrow(
+      /^A way into the room — still to fill in/,
+    );
+  });
+
+  it('takes the series instructions as the way in, with no link on the record', () => {
+    // D-06: on a permanent-room account the account *is* the room, so the
+    // per-event field is empty by design and the address is one value for
+    // the whole series. Requiring `zoom_link` alone would make every such
+    // instance paste the same URL onto every record -- and leave the old
+    // ones pointing at a dead room the day it changed.
+    const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }], {
+      zoom_link: '',
+    });
+    expect(lockBlockers(s, 'MRG-09', SERIES_ROOM)).toEqual([]);
+    expect(lockDate(s, acceptedDates(s)[0], 'MRG-09', SERIES_ROOM).status).toBe('scheduled');
+  });
+
+  it('takes the record’s own link as the way in, with no series instructions', () => {
+    const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
+    expect(lockBlockers(s, 'MRG-09', NO_SERIES_ROOM)).toEqual([]);
+  });
+
+  it('reads a config that has not loaded as no series instructions', () => {
+    // What a screen holds while the data is in flight. A record with its own
+    // link still answers, and one without does not -- the same answer a
+    // loaded config with no instructions would give.
+    const withLink = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }]);
+    const without = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }], {
+      zoom_link: '',
+    });
+    expect(lockBlockers(withLink, 'MRG-09', null)).toEqual([]);
+    expect(lockBlockers(without, 'MRG-09', null)).toEqual(['A way into the room']);
+  });
+
+  it('names the room last, after the three that were already there', () => {
+    // The order the screen reads down the page, which is the reason the list
+    // exists rather than four separate refusals.
+    const s = withCandidates([{ date: '2026-10-01', time: '16:00', answer: 'accepted' }], {
+      title: '',
+      abstract: '',
+      zoom_link: '',
+    });
+    expect(lockBlockers(s, '', NO_SERIES_ROOM)).toEqual([
+      'Title',
+      'Abstract',
+      'Edition',
+      'A way into the room',
+    ]);
   });
 
   it('accepts what answerDate hands back, in one negotiation', () => {
@@ -256,7 +336,7 @@ describe('locking a date', () => {
     );
     const { speaker, accepted } = answerDate(offered, '2026-10-01', 'accepted');
     expect(accepted).not.toBeNull();
-    expect(lockDate(speaker, accepted as AcceptedDate, 'MRG-09').date).toBe('2026-10-01');
+    expect(lockDate(speaker, accepted as AcceptedDate, 'MRG-09', NO_SERIES_ROOM).date).toBe('2026-10-01');
   });
 });
 

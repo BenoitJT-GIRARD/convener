@@ -233,6 +233,7 @@ describe('transitions v2', () => {
     const next = applyTransition(s, 'invited-accept', '', cfg, '2026-05-23', {
       date: '2026-08-08',
       edition_code: '',
+      zoom_link: 'https://example.test/room',
     });
     expect(next.status).toBe('confirmed');
     expect(next.candidate_dates.map(c => c.answer)).toEqual(['', 'accepted']);
@@ -251,6 +252,7 @@ describe('transitions v2', () => {
       applyTransition(s, 'invited-accept', '', cfg, '2026-05-23', {
         date: '2026-08-08',
         edition_code: '',
+        zoom_link: 'https://example.test/room',
       }),
     ).toThrow(/never put to this speaker/);
   });
@@ -276,6 +278,7 @@ describe('transitions v2', () => {
     const next = applyTransition(s, 'lock-date', '', cfg, '2026-05-23', {
       date: '2026-08-01',
       edition_code: 'MRG-07',
+      zoom_link: 'https://example.test/room',
     });
     expect(next.status).toBe('scheduled');
     expect(next.date).toBe('2026-08-01');
@@ -298,12 +301,14 @@ describe('transitions v2', () => {
       applyTransition(unanswered, 'lock-date', '', cfg, '2026-05-23', {
         date: '2026-08-01',
         edition_code: 'MRG-07',
+        zoom_link: 'https://example.test/room',
       }),
     ).toThrow(DateRejected);
     expect(() =>
       applyTransition(unanswered, 'lock-date', '', cfg, '2026-05-23', {
         date: '2026-09-09',
         edition_code: 'MRG-07',
+        zoom_link: 'https://example.test/room',
       }),
     ).toThrow(/not a date this speaker has accepted/);
   });
@@ -384,8 +389,8 @@ describe('transitions v2', () => {
     ];
     const payloads: Partial<Record<Transition, TransitionPayload>> = {
       'ballot-cast': cast(),
-      'invited-accept': { date: '2026-06-01', edition_code: '' },
-      'lock-date': { date: '2026-06-01', edition_code: 'MRG-09' },
+      'invited-accept': { date: '2026-06-01', edition_code: '', zoom_link: '' },
+      'lock-date': { date: '2026-06-01', edition_code: 'MRG-09', zoom_link: '' },
       'consent-set': { consent: 'granted' },
       'publication-object': { reason: 'wait' },
       'publication-resolve': { resolution: 'lift', note: 'ok' },

@@ -47,11 +47,21 @@ export type Transition =
  *  an evening other than the one that was offered and agreed.
  *
  *  `invited-accept` is applied with the same shape and ignores
- *  `edition_code`: an acceptance is the acceptance *of an evening*, and the
- *  edition number is not chosen until the date is frozen a status later. */
+ *  `edition_code` and `zoom_link`: an acceptance is the acceptance *of an
+ *  evening*, and neither the edition number nor the room is settled until the
+ *  date is frozen a status later.
+ *
+ *  `zoom_link` rides along rather than being written on its own because the
+ *  two belong to one act. `lockBlockers` refuses a lock-in with no way into
+ *  the room, and the link the volunteer just typed is what satisfies it -- so
+ *  it has to be part of the value the precondition is judged against, not a
+ *  second write that might not follow. It is the record's own link; an empty
+ *  string is the ordinary answer on an instance whose series instructions
+ *  carry the address for every session (D-06). */
 export interface LockDatePayload {
   date: string;
   edition_code: string;
+  zoom_link: string;
 }
 
 export interface OverridePayload {
@@ -338,7 +348,12 @@ export function applyTransition(
             'locking a date commits them to that evening.',
         );
       }
-      return lockDate(s, accepted, p.edition_code);
+      // Judged against the record *including* the room about to be written.
+      // The volunteer typing a link in the panel is what satisfies
+      // `lockBlockers`, and a precondition that read the stored value would
+      // refuse the very write that fixes it.
+      const withRoom = p.zoom_link === s.zoom_link ? s : { ...s, zoom_link: p.zoom_link };
+      return lockDate(withRoom, accepted, p.edition_code, config);
     }
     case 'cancel-edition':
       // The status and nothing else. The edition code stays on the record and
