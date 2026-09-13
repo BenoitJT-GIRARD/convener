@@ -4068,29 +4068,53 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
 
 
 # ------------------------------------------------------------------ #
-# Pinning the *narrowness* of the secret
-# monitor's own job guard.
+# The secret monitor's job guard: it must ask
+# the *fact*, and never a proxy for it.
 #
-# The guard rests on documented platform behaviour -- GitHub starts a
-# `schedule:` or `repository_dispatch:` run only from the default branch
-# -- which no offline test can execute. What a test can hold is the thing
-# that would actually go wrong later: somebody widening that guard to
-# skip `push` too, or replacing it with "only run for
-# `workflow_dispatch`". Both would save more minutes, and both would rest
-# on a property of the nineteen *watched* files (that none of them has a
-# `push:` trigger outside `branches: [main]`) rather than on anything the
-# platform promises -- so the day one of those files loses its branch
-# filter, the monitor would stop looking exactly where it had started to
-# matter, and in silence. That trade -- minutes saved against a control
-# that keeps looking -- is settled on the side that keeps the control;
-# this is what keeps it settled.
+# The distinction this section exists to hold is one word wide, and
+# getting it wrong costs either a control or half the repository's
+# compute budget -- both of which have now actually happened here.
+#
+# **A proxy is refused.** A guard on the triggering run's *event name*
+# ("skip `push` too", "run only for `workflow_dispatch`") is a statement
+# about the nineteen *watched* files -- that none of them has a `push:`
+# trigger outside `branches: [main]`. The platform promises nothing of
+# the sort. The day one of those files loses its branch filter, such a
+# guard goes quietly false exactly where it had started to matter.
+#
+# **The fact is required.** `github.event.workflow_run.head_branch` is
+# the branch the run was actually requested against, reported by the
+# platform for the run in hand. It is the same value
+# `dispatch_alert.alert_message` decides on -- that function returns
+# `None` exactly when it equals `MAIN_BRANCH` -- so a guard on it can
+# skip only runs the function would have passed over in silence anyway.
+# There is no watched-file property in it to come apart.
+#
+# The earlier version of this section pinned "no clause beyond the two
+# event comparisons", which reads as caution and was not: it generalised
+# a correct argument about *event-name* proxies into a ban on the one
+# term that is not a proxy. The monitor consequently started a full
+# Python toolchain on every push to answer a question already in the
+# payload -- measured at 465 of 874 minutes on the derived instance over
+# 400 runs, 53% of everything, with 56 runs failing on their own
+# five-minute ceiling before the account's included minutes ran out. The
+# tests below hold the distinction itself, so neither failure can come
+# back: the guard must read the branch, and must not narrow on the event.
 # ------------------------------------------------------------------ #
 
 #: A comparison of the *triggering run's* own event against a literal --
 #: `github.event.workflow_run.event`, never `github.event_name`, which on
-#: this workflow is always the constant `workflow_run`.
+#: this workflow is always the constant `workflow_run`. Finding one of
+#: these in the guard is the failure, not the requirement.
 _TRIGGERING_EVENT_TEST_RE = re.compile(
     r"github\.event\.workflow_run\.event\s*(==|!=)\s*'([a-z_]+)'"
+)
+
+#: The comparison the guard must be made of: the triggering run's own
+#: branch against a literal. The operator is captured because its
+#: direction is a safety property -- see the test below.
+_HEAD_BRANCH_TEST_RE = re.compile(
+    r"github\.event\.workflow_run\.head_branch\s*(==|!=)\s*'([A-Za-z0-9._/-]+)'"
 )
 
 
@@ -4099,8 +4123,8 @@ def _guard_event_tests(guard: str) -> tuple[set[str], set[str], str]:
 
     The leftover is what makes this useful: an added `||`, a second
     context, or any other term stays behind once the comparisons are
-    removed, so a guard that grew a clause cannot pass merely by having
-    the two right event names among several.
+    removed, so a guard cannot pass merely by having a right-looking
+    term among several.
     """
     found = _TRIGGERING_EVENT_TEST_RE.findall(guard)
     leftover = _TRIGGERING_EVENT_TEST_RE.sub("", guard).replace("&&", "")
@@ -4111,68 +4135,158 @@ def _guard_event_tests(guard: str) -> tuple[set[str], set[str], str]:
     )
 
 
-def test_the_guard_reader_sees_a_widened_guard_for_what_it_is() -> None:
-    """Positive control, on probes rather than on the real file: the
-    reader has to tell the narrow guard apart from both widenings that
-    would be tempting later, or it proves nothing about the real one."""
-    narrow = (
+def _guard_branch_tests(guard: str) -> tuple[set[str], set[str], str]:
+    """`(operators, branch names, whatever is left)`, the same shape."""
+    found = _HEAD_BRANCH_TEST_RE.findall(guard)
+    leftover = _HEAD_BRANCH_TEST_RE.sub("", guard).replace("&&", "")
+    return (
+        {operator for operator, _ in found},
+        {branch for _, branch in found},
+        " ".join(leftover.split()),
+    )
+
+
+def test_the_guard_reader_tells_the_fact_from_the_proxy() -> None:
+    """Positive control, on probes rather than on the real file: the two
+    readers have to tell apart the guard that asks the branch, the
+    guards that narrow on the event name, and a guard that does both --
+    or they prove nothing about the real one."""
+    fact = "github.event.workflow_run.head_branch != 'main'"
+    assert _guard_branch_tests(fact) == ({"!="}, {"main"}, "")
+    assert _guard_event_tests(fact)[1] == set(), "no event comparison here"
+
+    proxy = (
         "github.event.workflow_run.event != 'schedule' && "
         "github.event.workflow_run.event != 'repository_dispatch'"
     )
-    assert _guard_event_tests(narrow) == (
+    assert _guard_event_tests(proxy) == (
         {"!="},
         {"schedule", "repository_dispatch"},
         "",
     )
+    assert _guard_branch_tests(proxy)[1] == set(), "no branch comparison here"
 
-    wider = "github.event.workflow_run.event == 'workflow_dispatch'"
-    assert _guard_event_tests(wider) == ({"=="}, {"workflow_dispatch"}, "")
+    widest = "github.event.workflow_run.event == 'workflow_dispatch'"
+    assert _guard_event_tests(widest) == ({"=="}, {"workflow_dispatch"}, "")
 
-    smuggled = (
-        "github.event.workflow_run.event != 'schedule' && "
-        "github.event.workflow_run.event != 'repository_dispatch' && "
-        "github.event.workflow_run.head_branch != 'main'"
+    both = f"{proxy} && {fact}"
+    assert _guard_event_tests(both)[1] == {"schedule", "repository_dispatch"}
+    assert _guard_branch_tests(both)[1] == {"main"}
+
+    inverted = "github.event.workflow_run.head_branch == 'main'"
+    assert _guard_branch_tests(inverted)[0] == {"=="}, (
+        "the reader has to report the operator, because an inverted "
+        "comparison is the one mutation that reverses this guard's "
+        "meaning while keeping every other property it is checked for"
     )
-    _, events, leftover = _guard_event_tests(smuggled)
-    assert events == {"schedule", "repository_dispatch"}
-    assert leftover, "an extra clause must survive as leftover, not vanish"
 
 
-def test_the_monitor_skips_only_the_two_events_that_cannot_leave_main() -> None:
-    """The two events GitHub can only ever start from the default branch,
-    and no third. `push` in particular stays watched on purpose: a watched
-    workflow that one day loses its `branches: [main]` has to still be
-    seen, and that is the whole difference between this guard and a
-    wider one that would save minutes by no longer looking."""
+def test_the_monitor_guards_on_the_branch_the_alert_decides_on() -> None:
+    """The guard is the alert's own condition, hoisted into an expression
+    the platform evaluates for free.
+
+    A skipped job starts no runner and is billed nothing, so on `main`
+    this control now costs what it is worth -- and off `main`, which is
+    the only case `alert_message` ever speaks in, it runs exactly as it
+    did.
+    """
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
     guard = monitor["jobs"]["monitor"]["if"]
     assert isinstance(guard, str) and guard, (
         "secret-workflow-monitor.yml's own job carries no `if:` at all -- "
-        "the guard was reverted, and the monitor is spending five minutes "
-        "of ceiling on every scheduled and dispatched run to answer a "
-        "question whose answer is a constant"
+        "the guard was reverted, and the monitor is starting a runner on "
+        "every run of all twenty watched workflows to answer a question "
+        "that is already in the event payload"
     )
 
-    operators, events, leftover = _guard_event_tests(guard)
-    assert events == {"schedule", "repository_dispatch"}, (
-        f"the monitor's job guard names {sorted(events)} -- it may only "
-        "ever skip the two events GitHub starts from the default branch "
-        "and nothing else; anything wider rests on the *watched* files "
-        "keeping their `branches: [main]`, which is not a platform "
-        "guarantee and not what this monitor is for"
+    operators, branches, leftover = _guard_branch_tests(guard)
+    assert branches, (
+        "the monitor's job guard does not test "
+        "`github.event.workflow_run.head_branch` at all -- that value is "
+        "the branch the triggering run was requested against, and it is "
+        "the only term in this guard that is the fact rather than a "
+        "proxy for it"
     )
     assert operators == {"!="}, (
-        f"the guard tests the triggering event with {sorted(operators)} -- "
-        "it must exclude those two events, never select for some other one"
+        f"the guard compares the branch with {sorted(operators)} -- it "
+        "must be `!=`, so that a run whose branch is *absent* (GitHub "
+        "omits `head_branch` once a branch is deleted) compares unequal, "
+        "runs the job, and is reported. An `==` test, however it is "
+        "negated further out, makes the unknown case read as safe"
     )
     assert leftover == "", (
-        "the guard carries a clause beyond those two comparisons: "
-        f"{leftover!r} -- every event this monitor can still see must stay "
-        "visible"
+        f"the guard carries a term beyond the branch comparison: {leftover!r}"
     )
     assert "||" not in guard, (
-        "the guard joins its comparisons with `||`, so a run only has to "
-        "not be one of the two to be skipped -- it must be neither"
+        "the guard joins its terms with `||`, so a run only has to fail "
+        "one of them to be watched -- every term here must hold"
+    )
+
+    _, events, _ = _guard_event_tests(guard)
+    assert events == set(), (
+        f"the guard narrows on the triggering event name {sorted(events)} "
+        "-- that is a statement about the *watched* workflows keeping "
+        "their `branches: [main]`, which the platform does not promise. "
+        "The branch comparison above already skips every run this "
+        "monitor has nothing to say about, including the scheduled and "
+        "dispatched ones, so an event test can now only subtract "
+        "detection"
+    )
+
+
+def test_the_branch_the_guard_names_is_the_branch_the_alert_is_silent_for() -> None:
+    """The one literal, in two files.
+
+    `alert_message` returns `None` exactly when `head_branch ==
+    MAIN_BRANCH`; the guard skips the job exactly when the same value
+    equals its own literal. If those two ever name different branches,
+    the guard stops being the function's own condition and starts being
+    a second opinion about it -- silently dropping the runs the function
+    would have reported.
+    """
+    from convener_ops.governance import dispatch_alert
+
+    monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
+    _, branches, _ = _guard_branch_tests(monitor["jobs"]["monitor"]["if"])
+
+    assert branches == {dispatch_alert.MAIN_BRANCH}, (
+        f"secret-workflow-monitor.yml's guard skips {sorted(branches)} but "
+        f"dispatch_alert.MAIN_BRANCH is {dispatch_alert.MAIN_BRANCH!r} -- "
+        "the guard must name the branch the alert itself is silent for"
+    )
+
+
+def test_the_alert_is_silent_for_exactly_the_branch_the_guard_skips() -> None:
+    """The other direction, executed rather than read: the guard is only
+    safe because `alert_message` has nothing to say for that branch and
+    something to say for every other. This runs the function, so a change
+    to *it* -- an added reason to speak on `main`, a widened silence --
+    fails here rather than in production."""
+    from convener_ops.governance import dispatch_alert
+
+    common = {
+        "workflow_name": "Mint event keys",
+        "run_event": "push",
+        "run_url": "https://example.invalid/run/1",
+        "actor": "somebody",
+    }
+
+    assert (
+        dispatch_alert.alert_message(head_branch=dispatch_alert.MAIN_BRANCH, **common)
+        is None
+    ), "the guard skips this branch on the strength of this silence"
+
+    for branch in ("a-side-branch", "release/1.0", ""):
+        assert dispatch_alert.alert_message(head_branch=branch, **common) is not None, (
+            f"alert_message says nothing for {branch!r}, which the job "
+            "guard lets through -- the guard is not the bottleneck here, "
+            "so a silence added to the function is a detection lost with "
+            "nothing in the workflow to notice"
+        )
+
+    assert dispatch_alert.alert_message(head_branch=None, **common) is not None, (
+        "an absent branch must be reported -- it is the case the guard's "
+        "own `!=` is written to let through"
     )
 
 
