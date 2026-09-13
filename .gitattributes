@@ -54,6 +54,16 @@ docs/handbook/governance/register.md merge=ours
 # above. Without it git falls back to the ordinary conflict, which is strictly
 # better than the silence but is not what this asks for, so the page an
 # operator reads before merging says to run it.
+#
+# **"Ours" is whatever tree the merge runs in, and git has no idea which
+# remote it came from.** These rules govern `git merge origin/main` exactly as
+# they govern the upstream one -- and there the clone is the *stale* side,
+# because the cockpit writes to `origin` from volunteers' browsers all day.
+# Measured: a clone two leads behind, merging `origin/main`, discarded both and
+# reported success. So `docs/operating/taking-an-update.md` opens its procedure
+# with `git pull --ff-only`, which consults no merge rule at all and makes
+# "ours" mean the live instance. The attribute is only ever correct against a
+# tree that is already up to date with origin.
 instance/data/** merge=ours
 instance/keys/** merge=ours
 instance/public-data/** merge=ours

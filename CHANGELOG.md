@@ -199,6 +199,23 @@ it carries is what a release does to somebody else's repository:
   `git check-attr` rather than by reading the file, because a pattern that
   matches nothing reads exactly like one that works.
 
+- **The merge rules above govern a second merge, and there they destroy
+  rather than protect.** Git cannot tell one remote from another:
+  `merge=ours` means *this working tree wins*, in every merge the clone
+  performs — including `git merge origin/main`, which is what an operator
+  reaches for after a refused push. In that merge the clone is the **stale**
+  side, because the cockpit writes to `origin` from volunteers’ browsers all
+  day. Measured on real commits: a clone two leads behind, one local edit to
+  the same file, `git merge origin/main` — both leads discarded, git
+  reporting success, nothing in its output naming the file.
+
+  The procedure now opens with `git pull --ff-only origin main`, which
+  consults no merge rule at all and makes yours mean the live instance rather
+  than a clone that has been sitting. A refused push sends you back to that
+  line rather than to `git pull`. Both the page and `.gitattributes` name
+  the second merge now; before this, every word written about these rules was
+  about upstream.
+
 ### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to
