@@ -18,6 +18,7 @@ import { AuthProvider } from '../../src/auth/AuthContext';
 import { DataProvider } from '../../src/data/DataContext';
 import { DatePanel, type DateMode } from '../../src/components/DatePanel';
 import { parseSpeakers, serializeSpeakers } from '../../src/data/yaml';
+import { editionNumber } from '../../src/state/agenda';
 import type { Speaker } from '../../src/data/types';
 
 const BOARD_YAML = boardYaml(['alice', 'bob', 'carol', 'dan']);
@@ -41,6 +42,7 @@ function makeBackend(initial: Speaker[]) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
+  const configWrites: string[] = [];
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
@@ -61,13 +63,25 @@ function makeBackend(initial: Speaker[]) {
         json: async () => ({ content: encodeUtf8(serializeSpeakers(server)), sha }),
       });
     }
+    if (opts?.method === 'PUT') {
+      const body = JSON.parse(opts.body as string);
+      configWrites.push(decodeUtf8(body.content));
+      return Promise.resolve({ ok: true, json: async () => ({ content: { sha: 'cfgsha2' } }) });
+    }
     return Promise.resolve({
       ok: true,
       json: async () => ({ content: encodeUtf8(BOARD_YAML), sha: 'cfgsha' }),
     });
   });
 
-  return { fetchMock, current: () => server };
+  return {
+    fetchMock,
+    current: () => server,
+    /** The bytes of every configuration file this UI sent, in order. The
+     *  edition counter lives there and nowhere else, so a reading about it
+     *  cannot come from `speakers.yml`. */
+    configWrites,
+  };
 }
 
 function renderFor(record: Speaker, mode: DateMode, backend: { fetchMock: unknown }) {
@@ -306,5 +320,49 @@ describe('what the speaker replies while the invitation is out', () => {
       'declined',
       '',
     ]);
+  });
+
+  it('raises the edition counter past the code it just assigned', async () => {
+    // The defect, measured on a live instance: the cockpit assigned that
+    // instance's first edition, `next_edition_number` stayed at 1, and
+    // `sh gates.sh` went red -- over a key no screen exposes, one moment
+    // after this screen reported success. Nothing in either language wrote
+    // the counter; every one of the five places it appears read it.
+    const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }]);
+    const backend = makeBackend([s]);
+    renderFor(s, 'lock', backend);
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest the next code' }));
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => expect(backend.current()[0].status).toBe('scheduled'));
+    const assigned = backend.current()[0].edition_code;
+    const expected = (editionNumber(assigned) ?? 0) + 1;
+
+    await waitFor(() => expect(backend.configWrites).toHaveLength(1));
+    expect(backend.configWrites[0]).toContain(`next_edition_number: ${expected}`);
+  });
+
+  it('writes the record before the counter, so a failure lags rather than burns a number', async () => {
+    // Order, not decoration. A counter raised first and a record that then
+    // failed would burn an edition number nothing ever used -- which shows up
+    // on a poster and cannot be taken back. A record written first and a
+    // counter that then failed is the state this whole change fixes: visible,
+    // loud in `sh gates.sh`, and repaired by the next lock-in.
+    const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }]);
+    const backend = makeBackend([s]);
+    renderFor(s, 'lock', backend);
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest the next code' }));
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => expect(backend.configWrites).toHaveLength(1));
+    expect(backend.current()[0].status).toBe('scheduled');
   });
 });

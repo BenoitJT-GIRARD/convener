@@ -238,6 +238,31 @@ it carries is what a release does to somebody else's repository:
   The claim is made only when both sources are empty now, which is the one
   state in which it is true.
 
+- **Nothing raised the edition counter, so the first edition an instance
+  scheduled turned `sh gates.sh` red.** `next_edition_number` appeared in
+  five places across both languages and every one of them **read** it. So an
+  operator locked their first edition in through the cockpit, the screen
+  reported success, and a gate then failed naming a key they had never heard
+  of and cannot reach from any screen — with a message that said the instance
+  had assigned no edition at all, which was the opposite of what had just
+  happened.
+
+  Nothing was broken by the stale value: `nextEditionCode` walks past
+  whatever codes are taken, so no duplicate code was ever possible. The guard
+  is still right to fail. The counter is a high-water mark rather than a count
+  of rows — it is the one thing left in the repository that a renumbering
+  would have to go through, and the reason it exists is that rows can be
+  cleared while editions stay on posters and in sent mail.
+
+  The cockpit raises it now, in the same act that assigns the code, and it
+  raises it as a **maximum** so a replay against fresher data can never lower
+  it. The record is written first and the counter second: a counter raised
+  first on a record that then failed would burn an edition number nothing
+  used, which shows up on a poster and cannot be taken back, while a counter
+  that lags is exactly the state this fixes — visible, loud, and repaired by
+  the next lock-in. The assertion now says what actually happened, and where
+  to look.
+
 ### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to

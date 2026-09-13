@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
-import { editionCodePrefix, nextEditionCode } from '../state/agenda';
+import { editionCodePrefix, nextEditionCode, raisedEditionCounter } from '../state/agenda';
 import { DateRejected, answerDate, lockBlockers, proposeDates } from '../state/dates';
 import { parisToday } from '../state/derived';
-import { formatDecision, identifier, transitionDecision } from '../state/decisions';
+import {
+  dataEdit,
+  formatDecision,
+  identifier,
+  transitionDecision,
+} from '../state/decisions';
 import {
   applyTransition,
   canTransition,
@@ -54,7 +59,7 @@ interface Props {
 }
 
 export function DatePanel({ speaker, role, mode }: Props) {
-  const { speakers, config, mutateSpeakers } = useData();
+  const { speakers, config, mutateSpeakers, mutateConfig } = useData();
   const { login } = useAuth();
   const [date, setDate] = useState('');
   const [time, setTime] = useState('12:30');
@@ -125,7 +130,7 @@ export function DatePanel({ speaker, role, mode }: Props) {
     if (locked || !config || !login || !canTransition(speaker, transition, role)) return;
     setBusy(true);
     try {
-      await mutateSpeakers(
+      const wrote = await mutateSpeakers(
         current =>
           current.map(sp =>
             sp.id === speaker.id
@@ -136,9 +141,40 @@ export function DatePanel({ speaker, role, mode }: Props) {
           transitionDecision(transition, identifier(speaker.id), identifier(login), payload),
         ),
       );
+      // The record is the act; the counter is the bookkeeping, and it follows
+      // rather than leads. If this second write fails the mark lags, which is
+      // the state this fixes -- visible, loud in `sh gates.sh`, and repaired
+      // by the next lock-in. Raising it first and failing on the record would
+      // burn an edition number nothing ever used, which shows up on a poster
+      // and cannot be taken back.
+      if (wrote && transition === 'lock-date' && payload.edition_code) {
+        await raiseEditionCounter(payload.edition_code);
+      }
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Raise `next_edition_number` past the code just assigned.
+   *
+   *  Nothing did this: the counter appeared in three files of the cockpit and
+   *  two of the tooling, and every one of them read it. So it stayed at 1
+   *  while editions were assigned, and the first instance to schedule an
+   *  edition met a red gate over a value no screen exposes.
+   *
+   *  A separate write from the record's, because they are separate files and
+   *  this application has no two-file transaction. The transform is a
+   *  maximum, so a replay against fresher data -- somebody else locking in at
+   *  the same moment -- cannot lower it.
+   */
+  async function raiseEditionCounter(editionCode: string) {
+    await mutateConfig(
+      current => ({
+        ...current,
+        next_edition_number: raisedEditionCounter(current.next_edition_number, editionCode),
+      }),
+      dataEdit(identifier(speaker.id), { part: 'edition-counter' }),
+    );
   }
 
   /** An evening the speaker cannot make. Not a transition: the record stays

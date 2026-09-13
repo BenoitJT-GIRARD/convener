@@ -1397,7 +1397,11 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
         pytest.skip(_NO_EDITION_ASSIGNED)
 
     assert isinstance(counter, int) and counter > 1, (
-        "this instance has assigned no edition at all"
+        f"{len(assigned)} edition(s) are assigned and next_edition_number is "
+        f"{counter!r}, which says this series has numbered none. The cockpit "
+        "raises the mark when it locks an edition in "
+        "(app/src/components/DatePanel.tsx); an edition assigned any other "
+        "way has to raise it by hand, in instance/data/config.yml."
     )
     assert editions.describes(f"{editions.code_prefix}{counter - 1}")
     assert [code for code in assigned if not editions.describes(code)] == []

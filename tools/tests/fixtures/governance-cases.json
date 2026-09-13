@@ -1888,6 +1888,10 @@
     {
       "name": "the admin form saves the fields it was given",
       "message": "data: spk-001 admin edit"
+    },
+    {
+      "name": "raising the edition counter is bookkeeping, not a decision",
+      "message": "data: spk-001 advance the edition counter"
     }
   ],
   "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/governance/notify.py puts the same ones in the daily digest: one sentence, two readers, so a reword that reaches only one side fails here. Each case carries the whole `config` the two readers take, not just `sla_days`: the board-decision step is timed by `vote_window_days` and the other three by `sla_days`, one number per deadline. The two cases with a vote window other than 14 are what makes that testable rather than merely stated: a reader that hard-coded fourteen days for the board, or read a `lead_decision` key of its own, passes every other case here and fails those two. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",

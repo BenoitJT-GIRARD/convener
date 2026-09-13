@@ -271,6 +271,14 @@ export function itemKey(value: string): ItemKey {
  */
 export type Edit =
   | { part: 'admin-fields' }
+  // Not a part of the record at all, and the one variant that is not: the
+  // edition counter lives in `instance/data/config.yml`, and raising it is
+  // the bookkeeping that follows a lock-in. It carries the speaker whose
+  // lock-in caused it because that is the only honest entity for it -- and
+  // it is a `data:` subject rather than a `config:` one because
+  // `instance/data/config.yml` is this instance's data, not one of the
+  // settings files `CONFIG_DIRS` holds directly.
+  | { part: 'edition-counter' }
   | { part: 'post-archive-metrics' }
   | { part: 'field'; key: FieldKey }
   | { part: 'runbook-box'; key: ItemKey; ticked: boolean }
@@ -282,6 +290,8 @@ function editPart(edit: Edit): string {
   switch (edit.part) {
     case 'admin-fields':
       return 'admin edit';
+    case 'edition-counter':
+      return 'advance the edition counter';
     case 'post-archive-metrics':
       return 'update post-archive metrics';
     case 'field':
@@ -432,7 +442,8 @@ export function isSubject(line: string): line is Subject {
     `^data: (?:${acts}) ${TOKEN_SRC} by ${TOKEN_SRC}(?: \\([A-Za-z0-9 _-]+\\))?$`,
   );
   const edit = new RegExp(
-    `^data: ${TOKEN_SRC} (?:admin edit|update post-archive metrics|set ${KEY_SRC}|` +
+    `^data: ${TOKEN_SRC} (?:admin edit|advance the edition counter|` +
+      `update post-archive metrics|set ${KEY_SRC}|` +
       `runbook ${KEY_SRC}=(?:true|false)|owner for ${KEY_SRC}|owner cleared on ${KEY_SRC})$`,
   );
   // The settings screen's own domain, built from the same two patterns
