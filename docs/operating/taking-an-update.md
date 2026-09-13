@@ -142,11 +142,40 @@ repository is billed against your organisation's Actions allowance — so batch
 several upstream releases into one merge rather than taking each as it lands,
 if you are watching that budget.
 
+## Before your first merge, once
+
+```sh
+git config merge.ours.driver true
+```
+
+One line per clone, and the section below is what it buys. Without it git
+still merges, but it falls back to an ordinary conflict on paths that are
+yours — which is loud and safe, and simply more work than it needs to be.
+
 ## What never conflicts
 
 Everything the boundary declares: `instance/data/`, `instance/keys/`,
 `instance/public-data/`, `instance/config.json`, the four configuration files
-beside it, and `docs/handbook/governance/register.md`. Upstream does not
-write those paths, so nothing arrives to disagree with what you put there.
+beside it, and `docs/handbook/governance/register.md`.
+
+**Not because upstream leaves them alone — because your version wins.** This
+page used to say upstream does not write those paths. That was true while
+nothing upstream had run, and it stopped being true the day it did: upstream
+is itself a running instance, and its own scheduled jobs commit into
+`instance/data/`, `instance/keys/` and `instance/public-data/` exactly as
+yours do. `.gitattributes` gives those three `merge=ours`, so a merge keeps
+your records and drops upstream's, every time, without asking.
+
+That is the resolution rather than a compromise, and it was worth writing
+down: measured on a duplicate one release behind, upstream's own edits went
+into its `instance/data/speakers.yml` with **no conflict at all**, because the
+two sides had changed different regions of the same file. A conflict would
+have been the good outcome.
+
+A file upstream *adds* still arrives — `merge=ours` is consulted only when
+both sides changed the same path — so a new declaration reaches you the
+ordinary way. The four files upstream maintains inside those directories
+(`instance/data/schema.md` and the three `README.md`) are excepted by name,
+and update the ordinary way too.
 [What a duplicate edits](what-a-duplicate-edits.md) is the list, and
 `declarations/boundary.yml` is where it is declared and argued.

@@ -21,3 +21,49 @@ instance/public-data/agenda-internal.ics binary
 # `tools/tests/declaration/test_boundary.py` refuses a `regenerated:` path
 # that is missing this line.
 docs/handbook/governance/register.md merge=ours
+
+# The three directories `declarations/boundary.yml` gives the instance.
+#
+# That declaration says upstream does not *edit* them. It cannot say upstream
+# does not *run*: this repository is itself a running instance, and its own
+# scheduled jobs commit into all three. `sweep-and-notify.yml` writes
+# `speakers.yml`, `queue-watch.yml`, `queue-ledger.yml` and
+# `actions-usage.yml`; `retention.yml` writes `retention-last-run.yml`,
+# `event-key-destructions.yml` and `instance/keys/events`; `deploy.yml` writes
+# all three projections under `public-data`; `candidate-form.yml`,
+# `invite-survey.yml`, `registration.yml` and the certificate workflows write
+# more. Every one is a commit a duplicate's next merge has to do something
+# with.
+#
+# **And the bad outcome is not a conflict.** Measured on a duplicate one
+# release behind: upstream's own edits merged into the duplicate's
+# `instance/data/speakers.yml` with *no* conflict at all, because the header
+# and the records occupy different regions of the file and git applied
+# upstream's hunks in silence. A conflict would have been the good outcome --
+# loud, and a person gets to decide. `docs/operating/taking-an-update.md` promised these
+# paths never conflict, which was true when nothing upstream had run yet and
+# read as a promise that nothing arrives.
+#
+# So this is the resolution written down, and it is the same one the register
+# above gets for the same reason: a duplicate's records are the duplicate's.
+# It does not stop a *new* file arriving -- `merge=ours` is consulted only
+# when both sides changed the same path, and the same measured merge created
+# `instance/data/queue-watch.yml` normally.
+#
+# Needs `git config merge.ours.driver true`, once per clone, like the register
+# above. Without it git falls back to the ordinary conflict, which is strictly
+# better than the silence but is not what this asks for, so the page an
+# operator reads before merging says to run it.
+instance/data/** merge=ours
+instance/keys/** merge=ours
+instance/public-data/** merge=ours
+
+# Except the files upstream keeps inside those directories, which
+# `boundary.yml` declares `kept:` and an instance never edits. `!merge` leaves
+# the attribute unspecified -- the ordinary three-way merge -- rather than
+# `-merge`, which would mean "take ours and declare a conflict" and is the
+# opposite of the intent.
+instance/data/schema.md !merge
+instance/keys/events/README.md !merge
+instance/keys/signing/README.md !merge
+instance/public-data/README.md !merge
