@@ -21,7 +21,16 @@ import { parseSpeakers, serializeSpeakers } from '../../src/data/yaml';
 import { editionNumber } from '../../src/state/agenda';
 import type { Speaker } from '../../src/data/types';
 
-const BOARD_YAML = boardYaml(['alice', 'bob', 'carol', 'dan']);
+/** The board double with prose in it, which is what a real `config.yml` is:
+ *  on the shipped example, 27 comment lines carrying the arbitration behind
+ *  every value. A write of this file used to replace all of it with a
+ *  one-line constant. */
+const BOARD_YAML = [
+  '# Editorial Board, the season, and the thresholds a vote is measured against.',
+  '# Written by whoever stood this instance up; nothing upstream rewrites it.',
+  boardYaml(['alice', 'bob', 'carol', 'dan']).trimEnd(),
+  '',
+].join('\n');
 
 function encodeUtf8(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -344,6 +353,15 @@ describe('what the speaker replies while the invitation is out', () => {
 
     await waitFor(() => expect(backend.configWrites).toHaveLength(1));
     expect(backend.configWrites[0]).toContain(`next_edition_number: ${expected}`);
+
+    // And the file it wrote is still the file it read. This is the wiring
+    // `data/config-write.ts` is read on its own for: the defect was never in
+    // a helper nobody called, it was in the one line of `DataContext` that
+    // chose to parse and re-serialise. Measured on a live instance, this very
+    // write took config.yml from 31 comment lines to 1.
+    for (const line of BOARD_YAML.split('\n').filter(l => l.startsWith('#'))) {
+      expect(backend.configWrites[0], line).toContain(line);
+    }
   });
 
   it('writes the record before the counter, so a failure lags rather than burns a number', async () => {

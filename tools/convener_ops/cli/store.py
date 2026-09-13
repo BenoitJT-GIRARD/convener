@@ -105,6 +105,41 @@ def dump_speakers(speakers: Any) -> str:
     return SPEAKERS_HEADER + dump(speakers)
 
 
+def under_its_own_header(original: str, body: str, fallback: str) -> str:
+    """`body`, under whatever header `original` already carried.
+
+    The constants above are what a *fresh* file gets, and they are pinned byte
+    for byte against `app/src/data/yaml.ts`. They are not what an existing file
+    should be handed back. This repository's own
+    `instance/data/speakers.yml` opened with sixty-seven lines saying that
+    nobody in it is real, why every address is under `.test` and why every
+    board login is prefixed -- and the nightly sweep replaced all of it with
+    one line, in a commit that said it had swept elapsed events. Nobody
+    noticed for a day.
+
+    The file is reviewed in ordinary pull requests and, on a real instance,
+    holds personal data. Its header is what tells a reader which of the two
+    they are looking at.
+
+    A file with no header of its own gets `fallback`, which is the only case
+    the constant was ever for.
+    """
+    lead: list[str] = []
+    for line in original.split("\n"):
+        if line.lstrip().startswith("#") or not line.strip():
+            lead.append(line)
+        else:
+            break
+    if not any(line.lstrip().startswith("#") for line in lead):
+        return fallback + body
+    return "\n".join(lead) + "\n" + body
+
+
+def speakers_under_own_header(original: str, speakers: Any) -> str:
+    """What a writer of an existing `speakers.yml` should produce."""
+    return under_its_own_header(original, dump(speakers), SPEAKERS_HEADER)
+
+
 def dump_config(config: Any) -> str:
     return CONFIG_HEADER + dump(config)
 

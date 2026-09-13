@@ -97,6 +97,32 @@ export function withSpeakersHeader(body: string): string {
   return SPEAKERS_HEADER + body;
 }
 
+/**
+ * `body`, under whatever header `original` already carried.
+ *
+ * The constant above is what a *fresh* file gets, and it is pinned byte for
+ * byte against the Python side. It is not what an existing file should be
+ * given back: the shipped `instance/data/speakers.yml` opened with sixty-seven
+ * lines explaining that nobody in it is real, why every address is under
+ * `.test` and why every board login is prefixed -- and a write replaced all of
+ * it with one line. The file is reviewed in ordinary pull requests and holds
+ * personal data on a real instance; that header is what tells a reader which
+ * they are looking at.
+ *
+ * A file with no header of its own gets the constant, which is the only case
+ * the constant was ever for.
+ */
+export function underItsOwnHeader(original: string, body: string, fallback: string): string {
+  const lines = original.split('\n');
+  const lead: string[] = [];
+  for (const line of lines) {
+    if (line.trimStart().startsWith('#') || line.trim() === '') lead.push(line);
+    else break;
+  }
+  const header = lead.filter(line => line.trimStart().startsWith('#'));
+  return header.length > 0 ? `${lead.join('\n')}\n${body}` : fallback + body;
+}
+
 export function withConfigHeader(body: string): string {
   return CONFIG_HEADER + body;
 }

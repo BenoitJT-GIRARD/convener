@@ -104,7 +104,14 @@ def handle_proposal() -> int:
 
     speakers.append(lead)
     speakers_path.write_text(
-        store.dump_speakers(speakers), encoding="utf-8", newline=""
+        # Under the header the file already had. `dump_speakers` substitutes a
+        # constant, which is right for a file being created and wrong for one
+        # being edited -- see `store.under_its_own_header`.
+        store.speakers_under_own_header(
+            speakers_path.read_text(encoding="utf-8"), speakers
+        ),
+        encoding="utf-8",
+        newline="",
     )
     print(f"created {lead['id']} from form proposal")
     return 0
