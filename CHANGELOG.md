@@ -364,6 +364,28 @@ the day they were written; the lesson had never crossed into Python.
 
 ### Before you merge this
 
+- **Take this release's merge rules before you merge this release.** Git
+  reads `.gitattributes` from your working tree, so the merge that *brings*
+  `merge=ours` is judged by the file it is about to replace — and that one
+  does not have it. Measured: the plain descent, with the driver configured,
+  still took upstream's edits into the duplicate's own
+  `instance/data/speakers.yml` in silence; taking the file first left the blob
+  identical. Once, for this release only:
+
+  ```sh
+  git config merge.ours.driver true
+  git fetch upstream
+  git checkout upstream/main -- .gitattributes
+  git commit -m "repo: take the merge rules before merging"
+  git merge upstream/main
+  ```
+
+  After this release the rules are already in your tree and an ordinary
+  `git merge upstream/main` is enough. If you have already merged without
+  doing this, check `git diff` on `instance/data/` and `instance/public-data/`
+  in that merge: anything upstream changed there is upstream's example
+  instance, and yours is the version to keep.
+
 - `instance/data/credential-renewals.yml` — **new, and it arrives empty.**
   Nothing about the merge needs doing first and nothing breaks if you leave
   it: an instance that declares no date is an ordinary state, said out loud
