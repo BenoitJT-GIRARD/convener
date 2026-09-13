@@ -173,6 +173,34 @@ export function dateTimeLine(isoDate: string, time: string): string {
   return `${weekday}, ${Number(d)} ${month} ${parsed[1]} at ${time} ${abbreviation}`;
 }
 
+/**
+ * Whether this record has a way into the room on it.
+ *
+ * **Either source counts, and that is the whole point.** The room is the
+ * record's own `zoom_link` *or* the series-wide `instructions` in
+ * `instance/data/config.yml`, and an instance is entitled to use one, the
+ * other, or both. D-06 is that the chosen platform's account *is* the
+ * permanent room, so on such an instance the per-event field is empty by
+ * design and the link lives in the series instructions; an instance that
+ * opens a room per seminar has it the other way round.
+ *
+ * This is the same reconciliation `journey/confirmation.py` performs when it
+ * composes the message a registrant receives, and `state/artefacts.ts::room`
+ * when it draws the volunteer's own panel. It was a rule about *messages*
+ * until an edition could be locked without either source set -- at which
+ * point the showcase publishes the event, registration opens, and the first
+ * person to sign up is told nothing about where to go. Reading it here makes
+ * it a precondition instead (`state/dates.ts::lockBlockers`).
+ *
+ * `config` may be `null`, which is what a screen holds while data loads. That
+ * reads as "no series instructions", so a record with its own link still
+ * answers true and one without does not -- the same answer the loaded config
+ * would give for an instance that has none.
+ */
+export function roomOnRecord(s: Speaker, config: Config | null): boolean {
+  return s.zoom_link.trim() !== '' || (config?.instructions ?? '').trim() !== '';
+}
+
 export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
   if (s.status !== 'scheduled' || !s.date) return false;
   if (s.time) {
