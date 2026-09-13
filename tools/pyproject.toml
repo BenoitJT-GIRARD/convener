@@ -136,6 +136,17 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["tests"]
 addopts = "-q"
+markers = [
+    # A test that reads the *shipped* `instance/` tree rather than a fixture
+    # it built itself. There are very few, and they are the only reason a
+    # change to a data file needs a test run at all -- so they are named,
+    # and `validate-data.yml` runs this selection on every data write while
+    # `quality.yml` no longer wakes for one. A test that reads the shipped
+    # tree without this marker fails
+    # `test_every_test_reading_the_shipped_instance_carries_the_marker`,
+    # which walks the suite rather than trusting anyone to remember.
+    "shipped_data: reads the shipped instance/ tree, not a fixture",
+]
 
 [tool.ruff]
 line-length = 88

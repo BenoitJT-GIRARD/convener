@@ -16,6 +16,8 @@ looking at.
 
 from __future__ import annotations
 
+import pytest
+
 from convener_ops.cli import store
 
 FALLBACK = "# a fresh file gets this\n"
@@ -81,6 +83,7 @@ def test_the_speakers_writer_keeps_the_header_the_sweep_used_to_delete() -> None
     assert store.SPEAKERS_HEADER not in written
 
 
+@pytest.mark.shipped_data
 def test_the_shipped_speakers_file_still_carries_its_own_explanation() -> None:
     """An anchor, because this one was lost once and nothing noticed for a
     day. It is prose rather than a value, so nothing else in this suite would

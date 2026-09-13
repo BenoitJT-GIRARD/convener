@@ -76,6 +76,46 @@ name: Quality
 on:
   push:
     branches: [main]
+    # A write under these paths is data, and this workflow checks code.
+    #
+    # Measured on the instance this product was derived for, on 2026-09-13:
+    # one volunteer walking the runbook for two seminars made 53 commits in
+    # 47 minutes, each of them a write to `instance/data/speakers.yml`, and
+    # each of them woke nine workflows. The account's whole monthly
+    # allowance -- 2000 minutes, the GitHub Free ceiling for a private
+    # repository -- was gone before the session ended.
+    #
+    # This workflow was 428 of the 1175 billed minutes: the largest single
+    # item, and not the one the run list makes it look like. Billing is per
+    # *job*, rounded up to the whole minute, and this file has four --
+    # `python`, `web`, `workflow-schema`, `relays` -- so 31 runs billed 124
+    # jobs. Re-running all four because a volunteer ticked a checkbox is
+    # what this list stops.
+    #
+    # The handful of tests that genuinely read the shipped `instance/`
+    # tree are marked `shipped_data` and run by `validate-data.yml`, which
+    # already watches these very paths. Which tests those are was measured
+    # rather than assumed: three plausible hand-edits to the shipped
+    # `speakers.yml`, the whole suite run after each, and exactly one test
+    # noticed. `tools/tests/repository/test_shipped_data_marker.py` holds
+    # both halves -- that the marker covers every such test, and that this
+    # list still excludes them here.
+    #
+    # `paths-ignore:`, never `paths:`. A run is skipped only when *every*
+    # changed file matches, so a commit touching code and data still runs
+    # this in full; and a path forgotten from this list merely runs a check
+    # that did not have to run, where a path forgotten from a `paths:` list
+    # would skip one that did. For a workflow whose *absence* is the
+    # defect, that is the only safe direction -- the same argument
+    # `deploy.yml`'s own trigger spends twenty lines on.
+    paths-ignore:
+      - 'instance/data/**'
+      - 'instance/public-data/**'
+      - 'instance/keys/**'
+  # Not narrowed on a pull request, deliberately. The saving above is on
+  # the push path of a running instance, where these commits actually
+  # happen; a reviewer reading a change is entitled to the whole suite
+  # whatever the change touches.
   pull_request:
 
 # A newer push to a pull request replaces the

@@ -57,3 +57,20 @@ jobs:
       - name: Validate
         working-directory: tools
         run: uv run --frozen convener-validate
+      # The handful of tests that read the *shipped* `instance/` tree
+      # rather than a fixture they built themselves. They used to run here
+      # only incidentally, inside `quality.yml`'s whole suite, which woke
+      # for every write to a data file and cost 428 billed minutes in a
+      # single session on the instance this product was derived for. That
+      # trigger is narrowed
+      # now, so these come here instead -- to the workflow that already
+      # watches exactly the paths they read.
+      #
+      # `tools/tests/repository/test_shipped_data_marker.py` is what keeps
+      # the selection honest in both directions: every test reading the
+      # shipped tree must carry the marker, and the marker must select
+      # something, so this step can neither miss a guard nor pass by
+      # running nothing.
+      - name: The guards that read the shipped data
+        working-directory: tools
+        run: uv run --frozen pytest -m shipped_data
