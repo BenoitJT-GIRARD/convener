@@ -400,6 +400,43 @@ the day they were written; the lesson had never crossed into Python.
 - **[Taking an update](docs/operating/taking-an-update.md)**, which is the
   command this product is built around and had never written down.
 
+- **A seminar that was announced and does not happen now has a path.** It had
+  none: `scheduled` offered one control, *Mark it delivered*, and the only way
+  out was **Force status** — which writes a status, records no act, and leaves
+  the register showing a forcing rather than a cancellation. Everything the
+  status reaches self-heals; the people do not. Somebody who registered,
+  received a confirmation naming a date and was promised a certificate was
+  told nothing, and no job existed that could tell them.
+
+  `cancelled` is a status of its own. Not `archived`, which means closed and
+  complete and is what the agenda/archive boundary reads; not `parked` or
+  either `decline-`, which belong to the lead stage, before a date and an
+  edition code exist. The act carries a reason from a closed vocabulary of
+  four — the speaker withdrew, the Board withdrew it, the date was unworkable,
+  the series is paused — and that reason reaches the register and nothing
+  else. It is never sent to anybody: a commit subject is permanent, and the
+  speaker withdrawing is a fact about a person who did not agree to it being
+  mailed to two hundred strangers.
+
+  **Everyone who registered is written to**, by a job the cancellation starts.
+  That is the half of a cancellation nothing else could carry, and the half a
+  volunteer cannot be asked to do by hand against an encrypted list. They are
+  told it is off, that nothing is expected of them, and what becomes of what
+  they gave. `instance/data/cancellations.yml` records which editions have
+  been told about, after the fact, so a run that fails halfway is re-run and
+  reaches exactly the people it missed — the same shape and the same reason as
+  the destruction registry. Sending and recording are two commands, because
+  the recording is the half a rejected push makes run again and so is the half
+  that must do nothing to anybody.
+
+  The rest follows from the status without anything learning a new word: the
+  events feed is filtered to `scheduled`, so the edition leaves the showcase;
+  `mint-event-keys.yml` selects on the same value, so no key is minted for it;
+  and retention computes destruction from the date that was announced, so the
+  registrations go on the day they always would have. The edition code stays
+  used — it was announced under that code, and a talk that finds a new date is
+  a new edition.
+
 ### Fixed
 
 - **The Actions budget alarm measured nothing.** It read the minutes GitHub

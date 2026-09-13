@@ -51,7 +51,7 @@ given" — and is well formed.
 | `links` | list&lt;string&gt; | URLs the lead arrived with: ORCID, lab page, a paper. |
 | `host_1` | string | Login of the first Event Host. Both hosts are required from `scheduled` onwards. |
 | `host_2` | string | Login of the second Event Host. |
-| `status` | enum | Where the record stands. Managed by the state machine; see the statuses below. One of `lead`, `approved`, `invited`, `confirmed`, `scheduled`, `delivered`, `archived`, `parked`, `decline-board` or `decline-speaker`. |
+| `status` | enum | Where the record stands. Managed by the state machine; see the statuses below. One of `lead`, `approved`, `invited`, `confirmed`, `scheduled`, `delivered`, `archived`, `cancelled`, `parked`, `decline-board` or `decline-speaker`. |
 | `selection.ballots` | list&lt;Ballot&gt; | One entry per voting board member. Replaces the former `votes_for` list of logins. |
 | `selection.opened_on` | string | YYYY-MM-DD the vote opened. The vote window (`vote_window_days`) is counted from here; an empty value means `convener-sweep` can never expire the lead. |
 | `selection.decided_on` | string | YYYY-MM-DD the threshold was reached. Empty while the lead is still open. |
@@ -128,6 +128,7 @@ The state machine governs transitions. Statuses:
 - `scheduled` — date locked and edition code assigned, the runbook drives the rest
 - `delivered` — event date passed (automatic transition, see `convener-sweep`)
 - `archived` — post-event items done (an explicit gesture, never automatic)
+- `cancelled` — announced and will not happen; registrants are told when it is
 - `parked` — board paused this lead (reversible)
 - `decline-board` — board collectively declined (reversible)
 - `decline-speaker` — speaker declined the invitation

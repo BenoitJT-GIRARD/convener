@@ -76,7 +76,7 @@ export const AGENDA_STATUSES: readonly SpeakerStatus[] = ['scheduled', 'delivere
  *  other half of the boundary is here, and a rule about two lists cannot be
  *  stated where only one of them is. */
 export interface ArchiveGroup {
-  key: 'past' | 'parked' | 'declined-board' | 'declined-speaker';
+  key: 'past' | 'cancelled' | 'parked' | 'declined-board' | 'declined-speaker';
   num: string;
   label: string;
   hint: string;
@@ -99,8 +99,25 @@ export const ARCHIVE_GROUPS: ArchiveGroup[] = [
     sortDesc: true,
   },
   {
-    key: 'parked',
+    key: 'cancelled',
     num: '02',
+    label: 'Cancelled',
+    // Closed, not owed. The obligation a cancellation creates -- telling the
+    // people who registered -- is discharged by the act itself: cancelling
+    // dispatches `cancel-edition.yml`, the way locking a date dispatches and
+    // retention dispatches. A status that waited for somebody to send those
+    // messages by hand would be a status on the agenda for as long as nobody
+    // did, which is the shape this project refuses everywhere else.
+    //
+    // It reads newest first, like past webinars: a cancelled edition has a
+    // date, and the date is what a reader is looking for.
+    hint: 'Announced and did not happen — registrants were told',
+    statuses: ['cancelled'],
+    sortDesc: true,
+  },
+  {
+    key: 'parked',
+    num: '03',
     label: 'Parked',
     hint: 'Set aside by the board — can be reactivated',
     statuses: ['parked'],
@@ -108,7 +125,7 @@ export const ARCHIVE_GROUPS: ArchiveGroup[] = [
   },
   {
     key: 'declined-board',
-    num: '03',
+    num: '04',
     label: 'Declined (board)',
     hint: 'The board chose not to invite',
     statuses: ['decline-board'],
@@ -116,7 +133,7 @@ export const ARCHIVE_GROUPS: ArchiveGroup[] = [
   },
   {
     key: 'declined-speaker',
-    num: '04',
+    num: '05',
     label: 'Declined (speaker)',
     hint: 'Speaker turned down the invitation',
     statuses: ['decline-speaker'],

@@ -54,6 +54,31 @@ coming along.
 The three recording steps belong to the session itself and are in
 [Hosting day](3-hosting.md).
 
+## If it is not going to happen
+
+A speaker falls ill, a date turns out to be impossible, the series pauses. On
+the record, **Cancel this edition…** is the Board's control on a scheduled
+webinar, beside *Mark it delivered*. It asks for one of four reasons — the
+speaker withdrew, the Board withdrew it, the date was unworkable, the series is
+paused — and that reason is what the decision register records. It is never
+sent to anybody.
+
+**Everyone who registered is written to**, at the address their confirmation
+went to, by the job the cancellation starts. Nobody has to remember: that is
+the half of a cancellation this system exists to carry, and the half a
+volunteer cannot be expected to do by hand with an encrypted list. They are
+told it is off, that nothing is expected of them, and what becomes of what
+they gave. They are not told why.
+
+Everything else follows on its own. The edition leaves the showcase, no key is
+minted for it, and its registrations are destroyed on the schedule the
+confirmation described — on the date the seminar would have been held. The
+record moves to the archive under *Cancelled*.
+
+**The edition code stays used.** If the talk finds a new date it is a new
+edition with a new code: the old one was announced, and two different talks
+must never share one address.
+
 ---
 
 !!! tip "Scheduling a forum post in advance"

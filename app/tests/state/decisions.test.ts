@@ -1,4 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { CANCELLATION_REASONS } from '../../src/state/transitions';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import cases from '../../../tools/tests/fixtures/governance-cases.json';
@@ -86,6 +87,11 @@ function decisionFrom(c: FixtureCase): Decision {
         throw new Error(`not a date reply: ${detail}`);
       }
       return { kind: 'date-answer', entity, actor, detail };
+    case 'cancel-edition': {
+      const reason = CANCELLATION_REASONS.find(r => r === detail);
+      if (!reason) throw new Error(`not a cancellation reason: ${detail}`);
+      return { kind: 'cancel-edition', entity, actor, detail: reason };
+    }
     case 'override': {
       const status = STATUSES.find(s => s === detail);
       if (!status) throw new Error(`not a speaker status: ${detail}`);

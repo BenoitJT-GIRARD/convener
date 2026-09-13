@@ -149,15 +149,16 @@ describe('the three other closed statuses say why, when, and what would reopen t
 
 describe('every status this page can be drawn on has something to say', () => {
   it('covers each of them, and no working status reaches it', () => {
-    // The four the speaker page draws it for: the ones with no phase of
+    // The five the speaker page draws it for: the ones with no phase of
     // their own. A status added to the model lands here or on the board,
-    // and this is what refuses a fifth arriving with no words written for
-    // it.
+    // and this is what refuses a sixth arriving with no words written for
+    // it -- `cancelled` was the fifth, and this line is where it had to be
+    // decided rather than inherited.
     const closedStatuses = SPEAKER_STATUSES.filter(
       status => !BOARD_STATUSES.includes(status) && !AGENDA_STATUSES.includes(status),
     );
     expect([...closedStatuses].sort()).toEqual(
-      ['archived', 'decline-board', 'decline-speaker', 'parked'].sort(),
+      ['archived', 'cancelled', 'decline-board', 'decline-speaker', 'parked'].sort(),
     );
     for (const status of closedStatuses) {
       const { unmount } = render(<ClosedRecord speaker={closed(status)} config={config()} />);

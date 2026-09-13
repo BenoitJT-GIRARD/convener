@@ -291,7 +291,7 @@ function vocabulary<T extends string>(members: Record<T, true>): readonly T[] {
  *  status, including the next one somebody adds. */
 export const SPEAKER_STATUSES = vocabulary<Speaker['status']>({
   lead: true, approved: true, invited: true, confirmed: true, scheduled: true,
-  delivered: true, archived: true, parked: true,
+  delivered: true, archived: true, cancelled: true, parked: true,
   'decline-board': true, 'decline-speaker': true,
 });
 const SOURCES = vocabulary<Speaker['source']>({
