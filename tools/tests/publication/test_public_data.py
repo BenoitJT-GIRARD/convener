@@ -333,15 +333,65 @@ def test_the_programme_is_published_whatever_the_consent_says() -> None:
     assert out["status"] == "archived"
 
 
-def test_no_recording_in_the_real_feed_lacks_recorded_consent() -> None:
-    # The property, stated over whatever `instance/data/speakers.yml` happens to
-    # hold: no row carries a link unless that row's gate opened.
+@pytest.mark.shipped_data
+def test_no_recording_in_the_shipped_file_sits_on_a_refusal() -> None:
+    """The property stated over the *file*, not over the projection of it.
+
+    This test used to iterate `to_public(speakers)` and check the rows that
+    came back carrying a link. `to_public` blanks that very link whenever
+    the status is not a recording status or the recording is withheld --
+    so the body only ran in the case the function already prevents, and the
+    assertion inside it had never once executed against this file.
+    Measured, and not hypothetically: setting `exm-001`'s consent to
+    `refused` while leaving its recording link in place -- the exact shape
+    of a withdrawal handled badly -- left the entire suite green.
+
+    So the reading is of the file's own rows. A recording link is allowed
+    to sit on a row that has not been published yet: filling in where the
+    recording is records a fact, and publishing it is a separate gate
+    (`test_the_wrap_up_checklist_is_not_a_second_door_into_the_feed`, and
+    `exm-003` in the shipped file is exactly that state). What is never
+    allowed is a link on a row whose speaker has *refused*, because that is
+    a URL sitting one loosened guard away from a feed, in a file people
+    hand-edit.
+    """
     from convener_ops.declaration.paths import repo_root
     from convener_ops.declaration.yaml_safe import safe_load
 
     path = repo_root() / "instance" / "data" / "speakers.yml"
     speakers = safe_load(path.read_text(encoding="utf-8"))
     assert isinstance(speakers, list)
+
+    carrying = [s for s in speakers if s.get("youtube_url")]
+    assert carrying, (
+        "no row in the shipped file carries a recording link at all, so "
+        "this guard has nothing to read -- it is vacuous again, which is "
+        "the defect it was written to leave behind"
+    )
+    for entry in carrying:
+        assert entry.get("publication", {}).get("consent") != "refused", (
+            f"{entry['id']} carries a recording link and its speaker "
+            "refused. Clear the link when a consent is withdrawn -- "
+            "`to_public` would keep it out of the feed today, but the link "
+            "is in a file that is read, copied and hand-edited, and the "
+            "refusal is the whole point"
+        )
+
+
+@pytest.mark.shipped_data
+def test_the_projection_of_the_shipped_file_carries_no_unconsented_link() -> None:
+    """The other half, kept: what actually reaches the feed.
+
+    Weaker than it looks on its own -- `to_public` enforcing this is why
+    the test above had to stop asking it -- but it is the statement that
+    the *published* artefact is clean, and it costs nothing to keep beside
+    the statement that the file is.
+    """
+    from convener_ops.declaration.paths import repo_root
+    from convener_ops.declaration.yaml_safe import safe_load
+
+    path = repo_root() / "instance" / "data" / "speakers.yml"
+    speakers = safe_load(path.read_text(encoding="utf-8"))
     by_code = {s.get("edition_code", ""): s for s in speakers}
     for row in to_public(speakers):
         if row["youtube_url"]:
