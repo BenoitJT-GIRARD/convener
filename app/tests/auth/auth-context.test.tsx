@@ -7,7 +7,12 @@ describe('AuthProvider', () => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     localStorage.clear();
+    sessionStorage.clear();
   });
+
+  const SESSION = 'convener.session';
+  const ok = (login = 'alice') =>
+    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ login }) });
 
   it('starts ready with no session when there is no stored token', () => {
     const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
@@ -58,7 +63,13 @@ describe('AuthProvider', () => {
     expect(result.current.ready).toBe(false);
     await waitFor(() => expect(result.current.ready).toBe(true));
     expect(result.current.token).toBeNull();
-    expect(result.current.startupError).toMatch(/sign in again/i);
+    // Not "sign in again", which this used to say. Nothing has been
+    // established about the token -- the check itself never got an answer --
+    // and the sentence now claims only that, with the step that fixes it
+    // most often. `friendlyError` draws the same line for every other call
+    // this application makes.
+    expect(result.current.startupError).toMatch(/could not reach github/i);
+    expect(result.current.startupError).toMatch(/connection/i);
   });
 
   it('signIn keeps the token in memory only and returns true on success', async () => {
@@ -143,5 +154,129 @@ describe('AuthProvider', () => {
 
   it('useAuth throws when used outside a provider', () => {
     expect(() => renderHook(() => useAuth())).toThrow(/outside provider/);
+  });
+
+  // ---------------------------------------------------------------- //
+  // What a session survives.
+  // ---------------------------------------------------------------- //
+
+  it('picks a stored session up on mount, so a reload is not a device flow', async () => {
+    // The whole of the report, in one reading: an operator wrote that
+    // refreshing, leaving or going back signed them out and made them do the
+    // GitHub code again. The token lived in React state and nowhere else.
+    sessionStorage.setItem(SESSION, 'live');
+    vi.stubGlobal('fetch', ok());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    // Not a sign-in screen for even one frame: `ready` is false while the
+    // stored token is checked, which renders a spinner rather than the
+    // device-code prompt.
+    expect(result.current.ready).toBe(false);
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toMatchObject({ token: 'live', login: 'alice' });
+  });
+
+  it('keeps the session after a sign-in, which is what makes the next reload free', async () => {
+    vi.stubGlobal('fetch', ok());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    await act(async () => {
+      await result.current.signInWithTokens('fresh');
+    });
+
+    expect(sessionStorage.getItem(SESSION)).toBe('fresh');
+  });
+
+  it('forgets the session on sign-out', async () => {
+    sessionStorage.setItem(SESSION, 'live');
+    vi.stubGlobal('fetch', ok());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    act(() => result.current.signOut());
+
+    expect(sessionStorage.getItem(SESSION)).toBeNull();
+    expect(result.current.token).toBeNull();
+  });
+
+  it('forgets a session GitHub refuses', async () => {
+    // An answer: the token is no good, and keeping it would show a spinner
+    // and then a sign-out message on every reload for as long as the tab is
+    // open.
+    sessionStorage.setItem(SESSION, 'revoked');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.token).toBeNull();
+    expect(sessionStorage.getItem(SESSION)).toBeNull();
+  });
+
+  it('keeps a session it could not check, because nothing was established', async () => {
+    // Not an answer. Throwing the session away on a moment of bad network
+    // would charge a volunteer a full device flow for something that fixed
+    // itself, which is the exact cost this change exists to stop paying.
+    sessionStorage.setItem(SESSION, 'live');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.startupError).toMatch(/could not reach github/i);
+    expect(sessionStorage.getItem(SESSION)).toBe('live');
+  });
+
+  it('migrates the legacy key into the session and still deletes it', async () => {
+    localStorage.setItem('convener.token', 'good');
+    vi.stubGlobal('fetch', ok());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current.token).toBe('good');
+    expect(localStorage.getItem('convener.token')).toBeNull();
+    expect(sessionStorage.getItem(SESSION)).toBe('good');
+  });
+
+  it('signs in normally when the storage itself throws', async () => {
+    // A private window, blocked site data, a full quota: the accessor throws
+    // rather than returning null. A sign-in screen that crashes because it
+    // could not write a convenience is worse than one that asks for the code
+    // again next time.
+    const broken = {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {
+        throw new Error('blocked');
+      },
+      removeItem: () => {
+        throw new Error('blocked');
+      },
+    };
+    vi.stubGlobal('sessionStorage', broken);
+    vi.stubGlobal('fetch', ok());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    await act(async () => {
+      expect(await result.current.signInWithTokens('fresh')).toBe(true);
+    });
+    expect(result.current).toMatchObject({ token: 'fresh', login: 'alice' });
+  });
+
+  it('keeps the session through a GitHub outage, which is not a refusal', async () => {
+    // Written on a day GitHub was returning 5xx from its authorization
+    // endpoints. Signing every volunteer out of a working session because the
+    // service could not answer is the opposite of what the session is for.
+    sessionStorage.setItem(SESSION, 'live');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) }),
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(sessionStorage.getItem(SESSION)).toBe('live');
+    expect(result.current.startupError).toMatch(/could not reach github/i);
   });
 });

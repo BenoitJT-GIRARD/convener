@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { validateToken } from './api';
+import { checkToken, validateToken } from './api';
 import { isDemoMode, exitDemoMode, DEMO_USER } from '../data/demo';
 import { forgetDemoSession } from '../data/demo-session';
 
@@ -25,6 +25,33 @@ const Ctx = createContext<AuthCtx | null>(null);
 // removed. Never written again.
 const LEGACY_KEY = 'convener.token';
 
+/** Where the session lives between renders of the same tab.
+ *
+ *  **`sessionStorage`, and the choice is the whole of this.** The token lived
+ *  in React state and nowhere else, so a reload, a back navigation or a
+ *  closed tab was a full device flow again: click, read a code, switch to
+ *  github.com, type it, come back. D-03 argues for that flow on friction --
+ *  "on a non-technical population, onboarding friction is what determines
+ *  whether the tool gets used at all", about thirty seconds -- and thirty
+ *  seconds paid once when you start work is the trade it makes. Thirty
+ *  seconds paid again every time somebody presses back is a different trade,
+ *  made by this file rather than by that decision, on exactly the population
+ *  the decision exists to protect.
+ *
+ *  `localStorage` is what it is not: that would outlive the tab, the day and
+ *  the person at the machine, on an application whose repository holds
+ *  participants' personal data. `sessionStorage` is scoped to this tab and
+ *  goes when the tab does.
+ *
+ *  It is not a defence against a script running on this origin -- such a
+ *  script reads a React state variable as easily as a storage key, so that
+ *  surface is unchanged either way. What changes is how long the token
+ *  outlives the page, and the answer is: until this tab is closed. The
+ *  startup path below still validates it against GitHub, so a token revoked
+ *  or expired since signs the volunteer out cleanly rather than failing at
+ *  the first write. */
+const SESSION_KEY = 'convener.session';
+
 // Written by an earlier build that attempted a refresh flow. That flow was
 // removed (it needed a client secret the relay deliberately does not hold), so
 // the key is inert -- but an inert key nobody clears is litter in a browser we
@@ -47,6 +74,34 @@ function removeLocalStorage(key: string): void {
   }
 }
 
+// Every one of these is wrapped: a private window, blocked site data or a
+// storage quota makes the accessor itself throw, and a sign-in screen that
+// crashes because it could not write a convenience is worse than one that
+// simply asks for the code again.
+function readSession(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeSession(token: string): void {
+  try {
+    sessionStorage.setItem(SESSION_KEY, token);
+  } catch {
+    /* the session simply does not survive this tab's next reload */
+  }
+}
+
+function forgetSession(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Read the legacy access-token key once, deleting it in the process so it's
  *  never consulted again. */
 function consumeLegacyToken(): string | null {
@@ -60,7 +115,13 @@ function consumeLegacyToken(): string | null {
  *  useState initialiser instead of being set from inside the effect below. */
 function initialAuthState(): AuthState {
   if (isDemoMode()) return { token: 'demo', login: DEMO_USER.login, ready: true, startupError: null };
-  if (readLocalStorage(LEGACY_KEY)) return { token: null, login: null, ready: false, startupError: null };
+  // `ready: false` means "a token is stored and is being checked", which is a
+  // spinner rather than a sign-in screen. Getting this wrong would show the
+  // device-code prompt for a moment to somebody who is already signed in --
+  // the exact flicker this change exists to remove.
+  if (readSession() || readLocalStorage(LEGACY_KEY)) {
+    return { token: null, login: null, ready: false, startupError: null };
+  }
   return { token: null, login: null, ready: true, startupError: null };
 }
 
@@ -71,36 +132,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isDemoMode()) return;
 
     removeLocalStorage(ORPHANED_REFRESH_KEY);
+    // The session first, the legacy key second, and the legacy key is
+    // consumed either way: it is read once in the life of a browser and must
+    // not be left behind because a session happened to be there too.
     const legacy = consumeLegacyToken();
-    if (!legacy) return; // initial state was already ready: true
+    const stored = readSession() ?? legacy;
+    if (!stored) return; // initial state was already ready: true
 
-    // validateToken never rejects (see api.ts), but this .catch is defence
+    // `checkToken` never rejects (see api.ts), but this .catch is defence
     // in depth: a startup failure must always reach a terminal `ready`
     // state, never leave the app on a permanent spinner.
-    validateToken(legacy)
-      .then(u =>
-        setS({
-          token: u ? legacy : null,
-          login: u?.login ?? null,
-          ready: true,
-          startupError: u
-            ? null
-            : 'You were signed out. Check your connection, then sign in again.',
-        }),
-      )
-      .catch(() =>
+    checkToken(stored)
+      .then(checked => {
+        if (checked.outcome === 'valid') {
+          writeSession(stored);
+          setS({ token: stored, login: checked.login, ready: true, startupError: null });
+          return;
+        }
+        // Only a refusal throws the session away. `unreachable` establishes
+        // nothing about the token, and discarding it there would charge a
+        // volunteer a full device flow for a moment of bad network -- the
+        // cost D-03 exists to keep low. The sentence differs for the same
+        // reason: "check your connection" is wrong advice for a token GitHub
+        // has actually refused.
+        if (checked.outcome === 'refused') forgetSession();
         setS({
           token: null,
           login: null,
           ready: true,
-          startupError: 'You were signed out. Check your connection, then sign in again.',
-        }),
-      );
+          startupError:
+            checked.outcome === 'refused'
+              ? 'Your sign-in has expired. Sign in again.'
+              : 'Could not reach GitHub to check your sign-in. Check your connection, then reload.',
+        });
+      })
+      .catch(() => {
+        setS({
+          token: null,
+          login: null,
+          ready: true,
+          startupError: 'Could not reach GitHub to check your sign-in. Check your connection, then reload.',
+        });
+      });
   }, []);
 
   async function signIn(t: string) {
     const u = await validateToken(t);
     if (!u) return false;
+    writeSession(t);
     setS({ token: t, login: u.login, ready: true, startupError: null });
     return true;
   }
@@ -111,11 +190,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signInWithTokens(accessToken: string) {
     const u = await validateToken(accessToken);
     if (!u) return false;
+    writeSession(accessToken);
     setS({ token: accessToken, login: u.login, ready: true, startupError: null });
     return true;
   }
 
   function signOut() {
+    forgetSession();
     removeLocalStorage(LEGACY_KEY);
     exitDemoMode();
     // Signing out of a demonstration leaves it, so what this tab did in
