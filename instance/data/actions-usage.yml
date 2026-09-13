@@ -1,26 +1,75 @@
-# What the example instance's own Actions runs really billed; see tools/convener_ops/maintenance/actions_usage.py
+# What this repository's own Actions runs really billed; see tools/convener_ops/maintenance/actions_usage.py
 # A LOWER BOUND, never the bill: the free minutes belong to the organisation and are shared.
 v: 1
 latest:
-  observed_on: '2026-08-24'
-  since: '2026-08-18'
+  observed_on: '2026-09-13'
+  since: '2026-09-07'
   window_days: 7
-  runs: 0
-  uncosted_runs: 0
-  truncated: false
-  billed_minutes: 0
+  runs: 200
+  uncosted_runs: 11
+  truncated: true
+  billed_minutes: 537
   scheduled_minutes: 0
   submission_minutes: 0
-  development_minutes: 0
-  projected_monthly_minutes: 0
+  development_minutes: 537
+  projected_monthly_minutes: 2332
   busiest_submission_day: ''
   busiest_submissions: 0
-  by_event: []
-  by_workflow: []
+  by_event:
+  - event: push
+    minutes: 252
+  - event: pull_request
+    minutes: 223
+  - event: dynamic
+    minutes: 37
+  - event: workflow_run
+    minutes: 25
+  by_workflow:
+  - workflow: Quality
+    minutes: 215
+  - workflow: Security
+    minutes: 120
+  - workflow: pages build and deployment
+    minutes: 36
+  - workflow: Accessibility
+    minutes: 34
+  - workflow: Monitor secret-bearing workflow runs
+    minutes: 25
+  - workflow: Deploy app
+    minutes: 24
+  - workflow: Validate data
+    minutes: 17
+  - workflow: Demonstration
+    minutes: 13
+  - workflow: Derive the decision register
+    minutes: 13
+  - workflow: Templates
+    minutes: 12
+  - workflow: Preview
+    minutes: 9
+  - workflow: Publish showcase
+    minutes: 9
+  - workflow: Deploy auth relay
+    minutes: 2
+  - workflow: Deploy form relay
+    minutes: 2
+  - workflow: Deploy signup relay
+    minutes: 2
+  - workflow: Visuals
+    minutes: 2
+  - workflow: 'Configured Graph Update: uv in /tools #1572783553'
+    minutes: 1
+  - workflow: Visuals production
+    minutes: 1
   submissions_by_day: []
 history:
 - day: '2026-08-24'
   runs: 0
   minutes: 0
   projected_monthly: 0
+  busiest_submissions: 0
+- day: '2026-09-13'
+  runs: 200
+  minutes: 537
+  projected_monthly: 2332
   busiest_submissions: 0
