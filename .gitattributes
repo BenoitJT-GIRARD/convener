@@ -68,6 +68,32 @@ instance/data/** merge=ours
 instance/keys/** merge=ours
 instance/public-data/** merge=ours
 
+# One path was considered for this list and is deliberately not on it, named
+# here because a list with no record of what it refused is a list that grows
+# by habit. `site/src/banners/` holds one image per scheduled edition, and
+# `visuals-production.yml` rewrites it on both sides exactly as the three
+# directories above are rewritten.
+#
+# **It is already loud, and it already heals.** Measured, on the real files:
+# a duplicate with no such edition and an upstream that had regenerated its
+# own gives `CONFLICT (modify/delete) ... Version main left in tree` -- a
+# person is asked. Every image here is covered by `*.png binary` at the top of
+# this file, which is the `-diff -merge -text` macro, so git will not merge one
+# silently even where both sides changed it. And `sync_banners` in that
+# workflow does `rm -rf site/src/banners` and rebuilds the directory from the
+# editions currently scheduled, so whatever a merge leaves there is gone at the
+# next run. Neither is true above: an upstream edit merged into `speakers.yml`
+# arrives without a word and stays.
+#
+# Declaring it would also cost something real. `boundary.yml` hands the
+# instance whole directories, and
+# `test_instance_directory.py::test_every_file_the_instance_owns_sits_under_the_instance_directory`
+# holds every one of them under `instance/` -- with a single anchored
+# exception, the decision register, so that the rule cannot be widened by
+# adding an entry and nobody having decided anything. A reader can see where
+# the boundary runs by looking at a path. That is worth more than removing a
+# conflict git is right to raise.
+
 # Except the files upstream keeps inside those directories, which
 # `boundary.yml` declares `kept:` and an instance never edits. `!merge` leaves
 # the attribute unspecified -- the ordinary three-way merge -- rather than
