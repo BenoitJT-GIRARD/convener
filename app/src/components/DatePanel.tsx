@@ -64,6 +64,11 @@ export function DatePanel({ speaker, role, mode }: Props) {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('12:30');
   const [edition, setEdition] = useState('');
+  // Whether what is in the box came from `Suggest the next code` and has not
+  // been typed over since. A suggestion is a *reading* of the agenda and goes
+  // stale the moment anybody else locks a date; a code somebody typed is a
+  // decision, and is written exactly as given. See `fire`.
+  const [suggested, setSuggested] = useState(false);
   const [busy, setBusy] = useState(false);
   const today = parisToday();
   const locked = busy || !login || !config;
@@ -130,25 +135,60 @@ export function DatePanel({ speaker, role, mode }: Props) {
     if (locked || !config || !login || !canTransition(speaker, transition, role)) return;
     setBusy(true);
     try {
+      // What the winning attempt actually assigned. `mutateSpeakers` replays
+      // its transformation against freshly-read data and hands back only
+      // whether it wrote, so the code is captured here as the transform runs.
+      // A replay overwrites it, which is the point: the attempt that lands is
+      // the last one to run, so this holds what the commit contains.
+      let assigned = payload.edition_code;
+
       const wrote = await mutateSpeakers(
-        current =>
-          current.map(sp =>
+        current => {
+          // **Decided here, not on screen.** `Suggest the next code` reads
+          // the agenda as it was when the button was pressed, and a
+          // suggestion is stale the moment anybody else locks a date --
+          // `nextEditionCode` skips codes already in use, but only among the
+          // records it is shown. Two volunteers locking at the same moment
+          // were both handed the same next code, and both wrote it: a
+          // duplicate `edition_code` that nothing refuses until
+          // `validate-data.yml` fails on the commit that is already pushed.
+          // Recomputing inside the transformation puts that reading on the
+          // same freshly-read list the write lands on.
+          //
+          // A code the volunteer typed is never recomputed. Typing one is a
+          // decision -- renumbering a series, matching a poster already
+          // printed -- and second-guessing it here would silently write
+          // something other than what the screen said.
+          assigned = suggested
+            ? nextEditionCode(current, config.next_edition_number)
+            : payload.edition_code;
+          return current.map(sp =>
             sp.id === speaker.id
-              ? applyTransition(sp, transition, login, config, today, payload)
+              ? applyTransition(sp, transition, login, config, today, {
+                  ...payload,
+                  edition_code: assigned,
+                })
               : sp,
-          ),
+          );
+        },
         formatDecision(
           transitionDecision(transition, identifier(speaker.id), identifier(login), payload),
         ),
       );
+
       // The record is the act; the counter is the bookkeeping, and it follows
-      // rather than leads. If this second write fails the mark lags, which is
-      // the state this fixes -- visible, loud in `sh gates.sh`, and repaired
-      // by the next lock-in. Raising it first and failing on the record would
-      // burn an edition number nothing ever used, which shows up on a poster
-      // and cannot be taken back.
-      if (wrote && transition === 'lock-date' && payload.edition_code) {
-        await raiseEditionCounter(payload.edition_code);
+      // rather than leads. If this second write fails the mark lags -- loud in
+      // `sh gates.sh`, and harmless while the record stands, because
+      // `nextEditionCode` skips codes already in use. Raising it first and
+      // failing on the record would leave a number burnt with no record
+      // carrying it, and this pair is two files with no transaction between
+      // them, so one of the two orders has to be chosen and defended.
+      //
+      // Raised from `assigned`, never from `payload.edition_code`: after a
+      // replay those differ, and the mark has to pass the code that was
+      // written rather than the one the screen offered.
+      if (wrote && transition === 'lock-date' && assigned) {
+        await raiseEditionCounter(assigned);
       }
     } finally {
       setBusy(false);
@@ -318,15 +358,20 @@ export function DatePanel({ speaker, role, mode }: Props) {
               type="text"
               placeholder={`${editionCodePrefix()}N`}
               value={edition}
-              onChange={e => setEdition(e.target.value)}
+              onChange={e => {
+                setEdition(e.target.value);
+                setSuggested(false);
+              }}
               className="px-2 py-1 text-sm font-mono w-20"
             />
           </label>
           <button
             type="button"
-            onClick={() =>
-              config && setEdition(nextEditionCode(speakers, config.next_edition_number))
-            }
+            onClick={() => {
+              if (!config) return;
+              setEdition(nextEditionCode(speakers, config.next_edition_number));
+              setSuggested(true);
+            }}
             className="text-xs text-field-text underline"
           >
             Suggest the next code
