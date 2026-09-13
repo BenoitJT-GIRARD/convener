@@ -852,3 +852,68 @@ def test_signup_url_matches_the_shared_fixtures_worked_examples(
     assert registration.signup_url(case["event_id"]) == published.load().under(
         case["signup_url_path"]
     )
+
+
+# --------------------------------------------------------------------- #
+# No line of a confirmation denies the line under it.
+# --------------------------------------------------------------------- #
+
+#: What a confirmation must never say while printing a way in on the next
+#: line. It is also a promise nothing in this repository keeps: there is no
+#: queue of editions with a pending link, no job that notices and no reminder.
+PENDING_LINK = "has not been set yet"
+
+
+def _body(*, join_url: str = "", instructions: str = "") -> str:
+    event = EventDetails(
+        title="On analytical engines",
+        date="2026-09-01",
+        room=Room(join_url=join_url, instructions=instructions),
+    )
+    return compose(_registration(), event, "WXYZ-2345").body
+
+
+def test_a_permanent_room_is_never_announced_as_a_missing_link() -> None:
+    """The case measured on a live instance, and the one the design produces.
+
+    D-06 is that the account is a single permanent room, so there is no
+    per-event link to hold and `convener-check-config` tells the operator to
+    put the joining instructions in `instance/data/config.yml`. An operator who
+    followed that read "the room link for this event has not been set yet"
+    with the room link on the next line.
+    """
+    body = _body(instructions="Join online: https://example.test/room")
+
+    assert "https://example.test/room" in body
+    assert PENDING_LINK not in body
+
+
+def test_a_per_event_link_is_still_the_one_offered() -> None:
+    body = _body(join_url="https://example.test/one-off")
+
+    assert "Join here: https://example.test/one-off" in body
+    assert PENDING_LINK not in body
+
+
+def test_both_are_printed_when_both_exist() -> None:
+    """A per-event link and series-wide instructions are not alternatives:
+    the access code, the opening time and everything else a series says lives
+    in the second one."""
+    body = _body(
+        join_url="https://example.test/one-off",
+        instructions="Access code: 8842798",
+    )
+
+    assert "Join here: https://example.test/one-off" in body
+    assert "Access code: 8842798" in body
+    assert PENDING_LINK not in body
+
+
+def test_the_sentence_survives_for_the_one_state_where_it_is_true() -> None:
+    """Non-vacuity, and the reason this is a reconciliation rather than a
+    deletion: an edition with neither a link nor series instructions really
+    has nothing to tell a registrant yet, and saying so is better than
+    silence."""
+    body = _body()
+
+    assert PENDING_LINK in body

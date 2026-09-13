@@ -216,6 +216,28 @@ it carries is what a release does to somebody else's repository:
   the second merge now; before this, every word written about these rules was
   about upstream.
 
+- **A confirmation said the room link was not set, on the line above the room
+  link.** Composed with a live instance’s real records: *The room link for this
+  event has not been set yet — we will send it as soon as it is, to this same
+  address.* and then, immediately under it, the join URL and the access code.
+
+  The configuration that produced it is the documented one. D-06 is that the
+  meeting account **is** a single permanent room; the provider returns no
+  per-event link, and `convener-check-config` tells the operator to put the
+  joining instructions in `instance/data/config.yml`, one value for the whole
+  series. So `zoom_link` is empty by design and the sentence fired on the
+  strength of half the test.
+
+  What it cost is not the awkwardness. *We will send it as soon as it is* is a
+  commitment made in writing, on behalf of a volunteer team, to every
+  registrant — and nothing tracks it: no queue of editions with a pending
+  link, no job that notices, no reminder. It misleads the careful reader
+  first. Someone who read past the first sentence joined anyway; someone who
+  trusted it waited for an e-mail nobody was going to send.
+
+  The claim is made only when both sources are empty now, which is the one
+  state in which it is true.
+
 ### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to
