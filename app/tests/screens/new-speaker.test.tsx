@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../../src/auth/AuthContext';
 import { DataProvider } from '../../src/data/DataContext';
 import { NewSpeaker } from '../../src/screens/NewSpeaker';
+import * as yaml from 'js-yaml';
 import { parseSpeakers, serializeSpeakers } from '../../src/data/yaml';
 import type { Speaker } from '../../src/data/types';
 
@@ -34,6 +35,7 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
   let sha = 'sha-0';
   let counter = 0;
   const messages: string[] = [];
+  const written: string[] = [];
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
@@ -46,6 +48,7 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
           return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
         }
         messages.push(body.message as string);
+        written.push(decodeUtf8(body.content));
         server = parseSpeakers(decodeUtf8(body.content));
         sha = `sha-${++counter}`;
         return Promise.resolve({ ok: true, json: async () => ({ content: { sha } }) });
@@ -62,6 +65,10 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
     fetchMock,
     /** Every commit subject this UI actually sent, in order. */
     messages,
+    /** The bytes of every file this UI actually sent, in order. Not the
+     *  records parsed back out of them: what this file has to be able to see
+     *  is key order, and parsing is exactly what loses it. */
+    written,
     /** Simulate another submitter's write landing directly on the remote,
      *  bypassing this test's UI and this component's local React state. */
     interlope(next: Speaker[]) {
@@ -286,5 +293,91 @@ describe('NewSpeaker', () => {
 
     expect(screen.queryByText('SPEAKER PAGE')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
+  });
+  // ------------------------------------------------------------------ //
+  // The bytes, not the record parsed back out of them.
+  // ------------------------------------------------------------------ //
+
+  describe('the record this screen writes', () => {
+    it('lays its keys down in the model\u2019s own order, id first', async () => {
+      // The agreement between this repository's two YAML writers was pinned one
+      // step downstream of where it broke. `tools/tests/cli/test_yaml_boundary.py`
+      // and `tests/data/yaml.test.ts` hold the two *serialisers* together, and
+      // they work -- but they run on a fixture whose own first key is `id`.
+      // What they never see is the record this screen constructs, which is
+      // built in another file, in another order, and reaches no fixture. So
+      // this reads the bytes that went to the API.
+      //
+      // Nothing here writes the order down. The left side is the file as it
+      // was sent; the right side is the same record after `data/validate.ts`
+      // has rebuilt it, which is the model's own order. A key added to the
+      // model and forgotten here lands red without anybody updating a list.
+      const backend = makeSpeakersBackend([speaker('spk-001')]);
+      vi.stubGlobal('fetch', backend.fetchMock);
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <DataProvider>
+              <NewSpeaker />
+            </DataProvider>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      fireEvent.change(await screen.findByLabelText(/Name \*/), {
+        target: { value: 'Ordered Lead' },
+      });
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+      await waitFor(() => expect(backend.written).toHaveLength(1));
+
+      const sent = backend.written[backend.written.length - 1];
+      const raw = yaml.load(sent) as Record<string, unknown>[];
+      const asWritten = Object.keys(raw[raw.length - 1]);
+
+      const rebuilt = parseSpeakers(sent);
+      const canonical = Object.keys(rebuilt[rebuilt.length - 1]);
+
+      // Said twice on purpose: the first line is the one a reader can act on
+      // when it fails, the second is the whole rule.
+      expect(asWritten[0]).toBe('id');
+      expect(asWritten).toEqual(canonical);
+    });
+
+    it('writes the existing record and the new one in the same order', async () => {
+      // The cost this defect carries is a diff, so the reading is about the
+      // file rather than about one record: the next Python-side rewrite of a
+      // record laid down in a different order re-emits the whole block, and a
+      // thirty-five-line move hides the one line that changed in a review that
+      // is part of the governance.
+      const backend = makeSpeakersBackend([speaker('spk-001')]);
+      vi.stubGlobal('fetch', backend.fetchMock);
+
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <DataProvider>
+              <NewSpeaker />
+            </DataProvider>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      fireEvent.change(await screen.findByLabelText(/Name \*/), {
+        target: { value: 'Second Lead' },
+      });
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+      await waitFor(() => expect(backend.written).toHaveLength(1));
+
+      const raw = yaml.load(backend.written[0]) as Record<string, unknown>[];
+      expect(raw).toHaveLength(2);
+      expect(Object.keys(raw[1])).toEqual(Object.keys(raw[0]));
+    });
   });
 });

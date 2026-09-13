@@ -91,6 +91,23 @@ it carries is what a release does to somebody else's repository:
 
 - a short passage saying what changed, in the terms an operator reads
   rather than in the terms the diff does;
+- a `- **The cockpit wrote a new speaker with its id last of thirty-five keys.**
+  Every other writer puts `id` first, `data/validate.ts` included, which is
+  the model's own order. The screen built the record by spreading the form
+  fields and appending the id afterwards, and `data/yaml.ts` dumps with
+  `sortKeys: false` — deliberately, because that is what keeps the bytes
+  matching PyYAML — so construction order was file order. Nothing to a
+  parser; the cost is a diff. The next Python-side rewrite of such a record
+  re-emits it in canonical order and moves the whole thirty-five-line block
+  for a change that touched one field, on a file whose review is part of the
+  governance.
+
+  The agreement between the two writers was pinned one step downstream of
+  where it broke: the boundary fixture holds the two sides' YAML output together
+  and never sees the record this screen constructs. It is read from the bytes
+  the screen actually sends now, against the same record after
+  `data/validate.ts` has rebuilt it — neither side writes the order down, so
+  a field added to the model and forgotten here lands red on its own.
 - a `- **One transient failure and the volunteer became the retry loop.** The
   cockpit's single write path replayed a conflict and nothing else, so a 500,
   502 or 503 was final on the first click: an operator creating a lead on a
