@@ -72,6 +72,7 @@ from __future__ import annotations
 
 import ast
 import pkgutil
+import subprocess  # nosec B404
 from importlib import import_module
 from pathlib import Path
 from typing import Any, Final
@@ -1140,3 +1141,110 @@ def test_no_test_module_reads_an_instance_path_while_it_loads() -> None:
         "before pytest has a test to fail: move the read into a function "
         f"so that only the tests needing it go red -- {offending}"
     )
+
+
+# --------------------------------------------------------------------- #
+# The instance's directories, on a merge.
+# --------------------------------------------------------------------- #
+
+
+def _resolved_merge_attribute(paths: list[str]) -> dict[str, str]:
+    """What git itself resolves, rather than what `.gitattributes` reads like.
+
+    The file is a list of patterns whose order matters and whose globs do not
+    always mean what they look like. A reading that only parsed the text would
+    pass over a rule that matches nothing, which is the failure it exists to
+    catch.
+    """
+    result = subprocess.run(  # nosec B603 B607
+        ["git", "check-attr", "merge", "--", *paths],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    resolved: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        path, _, value = line.rpartition(": merge: ")
+        if path:
+            resolved[path] = value
+    return resolved
+
+
+def test_every_directory_the_instance_owns_keeps_its_own_on_a_merge() -> None:
+    """The clause `regenerated:` states for one file, stated for the rest.
+
+    `boundary.yml` gives these directories to the instance and says upstream
+    does not *edit* them. It cannot say upstream does not *run*: upstream is
+    itself a running instance, and its scheduled jobs commit into all three --
+    the sweep, retention, the deploy projections, the certificate workflows.
+
+    **And the bad outcome was not a conflict.** Measured on a duplicate one
+    release behind, upstream's own edits went into the duplicate's
+    `instance/data/speakers.yml` with no conflict at all: the header and the
+    records sit in different regions of the file, so git applied upstream's
+    hunks in silence. A conflict would have been the good outcome. This is
+    what makes the resolution -- a duplicate's records are the duplicate's --
+    something git performs rather than something a page promises.
+    """
+    declaration = load()
+    directories = [path for path in declaration.instance_paths if path.endswith("/")]
+    assert directories, (
+        "the declaration hands the instance no directory at all, so this "
+        "reading is comparing two empty sets"
+    )
+
+    # One real file from each, so the question asked is the one that matters:
+    # not "is there a line" but "does git resolve it".
+    probes = {
+        directory: f"{directory}a-file-a-running-instance-writes"
+        for directory in directories
+    }
+    resolved = _resolved_merge_attribute(list(probes.values()))
+    for directory, probe in probes.items():
+        assert resolved.get(probe) == "ours", (
+            f"{directory} is the instance's by "
+            f"{boundary.DECLARATION_PATH.as_posix()}, and git resolves "
+            f"merge={resolved.get(probe)!r} for a file in it. Upstream runs on "
+            "these paths even though it does not edit them, so a merge that "
+            "does not take the instance's version takes upstream's -- and it "
+            "does so without a conflict wherever the two changed different "
+            f"regions. Give it {boundary.REGENERATED_MERGE_ATTRIBUTE} in "
+            f"{boundary.GIT_ATTRIBUTES_PATH.as_posix()}"
+        )
+
+
+def test_the_files_upstream_keeps_inside_them_merge_the_ordinary_way() -> None:
+    """The mirror, and it is not symmetry for its own sake.
+
+    `kept:` names the files upstream maintains inside a directory it handed
+    over -- the schema appendix and three READMEs. Sweeping them into the rule
+    above would be a promise upstream cannot keep: it would go on improving
+    them and no duplicate would ever see it, silently, which is the same
+    failure in the other direction.
+
+    `!merge` leaves the attribute unspecified, which is the ordinary
+    three-way merge. Not `-merge`, which means "take ours and declare a
+    conflict" and would be the opposite of the intent.
+    """
+    kept = list(load().kept_files)
+    assert kept, "no kept: file is declared, so this reading holds nothing"
+
+    resolved = _resolved_merge_attribute(kept)
+    for path in kept:
+        assert resolved.get(path) == "unspecified", (
+            f"{path} is declared kept: -- upstream maintains it -- and git "
+            f"resolves merge={resolved.get(path)!r}. Under "
+            f"{boundary.REGENERATED_MERGE_ATTRIBUTE} an instance would never "
+            "receive an upstream improvement to it, and would never be told"
+        )
+
+
+def test_a_file_that_is_nobody_special_merges_the_ordinary_way() -> None:
+    """Non-vacuity, and the shape of a rule that swallowed the repository: a
+    blanket `merge=ours` would satisfy both readings above and quietly stop
+    every duplicate receiving any upstream fix at all."""
+    resolved = _resolved_merge_attribute(
+        ["app/src/App.tsx", "tools/convener_ops/declaration/boundary.py", "README.md"]
+    )
+    assert set(resolved.values()) == {"unspecified"}, resolved

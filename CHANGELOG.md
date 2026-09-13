@@ -173,6 +173,32 @@ it carries is what a release does to somebody else's repository:
   refusal — 409, 422 — still replays immediately, because somebody else
   writing is exactly when reading again should not wait.
 
+- **A duplicate merging an update could lose its own records, silently.**
+  The boundary gives an instance `instance/data/`, `instance/keys/` and
+  `instance/public-data/`, and [taking an update](docs/operating/taking-an-update.md)
+  said upstream does not write those paths. That was true while nothing
+  upstream had run. It stopped being true the day it did: upstream is itself a
+  running instance, and its own scheduled jobs commit into all three — the
+  sweep writes the speakers and the queue, retention writes the destruction
+  ledger and the event keys, the deploy writes all three projections, the
+  certificate workflows write more.
+
+  **And the bad outcome was not a conflict.** Measured on a duplicate one
+  release behind: upstream’s own edits went into the duplicate’s
+  `instance/data/speakers.yml` with no conflict at all, because the header
+  and the records occupy different regions of the file and git applied
+  upstream’s hunks in silence. A conflict would have been the good outcome —
+  loud, and a person gets to decide.
+
+  The three directories carry `merge=ours` now, which is the resolution the
+  decision register already had for the same reason. A file upstream *adds*
+  still arrives, because the driver is consulted only when both sides changed
+  the same path — measured on the same merge, which created
+  `instance/data/queue-watch.yml` normally. The four files upstream maintains
+  inside those directories are excepted by name. The reading is taken through
+  `git check-attr` rather than by reading the file, because a pattern that
+  matches nothing reads exactly like one that works.
+
 ### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to
