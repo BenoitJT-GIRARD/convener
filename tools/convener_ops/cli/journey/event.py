@@ -174,6 +174,27 @@ def events_awaiting_key(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
+def event_key_secret_name(argv: Sequence[str] | None = None) -> int:
+    """`convener-event-key-secret-name`: the repository secret that holds one
+    edition's private half.
+
+    The workflow needs this name before it has anything to put in it, and the
+    rule that produces it is not obvious -- GitHub Actions secret names may
+    hold only letters, digits and underscore, while an event id may legally
+    carry `.` and `-`, so `secret_name` folds both before uppercasing.
+    Spelling that fold a second time in shell is how the two would come to
+    disagree, quietly, on the one edition whose id has a dot in it.
+
+    A name, never a value: `instance/keys/events/<id>.pub` already names the
+    edition openly.
+    """
+    parser = argparse.ArgumentParser(prog="convener-event-key-secret-name")
+    parser.add_argument("--event", required=True, help="the edition's id")
+    args = parser.parse_args(argv)
+    print(eventkeys.secret_name(args.event.lower()))
+    return 0
+
+
 def mint_event_key(argv: Sequence[str] | None = None) -> int:
     """`convener-mint-event-key`: one fresh pair, private half to stdout.
 

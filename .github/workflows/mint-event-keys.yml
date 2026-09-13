@@ -112,14 +112,10 @@ jobs:
         # cannot open.
         run: |
           set -o pipefail
-          minted=''
+          : > "$RUNNER_TEMP/minted"
           while IFS= read -r id; do
             [ -n "$id" ] || continue
-            name="$(cd tools && uv run --frozen python -c "
-          import sys
-          from convener_ops.journey import eventkeys
-          sys.stdout.write(eventkeys.secret_name(sys.argv[1]))
-          " "$id")"
+            name="$(cd tools && uv run --frozen convener-event-key-secret-name --event "$id")"
             tmp="$RUNNER_TEMP/$id.pub"
             (cd tools && uv run --frozen convener-mint-event-key --event "$id" --public-out "$tmp") \
               | gh secret set "$name" --repo "$GITHUB_REPOSITORY"
@@ -135,10 +131,14 @@ jobs:
               echo "::error::$name is not set after minting $id; the public half has not been published, so nothing can be accepted for it"
               exit 1
             fi
-            minted="$minted $id"
+            echo "$id" >> "$RUNNER_TEMP/minted"
             echo "::notice::$id has a key, and its page can open"
           done <<< "$IDS"
-          echo "minted=${minted# }" >> "$GITHUB_OUTPUT"
+          {
+            echo 'minted<<EOF'
+            cat "$RUNNER_TEMP/minted"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish the public halves
         if: steps.mint.outputs.minted != ''
@@ -155,9 +155,10 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
             mkdir -p instance/keys/events
-            for id in $MINTED; do
+            while IFS= read -r id; do
+              [ -n "$id" ] || continue
               cp "$RUNNER_TEMP/$id.pub" "instance/keys/events/$id.pub"
-            done
+            done <<< "$MINTED"
             git add instance/keys/events
             if git diff --cached --quiet; then
               # The refreshed tip already carries these bytes, which on a
@@ -165,16 +166,17 @@ jobs:
               # attempt it would mean the file never reached its path, so the
               # files themselves are what decides rather than the attempt
               # number.
-              for id in $MINTED; do
+              while IFS= read -r id; do
+                [ -n "$id" ] || continue
                 if [ ! -f "instance/keys/events/$id.pub" ]; then
                   echo "::error::$id was minted and its public half is not in the tree, so nothing can be accepted for it"
                   exit 1
                 fi
-              done
+              done <<< "$MINTED"
               echo "::notice::the public halves are already published"
               exit 0
             fi
-            git commit -m "keys: publish the public half for$(printf ' %s' $MINTED)"
+            git commit -m "keys: publish the public half for $(echo "$MINTED" | tr '\n' ' ')"
             if git push origin "HEAD:$TARGET_BRANCH"; then
               exit 0
             fi
