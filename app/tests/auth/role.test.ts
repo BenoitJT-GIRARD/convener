@@ -61,6 +61,23 @@ describe('detectRole', () => {
     expect(await detectRole('alice', 'tok', cfg)).toBe('organizer');
   });
 
+  it('falls back to config on a 403, because a refusal is not an answer', async () => {
+    // The whole of this case: `standing-up.yml`'s App step sets one
+    // repository permission and says to leave every other permission alone,
+    // so the App's own token cannot read an *organisation* endpoint at all.
+    // GitHub answers 403 "Resource not accessible by integration" -- which
+    // says the caller may not ask, never that the answer is no. Reading it
+    // as a no demotes every Board member the sequence just installed.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+    expect(await detectRole('alice', 'tok', cfg)).toBe('board');
+    expect(await detectRole('bob', 'tok', cfg)).toBe('organizer');
+  });
+
+  it('returns organizer on a 403 with no config to fall back to', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+    expect(await detectRole('alice', 'tok', null)).toBe('organizer');
+  });
+
   it('falls back to config when fetch throws', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
     expect(await detectRole('alice', 'tok', cfg)).toBe('board');
