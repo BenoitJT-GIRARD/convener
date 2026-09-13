@@ -192,6 +192,46 @@ export function nextEditionCode(speakers: Speaker[], counter: number): string {
 }
 
 /**
+ * The number in an edition code, or `null` when the code does not carry one
+ * under this instance's prefix.
+ *
+ * A code is the instance's own prefix and then digits: the twelfth
+ * edition is 12. A prefix with nothing after it, digits that are not
+ * digits, and a code from some other series are all neither. Read rather
+ * than assumed, because the counter below is raised from it and a silent
+ * misread would move a high-water mark to somewhere no edition is.
+ */
+export function editionNumber(editionCode: string): number | null {
+  const prefix = editionCodePrefix();
+  if (!editionCode.startsWith(prefix)) return null;
+  const rest = editionCode.slice(prefix.length);
+  if (!/^[0-9]+$/.test(rest)) return null;
+  return Number(rest);
+}
+
+/**
+ * What `next_edition_number` should read once `editionCode` is assigned.
+ *
+ * **A floor that only ever rises.** The counter is a high-water mark rather
+ * than a count of rows -- `test_published.py` holds it that way, and for a
+ * reason a duplicate meets: rows can be cleared, and a counter derived from
+ * the rows that remain would renumber editions that already exist on posters
+ * and in sent mail. So this takes the larger of the two, never the newer.
+ *
+ * It exists because nothing raised the mark at all. Measured on a live
+ * instance: the cockpit assigned the first edition, the counter stayed at
+ * 1, and `sh gates.sh` went red on the first edition that instance ever
+ * scheduled -- naming a key the operator has never heard of and cannot
+ * reach from any screen, one moment after a screen told them their edition
+ * was locked in.
+ */
+export function raisedEditionCounter(counter: number, editionCode: string): number {
+  const assigned = editionNumber(editionCode);
+  if (assigned === null) return counter;
+  return Math.max(counter, assigned + 1);
+}
+
+/**
  * The event id of an edition, which is its code lower-cased and nothing else.
  *
  * The rule `tools/convener_ops/journey/platform.py::find_speaker` states,

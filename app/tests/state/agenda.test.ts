@@ -1,13 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  AGENDA_STATUSES,
-  ARCHIVE_GROUPS,
-  ARCHIVE_STATUSES,
-  BOARD_COLUMNS,
-  BOARD_STATUSES,
-  eventIdOf,
-  findOverlaps,
-} from '../../src/state/agenda';
+import { AGENDA_STATUSES, ARCHIVE_GROUPS, ARCHIVE_STATUSES, BOARD_COLUMNS, BOARD_STATUSES, editionCodePrefix, editionNumber, eventIdOf, findOverlaps, raisedEditionCounter } from '../../src/state/agenda';
 import { SPEAKER_STATUSES } from '../../src/data/validate';
 import type { Speaker, SpeakerStatus } from '../../src/data/types';
 import { speaker as double } from '../helpers/data-doubles';
@@ -173,5 +165,43 @@ describe('the event id of an edition', () => {
   it('is the edition code lower-cased, and nothing else', () => {
     expect(eventIdOf('MRG-12')).toBe('mrg-12');
     expect(eventIdOf('')).toBe('');
+  });
+});
+
+
+describe('raisedEditionCounter', () => {
+  it('moves the mark past the code just assigned', () => {
+    // The defect: the cockpit assigned an instance's first edition and
+    // `next_edition_number` stayed at 1, so `sh gates.sh` went red -- over a
+    // key no screen exposes, one moment after a screen said the edition was
+    // locked in.
+    expect(raisedEditionCounter(1, `${editionCodePrefix()}1`)).toBe(2);
+    expect(raisedEditionCounter(2, `${editionCodePrefix()}7`)).toBe(8);
+  });
+
+  it('never lowers it, because it is a high-water mark and not a count', () => {
+    // The reason the counter exists at all, and the reason this is a maximum
+    // rather than an assignment: rows can be cleared, and a mark derived from
+    // the rows that remain would renumber editions that are already on
+    // posters and in sent mail.
+    expect(raisedEditionCounter(9, `${editionCodePrefix()}3`)).toBe(9);
+    expect(raisedEditionCounter(9, `${editionCodePrefix()}8`)).toBe(9);
+  });
+
+  it('leaves the mark alone when the code carries no number of this series', () => {
+    // A code from another prefix, or a code with nothing after it, says
+    // nothing about where this series has got to. Moving the mark on one
+    // would put it somewhere no edition is.
+    expect(raisedEditionCounter(4, 'ZZZ-11')).toBe(4);
+    expect(raisedEditionCounter(4, editionCodePrefix())).toBe(4);
+    expect(raisedEditionCounter(4, '')).toBe(4);
+  });
+});
+
+describe('editionNumber', () => {
+  it('reads the number under this instance prefix and nothing else', () => {
+    expect(editionNumber(`${editionCodePrefix()}12`)).toBe(12);
+    expect(editionNumber(`${editionCodePrefix()}x`)).toBeNull();
+    expect(editionNumber('ZZZ-1')).toBeNull();
   });
 });
