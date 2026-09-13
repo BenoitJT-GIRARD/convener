@@ -1,4 +1,70 @@
-# Speakers (unified schema v6 — see docs/engineering/schema.md)
+# The example instance's own speakers and editions (unified schema v6 --
+# see docs/engineering/schema.md). The same file `instance/data/speakers.yml` is for
+# the instance that runs this repository, written for one that does not
+# exist.
+#
+# Nobody here is real. Every address is under `.test`, which RFC 2606
+# reserves and no registry will ever delegate; every affiliation names an
+# institution that does not exist; every board login is prefixed
+# `example-`. That combination is what makes a record unmistakably
+# synthetic even if a name it invents happens to be somebody's somewhere.
+#
+# `country` is the one field that names a real place, and it is the one
+# field that has to. The cockpit's *Diversity* screen counts a country as
+# a bucket and reports a share against the people who declared one
+# (`app/src/state/diversity.ts`); a programme spread over invented
+# countries is a measure nobody can read, and a bucket nobody can place
+# says nothing about whether the balance target is being kept. A country
+# is not a person, an organisation or an address, so nothing about the
+# three habits above is given up by writing one.
+#
+# `edition_code` is `MRG-N`: this instance's own prefix, declared once in
+# `../instance/config.json` as `edition_prefix` and written nowhere else.
+# It is deliberately not `identity.short_name` (`TEC`) -- the two are free
+# to differ, which is the whole reason the prefix has a key of its own --
+# and `validate.validate_speakers` builds its pattern from the declaration
+# rather than fixing one shape for every instance there will ever be.
+#
+# The day these records are written for
+# -------------------------------------
+# 2026-09-03, and every date below is placed against it. Nothing reads
+# that day from this file: it is `example_dates.ANCHOR`, stated once per
+# language (`tools/scripts/example_dates.py`, `app/scripts/example-dates.mjs`)
+# and pinned by `tools/tests/fixtures/example-dates.json`. Whatever reads
+# these records shifts every day in them by whole weeks, so the fixture is
+# as old on the day the demonstration runs as it was on the day it was
+# written -- a Thursday session stays a Thursday session, and the inbox
+# stops printing "Forum summary is 281 days overdue" for a talk this
+# instance gave last autumn.
+#
+# So the offsets are the content and the dates are their rendering. On the
+# anchor day: MRG-4 was delivered that evening, MRG-5 is five weeks out,
+# one lead has had its vote open for five days of the fourteen it gets,
+# and no step of any record is past the turnaround time the series sets
+# itself. Moving a date here means moving it relative to that day, not to
+# the day you happen to be editing.
+#
+# Sixteen records, chosen to exercise states rather than to be plausible:
+# one for every status the model has, and enough of the ones a board
+# actually decides on to make the *Diversity* screen say something. That
+# screen refuses a share below ten declared answers, and it asks its
+# question of two populations -- everyone who applied, and everyone the
+# board selected -- so the ten selected records below all declare a
+# gender, a career stage and a country. Two records decline to declare,
+# which is a first-class answer and is what the undisclosed row is for.
+#
+#   2 leads (one with the vote open, one nobody has opened yet)
+#   1 approved  1 invited  2 confirmed  1 scheduled
+#   2 delivered (one waiting on the board, one whose speaker refused the
+#                recording)  2 archived and published
+#   2 parked (the window closed)  2 declined by the board
+#   1 declined by the speaker
+#
+# Two of the hosts are not on the board: `example-fern` and
+# `example-gorse` have each co-hosted two webinars that happened, which is
+# what makes them nominable (G-05). A fixture whose every past webinar was
+# hosted by a board member would leave the two nominations in `config.yml`
+# standing on nobody, and the rule that admits a member undemonstrable.
 - id: exm-001
   name: Alba Quennell
   gender: F

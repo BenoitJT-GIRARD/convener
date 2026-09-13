@@ -299,6 +299,41 @@ it carries is what a release does to somebody else's repository:
   as they go out* — a commitment in writing that no step of the runbook ever
   came back to. It promises what actually happens instead.
 
+- **A write of a data file deleted the reasoning in it.** Advancing the
+  edition counter took a live instance's `instance/data/config.yml` from 31
+  comment lines to 1, in a commit whose subject said it had advanced a
+  counter. Thirty lines explaining why those logins are GitHub logins and not
+  names, how the team is resolved, and which thresholds are the product's
+  defaults kept rather than chosen — gone, on the most ordinary act in the
+  runbook, on the one file this product asks an operator to *reason* about
+  rather than fill in. The boundary gives that file to the instance, so
+  nothing upstream would ever have put it back.
+
+  The mechanism is older than the act that exposed it: a write was a
+  parse-and-serialise, `js-yaml` drops every comment on the way in, and the
+  writer put a one-line constant back where the file's own header had been.
+  What changed was how often the file is written. A write now re-emits the
+  original bytes for every top-level key whose value did not change, and the
+  canonical dump only for the ones that did — the rule `settings/edit.ts`
+  already kept for a single number, generalised to a block. A comment above a
+  key travels with that key, and the file keeps the order somebody arranged
+  it in. Measured on the shipped example: all 27 of its comment lines sit
+  outside the one block the Board screen ever rewrites.
+
+  **`speakers.yml` had the same defect, and it had already fired.** That file
+  opened with sixty-seven lines saying that nobody in it is real, why every
+  address is under `.test` and why every board login is prefixed. The nightly
+  sweep replaced all of it with one line, in a commit about elapsed events,
+  and nothing noticed for a day. The header is restored, every writer of that
+  file on both sides keeps the one the file already has, and a reading holds
+  it — prose is not a value, so nothing else in either suite would have
+  missed it.
+
+  The dumps themselves are untouched. `serializeConfig`, `dump_speakers` and
+  the two header constants are pinned byte for byte across the language
+  boundary, and that agreement is about what a *fresh* file looks like. What
+  changed is what a writer does with the dump, not what the dump is.
+
 ### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to

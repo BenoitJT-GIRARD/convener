@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { configTextFor } from './config-write';
 import { getFile, githubStore } from '../github/contents';
 import { mutate } from '../github/mutate';
 import { friendlyError } from '../github/errors';
@@ -8,9 +9,8 @@ import {
   parseSpeakers,
   serializeSpeakers,
   parseConfig,
-  serializeConfig,
-  withSpeakersHeader,
-  withConfigHeader,
+  SPEAKERS_HEADER,
+  underItsOwnHeader,
 } from './yaml';
 import { isDemoMode, demoSpeakers, demoConfig } from './demo';
 import { forgetDemoSession, readDemoSession, writeDemoSession } from './demo-session';
@@ -235,12 +235,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const result = await mutate({
         store: githubStore(token),
         path: speakersFile(),
-        parse: parseSpeakers,
-        serialize: v => withSpeakersHeader(serializeSpeakers(v)),
-        transform,
-        message,
+        parse: (text: string) => text,
+        serialize: (text: string) => text,
+        // Under the header the file already had, not under the constant. A
+        // write used to replace sixty-seven lines of the example instance's
+        // own explanation with one -- see `underItsOwnHeader`.
+        transform: (text: string) =>
+          underItsOwnHeader(
+            text,
+            serializeSpeakers(transform(parseSpeakers(text))),
+            SPEAKERS_HEADER,
+          ),
+        // The subject may be a function of what is about to be written --
+        // `NewSpeaker` names the id it assigned, which only the winning
+        // attempt settles. It is handed the records, not the bytes: the
+        // caller reasons about a list of speakers and should not have to
+        // learn that this writer works in text.
+        message:
+          typeof message === 'function'
+            ? (text: string) => message(parseSpeakers(text))
+            : message,
       });
-      setS(p => ({ ...p, speakers: result.value, spkSha: result.sha, saveError: null }));
+      setS(p => ({
+        ...p,
+        speakers: parseSpeakers(result.value),
+        spkSha: result.sha,
+        saveError: null,
+      }));
       return true;
     } catch (e) {
       setS(p => ({ ...p, saveError: friendlyError(e, 'save') }));
@@ -262,15 +283,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return true;
     }
     try {
+      // Text in, text out. The transform still works on the parsed `Config`,
+      // because that is what every caller reasons about -- but what reaches
+      // the API is the original file with only the blocks that changed
+      // rewritten. A parse-and-serialise here used to replace the file's own
+      // header with a constant and drop every comment in it: thirty lines of
+      // an instance's own reasoning, deleted by a write that moved one
+      // integer. See `data/config-write.ts` for the measurement.
       const result = await mutate({
         store: githubStore(token),
         path: configFile(),
-        parse: parseConfig,
-        serialize: v => withConfigHeader(serializeConfig(v)),
-        transform,
+        parse: (text: string) => text,
+        serialize: (text: string) => text,
+        transform: (text: string) => configTextFor(text, transform(parseConfig(text))),
         message,
       });
-      setS(p => ({ ...p, config: result.value, cfgSha: result.sha, saveError: null }));
+      setS(p => ({
+        ...p,
+        config: parseConfig(result.value),
+        cfgSha: result.sha,
+        saveError: null,
+      }));
       return true;
     } catch (e) {
       setS(p => ({ ...p, saveError: friendlyError(e, 'save') }));

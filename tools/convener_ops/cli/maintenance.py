@@ -141,7 +141,14 @@ def sweep() -> int:
     changes += vote_changes
     if changes:
         speakers_path.write_text(
-            store.dump_speakers(swept), encoding="utf-8", newline=""
+            # Under the header the file already had. This writer is the one
+            # that deleted sixty-seven lines of it, on a schedule, in a commit
+            # about elapsed events -- see `store.under_its_own_header`.
+            store.speakers_under_own_header(
+                speakers_path.read_text(encoding="utf-8"), swept
+            ),
+            encoding="utf-8",
+            newline="",
         )
         for change in changes:
             print(change)
