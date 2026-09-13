@@ -21,6 +21,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import * as yaml from 'js-yaml';
 import { AuthProvider } from '../../src/auth/AuthContext';
+import { DataProvider } from '../../src/data/DataContext';
 import { Settings } from '../../src/screens/Settings';
 import {
   CONFIG_DIRS,
@@ -78,7 +79,16 @@ interface Backend {
  * describing a screen this repository must never have.
  */
 function makeBackend(
-  options: { secretNames?: string[]; refuseSecrets?: boolean; refuseWith?: number } = {},
+  options: {
+    secretNames?: string[];
+    refuseSecrets?: boolean;
+    refuseWith?: number;
+    /** Who is signed in. Board by default, because that is who these
+     *  thresholds are for -- and because a harness that signed everybody in
+     *  as an organizer would make every saving test here prove the gate
+     *  rather than the bound it was written for. */
+    role?: 'board' | 'organizer';
+  } = {},
 ): Backend {
   // 403 unless the test says otherwise: that is what a user-to-server token
   // gets for a permission its App does not hold, and it is the refusal the
@@ -93,6 +103,14 @@ function makeBackend(
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
       return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+    }
+    // 404 for a login that is genuinely not on the team, which is the one
+    // authoritative negative (`auth/role.ts`). Never 403 here: that means the
+    // caller may not ask, and it falls through to the configuration instead.
+    if (url.includes('/memberships/')) {
+      return options.role === 'organizer'
+        ? Promise.resolve({ ok: false, status: 404, text: async () => 'not a member' })
+        : Promise.resolve({ ok: true, json: async () => ({ state: 'active' }) });
     }
     if (url.endsWith('/actions/secrets?per_page=100')) {
       if (options.refuseSecrets) {
@@ -162,7 +180,9 @@ function renderSettings(backend: Backend) {
   render(
     <MemoryRouter>
       <AuthProvider>
-        <Settings />
+        <DataProvider>
+          <Settings />
+        </DataProvider>
       </AuthProvider>
     </MemoryRouter>,
   );
@@ -485,7 +505,9 @@ describe('the same screen, demonstrated', () => {
     render(
       <MemoryRouter>
         <AuthProvider>
-          <Settings />
+          <DataProvider>
+            <Settings />
+          </DataProvider>
         </AuthProvider>
       </MemoryRouter>,
     );
@@ -504,7 +526,9 @@ describe('the same screen, demonstrated', () => {
     render(
       <MemoryRouter>
         <AuthProvider>
-          <Settings />
+          <DataProvider>
+            <Settings />
+          </DataProvider>
         </AuthProvider>
       </MemoryRouter>,
     );
@@ -521,7 +545,9 @@ describe('the same screen, demonstrated', () => {
     render(
       <MemoryRouter>
         <AuthProvider>
-          <Settings />
+          <DataProvider>
+            <Settings />
+          </DataProvider>
         </AuthProvider>
       </MemoryRouter>,
     );
@@ -536,5 +562,113 @@ describe('the same screen, demonstrated', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save 1 change/ }));
     await waitFor(() => expect(screen.getByText(/^Written: /)).toBeInTheDocument());
     expect(wire).not.toHaveBeenCalled();
+  });
+
+});
+
+// ---------------------------------------------------------------- //
+// Who may change what an instance runs on.
+// ---------------------------------------------------------------- //
+
+describe('an organizer', () => {
+  it('reads every threshold and can change none of them', async () => {
+    // The gap this closes. Every other write surface in this application
+    // asks the role -- `ActionButtons`, `PublicationGate`, `SpeakerPage` --
+    // and this one, which settles the Actions allowance and the routing
+    // every registration passes through, never did. Measured on a live
+    // instance: two of the five repository admins are exactly the
+    // `organizer` the product models.
+    const backend = makeBackend({ role: 'organizer' });
+    renderSettings(backend);
+
+    const alarm = await alarmField();
+    expect(alarm).toHaveAttribute('readonly');
+    // Readable, selectable, reachable: seeing what the instance is set to
+    // is the part an organizer keeps.
+    expect(alarm).not.toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Save/ })).toBeDisabled(),
+    );
+    expect(screen.getByText(/These are the Board/)).toBeInTheDocument();
+  });
+
+  it('is told it is a division of responsibility and not a lock', async () => {
+    // A role check in a browser is not a security boundary, and saying so
+    // is not a caveat -- an organizer holds write access to the repository
+    // and can edit these three files on GitHub whichever way this screen
+    // renders. What the sentence has to carry is why the division is stated
+    // here at all: on the private repository D-15 requires, on the free
+    // plan, GitHub refuses branch protection and rulesets outright, so
+    // CODEOWNERS is advisory and there is nowhere else to say it.
+    const backend = makeBackend({ role: 'organizer' });
+    renderSettings(backend);
+
+    // The paragraph, not the `<strong>` the matcher lands on: the whole
+    // point is the sentences after the first one.
+    const notice = (await screen.findByText(/These are the Board/)).closest('p');
+    const said = notice?.textContent ?? '';
+    expect(said).toMatch(/not a lock/);
+    expect(said).toMatch(/CODEOWNERS/);
+    expect(said).toMatch(/advisory/);
+  });
+
+  it('writes nothing even if the save control is reached anyway', async () => {
+    // The gate is on the control, and a disabled control is a rendering.
+    // This asserts the outcome rather than the attribute: no subject was
+    // ever sent.
+    const backend = makeBackend({ role: 'organizer' });
+    renderSettings(backend);
+
+    // The lane threshold, not the alarm: 60 hours is out of bounds against
+    // the real declarations, so a reading built on it was held disabled by
+    // the bound and passed with no gate at all -- which the mutation caught.
+    // 168 is the legal edit the saving test above makes, and it is exactly
+    // the edit that must not go through from here.
+    fireEvent.change(
+      await screen.findByLabelText(
+        'Immediate-lane threshold — queue_beyond_hours in instance/registration-lanes.yml',
+        undefined,
+        FIRST_RENDER,
+      ),
+      { target: { value: '168' } },
+    );
+    const save = screen.getByRole('button', { name: /^Save/ });
+    fireEvent.click(save);
+
+    await waitFor(() => expect(save).toBeDisabled());
+    expect(backend.subjects).toEqual([]);
+    expect(backend.files['instance/registration-lanes.yml']).not.toContain(
+      'queue_beyond_hours: 168',
+    );
+  });
+});
+
+describe('a Board member', () => {
+  it('still gets the fields and the control', async () => {
+    // Non-vacuity for the three above: a gate that refused everybody would
+    // pass all of them and take the screen with it.
+    const backend = makeBackend();
+    renderSettings(backend);
+
+    const alarm = await alarmField();
+    expect(alarm).not.toHaveAttribute('readonly');
+    expect(screen.queryByText(/These are the Board/)).not.toBeInTheDocument();
+
+    // The lane threshold rather than the alarm, and for the same reason the
+    // saving test above uses it: raising it is the one edit that is legal
+    // against the coupling as the real declarations leave it. This reading
+    // is about the gate, so the field it moves must not also be arguing
+    // about a bound.
+    fireEvent.change(
+      await screen.findByLabelText(
+        'Immediate-lane threshold — queue_beyond_hours in instance/registration-lanes.yml',
+        undefined,
+        FIRST_RENDER,
+      ),
+      { target: { value: '168' } },
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Save 1 change/ })).not.toBeDisabled(),
+    );
   });
 });

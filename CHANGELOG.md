@@ -114,6 +114,45 @@ it carries is what a release does to somebody else's repository:
   outcome, so an outage signed everybody out. `checkToken` separates the
   three now, and only a refusal discards the session — measured against a 502,
   on a day GitHub was returning 5xx from its authorization endpoints.
+- a `- **The settings screen was the one write surface that never asked the
+  role.** Every other one asks it, and this is the screen that settles how the
+  instance runs: the Actions allowance and the alarm before it is exhausted,
+  the routing every registration passes through, the submission-queue alarm.
+  Measured on a live instance, two of the five repository admins are exactly
+  the organizer the product models, and could change all three from that
+  screen. The fields are read-only for anyone but the Board now, and the
+  control is refused rather than merely hidden.
+
+  Read-only rather than disabled, because seeing what the instance is set to
+  is the part an organizer keeps, and a disabled input is skipped by keyboard
+  navigation and reads as broken rather than as somebody else’s to change.
+
+  The sentence that appears says it is a division of responsibility and not a
+  lock, which is the honest limit: an organizer holds write access and can
+  edit those three files on GitHub whichever way this screen renders. It is
+  stated here because there is nowhere else to state it — GitHub refuses
+  branch protection and rulesets on a private repository on the free plan,
+  the shape D-15 asks a cockpit to have, so the CODEOWNERS file the
+  standing-up sequence writes is advisory on every instance shaped the way
+  the sequence shapes it. That step now says so, and says why to set it
+  anyway.
+- a `- **The cockpit wrote a new speaker with its id last of thirty-five keys.**
+  Every other writer puts `id` first, `data/validate.ts` included, which is
+  the model's own order. The screen built the record by spreading the form
+  fields and appending the id afterwards, and `data/yaml.ts` dumps with
+  `sortKeys: false` — deliberately, because that is what keeps the bytes
+  matching PyYAML — so construction order was file order. Nothing to a
+  parser; the cost is a diff. The next Python-side rewrite of such a record
+  re-emits it in canonical order and moves the whole thirty-five-line block
+  for a change that touched one field, on a file whose review is part of the
+  governance.
+
+  The agreement between the two writers was pinned one step downstream of
+  where it broke: the boundary fixture holds the two sides' YAML output together
+  and never sees the record this screen constructs. It is read from the bytes
+  the screen actually sends now, against the same record after
+  `data/validate.ts` has rebuilt it — neither side writes the order down, so
+  a field added to the model and forgotten here lands red on its own.
 - a `- **One transient failure and the volunteer became the retry loop.** The
   cockpit's single write path replayed a conflict and nothing else, so a 500,
   502 or 503 was final on the first click: an operator creating a lead on a

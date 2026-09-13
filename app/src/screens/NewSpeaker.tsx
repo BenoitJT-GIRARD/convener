@@ -57,7 +57,17 @@ export function NewSpeaker() {
     setBusy(true);
     const today = parisToday();
     try {
-      const fields: Omit<Speaker, 'id'> = {
+      const fields: Speaker = {
+        // A placeholder, and it is here for its *position* rather than its
+        // value: the transform below overwrites it with the id it assigns,
+        // and a spread that overwrites an existing key leaves that key where
+        // it already was. Appending `id` after the spread -- which is what
+        // stood here -- laid it down last of thirty-five, and `data/yaml.ts`
+        // dumps with `sortKeys: false` because that is what keeps the bytes
+        // matching PyYAML, so construction order is file order. Every other
+        // writer puts `id` first, `data/validate.ts` included, which is the
+        // model's own order and the one this file is read in.
+        id: '',
         name: form.name.trim(),
         gender: form.gender,
         career_stage: form.career_stage,

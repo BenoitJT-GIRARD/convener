@@ -1,0 +1,4 @@
+# What the public submission queue still holds, and since when; see tools/convener_ops/maintenance/queue_watch.py
+v: 1
+observed_at: '2026-09-13T10:06:22Z'
+waiting: []
