@@ -9,6 +9,44 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# One run at a time, and the newest wins.
+#
+# **Why cancelling is right here and wrong three files away.** This
+# workflow publishes a *state*, not an event: whatever it is part way
+# through producing, a run started since is producing a newer version of
+# the same thing. A superseded run has nothing left to say.
+#
+# The first reason is correctness, not cost. Two overlapping runs here each derive the
+# register from history and commit it, and the older one's commit
+# can land last.
+# That is precisely what `deploy.yml` cancels for -- see
+# `test_deploy_workflow_cancels_stale_runs_of_itself`, which spells out
+# that an unserialised loser's rebase either conflicts or "replays
+# cleanly and lets the older build silently overwrite the newer one".
+# This file had no concurrency block at all, so that case was open.
+#
+# The minutes are real and secondary, and worth stating at their true
+# size rather than a flattering one: on 2026-09-13 this file billed
+# 47 minutes across 31 jobs, against `deploy.yml`'s 32 across 30 jobs with cancellation on.
+# Both are short jobs and GitHub rounds every job up to a whole minute,
+# so cancelling saves tens of minutes here, not hundreds. The hundreds
+# were in what *woke* nine workflows for one runbook tick.
+#
+# `sweep-and-notify.yml` is the counter-example and the reason this is
+# spelled out rather than copied: its `immediate` job composes a message
+# from `github.event.before`, so each run holds a window no other run
+# holds, and cancelling one loses that window's notification for good.
+# Cancellation belongs to workflows that publish the latest state, never
+# to workflows that send something.
+#
+# The group is a constant. `${{ github.ref }}` would read like "one
+# run per branch" and would be the same constant here -- every trigger
+# this file has resolves to the default branch -- but written as a
+# constant it cannot quietly become per-something-else later.
+concurrency:
+  group: derive-decision-register
+  cancel-in-progress: true
+
 jobs:
   register:
     runs-on: ubuntu-latest

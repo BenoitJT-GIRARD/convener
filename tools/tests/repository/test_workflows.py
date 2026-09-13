@@ -515,17 +515,41 @@ def test_deploy_workflow_concurrency_group_cannot_collide_with_another_workflow(
 
 
 def test_deploy_workflow_concurrency_is_not_shared_with_publish_showcase() -> None:
-    """`publish-showcase.yml` writes a disjoint subtree of example-showcase and its
-    overlapping pushes are both legitimate -- the retry-with-rebase loop
-    already handles that case more cheaply. Grouping the two workflows
-    together here would serialise a job that does not need to wait."""
+    """`publish-showcase.yml` writes a disjoint subtree of example-showcase
+    and its overlapping pushes are both legitimate -- the retry-with-rebase
+    loop already handles that case more cheaply. Grouping the two workflows
+    *together* would serialise a job that does not need to wait.
+
+    That is the whole claim, and this test used to assert something wider
+    than it: that `publish-showcase.yml` carried no concurrency block at
+    all. The two are not the same, and the difference was measured -- with
+    no group of its own, that workflow ran thirty times for one volunteer's
+    runbook session and cost 51 minutes, where `deploy.yml`, cancelling its
+    own superseded runs, cost 10 across 32. Worse, two overlapping showcase
+    runs race to push a *whole built site*, which is exactly the case
+    `test_deploy_workflow_cancels_stale_runs_of_itself` cancels for: the
+    loser's rebase can replay cleanly and let the older build overwrite the
+    newer.
+
+    So it now has a group -- its own. What this test holds is the thing the
+    docstring above always meant: not the same group as deploy's.
+    """
     publish_showcase = safe_load(
         (ROOT / ".github/workflows/publish-showcase.yml").read_text(encoding="utf-8")
     )
-    assert "concurrency" not in publish_showcase, (
-        "publish-showcase.yml must not gain a concurrency group shared with "
-        "deploy.yml's -- their overlapping pushes are both legitimate and "
-        "the existing retry loop already reconciles them"
+    theirs = publish_showcase.get("concurrency", {}).get("group")
+    ours = _load_workflow()["concurrency"]["group"]
+
+    assert theirs, (
+        "publish-showcase.yml has no concurrency group -- two overlapping "
+        "runs each push a whole built site, and the loser's rebase can "
+        "replay cleanly with the older build overwriting the newer"
+    )
+    assert theirs != ours, (
+        f"publish-showcase.yml and deploy.yml share the group {ours!r} -- "
+        "they write disjoint subtrees, their overlapping pushes are both "
+        "legitimate, and the retry-with-rebase loop already reconciles "
+        "them, so serialising one behind the other buys nothing"
     )
 
 
