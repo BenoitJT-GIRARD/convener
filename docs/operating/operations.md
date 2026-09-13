@@ -896,33 +896,56 @@ writing personal data to disk unencrypted for want of a key. See
 the one place in this codebase where an absent integration (D-13) is not
 treated as a normal state.
 
-**To create:** for each event that will take registrations, generate a
-fresh key pair (`convener_ops.journey.eventkeys.generate()`) — never reuse one event's
-pair for another, since a per-event key that read another event's data
-would not be a per-event key at all.
+**To create: nothing. `.github/workflows/mint-event-keys.yml` does it**,
+every morning, for every edition that has reached `scheduled` and has no
+public half published yet. There is no per-event step here and no per-event
+step anywhere else on the journey — this was the last one.
 
-1. Store the private half as the repository secret named by
-   `convener_ops.journey.eventkeys.secret_name(event_id)` -- **not** simply the event id
-   uppercased: GitHub Actions secret names may only contain letters, digits
-   and underscore, but an event id may legally contain `.` and `-` (the
-   tests' own canonical id, `mrg-042`, does), so `secret_name` folds both to
-   `_` before uppercasing. Never commit the private half, never write it to
-   a file outside a CI job's environment, and never let it appear in a job
-   log.
-2. Commit the public half as `instance/keys/events/<event id>.pub`. This is not a
-   secret: it is what lets the static registration page encrypt in the
-   browser without asking a server for anything first.
+**Why this one is minted by a machine and the signing key is not.** The *Certificate signing key*
+section below says a person must mint that one and hold the only copy of it,
+and means it. The argument does not carry here, for three measured reasons.
+CI already holds these keys: every decrypt runs in a runner with
+`CONVENER_EVENT_KEY_<ID>` in its environment. CI already writes these secrets:
+`retention.yml` deletes them on a schedule under `CONVENER_RETENTION_TOKEN`,
+whose Secrets permission is read *and* write. And the manual route exposed the
+private half to four surfaces the automated one never touches — a terminal, a
+clipboard, a browser form, and a shell history.
 
-**This order is load-bearing, not incidental.** Committing the public half
-is what the signup relay checks before it will dispatch a submission at
-all -- its "is this a known event" check (*Signup relay* above) -- and the
-*private* half is what *Handle registration*'s job needs to ever read a
-submission again. Publish the public half before the private secret
-exists, and every registration accepted in that window is told "sent",
-genuinely encrypted, and can never be decrypted again — the job that
+The workflow generates the pair in the runner, pipes the private half
+straight into `gh secret set` so it reaches no file and no log,
+**re-lists the secrets to confirm it is really set**, and only then publishes
+the public half as `instance/keys/events/<event id>.pub` and asks `deploy.yml`
+to rebuild what serves it. It never mints twice for one edition: a published
+public half means a live key, and a second pair would leave every registration
+taken under the first permanently unreadable.
+
+The secret's name is `convener_ops.journey.eventkeys.secret_name(event_id)` --
+**not** simply the event id uppercased: GitHub Actions secret names may only
+contain letters, digits and underscore, but an event id may legally contain
+`.` and `-` (the tests' own canonical id, `mrg-042`, does), so `secret_name`
+folds both to `_` before uppercasing.
+
+**If you ever have to do it by hand** — a key needed before tomorrow's run,
+or an edition the sweep cannot see — run the workflow rather than a Python
+shell: *Actions → Mint event keys → Run workflow*. The order below is why.
+
+**This order is load-bearing, not incidental, and it is now structural.**
+Committing the public half is what the signup relay checks before it will
+dispatch a submission at all -- its "is this a known event" check (*Signup
+relay* above) -- and the *private* half is what *Handle registration*'s job
+needs to ever read a submission again. Publish the public half before the
+private secret exists, and every registration accepted in that window is told
+"sent", genuinely encrypted, and can never be decrypted again — the job that
 would read it fails closed forever, not just until someone notices.
-Setting the private secret first closes that window: the relay has
-nothing to accept until step 2 opens it.
+
+The workflow cannot get that order wrong. `convener-mint-event-key` writes the
+public half to a path in the runner's temporary directory, never to
+`instance/keys/events/`; the secret is set and then confirmed by re-listing;
+and the file is copied into place only after that. Any failure leaves the
+public half unpublished, so the window never opens. A procedure with a
+mandatory order and an unrecoverable failure is exactly the kind that should
+not depend on a person doing two browser tabs in the right sequence twelve
+times a year.
 
 **Secrets to set:** `CONVENER_EVENT_KEY_<EVENT ID>`, one per event, set only for
 as long as that event's registrations need decrypting.
@@ -1021,7 +1044,13 @@ the same manual catch-up any other scheduled job in this project uses.
 
 **`CONVENER_RETENTION_TOKEN` — the one credential this whole job depends on,
 and its absence is deliberately not an ordinary D-13 state.**
-Deleting a repository secret needs a credential `GITHUB_TOKEN` does not
+It manages this repository’s event-key secrets at both ends now: this job
+deletes them when a retention window closes, and `mint-event-keys.yml`
+creates them when an edition is scheduled. One credential, one permission,
+both directions — the same read-and-write Secrets scope either way, so
+automating the creation asked for nothing the deletion had not already been
+granted.
+Managing a repository secret needs a credential `GITHUB_TOKEN` does not
 carry, no matter what `permissions:` a workflow grants it — so this is a
 **fine-grained personal access token, scoped to this repository, with
 the "Secrets" repository permission set to Read and write, and nothing

@@ -157,7 +157,22 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
     PEM marker itself -- which would catch a second, forgotten copy on
     disk the moment someone wrote it, rather than trusting nobody ever
     will. `write_bytes` has no caller in this module today;
-    it is here so that stays true rather than merely assumed."""
+    it is here so that stays true rather than merely assumed.
+
+    **`sys.stdout` is the one sink allowed, and the exception is narrower
+    than it sounds.** `cli/journey/event.py::mint_event_key` has to hand a
+    freshly minted private half to `gh secret set`, and every other way of
+    doing that is worse: a temporary file is the forgotten copy on disk this
+    rule exists for, and a command-line argument is readable in the process
+    list by anything else on the runner. A pipe is the only sink that leaves
+    nothing behind, so the rule learns the distinction rather than being
+    worked around by spelling.
+
+    It stays narrow because the receiver is matched exactly: `sys.stdout`,
+    and not `sys.stderr` (which Actions copies into a run log that outlives
+    the job), not a file object, not a handle a caller passed in.
+    `test_only_the_minting_command_writes_a_private_half_to_stdout` is the
+    other half of it -- the exception may exist in exactly one place."""
     suspect_fragments = ("private_pem", "private_key")
     package_dir = repo_root() / "tools" / "convener_ops"
     checked = 0
@@ -169,6 +184,8 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
                 and isinstance(node.func, ast.Attribute)
                 and node.func.attr in {"write_text", "write", "write_bytes"}
             ):
+                continue
+            if _writes_to_stdout(node):
                 continue
             checked += 1
             for arg in (*node.args, *(kw.value for kw in node.keywords)):
@@ -188,6 +205,53 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
                             "own docstring"
                         )
     assert checked > 0, "no write_text/write call found -- the walk itself is broken"
+
+
+def _writes_to_stdout(node: ast.Call) -> bool:
+    """`sys.stdout.write(...)`, matched on the receiver rather than on a
+    name a caller chose. `stderr` is deliberately not here: Actions copies it
+    into a run log, which outlives the job."""
+    func = node.func
+    if not isinstance(func, ast.Attribute):
+        return False
+    receiver = func.value
+    return (
+        isinstance(receiver, ast.Attribute)
+        and receiver.attr == "stdout"
+        and isinstance(receiver.value, ast.Name)
+        and receiver.value.id == "sys"
+    )
+
+
+def test_only_the_minting_command_writes_a_private_half_to_stdout() -> None:
+    """The exception above, held to one place.
+
+    A pipe leaves nothing behind only as long as it is a pipe. The moment a
+    second command starts printing a private half, somebody will run one of
+    them in a terminal to see what it does, and the key will be in a scroll
+    buffer and a shell history. One caller is checkable; a habit is not.
+    """
+    package_dir = repo_root() / "tools" / "convener_ops"
+    printing: list[str] = []
+    for path in sorted(package_dir.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call) and _writes_to_stdout(node)):
+                continue
+            names = {
+                sub.id.lower()
+                for arg in node.args
+                for sub in ast.walk(arg)
+                if isinstance(sub, ast.Name)
+            }
+            if any("private" in name for name in names):
+                printing.append(f"{path.relative_to(package_dir).as_posix()}")
+
+    assert printing == ["cli/journey/event.py"], (
+        "a private half is printed to stdout from "
+        f"{printing} -- the pipe into `gh secret set` is the one place that "
+        "is argued for, and a second one is a habit rather than an exception"
+    )
 
 
 # -------------------------------------------------------------------- #
