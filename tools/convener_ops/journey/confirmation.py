@@ -346,15 +346,35 @@ def compose(
         "",
     ]
 
+    # Three cases, and the middle one is the one this had wrong. The
+    # sentence about a missing link used to be emitted on the strength of
+    # `join_url` alone, which on a permanent-room account is always empty:
+    # D-06 is that the account *is* a single room, `platform_fcc.py` says the
+    # provider returns no per-event link, and `convener-check-config` tells the
+    # operator to put the joining instructions in `instance/data/config.yml`,
+    # "one value for the whole series". So an operator who followed the design
+    # got a confirmation reading "the room link has not been set yet" with the
+    # room link on the next line.
+    #
+    # What that cost is not the awkwardness. "We will send it as soon as it
+    # is, to this same address" is a commitment made in writing, on behalf of
+    # a volunteer team, to every registrant -- and nothing in this repository
+    # tracks it: no queue of editions with a pending link, no job that
+    # notices, no reminder. The careful reader is the one it misled. Someone
+    # who read past the first sentence joined anyway; someone who trusted it
+    # waited for an e-mail nobody was going to send, and missed the seminar.
+    #
+    # So the claim is made only when both sources are empty, which is the one
+    # state in which it is true.
     if event.room.join_url:
         lines.append(f"Join here: {event.room.join_url}")
-    else:
+    if event.room.instructions:
+        lines.append(event.room.instructions)
+    if not event.room.join_url and not event.room.instructions:
         lines.append(
             "The room link for this event has not been set yet -- we will "
             "send it as soon as it is, to this same address."
         )
-    if event.room.instructions:
-        lines.append(event.room.instructions)
     lines.append("")
 
     if matching_code:
