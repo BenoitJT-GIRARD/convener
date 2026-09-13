@@ -9,8 +9,10 @@ written, and the count of what failed comes back with it.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -18,7 +20,9 @@ from typing import Any
 from convener_ops.cli import store
 from convener_ops.declaration.paths import (
     DATA_DIR,
+    repo_root,
 )
+from convener_ops.journey import eventkeys
 from convener_ops.journey.platform import (
     EventNotFoundError,
     find_speaker,
@@ -127,3 +131,119 @@ def env_flag_is_true(name: str) -> bool:
     the_literal_true` pins every value a `workflow_dispatch` boolean input
     or a raw API dispatch could actually send."""
     return os.environ.get(name, "").strip().lower() == "true"
+
+
+def events_awaiting_key(argv: Sequence[str] | None = None) -> int:
+    """`convener-events-awaiting-key`: the ids that need a key minted, one
+    per line, and nothing else on stdout.
+
+    The first step of `.github/workflows/mint-event-keys.yml`, and the whole
+    of its decision. An edition that will take registrations needs a key
+    before its page opens; an edition whose public half is already committed
+    must never be given a second pair, because every registration taken under
+    the first would become permanently unreadable.
+
+    Prints nothing but ids, so the workflow can loop over the output without
+    parsing. What it read is reported on stderr, which keeps a run that finds
+    nothing distinguishable from a run that looked at nothing -- the same
+    distinction `credential_expiry.summary` exists for.
+    """
+    parser = argparse.ArgumentParser(prog="convener-events-awaiting-key")
+    parser.parse_args(argv)
+
+    root = repo_root()
+    speakers, errors = store.load(root / DATA_DIR / "speakers.yml")
+    if errors:
+        for line in errors:
+            print(f"::error::{line}", file=sys.stderr)
+        return 1
+
+    published = {
+        path.stem
+        for path in (root / eventkeys.KEYS_DIR).glob("*.pub")
+        if path.is_file()
+    }
+    waiting = eventkeys.awaiting_key(speakers, published)
+    print(
+        f"{len(speakers)} record(s) read, {len(published)} key(s) already "
+        f"published, {len(waiting)} awaiting one",
+        file=sys.stderr,
+    )
+    for event_id in waiting:
+        print(event_id)
+    return 0
+
+
+def event_key_secret_name(argv: Sequence[str] | None = None) -> int:
+    """`convener-event-key-secret-name`: the repository secret that holds one
+    edition's private half.
+
+    The workflow needs this name before it has anything to put in it, and the
+    rule that produces it is not obvious -- GitHub Actions secret names may
+    hold only letters, digits and underscore, while an event id may legally
+    carry `.` and `-`, so `secret_name` folds both before uppercasing.
+    Spelling that fold a second time in shell is how the two would come to
+    disagree, quietly, on the one edition whose id has a dot in it.
+
+    A name, never a value: `instance/keys/events/<id>.pub` already names the
+    edition openly.
+    """
+    parser = argparse.ArgumentParser(prog="convener-event-key-secret-name")
+    parser.add_argument("--event", required=True, help="the edition's id")
+    args = parser.parse_args(argv)
+    # `py/clear-text-logging-sensitive-data` reports this line, and it is the
+    # same false positive `maintenance.py` carries: the heuristic classifies by
+    # the name of what a value came from, and what comes from `secret_name` is
+    # a name. The value lives in the secret store and is never read back.
+    print(eventkeys.secret_name(args.event.lower()))
+    return 0
+
+
+def mint_event_key(argv: Sequence[str] | None = None) -> int:
+    """`convener-mint-event-key`: one fresh pair, private half to stdout.
+
+    **The private half is written to stdout and to nothing else.** The
+    workflow pipes it straight into `gh secret set`, so it exists in the
+    runner's memory and in GitHub's secret store, and never on a disk, never
+    in a log, and never in a process argument. Reading it back is impossible
+    by design, which is why this command refuses to run twice for the same
+    edition: it cannot recover the pair it made last time.
+
+    The public half is written where `--public-out` says, which the workflow
+    points at a temporary path rather than at
+    `instance/keys/events/<id>.pub`. That is the load-bearing order, made
+    structural instead of documented: the workflow moves the file into place
+    only after it has confirmed the secret is set, so the window in which the
+    relay would accept a registration nothing can decrypt never opens.
+    """
+    parser = argparse.ArgumentParser(prog="convener-mint-event-key")
+    parser.add_argument("--event", required=True, help="the edition's id")
+    parser.add_argument(
+        "--public-out",
+        required=True,
+        type=Path,
+        help="where to write the public half; not the published path",
+    )
+    args = parser.parse_args(argv)
+
+    event_id = args.event.lower()
+    published = eventkeys.public_key_path(event_id)
+    if published.exists():
+        print(
+            f"::error::{published.as_posix()} already exists, so {event_id} "
+            "has a live key. Minting a second pair would leave every "
+            "registration taken under the first permanently unreadable.",
+            file=sys.stderr,
+        )
+        return 1
+
+    private_pem, public_pem = eventkeys.generate()
+    args.public_out.parent.mkdir(parents=True, exist_ok=True)
+    args.public_out.write_text(public_pem, encoding="utf-8", newline="")
+    print(f"::notice::minted a key for {event_id}", file=sys.stderr)
+    # Written exactly as `generate` produced it, trailing newline and all:
+    # whatever this prints is what `gh secret set` stores and what the
+    # decrypting job later reads out of its environment, and the canonical PEM
+    # is the form every parser on both sides of that already expects.
+    sys.stdout.write(private_pem)
+    return 0

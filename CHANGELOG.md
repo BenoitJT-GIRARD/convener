@@ -283,6 +283,40 @@ the day they were written; the lesson had never crossed into Python.
 
 ### New
 
+- **An event key is minted by a machine now, not typed by a person.** It was
+  the last per-event manual step on the whole journey: for every edition that
+  takes registrations, somebody opened a Python shell, called
+  `eventkeys.generate()`, pasted the private half into a repository secret
+  through a browser, committed the public half, and waited for the showcase to
+  republish. Twelve times a year on a monthly series.
+
+  With a mandatory order and an unrecoverable failure if it is broken.
+  Publish the public half before the private secret exists and every
+  registration accepted in that window is told sent, genuinely encrypted, and
+  can never be read again — the job that would read it fails closed for ever,
+  and nobody finds out until the certificates fail weeks later. A procedure
+  with those properties should not depend on somebody getting two browser tabs
+  in the right sequence.
+
+  `.github/workflows/mint-event-keys.yml` runs every morning and mints for
+  any edition that has reached `scheduled` with no public half published. It
+  adds no party that did not hold these keys already — every decrypt already
+  runs in a runner with `CONVENER_EVENT_KEY_<ID>` in its environment, and
+  `retention.yml` already deletes these same secrets under the same token,
+  whose Secrets permission is read *and* write. It removes four surfaces the
+  manual route touched: a terminal, a clipboard, a browser form and a shell
+  history.
+
+  The order is structural rather than documented: the private half is piped
+  straight into `gh secret set` and reaches no file and no log, the secret is
+  confirmed by re-listing rather than by an exit code, and the public half is
+  copied into place only after that. It never mints twice for one edition,
+  because a published public half means a live key and a second pair would
+  leave the first edition’s registrations unreadable.
+
+  The signing key stays the deliberate opposite, and `operations.md` says why
+  in both places now.
+
 - **A notice before a credential expires.** Four watchdogs already watched
   things that *stop*; none watched a thing that *expires*, and an expiry
   gives no signal until it is too late. The meeting token is the worst of
