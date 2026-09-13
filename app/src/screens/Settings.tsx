@@ -52,6 +52,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { useRole } from '../auth/useRole';
 import { Button } from '../components/Button';
 import { isDemoMode } from '../data/demo';
 import { githubStore } from '../github/contents';
@@ -112,12 +113,14 @@ function SettingField({
   onChange,
   refusal,
   stored,
+  readOnly,
 }: {
   setting: Setting;
   value: string;
   onChange: (next: string) => void;
   refusal: Refusal | null;
   stored: string;
+  readOnly: boolean;
 }) {
   return (
     <div className="py-3 border-t border-border">
@@ -137,6 +140,12 @@ function SettingField({
             // where everybody else reads "Queue alarm".
             aria-label={`${setting.label} — ${setting.key} in ${setting.file}`}
             value={value}
+            // `readOnly` rather than `disabled`: the value still has to be
+            // readable, selectable and reachable by a screen reader, because
+            // seeing what the instance is set to is the part an organizer
+            // keeps. A disabled input is skipped by keyboard navigation and
+            // reads as broken rather than as somebody else's to change.
+            readOnly={readOnly}
             onChange={event => onChange(event.target.value)}
           />
           <span className="text-xs text-ink-muted">{setting.unit}</span>
@@ -253,6 +262,11 @@ function IntegrationRow({ report }: { report: IntegrationReport }) {
 
 export function Settings() {
   const { token } = useAuth();
+  const role = useRole();
+  // `null` while the lookup is in flight, and treated as not-Board until it
+  // answers: a control that is live for a moment and then withdrawn invites
+  // exactly the edit this is about.
+  const mayEdit = role === 'board';
   const [doc, setDoc] = useState<SettingsDocument | null>(null);
   const [names, setNames] = useState<SecretNames | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -418,6 +432,23 @@ export function Settings() {
           finds out, hours later, that it was impossible. Each field says what it
           decides and when a saved value starts being read.
         </p>
+        {!mayEdit && (
+          <p className="mt-2 text-sm text-ink-muted max-w-prose">
+            <strong>These are the Board&rsquo;s to change.</strong> They are shown
+            because reading what the instance is set to is everybody&rsquo;s, and the
+            fields below take no edit from this screen for anyone else. Ask the Board
+            if one of them is wrong.{' '}
+            <em>
+              This is a statement of who decides, not a lock: everyone who can open
+              this screen can also edit these three files on GitHub. It is here because
+              it is the only place the division can be said at all — GitHub refuses
+              branch protection and rulesets on a private repository on the free plan,
+              which is the shape D-15 requires, so the{' '}
+              <code className="font-mono text-xs">.github/CODEOWNERS</code> the
+              standing-up sequence writes is advisory on this instance.
+            </em>
+          </p>
+        )}
         {coupling === null ? (
           <p className="mt-2 text-sm text-danger">
             {doc.cadenceRefusal} No bound on this page can be computed, so nothing
@@ -436,6 +467,7 @@ export function Settings() {
               value={draft[fieldId(setting)] ?? ''}
               stored={storedText(doc, setting)}
               refusal={refusalFor(setting)}
+              readOnly={!mayEdit}
               onChange={next =>
                 setDraft(previous => ({ ...previous, [fieldId(setting)]: next }))
               }
@@ -445,7 +477,7 @@ export function Settings() {
         <div className="mt-4 flex items-center gap-3 flex-wrap">
           <Button
             onClick={() => void save(doc, token)}
-            disabled={saving || refused.length > 0 || changed.length === 0}
+            disabled={!mayEdit || saving || refused.length > 0 || changed.length === 0}
           >
             {saving ? 'Saving…' : `Save ${changed.length || 'no'} change${changed.length === 1 ? '' : 's'}`}
           </Button>

@@ -91,6 +91,28 @@ it carries is what a release does to somebody else's repository:
 
 - a short passage saying what changed, in the terms an operator reads
   rather than in the terms the diff does;
+- a `- **The settings screen was the one write surface that never asked the
+  role.** Every other one asks it, and this is the screen that settles how the
+  instance runs: the Actions allowance and the alarm before it is exhausted,
+  the routing every registration passes through, the submission-queue alarm.
+  Measured on a live instance, two of the five repository admins are exactly
+  the organizer the product models, and could change all three from that
+  screen. The fields are read-only for anyone but the Board now, and the
+  control is refused rather than merely hidden.
+
+  Read-only rather than disabled, because seeing what the instance is set to
+  is the part an organizer keeps, and a disabled input is skipped by keyboard
+  navigation and reads as broken rather than as somebody else’s to change.
+
+  The sentence that appears says it is a division of responsibility and not a
+  lock, which is the honest limit: an organizer holds write access and can
+  edit those three files on GitHub whichever way this screen renders. It is
+  stated here because there is nowhere else to state it — GitHub refuses
+  branch protection and rulesets on a private repository on the free plan,
+  the shape D-15 asks a cockpit to have, so the CODEOWNERS file the
+  standing-up sequence writes is advisory on every instance shaped the way
+  the sequence shapes it. That step now says so, and says why to set it
+  anyway.
 - a `- **The cockpit wrote a new speaker with its id last of thirty-five keys.**
   Every other writer puts `id` first, `data/validate.ts` included, which is
   the model's own order. The screen built the record by spreading the form

@@ -375,7 +375,15 @@ on its catch-all rule, the product's own maintainer, who is not a collaborator
 here. Replace it with `@<organisation>/editorial-board`, where
 `<organisation>` is the owner half of the repository just declared. GitHub
 parses that file itself, before any code of this project's can run, which is
-why it holds a literal at all.
+why it holds a literal at all. **What that file does here, and what it does
+not.** A code-owners rule is enforced only by a branch protection rule or a
+ruleset that requires the owner's review, and GitHub refuses both on a private
+repository on the free plan, which is the shape D-15 asks a cockpit to have.
+So on this instance the file routes review requests and records who is
+answerable for what; nothing stops a write that ignores it. Set it anyway, and
+for a reason that is not advisory at all -- the same team handle is what
+`app/src/auth/role.ts` asks GitHub about to decide who signs in as a Board
+member, so a wrong one is a Board that cannot vote.
 
 **Proves it is done.** After the first publish, open any page of the showcase
 and the cockpit's sign-in screen: the band naming unfilled keys is gone from
