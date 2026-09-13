@@ -91,7 +91,27 @@ it carries is what a release does to somebody else's repository:
 
 - a short passage saying what changed, in the terms an operator reads
   rather than in the terms the diff does;
-- a `### Before you merge this` section, in **every** entry, naming each
+- a `- **One transient failure and the volunteer became the retry loop.** The
+  cockpit's single write path replayed a conflict and nothing else, so a 500,
+  502 or 503 was final on the first click: an operator creating a lead on a
+  live instance was told *"GitHub is not responding"* and got through by
+  pressing the button at intervals until it worked. Twenty-two modules reach
+  that path — creating a lead, moving a status, recording a ballot, setting
+  consent, saving settings — and each was one attempt per click.
+
+  Transient failures are replayed now, **but only once it is known what they
+  did**, which is the part that is not simply "retry a 5xx". A gateway can
+  answer 502 after the commit already exists, and no caller's transform is
+  idempotent against its own result — creating a lead appends a record and
+  derives its id from what it reads — so a blind replay is how one speaker
+  becomes two. The next read settles it first: the file holds the bytes that
+  attempt wrote (it landed, and the answer was lost on the way back), or its
+  sha has not moved (it did not land, replay is safe), or neither, and then
+  the failure that actually happened is reported rather than guessed at. A
+  refusal — 409, 422 — still replays immediately, because somebody else
+  writing is exactly when reading again should not wait.
+
+### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to
   do says that in as many words: an operator has no way to tell a silence
