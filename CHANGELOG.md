@@ -246,7 +246,13 @@ the day they were written; the lesson had never crossed into Python.
   measured rather than assumed — CodeQL re-analysed and reported the same
   line, because the heuristic reads the word and an accurate name keeps it.
   What changed is the thing the alert was pointing at without being able to
-  see it.
+  see it. The alert itself is dismissed on that record. A suppression
+  marker was tried first and is not worth trying again: code scanning
+  ignored it and the alert simply moved down the file with the line,
+  closing at the old position and opening at the new one — which reads
+  like a fix and is not one. No duplicate ever sees any of this:
+  `security.yml` runs CodeQL only where the repository is not private,
+  and a cockpit is private by design.
 
 ### Before you merge this
 
