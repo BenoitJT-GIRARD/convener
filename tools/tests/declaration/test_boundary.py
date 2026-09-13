@@ -1248,3 +1248,60 @@ def test_a_file_that_is_nobody_special_merges_the_ordinary_way() -> None:
         ["app/src/App.tsx", "tools/convener_ops/declaration/boundary.py", "README.md"]
     )
     assert set(resolved.values()) == {"unspecified"}, resolved
+
+
+#: The page an operator reads before every merge, and the only place the
+#: direction of `merge=ours` can be made safe.
+UPDATE_PAGE: Final = Path("docs/operating/taking-an-update.md")
+
+
+def test_the_procedure_takes_origin_before_it_merges_upstream() -> None:
+    """`merge=ours` cannot tell one remote from another, so the procedure has
+    to.
+
+    The rules above are correct against upstream and exactly wrong against
+    `origin`: the cockpit writes there from volunteers' browsers all day, so a
+    clone that has been sitting is the stale side, and a merge run in it
+    discards what the cockpit wrote -- measured on real commits, two leads
+    gone, `git merge` reporting success and naming no file.
+
+    A fast-forward consults no merge rule at all. Doing it first is what makes
+    "ours" mean the live instance rather than a clone, and it is the whole of
+    the defence, so its position in the page is the thing to hold: after the
+    upstream merge it would protect nothing.
+    """
+    page = (ROOT / UPDATE_PAGE).read_text(encoding="utf-8")
+
+    fast_forward = page.find("git pull --ff-only")
+    upstream_merge = page.find("git merge upstream/main")
+    assert fast_forward != -1, (
+        f"{UPDATE_PAGE.as_posix()} no longer fast-forwards from origin before "
+        "merging. Without it the merge rules in "
+        f"{boundary.GIT_ATTRIBUTES_PATH.as_posix()} treat a stale clone as the "
+        "instance and drop everything the cockpit wrote"
+    )
+    assert upstream_merge != -1, (
+        f"{UPDATE_PAGE.as_posix()} no longer shows the upstream merge, so this "
+        "reading cannot say what order the two are in -- widen it with the "
+        "reason rather than leaving it green about a page it cannot see"
+    )
+    assert fast_forward < upstream_merge, (
+        "the fast-forward from origin comes after the upstream merge in "
+        f"{UPDATE_PAGE.as_posix()}, which protects nothing: by then the merge "
+        "has already run in a tree that was behind"
+    )
+
+
+def test_the_page_names_the_merge_these_rules_also_govern() -> None:
+    """The gap this was filed for. The attribute is set for the operator, in a
+    step they are told to run once, with a rationale entirely about upstream --
+    and it then governs a merge they will run far more often, in the direction
+    where it destroys rather than protects. Naming it is the minimum.
+    """
+    page = (ROOT / UPDATE_PAGE).read_text(encoding="utf-8")
+    assert "git merge origin/main" in page, (
+        f"{UPDATE_PAGE.as_posix()} documents "
+        f"{boundary.REGENERATED_MERGE_ATTRIBUTE} without naming the merge from "
+        "origin, which the same attribute governs and in which it drops the "
+        "cockpit's work rather than upstream's example data"
+    )

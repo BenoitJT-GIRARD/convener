@@ -21,16 +21,35 @@ practice: you fetch from it and you never push to it.
 ## Every time
 
 ```sh
+git pull --ff-only origin main
 git fetch upstream
 git merge upstream/main
 ```
 
-**Fetch immediately before you merge**, not once at the start of a session.
-Somebody else writes to upstream while you work, and a stale `upstream/main`
-does not fail loudly — it produces a conflict that is not really there, which
-you then resolve by hand, in a decision that looks reasonable and is wrong.
-That is the failure mode to watch for: not a merge that breaks, a merge that
-succeeds against yesterday's facts.
+**The first line is not housekeeping, and it is not optional.** Your clone is
+not the only thing writing to your instance: the cockpit writes to `origin`
+from volunteers' browsers all day — a lead created, a ballot recorded, a
+status moved, the agenda feed refreshed. A clone that has been sitting is
+behind, always, and the rules below then treat *the clone* as the instance.
+Fast-forwarding first makes "yours" mean the live instance, which is the only
+reading of it that is ever correct. A fast-forward also consults no merge rule
+at all, so nothing can be quietly dropped in the act of doing it.
+
+If that line refuses, your clone has commits of its own that `origin` has not
+got. Push them, or find out what they are, before merging anything — do not
+reach for an ordinary `git pull`, which is the merge this page is warning you
+about.
+
+**Fetch upstream immediately before you merge**, not once at the start of a
+session. Somebody else writes to upstream while you work, and a stale
+`upstream/main` does not fail loudly — it produces a conflict that is not
+really there, which you then resolve by hand, in a decision that looks
+reasonable and is wrong. That is the failure mode to watch for: not a merge
+that breaks, a merge that succeeds against yesterday's facts.
+
+**If your push is refused afterwards**, the cockpit wrote while you were
+merging. Start again from the first line rather than pulling: pulling is the
+merge where the rules below would drop what it wrote.
 
 ## "refusing to merge unrelated histories"
 
@@ -191,5 +210,25 @@ both sides changed the same path — so a new declaration reaches you the
 ordinary way. The four files upstream maintains inside those directories
 (`instance/data/schema.md` and the three `README.md`) are excepted by name,
 and update the ordinary way too.
+
+### These rules govern the other merge too
+
+Git has no idea which remote a merge came from. `merge=ours` means *this
+working tree's version wins*, in every merge this clone ever performs —
+including `git merge origin/main`, which is the one you would reach for after
+a refused push.
+
+In that merge "ours" is the clone, and the clone is the stale side: everything
+the cockpit wrote while you were away is on `origin`. Measured on a real
+instance, replayed on real commits — a clone behind by two leads, one local
+edit to the same file, `git merge origin/main`:
+
+> records after the merge: **none**. The two leads were discarded, `git merge`
+> reported success, and nothing in its output named the file.
+
+Two volunteers' work, gone quietly, on a file nobody diffs after a routine
+pull. That is why *Every time* begins with `git pull --ff-only` and why a
+refused push sends you back to it rather than to `git pull`. A fast-forward
+consults no rule; a merge does.
 [What a duplicate edits](what-a-duplicate-edits.md) is the list, and
 `declarations/boundary.yml` is where it is declared and argued.
