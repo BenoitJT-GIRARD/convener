@@ -47,7 +47,14 @@ discussion work.
 
 **Share it if you would like to.** Anything we post is yours to repost, and
 your reminder nearer the time carries the forum thread. There is no obligation
-at all.
+at all. If you do share it, please share the sign-up page rather than anything
+else — everyone who attends is registered, and that is how we can recognise
+them afterwards.
+
+**You do not have the joining details yet, and that is on purpose.** We send
+them a few days before, in your reminder, so that they are in the most recent
+message in your inbox rather than in one from three weeks earlier. There is
+nothing you need to do to get them.
 
 Looking forward to it,
 
@@ -72,3 +79,9 @@ Looking forward to it,
   question we ask afterwards, in its own message
   ([recording consent](consent-request.md)), and it is not settled by a
   sentence in a promotion e-mail.
+- **Never put the meeting link in this message.** It is the one e-mail written
+  to be forwarded, and a room link in it is a room anyone can enter without
+  registering — which breaks attendance matching, certificates and the
+  data-protection record in one step. The paragraph above tells the speaker
+  the details are coming so that nobody feels the need to add them here; the
+  [reminder](reminder.md) is where they go.

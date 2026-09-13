@@ -5,9 +5,15 @@ import {
   parisDayOf,
   parisToday,
   parisWallTimeToEpoch,
+  roomOnRecord,
+  roomText,
 } from '../../src/state/derived';
 import type { Config, Speaker } from '../../src/data/types';
-import { speaker as double } from '../helpers/data-doubles';
+import {
+  config as configDouble,
+  speaker as double,
+  speaker as speakerDouble,
+} from '../helpers/data-doubles';
 
 const config: Config = {
   season: 2026, next_edition_number: 5, overlap_window_days: 7,
@@ -156,5 +162,74 @@ describe('parisToday', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-11T09:00:00Z'));
     expect(parisToday()).toBe('2026-07-11');
+  });
+});
+
+describe('how to get into the room', () => {
+  const SERIES = 'Join online: https://join.example.test/series\nAccess code: 8842798';
+
+  function record(zoom_link: string): Speaker {
+    return speakerDouble({ id: 'spk-001', status: 'scheduled', zoom_link });
+  }
+
+  it('gives the record’s own link when the series says nothing', () => {
+    expect(roomText(record('https://meet.example.test/j/9'), null)).toBe(
+      'https://meet.example.test/j/9',
+    );
+  });
+
+  it('gives the series instructions when the record carries no link', () => {
+    // The permanent-room account of D-06, where the per-event field is empty
+    // by design. A reader that asked `zoom_link` alone reported no room at
+    // all here, while every registrant was being sent one.
+    expect(roomText(record(''), configDouble({ instructions: SERIES }))).toBe(SERIES);
+  });
+
+  it('gives both when an instance uses both, the event’s own first', () => {
+    const out = roomText(
+      record('https://meet.example.test/j/9'),
+      configDouble({ instructions: SERIES }),
+    );
+    expect(out.split('\n')[0]).toBe('https://meet.example.test/j/9');
+    expect(out).toContain('Access code: 8842798');
+  });
+
+  it('says a duplicated address once', () => {
+    // `convener-check-config` invited an operator to fill `zoom_link` on a
+    // permanent-room account, so a registrant read the same URL twice under
+    // two labels. The rule is `confirmation.py`'s, stated here so the
+    // speaker's reminder and the registrant's confirmation cannot differ.
+    const shared = 'https://join.example.test/series';
+    const out = roomText(record(shared), configDouble({ instructions: SERIES }));
+    expect(out).toBe(SERIES);
+  });
+
+  it('is empty when neither source has anything', () => {
+    // Which `roomOnRecord` is the predicate for, and which `lockBlockers`
+    // refuses before an edition can reach `scheduled` at all.
+    expect(roomText(record(''), configDouble({ instructions: '' }))).toBe('');
+    expect(roomOnRecord(record(''), configDouble({ instructions: '' }))).toBe(false);
+  });
+
+  it('agrees with the predicate in both directions', () => {
+    // Non-vacuity: two functions reading the same pair must not disagree
+    // about whether there is a room, or a record could pass the precondition
+    // and then render an empty address into a speaker's e-mail.
+    const cases: [string, string][] = [
+      ['', ''],
+      ['https://meet.example.test/j/9', ''],
+      ['', SERIES],
+      ['https://meet.example.test/j/9', SERIES],
+    ];
+    for (const [link, instructions] of cases) {
+      const s = record(link);
+      const cfg = configDouble({ instructions });
+      expect(roomText(s, cfg) !== '').toBe(roomOnRecord(s, cfg));
+    }
+  });
+
+  it('ignores whitespace that only looks like a room', () => {
+    expect(roomOnRecord(record('   '), configDouble({ instructions: '  \n ' }))).toBe(false);
+    expect(roomText(record('   '), configDouble({ instructions: '  \n ' }))).toBe('');
   });
 });

@@ -128,7 +128,7 @@ export function PublicationGate({ speaker, role }: { speaker: Speaker; role: Rol
           </p>
           <InlineContent
             contentKey="toolkit/recording-announce"
-            ctx={{ speaker, host: speaker.host_1, today }}
+            ctx={{ speaker, host: speaker.host_1, today, config }}
           />
         </div>
       )}

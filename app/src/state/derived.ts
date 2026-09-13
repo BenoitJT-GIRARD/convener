@@ -201,6 +201,32 @@ export function roomOnRecord(s: Speaker, config: Config | null): boolean {
   return s.zoom_link.trim() !== '' || (config?.instructions ?? '').trim() !== '';
 }
 
+/**
+ * How to get into the room, written out: the per-event link and the
+ * series-wide instructions, composed the way a message gives them.
+ *
+ * The rule is `journey/confirmation.py`'s, which is what a registrant
+ * actually receives, and it is stated once here so the speaker's own
+ * reminder cannot give a different answer from theirs:
+ *
+ * * the record's own link first, **unless the instructions already contain
+ *   it** -- an operator who filled both had registrants reading the same URL
+ *   twice under two labels;
+ * * then the series instructions, which are where an access code lives.
+ *
+ * Empty when neither is set, which `roomOnRecord` is the predicate for. No
+ * caller should reach a record in that state after `lockBlockers`, and a
+ * template that did would render nothing rather than a broken sentence.
+ */
+export function roomText(s: Speaker, config: Config | null): string {
+  const link = s.zoom_link.trim();
+  const instructions = (config?.instructions ?? '').trim();
+  const lines: string[] = [];
+  if (link && !instructions.includes(link)) lines.push(link);
+  if (instructions) lines.push(instructions);
+  return lines.join('\n');
+}
+
 export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
   if (s.status !== 'scheduled' || !s.date) return false;
   if (s.time) {
