@@ -564,3 +564,57 @@ def test_a_browser_encrypted_envelope_from_the_shared_fixture_decrypts_here(
     both languages pass their own, separately-written tests."""
     plaintext = decrypt(_FIXTURE["private_pem"], case["envelope"])
     assert json.loads(plaintext) == case["fields"]
+
+
+# --------------------------------------------------------------------- #
+# Which editions are waiting for a key.
+# --------------------------------------------------------------------- #
+
+
+def _edition(event_id: str, status: str = "scheduled") -> dict[str, str]:
+    return {"id": event_id, "status": status}
+
+
+def test_a_scheduled_edition_with_no_published_half_is_waiting() -> None:
+    """`scheduled` is the moment: `cli/publication.py` filters the published
+    events feed to the same value, and the relay will not dispatch a
+    submission for an edition that feed does not carry."""
+    assert eventkeys.awaiting_key([_edition("mrg-042")], set()) == ("mrg-042",)
+
+
+def test_an_edition_whose_half_is_published_is_never_offered_again() -> None:
+    """The one that matters. A second pair would leave every registration
+    taken under the first permanently unreadable, which `operations.md` calls
+    unrecoverable -- so the presence of the public half is a full stop, not a
+    hint."""
+    assert eventkeys.awaiting_key([_edition("mrg-042")], {"mrg-042"}) == ()
+
+
+@pytest.mark.parametrize("status", ["lead", "invited", "delivered", "archived"])
+def test_an_edition_that_is_not_scheduled_is_not_waiting(status: str) -> None:
+    """Before `scheduled` there is nothing to register for; after it the
+    registrations are taken and the key exists."""
+    assert eventkeys.awaiting_key([_edition("mrg-042", status)], set()) == ()
+
+
+def test_the_id_is_read_the_way_every_other_reader_reads_it() -> None:
+    """`cli/publication.py` lower-cases the record's own `id` to get an event
+    id, and the secret name and the published path are both built from that.
+    Reading it differently here would mint a key under a name nothing looks
+    for."""
+    assert eventkeys.awaiting_key([_edition("MRG-042")], set()) == ("mrg-042",)
+    assert eventkeys.awaiting_key([_edition("MRG-042")], {"mrg-042"}) == ()
+
+
+def test_an_edition_whose_id_is_not_an_event_id_is_refused() -> None:
+    """Refused rather than skipped. A record that cannot be named cannot be
+    given a key, and going quiet would leave it open for registrations no job
+    could ever read."""
+    with pytest.raises(ValueError):
+        eventkeys.awaiting_key([_edition("not an id")], set())
+
+
+def test_two_records_for_one_edition_are_offered_once() -> None:
+    assert eventkeys.awaiting_key(
+        [_edition("mrg-042"), _edition("mrg-042")], set()
+    ) == ("mrg-042",)

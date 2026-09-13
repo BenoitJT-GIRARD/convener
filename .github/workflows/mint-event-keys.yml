@@ -1,0 +1,192 @@
+name: Mint event keys
+
+# Every edition that will take registrations needs a key pair before its page
+# opens. This mints the ones that are missing, unattended.
+#
+# It was the last per-event manual step on the whole journey: a person opened
+# a Python shell, called `eventkeys.generate()`, pasted the private half into
+# a repository secret through a browser, committed the public half, and waited
+# for the showcase to republish. Twelve times a year on a monthly series, with
+# a mandatory order and an unrecoverable failure if that order is broken --
+# publish the public half first and every registration accepted in the window
+# is encrypted to a key nobody holds, told "sent", and lost for ever. A
+# procedure with those properties is one a machine should be running.
+#
+# Nothing here that CI did not already hold. `retention.yml` deletes these
+# same secrets on a schedule, under the same fine-grained token, whose Secrets
+# permission is read *and* write; and every decrypt already runs with
+# `CONVENER_EVENT_KEY_<ID>` in a runner's environment. Generating one here adds
+# no party that does not hold it already -- and removes four surfaces the
+# manual route touched: a terminal, a clipboard, a browser form, and whatever
+# the operator's shell history keeps.
+#
+# The signing key is the deliberate opposite, and `operations.md` says so in
+# as many words: minted once, by a person, who then holds the only copy. That
+# argument was made where it was meant. Its absence from the event-key section
+# was an inheritance rather than a decision, and this is the decision.
+on:
+  schedule:
+    # Early, and before `retention.yml` at 06:11: a key minted today should be
+    # in place long before anybody looks at the page it opens.
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+# One run at a time. Two concurrent runs could both find the same edition
+# waiting and both mint for it, and the second would overwrite a secret whose
+# public half the first had already committed.
+concurrency:
+  group: mint-event-keys
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  mint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # The public half, committed here. The private half never reaches a
+      # file this job could add.
+      contents: write
+      # Committing with GITHUB_TOKEN starts no workflow run, which is the
+      # recursion guard `publish-showcase.yml` describes -- so nothing would
+      # rebuild the app bundle that serves `instance/keys/events/*.pub` until
+      # an unrelated push happened to. `retention.yml` dispatches around the
+      # same trap for the same reason, on deletion.
+      actions: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.5.x'
+          enable-cache: true
+
+      - name: Find the editions awaiting a key
+        id: waiting
+        working-directory: tools
+        run: |
+          ids="$(uv run --frozen convener-events-awaiting-key)"
+          {
+            echo 'ids<<EOF'
+            echo "$ids"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      # An absent token is reported, not ignored, and only when it matters.
+      # A duplicate that has not set it yet and has no edition waiting has
+      # nothing wrong with it, and a workflow that went red every morning
+      # would teach its operator to stop reading this tab -- the failure this
+      # repository has already paid for once with CodeQL. An edition that *is*
+      # waiting is the opposite: its registrations cannot be taken at all
+      # until a key exists, so silence there would be the worst outcome.
+      - name: Refuse to leave an edition waiting without the token to mint
+        if: steps.waiting.outputs.ids != ''
+        env:
+          MINTING_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
+          IDS: ${{ steps.waiting.outputs.ids }}
+        run: |
+          if [ -z "$MINTING_TOKEN" ]; then
+            echo "::error::CONVENER_RETENTION_TOKEN is not set, and these editions are waiting for a key: $(echo "$IDS" | tr '\n' ' ')"
+            echo "::error::Until one exists, their registration pages cannot accept anything. See docs/operating/operations.md, Event registration keys."
+            exit 1
+          fi
+
+      - name: Mint, confirm, then publish
+        id: mint
+        if: steps.waiting.outputs.ids != ''
+        env:
+          GH_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
+          IDS: ${{ steps.waiting.outputs.ids }}
+        # The order here is the load-bearing one, made structural rather than
+        # documented. `convener-mint-event-key` writes the public half to a
+        # temporary path and prints the private half on stdout and nowhere
+        # else; the secret is set from that pipe; the secret is *confirmed*
+        # by re-listing, the way `retention.yml` confirms a deletion rather
+        # than trusting an exit code; and only then does the public half move
+        # to where the relay reads it. If any of those fails the file never
+        # moves, so the window in which a registration is accepted and lost
+        # cannot open.
+        run: |
+          set -o pipefail
+          minted=''
+          while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            name="$(cd tools && uv run --frozen python -c "
+          import sys
+          from convener_ops.journey import eventkeys
+          sys.stdout.write(eventkeys.secret_name(sys.argv[1]))
+          " "$id")"
+            tmp="$RUNNER_TEMP/$id.pub"
+            (cd tools && uv run --frozen convener-mint-event-key --event "$id" --public-out "$tmp") \
+              | gh secret set "$name" --repo "$GITHUB_REPOSITORY"
+            if [ ! -s "$tmp" ]; then
+              echo "::error::no public half was written for $id"
+              exit 1
+            fi
+            if ! listing="$(gh secret list --repo "$GITHUB_REPOSITORY" --json name --jq '.[].name')"; then
+              echo "::error::could not confirm whether $name was set for $id (gh secret list failed)"
+              exit 1
+            fi
+            if ! printf '%s\n' "$listing" | grep -qx "$name"; then
+              echo "::error::$name is not set after minting $id; the public half has not been published, so nothing can be accepted for it"
+              exit 1
+            fi
+            minted="$minted $id"
+            echo "::notice::$id has a key, and its page can open"
+          done <<< "$IDS"
+          echo "minted=${minted# }" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the public halves
+        if: steps.mint.outputs.minted != ''
+        env:
+          MINTED: ${{ steps.mint.outputs.minted }}
+        # Re-derived on a rejected push rather than rebased: fetch the
+        # refreshed tip, hard-reset onto it, put the files back, commit again.
+        # The public halves are still in the runner's temp for exactly this,
+        # which is why the step above copies rather than moves them out.
+        run: |
+          git config user.name 'convener-keys'
+          git config user.email 'convener-keys@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            mkdir -p instance/keys/events
+            for id in $MINTED; do
+              cp "$RUNNER_TEMP/$id.pub" "instance/keys/events/$id.pub"
+            done
+            git add instance/keys/events
+            if git diff --cached --quiet; then
+              # The refreshed tip already carries these bytes, which on a
+              # retry means another run published them first. On the first
+              # attempt it would mean the file never reached its path, so the
+              # files themselves are what decides rather than the attempt
+              # number.
+              for id in $MINTED; do
+                if [ ! -f "instance/keys/events/$id.pub" ]; then
+                  echo "::error::$id was minted and its public half is not in the tree, so nothing can be accepted for it"
+                  exit 1
+                fi
+              done
+              echo "::notice::the public halves are already published"
+              exit 0
+            fi
+            git commit -m "keys: publish the public half for$(printf ' %s' $MINTED)"
+            if git push origin "HEAD:$TARGET_BRANCH"; then
+              exit 0
+            fi
+          done
+          echo "::error::could not publish the public halves after three attempts"
+          exit 1
+
+      # Committing with GITHUB_TOKEN starts nothing, so the bundle that serves
+      # these files is asked for directly -- the same dispatch retention.yml
+      # makes after a deletion.
+      - name: Rebuild what serves the public halves
+        if: steps.mint.outputs.minted != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref "$TARGET_BRANCH"

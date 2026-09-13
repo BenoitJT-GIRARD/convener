@@ -27,6 +27,10 @@ from convener_ops.cli.journey.certificate import (
     reissue_certificate,
     revoke_certificate,
 )
+from convener_ops.cli.journey.event import (
+    events_awaiting_key,
+    mint_event_key,
+)
 from convener_ops.cli.journey.proposal import (
     handle_proposal,
 )
@@ -92,11 +96,13 @@ __all__ = [
     "encrypt_attendance_export",
     "encrypt_identifier",
     "erase_registration",
+    "events_awaiting_key",
     "handle_proposal",
     "handle_registration",
     "invite_survey",
     "issue_certificates",
     "match_attendance",
+    "mint_event_key",
     "notify_digest",
     "notify_immediate",
     "plan_queue_drain",

@@ -179,7 +179,7 @@ from __future__ import annotations
 import base64
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -481,6 +481,51 @@ def public_key_path(event_id: str) -> Path:
     or read it."""
     _validate_event_id(event_id)
     return paths.repo_root() / KEYS_DIR / f"{event_id}.pub"
+
+
+#: The status an edition reaches when it will be announced and will take
+#: registrations. `cli/publication.py` filters the published events feed to
+#: the same value, and the signup relay will not dispatch a submission for an
+#: edition that feed does not carry -- so this is the moment a key has to
+#: exist, and the earliest moment it can be minted against a real id.
+TAKES_REGISTRATIONS: Final = "scheduled"
+
+
+def awaiting_key(
+    speakers: Iterable[Mapping[str, Any]], published: Collection[str]
+) -> tuple[str, ...]:
+    """The editions that will take registrations and have no public half yet.
+
+    Pure, like everything else here: `published` is the set of ids whose
+    `instance/keys/events/<id>.pub` the caller has already found on disk, and
+    nothing in this function reads a file or reaches a network.
+
+    **The presence of the public half is the whole test, and it is the right
+    one.** Committing it is what opens the relay's door -- until it exists no
+    submission can be accepted, so an edition without one has no registration
+    that could be lost by minting a fresh pair. Once it exists the pair is
+    live and must never be replaced: a second pair would leave every
+    registration taken under the first permanently unreadable, which is the
+    failure `operations.md` calls unrecoverable.
+
+    A destroyed key is not a gap. Its `.pub` stays committed for ever -- that
+    is what makes the destruction legible -- so a retired edition never
+    reappears here.
+
+    An edition whose id is not a valid event id is refused rather than
+    skipped: a record that cannot be named cannot be given a key, and going
+    quiet about it would leave an edition open for registrations no job could
+    ever read.
+    """
+    waiting: list[str] = []
+    for entry in speakers:
+        if entry.get("status") != TAKES_REGISTRATIONS:
+            continue
+        event_id = str(entry.get("id", "")).lower()
+        _validate_event_id(event_id)
+        if event_id not in published and event_id not in waiting:
+            waiting.append(event_id)
+    return tuple(sorted(waiting))
 
 
 def key_status(
