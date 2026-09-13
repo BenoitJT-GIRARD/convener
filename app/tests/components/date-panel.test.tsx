@@ -18,7 +18,7 @@ import { AuthProvider } from '../../src/auth/AuthContext';
 import { DataProvider } from '../../src/data/DataContext';
 import { DatePanel, type DateMode } from '../../src/components/DatePanel';
 import { parseSpeakers, serializeSpeakers } from '../../src/data/yaml';
-import { editionNumber } from '../../src/state/agenda';
+import { editionCodePrefix, editionNumber, nextEditionCode } from '../../src/state/agenda';
 import type { Speaker } from '../../src/data/types';
 
 /** The board double with prose in it, which is what a real `config.yml` is:
@@ -47,10 +47,20 @@ function decodeUtf8(b64: string): string {
 
 /** A stand-in for the GitHub Contents API that enforces the sha precondition,
  *  so a write goes through the same path the real one does. */
-function makeBackend(initial: Speaker[]) {
+function makeBackend(
+  initial: Speaker[],
+  /** Somebody else's commit, landing between this UI's read and its write.
+   *  Called once, just before the first `speakers.yml` PUT is judged, and
+   *  whatever it returns becomes the file on the server under a fresh sha --
+   *  so the PUT meets 409 and `mutate` replays its transformation against
+   *  this list. It is the only way to exercise the replay from the outside,
+   *  and the replay is where an edition code is now decided. */
+  interleave?: (current: Speaker[]) => Speaker[],
+) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
+  let interleaved = false;
   const configWrites: string[] = [];
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
@@ -60,6 +70,11 @@ function makeBackend(initial: Speaker[]) {
     if (url.includes('speakers.yml')) {
       if (opts?.method === 'PUT') {
         const body = JSON.parse(opts.body as string);
+        if (interleave && !interleaved) {
+          interleaved = true;
+          server = interleave(server);
+          sha = `sha-${++counter}`;
+        }
         if (body.sha !== sha) {
           return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
         }
@@ -364,12 +379,115 @@ describe('what the speaker replies while the invitation is out', () => {
     }
   });
 
+  it('decides a suggested code against the records the write lands on', async () => {
+    // The defect. `Suggest the next code` reads the agenda as it was when the
+    // button was pressed. Two volunteers locking a date at the same moment
+    // were each handed the same next code and each wrote it, and nothing
+    // refuses a duplicate `edition_code` until `validate-data.yml` fails on a
+    // commit that is already pushed -- a red instance and a repair by hand,
+    // for a product whose whole claim is that no volunteer has to understand
+    // git.
+    //
+    // Here the other volunteer's record lands between this panel's read and
+    // its write, carrying the very code this panel is about to use.
+    const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }]);
+    let taken = '';
+    const backend = makeBackend([s], current => {
+      // Whatever the panel is about to suggest is what the other volunteer
+      // has just used, read off the same function rather than spelled again.
+      taken = nextEditionCode(current, 1);
+      return [
+        ...current,
+        speaker({ id: 'spk-999', status: 'scheduled', edition_code: taken }),
+      ];
+    });
+    renderFor(s, 'lock', backend);
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest the next code' }));
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => {
+      const mine = backend.current().find(r => r.id === s.id);
+      expect(mine?.status).toBe('scheduled');
+    });
+    const mine = backend.current().find(r => r.id === s.id);
+
+    expect(taken).not.toBe('');
+    expect(mine?.edition_code).not.toBe(taken);
+    expect(
+      backend.current().filter(r => r.edition_code === taken),
+    ).toHaveLength(1);
+  });
+
+  it('writes a code the volunteer typed exactly as typed, replay or not', async () => {
+    // The other direction, and it is not symmetry for its own sake. Typing a
+    // code is a decision -- renumbering a series, matching a poster already
+    // printed -- and a panel that quietly substituted its own reading would
+    // write something other than what the screen said, which is the one thing
+    // this whole change exists to stop.
+    const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }]);
+    const backend = makeBackend([s], current => [
+      ...current,
+      speaker({ id: 'spk-999', status: 'scheduled', edition_code: nextEditionCode(current, 1) }),
+    ]);
+    renderFor(s, 'lock', backend);
+
+    const typed = `${editionCodePrefix()}77`;
+    await waitFor(() => {
+      fireEvent.change(screen.getByPlaceholderText(`${editionCodePrefix()}N`), {
+        target: { value: typed },
+      });
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => {
+      const mine = backend.current().find(r => r.id === s.id);
+      expect(mine?.status).toBe('scheduled');
+    });
+    expect(backend.current().find(r => r.id === s.id)?.edition_code).toBe(typed);
+  });
+
+  it('raises the counter from the code it wrote, not the one it offered', async () => {
+    // The two halves have to agree. After a replay the code on screen and the
+    // code in the commit differ, and a counter raised from the screen would
+    // leave the mark below an edition that exists -- the very state the
+    // counter was added to prevent, reintroduced by the fix for a different
+    // defect.
+    const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }]);
+    const backend = makeBackend([s], current => [
+      ...current,
+      speaker({ id: 'spk-999', status: 'scheduled', edition_code: nextEditionCode(current, 1) }),
+    ]);
+    renderFor(s, 'lock', backend);
+
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suggest the next code' }));
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => expect(backend.configWrites).toHaveLength(1));
+    const written = backend.current().find(r => r.id === s.id)?.edition_code ?? '';
+    const expected = (editionNumber(written) ?? 0) + 1;
+
+    expect(backend.configWrites[0]).toContain(`next_edition_number: ${expected}`);
+  });
+
   it('writes the record before the counter, so a failure lags rather than burns a number', async () => {
-    // Order, not decoration. A counter raised first and a record that then
-    // failed would burn an edition number nothing ever used -- which shows up
-    // on a poster and cannot be taken back. A record written first and a
-    // counter that then failed is the state this whole change fixes: visible,
-    // loud in `sh gates.sh`, and repaired by the next lock-in.
+    // Order, not decoration. These are two files with no transaction
+    // between them, so one order has to be chosen and defended.
+    //
+    // A counter raised first, with the record then failing, leaves a number
+    // burnt and no record carrying it. A record written first, with the
+    // counter then failing, leaves the mark lagging -- loud in `sh gates.sh`,
+    // and harmless while that record stands, because `nextEditionCode` skips
+    // every code already in use. The lag is only reachable at all once
+    // somebody clears the row too, which is itself a deliberate act taken
+    // past a red gate.
     const s = confirmed([{ date: '2027-03-16', time: '20:30', answer: 'accepted' }]);
     const backend = makeBackend([s]);
     renderFor(s, 'lock', backend);
