@@ -366,7 +366,13 @@ def compose(
     #
     # So the claim is made only when both sources are empty, which is the one
     # state in which it is true.
-    if event.room.join_url:
+    # Not both when the second is a spelling of the first.
+    # `convener-check-config` still invites an operator to fill `zoom_link` on
+    # a permanent-room account, where the link already lives in the series
+    # instructions -- and a registrant then read the same URL twice, under two
+    # labels, which is confusing rather than false but is still the product
+    # asking a person to work out that two lines are one fact.
+    if event.room.join_url and event.room.join_url not in event.room.instructions:
         lines.append(f"Join here: {event.room.join_url}")
     if event.room.instructions:
         lines.append(event.room.instructions)

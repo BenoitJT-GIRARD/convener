@@ -28,14 +28,14 @@ coming along.
 
 ### T-14 days
 
-- [ ] Meeting link in hand, recording arranged — the workspace shows the room link on this line once the record carries one, and it goes nowhere else but the confirmation e-mail
+- [ ] Meeting link (leave empty if the series room is used) — typed on the line itself, not ticked: the confirmation e-mail sends whatever is there, and on a series whose account is one permanent room the joining details are already in `instance/data/config.yml` and this field has nothing of its own to hold
 - [ ] LinkedIn access in place
 - [ ] **Checked that the speaker has a forum account and is signed up to their own talk**
 - [ ] One line per promotion channel — as many as there are entries in `channels` in `instance/data/config.yml`, so what you see is what the Board has set
 
 ### T-7 days
 
-- [ ] Forum announcement seeded — the drafted announcement is named on the line, filled in from the record
+- [ ] Forum thread, once the announcement is seeded — the drafted announcement is named on the line, filled in from the record, and the thread address is typed back onto it: the speaker reminder at T-3 sends whatever is there
 - [ ] Seeded a question on the forum
 - [ ] Waiting room switched on, and both hosts given co-host rights
 - [ ] Meeting platform access token renewed, if it is close to a month old — see `docs/operating/operations.md` for the short browser step

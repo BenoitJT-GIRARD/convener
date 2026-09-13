@@ -61,7 +61,14 @@ export type FieldKey =
   | 'youtube_views_30d'
   | 'forum_replies'
   | 'youtube_url'
-  | 'forum_thread';
+  | 'forum_thread'
+  // Added because its own runbook step used to be a tick. A volunteer marked
+  // "meeting link in hand" and the record still had no link, which the step
+  // below it then reported as missing and the confirmation e-mail then sent
+  // as nothing. It is never published -- `publish-showcase.yml` refuses a
+  // build carrying one -- and only the key, never the value, reaches a commit
+  // subject.
+  | 'zoom_link';
 
 export interface RunbookItem {
   key: string;
@@ -302,8 +309,17 @@ export const PHASES: PhaseDef[] = [
         // the platform's or one somebody types in, and there is nobody left
         // to write to. The line itself stays: the link still has to exist.
         key: 'scheduled/T-14/zoom-link',
-        form: 'checkbox',
-        label: 'Meeting link in hand, recording arranged',
+        // A field, not a tick. Ticking "in hand" left the link in somebody's
+        // hand and not on the record: `ManualPlatform.get_room` reads it,
+        // `confirmation.py` sends it to every registrant, and the next step's
+        // own panel reported it missing directly under the box just ticked.
+        // The only place it could be typed was the Admin override panel,
+        // which `SpeakerPage` opens for the Board alone -- so a host who is
+        // an organizer could not record the fact their own step exists to
+        // produce.
+        form: 'field',
+        fieldKey: 'zoom_link',
+        label: 'Meeting link (leave empty if the series room is used)',
         window: 14,
       },
       {
@@ -329,8 +345,13 @@ export const PHASES: PhaseDef[] = [
       },
       {
         key: 'scheduled/T-7/forum-announce',
-        form: 'checkbox',
-        label: 'Forum announcement seeded',
+        // The thread's address, not a tick that one exists. The speaker's
+        // own reminder interpolates `{{ speaker.forum_thread }}` three days
+        // before the talk, so a ticked box and an empty field is a reminder
+        // that carries a blank where a link should be.
+        form: 'field',
+        fieldKey: 'forum_thread',
+        label: 'Forum thread, once the announcement is seeded',
         window: 7,
         contentKey: 'toolkit/forum-post-announce',
       },
@@ -818,6 +839,8 @@ export function fieldValue(s: Speaker, k: FieldKey): string | number | null {
       return s.youtube_url;
     case 'forum_thread':
       return s.forum_thread;
+    case 'zoom_link':
+      return s.zoom_link;
     case 'registrations':
       return s.metrics.registrations;
     case 'live_peak':
@@ -844,6 +867,8 @@ export function setField(s: Speaker, k: FieldKey, v: string): Speaker {
       return { ...s, youtube_url: v };
     case 'forum_thread':
       return { ...s, forum_thread: v };
+    case 'zoom_link':
+      return { ...s, zoom_link: v };
     case 'registrations':
       return { ...s, metrics: { ...s.metrics, registrations: v === '' ? null : Number(v) } };
     case 'live_peak':

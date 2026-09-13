@@ -917,3 +917,28 @@ def test_the_sentence_survives_for_the_one_state_where_it_is_true() -> None:
     body = _body()
 
     assert PENDING_LINK in body
+
+
+def test_the_same_link_twice_is_printed_once() -> None:
+    """`convener-check-config` still invites an operator to fill `zoom_link`,
+    and on a permanent-room account the link is already in the series
+    instructions. A registrant then read the same URL under two labels --
+    confusing rather than false, but still the product asking a person to work
+    out that two lines are one fact."""
+    link = "https://example.test/room"
+    body = _body(join_url=link, instructions=f"Join online: {link}")
+
+    assert body.count(link) == 1
+    assert "Join here:" not in body
+
+
+def test_two_genuinely_different_ways_in_are_both_printed() -> None:
+    """Non-vacuity: a one-off room for this edition and a series-wide access
+    code are two facts, and dropping the first would lose the one the
+    registrant needs."""
+    body = _body(
+        join_url="https://example.test/one-off", instructions="Access code: 8842798"
+    )
+
+    assert "Join here: https://example.test/one-off" in body
+    assert "Access code: 8842798" in body

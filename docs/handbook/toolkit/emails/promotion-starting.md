@@ -23,7 +23,7 @@ read it:
 
 - **Speaker:** {{ speaker.name }}, {{ speaker.affiliation }}
 - **Title:** {{ speaker.title }}
-- **When:** {{ speaker.date }}, {{ speaker.time }} CET
+- **When:** {{ speaker.when }}
 - **Abstract:**
 
 > {{ speaker.abstract }}
@@ -45,8 +45,9 @@ speaker who is not in the thread of their own seminar cannot answer anyone in
 it. It takes a couple of minutes and it is the single thing that makes the
 discussion work.
 
-**Share it if you would like to.** We will send you the links as they go out,
-and you are very welcome to repost them. There is no obligation at all.
+**Share it if you would like to.** Anything we post is yours to repost, and
+your reminder nearer the time carries the forum thread. There is no obligation
+at all.
 
 Looking forward to it,
 
