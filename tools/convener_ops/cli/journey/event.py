@@ -191,6 +191,10 @@ def event_key_secret_name(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="convener-event-key-secret-name")
     parser.add_argument("--event", required=True, help="the edition's id")
     args = parser.parse_args(argv)
+    # `py/clear-text-logging-sensitive-data` reports this line, and it is the
+    # same false positive `maintenance.py` carries: the heuristic classifies by
+    # the name of what a value came from, and what comes from `secret_name` is
+    # a name. The value lives in the secret store and is never read back.
     print(eventkeys.secret_name(args.event.lower()))
     return 0
 
