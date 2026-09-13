@@ -128,10 +128,56 @@ describe('the line that asks for the room link shows it', () => {
     expect(found.found).toHaveLength(1);
   });
 
-  it('says the record carries none, rather than showing an empty line', () => {
-    const found = whereabouts(ROOM, double({ zoom_link: '' }), config())!;
+  it('says nothing is on record only when neither source has anything', () => {
+    const found = whereabouts(
+      ROOM,
+      double({ zoom_link: '' }),
+      config({ instructions: '' }),
+    )!;
     expect(found.found).toEqual([]);
-    expect(found.pending).toContain('No room link');
+    expect(found.pending).toContain('No way into the room');
+  });
+
+  it('reports the series instructions when the record has no link of its own', () => {
+    // The defect. D-06 is that the account *is* the permanent room, so
+    // `zoom_link` is empty by design on such an account and the way in lives
+    // in the series instructions. `confirmation.py` was taught to read both;
+    // this was not, and a volunteer preparing the seminar then read "No room
+    // link is on this record yet" on the very screen whose e-mail was
+    // carrying the link.
+    const found = whereabouts(
+      ROOM,
+      double({ zoom_link: '' }),
+      config({ instructions: 'Join online: https://example.test/room' }),
+    )!;
+    expect(found.pending).toBeNull();
+    expect(found.found).toHaveLength(1);
+    expect(found.found[0].where).toContain('https://example.test/room');
+  });
+
+  it('shows one line when the per-event link is a spelling of the series one', () => {
+    // Confusing rather than false, and reachable by doing exactly what
+    // `convener-check-config` invites: filling a per-event field on an
+    // account that has no per-event room.
+    const link = 'https://example.test/room';
+    const found = whereabouts(
+      ROOM,
+      double({ zoom_link: link }),
+      config({ instructions: `Join online: ${link}` }),
+    )!;
+    expect(found.found).toHaveLength(1);
+  });
+
+  it('shows both when they are genuinely two facts', () => {
+    // Non-vacuity for the clause above: a one-off room for this edition and a
+    // series-wide note about how to get in are two things, and collapsing
+    // them would lose the one the registrant actually needs.
+    const found = whereabouts(
+      ROOM,
+      double({ zoom_link: 'https://example.test/one-off' }),
+      config({ instructions: 'Access code: 8842798' }),
+    )!;
+    expect(found.found).toHaveLength(2);
   });
 
   it('needs no token, because the room is read off the record either way', () => {

@@ -154,25 +154,45 @@ function visuals(speaker: Speaker): Whereabouts {
  * carrying one).
  */
 function room(speaker: Speaker, config: Config | null): Whereabouts {
-  if (!speaker.zoom_link) {
+  const instructions = config?.instructions ?? '';
+
+  // Both sources, the way `confirmation.py` reads them. This branch used to
+  // ask `zoom_link` alone, which on a permanent-room account is empty by
+  // design -- D-06 is that the account *is* the room, so the link lives in
+  // the series instructions and the per-event field has nothing of its own to
+  // hold. The e-mail was fixed to stop claiming a missing link while printing
+  // one; this was not, and the two then disagreed. The screen a volunteer
+  // checks before the seminar was the one that was wrong.
+  if (!speaker.zoom_link && instructions === '') {
     return {
       from: null,
       found: [],
       pending:
-        'No room link is on this record yet. It is the record’s own zoom_link, ' +
-        'set on this page under Admin override, and the confirmation e-mail ' +
-        'sends whatever is there.',
+        'No way into the room is on record yet. Either the record’s own ' +
+        'zoom_link, set on this page, or the series-wide joining ' +
+        'instructions in instance/data/config.yml — the confirmation e-mail ' +
+        'sends whichever of the two is there.',
     };
   }
-  const instructions = config?.instructions ?? '';
+
+  // One line, not two, when the per-event link is only a second spelling of
+  // the series one. `convener-check-config` still invites an operator to fill
+  // `zoom_link` on a permanent-room account, and a registrant filling both
+  // was reading the same URL twice under two labels.
+  const duplicated = speaker.zoom_link !== '' && instructions.includes(speaker.zoom_link);
+
   return {
     from: null,
     found: [
-      {
-        what: 'the room, as the confirmation e-mail gives it; it is on no public page',
-        where: speaker.zoom_link,
-        href: speaker.zoom_link,
-      },
+      ...(speaker.zoom_link === '' || duplicated
+        ? []
+        : [
+            {
+              what: 'the room, as the confirmation e-mail gives it; it is on no public page',
+              where: speaker.zoom_link,
+              href: speaker.zoom_link,
+            },
+          ]),
       ...(instructions === ''
         ? []
         : [{ what: 'joining it, for the whole series', where: instructions }]),

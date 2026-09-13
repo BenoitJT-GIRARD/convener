@@ -263,6 +263,42 @@ it carries is what a release does to somebody else's repository:
   the next lock-in. The assertion now says what actually happened, and where
   to look.
 
+- **The e-mail stopped denying the room link; the runbook step went on doing
+  it.** `artefacts.ts::room` asked the per-event `zoom_link` alone, which on a
+  permanent-room account is empty by design — so at the very step where a
+  volunteer prepares the seminar the screen read *No room link is on this
+  record yet*, while the confirmation e-mail for the same edition carried the
+  link. Before the e-mail was fixed the two were wrong together, which is why
+  neither was noticed; afterwards they disagreed, and the surface a person
+  checks before the event was the wrong one. It reads both sources now, like
+  the e-mail. And when the per-event field is only a second spelling of the
+  series one, both surfaces print it once instead of twice.
+
+- **Two runbook steps ticked a fact they never captured.** *Meeting link in
+  hand* and *Forum announcement seeded* were checkboxes. A volunteer ticked
+  that the link was in hand and the record still had no link; the step below
+  then reported it missing, and the confirmation e-mail sent nothing. The
+  same for the thread, which the speaker reminder interpolates three days
+  before the talk. Both are fields now, the shape the `approved` phase
+  already uses for the two host names — which also means a host who is an
+  organizer can record them: the only place either could be typed was the
+  Admin override panel, and that opens for the Board alone.
+
+- **The speaker was sent the wrong hour, and a promise nothing keeps.** The
+  reminder hard-typed *12:30 CET* and *12:20* while `speaker.time` sat on the
+  record, so any series running at another hour sent its speaker the wrong
+  time in the message whose whole job is to get them into the room — silently
+  wrong, which a blank would not have been. `toolkit/index.md` already states
+  the rule it broke: read `{{ speaker.when }}`, which computes the real Paris
+  offset for that day, and never write `{{ speaker.time }}` beside a hand-typed
+  zone. Two templates did. Both read `when` now.
+
+  The same reminder asked the speaker to join a room it did not name; it now
+  points at the joining details they already hold, from registering for their
+  own talk at T-14. And the T-21 message promised *we will send you the links
+  as they go out* — a commitment in writing that no step of the runbook ever
+  came back to. It promises what actually happens instead.
+
 ### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to
