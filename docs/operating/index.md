@@ -18,6 +18,10 @@ accounts and secrets, and keeps it running once volunteers are using it.
   and what the licence does not promise.
 - **[Operations](operations.md)** — every external integration, the secret
   it needs, and what degrades without it.
+- **[What the automation costs](what-the-automation-costs.md)** — the 2000
+  free Actions minutes a private cockpit gets each month, how GitHub
+  actually bills them, what one runbook session measured, and which prices
+  are the right ones to keep paying.
 
 ## What is not here
 

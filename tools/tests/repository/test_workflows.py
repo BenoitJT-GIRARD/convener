@@ -4119,9 +4119,10 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
 # a correct argument about *event-name* proxies into a ban on the one
 # term that is not a proxy. The monitor consequently started a full
 # Python toolchain on every push to answer a question already in the
-# payload -- measured at 465 of 874 minutes on the derived instance over
-# 400 runs, 53% of everything, with 56 runs failing on their own
-# five-minute ceiling before the account's included minutes ran out. The
+# payload -- measured at 432 of the 1175 billed minutes the derived
+# instance spent on 2026-09-13, 37% of everything and the largest single
+# item, with 26 of its 123 jobs failing on their own five-minute ceiling
+# rather than on anything they had found. The
 # tests below hold the distinction itself, so neither failure can come
 # back: the guard must read the branch, and must not narrow on the event.
 # ------------------------------------------------------------------ #
