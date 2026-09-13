@@ -91,7 +91,31 @@ it carries is what a release does to somebody else's repository:
 
 - a short passage saying what changed, in the terms an operator reads
   rather than in the terms the diff does;
-- a `### Before you merge this` section, in **every** entry, naming each
+- a `- **A session did not survive a reload, and D-03 did not say so.** In an
+  operator’s own words, standing an instance up: refreshing the page, leaving it
+  or going back signed them out and made them do the GitHub code again. The
+  access token lived in React state and nowhere else, so every one of those
+  was a full device flow. D-03 argues for that flow on friction — on a
+  non-technical population, onboarding friction is what determines whether the
+  tool gets used at all — and its Cost section recorded only how long the
+  token lasts, which is a different question from what a session survives.
+
+  It is held in `sessionStorage` now: a reload, a back navigation and an
+  ordinary tab restore cost nothing; closing the tab still ends it, and a
+  second tab signs in on its own. `localStorage` is what it is deliberately
+  not — that would outlive the tab, the day and the person at the machine, on
+  an application whose repository holds participants’ personal data. It is no
+  defence against a script running on this origin, which reads a state
+  variable as easily as a storage key; what it changes is how long the token
+  outlives the page. D-03’s Cost section now says all of that.
+
+  One thing came out of it that was not in the report. The startup check
+  treated a token GitHub refused and a GitHub it could not reach as the same
+  outcome, so an outage signed everybody out. `checkToken` separates the
+  three now, and only a refusal discards the session — measured against a 502,
+  on a day GitHub was returning 5xx from its authorization endpoints.
+
+### Before you merge this` section, in **every** entry, naming each
   path from the two lists above that the release touched and what the
   operator does about it. An entry whose answer is that there is nothing to
   do says that in as many words: an operator has no way to tell a silence

@@ -36,3 +36,19 @@ account is ever lost — mitigated by living in the repository and deploying
 from CI rather than by hand. In exchange, a session token now lasts hours
 rather than 90 days, is revocable from the organisation's side, and is
 scoped to the installation rather than to a whole personal account.
+
+**What a session survives**, which is a different question from how long the
+token lasts and was missing here. A reload, a back navigation and an ordinary
+tab restore: the access token is held in `sessionStorage`, so the flow above
+is not re-entered for any of them. Closing the tab ends it, and so does
+opening the cockpit in a second tab, which signs in on its own. That is
+deliberate — `localStorage` would outlive the tab, the day and the person at
+the machine, on an application whose repository holds participants' personal
+data — and it is the boundary an operator should expect.
+
+It is stated because the cost this decision argues against is friction, and
+for a while the implementation charged that friction on every reload: the
+token lived in React state alone, so pressing back asked a volunteer for a
+fresh device code. Thirty seconds paid once when you start work is the trade
+made here. Thirty seconds paid again on every navigation is not, and nothing
+on this page said which one a reader was getting.
