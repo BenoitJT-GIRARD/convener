@@ -289,28 +289,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   /** How long a queue waits before it writes itself.
    *
-   *  **The measurement this was first fitted to was the wrong cadence.** It
-   *  came from the session that exhausted an instance's month: median gap
-   *  between commits 10 seconds, lower quartile 4. But that was the person
-   *  who built the series walking a runbook he already knew, to see whether
-   *  it worked -- not somebody doing the work the line describes. A
-   *  volunteer ticks "posted on LinkedIn" after posting on LinkedIn. The
-   *  gaps are minutes, and a window fitted to a demonstration would flush
-   *  between nearly every one of them and batch nothing.
+   *  **A net is not supposed to catch the ordinary case.** Every other way a
+   *  queue empties is somebody doing something -- leaving the record,
+   *  starting a transition, pressing the control, moving to another tab.
+   *  This timer exists for the one case nobody performs: a record left open
+   *  on a screen somebody has walked away from. If it fires during ordinary
+   *  work then it is not a backstop, it is the mechanism -- and it will
+   *  split a volunteer's work into commits at the rhythm of their pauses
+   *  rather than the rhythm of their work.
    *
-   *  Two minutes, then, and the exposure that buys is smaller than it
-   *  sounds: this timer is the *backstop*, not the mechanism. A queue is
-   *  written when the volunteer leaves the record, when any other write goes
-   *  through, and when they press the control that says so -- the timer only
-   *  ever fires for a tab left open and walked away from, and closing that
-   *  tab asks the browser to warn first. What is at risk is ticks made in
-   *  the last two minutes by somebody whose machine then died.
+   *  Twenty minutes, because ten is still an ordinary pause. A volunteer
+   *  ticks "posted on LinkedIn" after posting on LinkedIn, and reads the
+   *  next line of the runbook before ticking that.
    *
-   *  Longer would batch more and is not obviously wrong; it has not been
-   *  taken because nothing has measured a real volunteer's cadence yet, and
-   *  this is the direction where being wrong costs somebody's work rather
-   *  than somebody's minutes. */
-  const QUEUE_MS = 120_000;
+   *  **The first number here was fitted to the wrong cadence** and is worth
+   *  recording, because it is the trap: it came from the session that
+   *  exhausted an instance's month -- median gap between commits 10
+   *  seconds, lower quartile 4 -- which was the person who built the series
+   *  walking a runbook he already knew, at the speed of somebody checking
+   *  that it works. Nobody doing the work goes at that speed.
+   *
+   *  **What a window this long would have risked, and what closes it.** At
+   *  two minutes the exposure was small enough to leave alone: an
+   *  unattended tab, and `beforeunload` asks the browser to warn before a
+   *  deliberate close. Twenty minutes is long enough that a browser may
+   *  discard a backgrounded tab for memory in the meantime, or a laptop may
+   *  sleep, and neither runs an unload handler you can rely on. So the
+   *  queue is now also written when the page is *hidden* -- see the effect
+   *  in `components/PendingEdits.tsx`. That is the moment a volunteer
+   *  switches away to go and do the thing the line describes, which makes
+   *  it both the safe moment and the right one: one commit per stretch of
+   *  work on a record, rather than one per pause in it. */
+  const QUEUE_MS = 1_200_000;
 
   async function queueSpeakerEdit(id: string, item: QueuedEdit): Promise<void> {
     if (!token) return;
