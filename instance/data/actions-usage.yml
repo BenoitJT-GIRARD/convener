@@ -2,64 +2,62 @@
 # A LOWER BOUND, never the bill: the free minutes belong to the organisation and are shared.
 v: 1
 latest:
-  observed_on: '2026-09-13'
-  since: '2026-09-07'
+  observed_on: '2026-09-14'
+  since: '2026-09-08'
   window_days: 7
   runs: 200
-  uncosted_runs: 11
+  uncosted_runs: 1
   truncated: true
-  billed_minutes: 537
-  scheduled_minutes: 0
+  billed_minutes: 611
+  scheduled_minutes: 5
   submission_minutes: 0
-  development_minutes: 537
-  projected_monthly_minutes: 2332
+  development_minutes: 606
+  projected_monthly_minutes: 2653
   busiest_submission_day: ''
   busiest_submissions: 0
   by_event:
-  - event: push
-    minutes: 252
   - event: pull_request
-    minutes: 223
+    minutes: 309
+  - event: push
+    minutes: 254
   - event: dynamic
     minutes: 37
   - event: workflow_run
-    minutes: 25
+    minutes: 6
+  - event: schedule
+    minutes: 5
   by_workflow:
   - workflow: Quality
-    minutes: 215
+    minutes: 287
   - workflow: Security
-    minutes: 120
-  - workflow: pages build and deployment
-    minutes: 36
+    minutes: 155
   - workflow: Accessibility
-    minutes: 34
-  - workflow: Monitor secret-bearing workflow runs
-    minutes: 25
-  - workflow: Deploy app
-    minutes: 24
+    minutes: 37
+  - workflow: pages build and deployment
+    minutes: 35
   - workflow: Validate data
-    minutes: 17
+    minutes: 22
+  - workflow: Deploy app
+    minutes: 21
   - workflow: Demonstration
-    minutes: 13
+    minutes: 12
   - workflow: Derive the decision register
-    minutes: 13
-  - workflow: Templates
     minutes: 12
   - workflow: Preview
-    minutes: 9
+    minutes: 11
   - workflow: Publish showcase
-    minutes: 9
-  - workflow: Deploy auth relay
-    minutes: 2
-  - workflow: Deploy form relay
-    minutes: 2
-  - workflow: Deploy signup relay
-    minutes: 2
-  - workflow: Visuals
-    minutes: 2
-  - workflow: 'Configured Graph Update: uv in /tools #1572783553'
-    minutes: 1
+    minutes: 7
+  - workflow: Monitor secret-bearing workflow runs
+    minutes: 6
   - workflow: Visuals production
+    minutes: 2
+  - workflow: 'Configured Graph Update: uv in /tools #1573735985'
+    minutes: 1
+  - workflow: 'Configured Graph Update: uv in /tools #1573806610'
+    minutes: 1
+  - workflow: Sweep and notify the board
+    minutes: 1
+  - workflow: Tell the registrants of a cancelled edition
     minutes: 1
   submissions_by_day: []
 history:
@@ -72,4 +70,9 @@ history:
   runs: 200
   minutes: 537
   projected_monthly: 2332
+  busiest_submissions: 0
+- day: '2026-09-14'
+  runs: 200
+  minutes: 611
+  projected_monthly: 2653
   busiest_submissions: 0
