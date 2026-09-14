@@ -18,12 +18,16 @@ import { useData } from '../data/DataContext';
  * and offers the button that ends the wait — so the batching is never
  * something the screen does behind them.
  *
- * **The three ways it is written.** A timer in `DataContext`, thirty seconds
+ * **The three ways it is written.** A timer in `DataContext`, two minutes
  * after the last edit; the control here; and, at the one chokepoint every
  * other write passes through, `mutateSpeakers` — so a transition empties the
  * queue before it changes a status, without any of its callers having to
  * remember. This component adds the fourth edge the provider cannot see: the
  * volunteer leaving the record.
+ *
+ * The timer is the backstop of the four, not the mechanism: in ordinary use
+ * a volunteer's work is written when they move on, and the timer is what
+ * catches a tab left open. That is why it can afford to be long.
  */
 export function PendingEdits() {
   const { pendingEdits, flushSpeakers } = useData();
