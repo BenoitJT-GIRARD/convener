@@ -291,6 +291,15 @@ export type Edit =
   | { part: 'post-archive-metrics' }
   | { part: 'field'; key: FieldKey }
   | { part: 'runbook-box'; key: ItemKey; ticked: boolean }
+  // Several of the above, written together. A volunteer ticking their way
+  // down a phase made one commit per box -- 53 of them in 47 minutes on a
+  // live instance -- and each commit is a push that wakes the repository's
+  // workflows. This is the subject for the batch, and it counts rather than
+  // lists: a subject is one permanent line, and nine keys in it would be
+  // unreadable in every tool that shows one. The diff holds the nine.
+  //
+  // It carries no key at all, so there is still no slot a value fits in.
+  | { part: 'checklist'; lines: number }
   | { part: 'owner'; key: ItemKey; cleared: boolean };
 
 /** Total: every value `Edit` admits renders to one phrase, and no phrase
@@ -310,6 +319,13 @@ function editPart(edit: Edit): string {
       return `set ${itemKey(edit.key)}`;
     case 'runbook-box':
       return `runbook ${edit.key}=${edit.ticked}`;
+    case 'checklist':
+      // A number this module computed from the length of a list, never a
+      // caller's string. Plural always: `pendingSubject` renders a queue of
+      // one through that edit's own phrase, so this variant is only ever
+      // reached with two or more and the wording has no singular to get
+      // wrong.
+      return `${edit.lines} checklist lines`;
     case 'owner':
       return edit.cleared ? `owner cleared on ${edit.key}` : `owner for ${edit.key}`;
   }
@@ -440,8 +456,10 @@ const KEY_SRC = `${TOKEN_SRC}(?:/${TOKEN_SRC})*`;
  * other way fails there instead of landing in a history nothing rewrites.
  *
  * It is the grammar's own shape, built from `ACTS` and from `editPart`'s
- * five phrases rather than restated: a phrase reworded above changes what
- * this accepts, in the same edit.
+ * own phrases: a phrase reworded above has to be reworded here in the same
+ * edit, and `decisions.test.ts` walks every variant of `Edit` through both
+ * so that a phrase added to one and not the other fails in the suite rather
+ * than at the moment somebody's work is refused a commit.
  */
 export function isSubject(line: string): line is Subject {
   // Every phrase is words and spaces -- see `ACTS` and `editPart` -- so
@@ -453,7 +471,8 @@ export function isSubject(line: string): line is Subject {
   const edit = new RegExp(
     `^data: ${TOKEN_SRC} (?:admin edit|advance the edition counter|` +
       `update post-archive metrics|set ${KEY_SRC}|` +
-      `runbook ${KEY_SRC}=(?:true|false)|owner for ${KEY_SRC}|owner cleared on ${KEY_SRC})$`,
+      `runbook ${KEY_SRC}=(?:true|false)|[0-9]+ checklist lines|` +
+      `owner for ${KEY_SRC}|owner cleared on ${KEY_SRC})$`,
   );
   // The settings screen's own domain, built from the same two patterns
   // `settingKey` and `settingsFile` check at construction rather than a

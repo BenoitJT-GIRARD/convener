@@ -16,11 +16,12 @@ import { assignItem } from '../state/assignment';
 import { dataEdit, identifier, itemKey } from '../state/decisions';
 import { effectiveStatus, parisToday, roomText } from '../state/derived';
 import { LoadError } from '../components/LoadError';
+import { PendingEdits } from '../components/PendingEdits';
 import type { Config, Speaker } from '../data/types';
 
 export function SpeakerPage() {
   const { id } = useParams();
-  const { speakers, loading, error, config, mutateSpeakers } = useData();
+  const { speakers, loading, error, config, mutateSpeakers, queueSpeakerEdit } = useData();
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Reading the records from GitHub…</p>;
@@ -39,31 +40,34 @@ export function SpeakerPage() {
 
   async function toggle(key: string, value: boolean) {
     if (!login || !id) return;
-    await mutateSpeakers(
-      current =>
-        current.map(sp =>
-          sp.id === id
-            ? { ...sp, runbook_progress: { ...sp.runbook_progress, [key]: value } }
-            : sp,
-        ),
-      // A box ticked on the runbook is the record catching up with work
-      // already done, not an act of the register. The key is the journey's
-      // own, from `state/phases.ts`, and names no one.
-      dataEdit(identifier(id), { part: 'runbook-box', key: itemKey(key), ticked: value }),
-    );
+    // Queued, not written. A box ticked on the runbook is the record catching
+    // up with work already done, not an act of the register, and nothing
+    // reads it in the same breath -- so a volunteer ticking their way down a
+    // phase makes one commit rather than one per box. The key is the
+    // journey's own, from `state/phases.ts`, and names no one.
+    await queueSpeakerEdit(id, {
+      apply: sp => ({ ...sp, runbook_progress: { ...sp.runbook_progress, [key]: value } }),
+      edit: { part: 'runbook-box', key: itemKey(key), ticked: value },
+    });
   }
 
   async function onField(k: FieldKey, v: string) {
     if (!login || !id) return;
-    await mutateSpeakers(
-      current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
-      // A talk detail typed in. `k` is a field name, never its value: the
-      // value is in the diff, where the consent classification governs it.
-      // `Edit` is what holds that -- `part: 'field'` carries a `FieldKey`
-      // and has nowhere to put `v` -- rather than the care of whoever edits
-      // this line next.
-      dataEdit(identifier(id), { part: 'field', key: k }),
-    );
+    // Queued, and here that is not only about batching: `Checklist`'s fields
+    // fire `onChange` on every keystroke, so this wrote **one commit per
+    // character typed**. It went unnoticed because the values a volunteer
+    // reaches for first -- a GitHub login, a URL -- are pasted, and a paste
+    // is a single change event. A title typed out was forty commits, each of
+    // them a push.
+    //
+    // `k` is a field name, never its value: the value is in the diff, where
+    // the consent classification governs it. `Edit` is what holds that --
+    // `part: 'field'` carries a `FieldKey` and has nowhere to put `v` --
+    // rather than the care of whoever edits this line next.
+    await queueSpeakerEdit(id, {
+      apply: sp => setField(sp, k, v),
+      edit: { part: 'field', key: k },
+    });
   }
 
   // Who can be put down for a line: the board, plus whichever hosts this
@@ -117,6 +121,7 @@ export function SpeakerPage() {
 
   return (
     <div className="max-w-3xl">
+      <PendingEdits />
       <p className="text-xs text-ink-muted font-mono mb-1">
         {s.id}
         {s.edition_code && ` · ${s.edition_code}`}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { configTextFor } from './config-write';
@@ -13,6 +13,14 @@ import {
   underItsOwnHeader,
 } from './yaml';
 import { isDemoMode, demoSpeakers, demoConfig } from './demo';
+import {
+  applyPending,
+  enqueue,
+  pendingCount,
+  pendingSubject,
+  type Queue,
+  type QueuedEdit,
+} from './pending';
 import { forgetDemoSession, readDemoSession, writeDemoSession } from './demo-session';
 import { configFile, speakersFile } from '../paths';
 import type { Speaker, Config } from './types';
@@ -59,6 +67,22 @@ interface Ctx extends State {
     transform: (current: Config) => Config,
     message: Subject,
   ) => Promise<boolean>;
+  /** Hold an edit to one record rather than writing it now.
+   *
+   *  For the two forms of the checklist that record something already done
+   *  elsewhere -- a box ticked, a detail typed -- and for nothing else. A
+   *  transition goes through `mutateSpeakers`, which flushes this first.
+   *
+   *  `speakers` above already has whatever is held applied to it, so a caller
+   *  reads the same list whether an edit has been written or not. */
+  queueSpeakerEdit: (id: string, item: QueuedEdit) => Promise<void>;
+  /** Write whatever is held, now. Called by the save control, by every
+   *  transition, and on the way out of a record. Resolves `true` when there
+   *  is nothing held or the write went through. */
+  flushSpeakers: () => Promise<boolean>;
+  /** How many edits are waiting, for the screen that has to say so. Zero
+   *  means the record on screen is the record in the repository. */
+  pendingEdits: number;
   /** Dismiss the current save-error banner without touching anything else. */
   clearSaveError: () => void;
 }
@@ -218,7 +242,99 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Held in a ref *and* in state, and both are needed. The ref is what the
+  // asynchronous code below reads -- a closure capturing the state value
+  // would flush whatever the queue was when the timer was set. The state is
+  // what a render reads, so a ticked box stays ticked on screen the moment it
+  // is clicked rather than a write later.
+  const queueRef = useRef<Queue | null>(null);
+  const [queue, setQueueState] = useState<Queue | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function setQueue(next: Queue | null) {
+    queueRef.current = next;
+    setQueueState(next);
+  }
+
+  /** Write one queue. Separate from `flushSpeakers` because `queueSpeakerEdit`
+   *  has to be able to write the *previous* record's queue while keeping the
+   *  new one it has just started. */
+  async function writeQueue(toWrite: Queue): Promise<boolean> {
+    return writeSpeakers(
+      current => applyPending(toWrite, current),
+      pendingSubject(toWrite),
+    );
+  }
+
+  async function flushSpeakers(): Promise<boolean> {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const held = queueRef.current;
+    if (held === null || held.edits.length === 0) return true;
+    // Cleared before the write, not after. A tick arriving while this is in
+    // flight belongs to the *next* queue; leaving it here would write it
+    // twice -- once in this batch and once in the next.
+    setQueue(null);
+    const wrote = await writeQueue(held);
+    if (!wrote) {
+      // Put it back. The banner says the write failed, and the volunteer's
+      // work is still on screen and still held, which is the whole reason
+      // `saveError` never clears the records.
+      setQueue(queueRef.current === null ? held : { id: held.id, edits: [...held.edits, ...queueRef.current.edits] });
+    }
+    return wrote;
+  }
+
+  /** How long a queue waits before it writes itself.
+   *
+   *  Chosen from the measurement rather than picked: on the session that
+   *  exhausted an instance's month, the median gap between one volunteer's
+   *  commits was 10 seconds and the quartile 4. Thirty seconds collapses 22
+   *  batchable writes to 4; sixty collapses them to 3, and two minutes to 1.
+   *  The curve is flat past thirty and the exposure -- work a closed tab
+   *  would lose -- grows in a straight line, so thirty is where those cross. */
+  const QUEUE_MS = 30_000;
+
+  async function queueSpeakerEdit(id: string, item: QueuedEdit): Promise<void> {
+    if (!token) return;
+    if (isDemoMode()) {
+      // Nothing is committed in a demonstration, so there is nothing to
+      // batch: the edit applies to the session copy straight away and the
+      // visitor sees exactly what a volunteer would.
+      await writeSpeakers(current => applyPending({ id, edits: [item] }, current), pendingSubject({ id, edits: [item] }));
+      return;
+    }
+    const { queue: next, flush } = enqueue(queueRef.current, id, item);
+    setQueue(next);
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      void flushSpeakers();
+    }, QUEUE_MS);
+    // A different record: the one being held is written now rather than
+    // merged, because a commit subject can only name one of them.
+    if (flush !== null) await writeQueue(flush);
+  }
+
   async function mutateSpeakers(
+    transform: (current: Speaker[]) => Speaker[],
+    message: Subject | ((next: Speaker[]) => Subject),
+  ): Promise<boolean> {
+    // Every transition passes through here, so this is where the queue is
+    // emptied -- once, at the chokepoint, rather than at each of the call
+    // sites that would have to remember. A status change publishes an
+    // edition or sends somebody a message, and doing that on top of ticks
+    // this tab has not written would record the two in the wrong order.
+    //
+    // Its own write, not folded into the transition's: a transition's subject
+    // is a line of the decision register, and bookkeeping merged into it
+    // would make that line describe two different things.
+    if (!(await flushSpeakers())) return false;
+    return writeSpeakers(transform, message);
+  }
+
+  async function writeSpeakers(
     transform: (current: Speaker[]) => Speaker[],
     message: Subject | ((next: Speaker[]) => Subject),
   ): Promise<boolean> {
@@ -269,6 +385,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Held edits are applied to what every screen reads, so a box stays ticked
+  // the moment it is clicked. It is `applyPending` doing it -- the same
+  // function the write transforms with -- so what is on screen and what will
+  // land cannot be two different answers.
+  const onScreen: State = { ...visible, speakers: applyPending(queue, visible.speakers) };
+
   async function mutateConfig(
     transform: (current: Config) => Config,
     message: Subject,
@@ -316,7 +438,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <C.Provider value={{ ...visible, reload, mutateSpeakers, mutateConfig, clearSaveError }}>
+    <C.Provider
+      value={{
+        ...onScreen,
+        reload,
+        mutateSpeakers,
+        mutateConfig,
+        queueSpeakerEdit,
+        flushSpeakers,
+        pendingEdits: pendingCount(queue),
+        clearSaveError,
+      }}
+    >
       {children}
     </C.Provider>
   );

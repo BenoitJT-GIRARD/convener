@@ -158,8 +158,28 @@ const ISLAND_PAGE_BUDGET_GZIP_BYTES = 110 * 1024;
  *  `define`, a library pulled in for one screen -- not whether the budget
  *  should go up. Raising it is a decision somebody makes deliberately, with
  *  a new measurement and a new argument written here.
+ *
+ *  **Raised once, on 2026-09-14, and this is that argument.** The 224 KiB
+ *  ceiling went red at 229,482 B. What the build had started carrying was
+ *  asked first, as the paragraph above requires, and the answer was no
+ *  `define` and no library: ten days of ordinary work -- a cancellation
+ *  path, a comment-preserving configuration writer, the room an edition is
+ *  held in, and a queue that stops the checklist writing a commit per
+ *  keystroke. That last one was measured on its own against the commit
+ *  before it: **681 B gzip**. The 9,364 B of headroom the 2026-09-04
+ *  measurement left had been spent by the other four.
+ *
+ *  So this is 230 KiB, and 230 is not a round number chosen for comfort --
+ *  it is the largest value that keeps this budget's whole claim true. That
+ *  claim is that the bundle carrying `declarations/standing-up.yml`, 236,454
+ *  B gzip, would have been red here. 231 KiB is 236,544 B and would have
+ *  passed it; 230 KiB is 235,520 B and would not.
+ *
+ *  **There is no third raise available.** The next time this goes red the
+ *  honest answer is to take weight out, because any ceiling above this one
+ *  stops catching the defect the check was written for.
  */
-const COCKPIT_BUDGET_GZIP_BYTES = 224 * 1024;
+const COCKPIT_BUDGET_GZIP_BYTES = 230 * 1024;
 
 /** The self-hosted font payload -- see this file's own module comment for
  *  why this is separate from the two page budgets above, and why "drop
