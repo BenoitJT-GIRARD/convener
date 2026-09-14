@@ -99,26 +99,90 @@ to the board. A cancelled publish is republished by the run that cancelled
 it; a cancelled send is simply lost. If such a workflow is costing too
 much, narrow what wakes it — never cancel it.
 
+## The second lever: how many commits the work makes
+
+Narrowing what a push wakes took the session from 1175 billed minutes to
+roughly 240. What was left was floor rather than waste — six short jobs woken
+per write, each billing its minimum whole minute — so the remaining lever was
+never another path filter. It was **the number of writes**: fifty-three
+commits for two seminars is one per checkbox.
+
+The cockpit now holds a record's checklist edits and writes them together.
+Only the checklist: a `checkbox` is a task and a `field` is a fact, nothing
+reads either in the same breath, and both are the record catching up with
+work already done. A `button-group` is a *transition* — it changes a status,
+and a status change publishes an edition, mints a key, opens registration or
+sends somebody a message — so it is never held, and it flushes whatever is
+held before it writes.
+
+**The worst of what this fixed was not the ticking.** The checklist's fields
+fire on every keystroke, and each one wrote: **one commit per character
+typed**. It had gone unnoticed because the first values a volunteer reaches
+for — a GitHub login, a forum URL — get pasted, and a paste is one event. The
+session measured above has exactly one `set host_1` in it for that reason.
+
 ## Where the floor is now
 
-A session of the same shape should now bill roughly 240 minutes rather than
-1175 — about five times less, and eight such sessions in a month rather
-than one and a half.
+| | billed minutes |
+|---|---:|
+| the session as measured | 1175 |
+| with what a push wakes narrowed | ~240 |
+| with checklist edits written together | **~115** |
 
-What is left is mostly floor rather than waste: six short jobs woken per
-tick, each billing its minimum whole minute. The next real lever is not
-another workflow filter, it is **the number of commits**. Fifty-three
-commits for two seminars is one per checkbox, and every one of them is a
-push. Anything that batched a volunteer's ticks into fewer commits would
-divide the remaining cost directly — that change has not been made, because
-it trades against losing a volunteer's work if a batch is dropped, and that
-trade has not been thought through yet.
+About **ten times less**, and roughly seventeen sessions of that shape in a
+month rather than one and a half. For a volunteer who *types* a title and an
+abstract rather than pasting them, the difference has no fixed factor at all:
+two hundred characters was two hundred commits and is now part of one.
+
+Both figures after the first are projections from the one session there is,
+and the first run after an allowance resets is what confirms them.
+
+The queue waits twenty minutes, and that number is deliberately too long to
+catch ordinary work. Every other way it empties is somebody doing something —
+leaving the record, starting a transition, switching to another tab, pressing
+the control that says so. The timer is for a record left open on a screen
+nobody is at. A net that caught the ordinary case would be splitting a
+volunteer's work into commits at the rhythm of their pauses.
 
 ## If an instance runs out anyway
 
 Included minutes reset at the start of the billing cycle, and nothing
-restores them early without paying. Until then the cockpit's automation is
-stopped, and the instance is operated by hand through the `convener-*`
-commands in `tools/`. A public repository has unlimited Actions minutes, so
-an instance's **showcase** keeps building throughout — only the private
-cockpit stops.
+restores them early without paying. What follows is what is and is not
+actually stopped, because most of it is less than it first looks.
+
+**Taking an update is not blocked.** A merge is git, and git costs no Actions
+minutes — so the ordinary procedure in
+[Taking an update](taking-an-update.md) works unchanged, including the
+`sh gates.sh` it already asks for before the push. Those gates are every
+check continuous integration runs and need no account and no secret, so the
+verification simply happens on your machine instead of on a runner.
+
+**Nothing accumulates while the workflows are stopped.** `Deploy app` and
+`Publish showcase` build from `HEAD`: they publish a *state*, not a queue of
+changes. One run after the allowance resets produces exactly what it would
+have produced at the moment of the merge. That is the same property that lets
+them cancel their own superseded runs.
+
+**The showcase keeps being served.** A public repository has unlimited
+Actions minutes, and an instance's published site — the event pages and the
+cockpit application both — lives in one. Its own Pages build goes on working
+throughout. What has stopped is the private repository that *produces* that
+content, not the public one that serves it.
+
+**One thing is genuinely lost: the public proposal form.** `form-relay` turns
+the form's webhook into a `repository_dispatch` and holds nothing. The
+dispatch is created successfully, the workflow behind it then fails to start,
+and the person who submitted sees a confirmation for a proposal that was
+never recorded. Close the form at its own source for the duration; a
+submitter reading "closed" is told the truth, and a silent success is not.
+
+**Registrations are not in that position.** The signup relay refuses an
+edition whose key has not been published, with an honest error, so nothing is
+accepted and quietly dropped.
+
+Resist operating the instance by hand in the meantime. Every `convener-*`
+command in `tools/` will run locally and do the right thing, which is exactly
+what makes it tempting — but a publish done by hand skips the steps the
+workflow wraps it in, and one of those refuses to publish a build carrying
+the room address. Waiting costs a few weeks of staleness. The other way costs
+the guarantee.

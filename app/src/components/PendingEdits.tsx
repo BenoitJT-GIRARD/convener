@@ -18,16 +18,19 @@ import { useData } from '../data/DataContext';
  * and offers the button that ends the wait — so the batching is never
  * something the screen does behind them.
  *
- * **The three ways it is written.** A timer in `DataContext`, two minutes
- * after the last edit; the control here; and, at the one chokepoint every
- * other write passes through, `mutateSpeakers` — so a transition empties the
+ * **The ways it is written.** The control here; `mutateSpeakers`, at the one
+ * chokepoint every other write passes through — so a transition empties the
  * queue before it changes a status, without any of its callers having to
- * remember. This component adds the fourth edge the provider cannot see: the
- * volunteer leaving the record.
+ * remember; and two edges the provider cannot see, both of them here: the
+ * volunteer leaving the record, and the page being hidden. Last of all a
+ * timer in `DataContext`, twenty minutes after the last edit.
  *
- * The timer is the backstop of the four, not the mechanism: in ordinary use
- * a volunteer's work is written when they move on, and the timer is what
- * catches a tab left open. That is why it can afford to be long.
+ * The timer is the backstop, not the mechanism. In ordinary use a
+ * volunteer's work is written when they move on or switch away, and the
+ * timer only ever catches a record left open on a screen nobody is at. That
+ * is what lets it be as long as it is — a net that caught the ordinary case
+ * would be splitting somebody's work into commits at the rhythm of their
+ * pauses.
  */
 export function PendingEdits() {
   const { pendingEdits, flushSpeakers } = useData();
@@ -45,10 +48,32 @@ export function PendingEdits() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Switching away writes what is held.
+  //
+  // This is what makes a twenty-minute timer safe. A backgrounded tab can be
+  // discarded by the browser for memory, and a laptop can sleep, and neither
+  // runs an unload handler anybody should rely on -- so at that length, held
+  // work behind a hidden tab is work genuinely at risk. `visibilitychange`
+  // fires while the page is still alive, which `beforeunload` cannot promise.
+  //
+  // It is also the right moment rather than merely a safe one: a volunteer
+  // switches away to go and do the thing the line describes. Writing here
+  // gives one commit per stretch of work on a record instead of one per
+  // pause in it, which is the same granularity the timer is trying to reach
+  // and arrives at it by watching the volunteer rather than the clock.
+  useEffect(() => {
+    function onHidden() {
+      if (document.visibilityState === 'hidden') void flushSpeakers();
+    }
+    document.addEventListener('visibilitychange', onHidden);
+    return () => document.removeEventListener('visibilitychange', onHidden);
+  }, [flushSpeakers]);
+
   // Closing the tab is the one edge nothing can be written on: a browser will
   // not wait for an asynchronous write during unload, and pretending
   // otherwise would be worse than saying so. This asks the browser to warn,
-  // which is all that is honestly available.
+  // which is all that is honestly available -- and after the effect above it
+  // is a second net rather than the only one.
   useEffect(() => {
     if (pendingEdits === 0) return;
     function warn(e: BeforeUnloadEvent) {

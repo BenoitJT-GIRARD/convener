@@ -231,9 +231,9 @@ describe('how many commits the work makes', () => {
     // Still held a second short of the window. Without this the reading
     // above would pass for any timer at all, including one that wrote
     // immediately -- and the length of this wait is the whole thing being
-    // decided, because it is how much work a dead machine would take.
+    // decided, because a net that catches the ordinary case is not a net.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(119_000);
+      await vi.advanceTimersByTimeAsync(1_199_000);
     });
     expect(b.messages).toHaveLength(0);
 
@@ -243,6 +243,52 @@ describe('how many commits the work makes', () => {
 
     await waitFor(() => expect(b.messages).toHaveLength(1));
     expect(b.messages[0]).toBe('data: spk-001 runbook delivered/forum-summary=true');
+  });
+
+  it('writes what is held when the volunteer switches away', async () => {
+    // What makes a twenty-minute timer safe to have. A backgrounded tab can
+    // be discarded by the browser for memory and a laptop can sleep, and
+    // neither runs an unload handler anybody should rely on -- so without
+    // this, held work behind a hidden tab is work genuinely at risk.
+    //
+    // It is also the right moment rather than merely a safe one: switching
+    // away is a volunteer going to do the thing the line describes.
+    const b = backend([delivered()]);
+    vi.stubGlobal('fetch', b.fetchMock);
+    show('spk-001');
+
+    await tickTheForumSummary();
+    expect(b.messages).toHaveLength(0);
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      configurable: true,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await waitFor(() => expect(b.messages).toHaveLength(1));
+    expect(b.messages[0]).toBe('data: spk-001 runbook delivered/forum-summary=true');
+  });
+
+  it('holds on to the work while the page is merely shown again', async () => {
+    // Non-vacuity in the direction that would be silent: a handler that
+    // wrote on every `visibilitychange` rather than on *hidden* would flush
+    // each time a volunteer came back to the tab, which is the batching
+    // undone by the very effect meant to protect it.
+    const b = backend([delivered()]);
+    vi.stubGlobal('fetch', b.fetchMock);
+    show('spk-001');
+
+    await tickTheForumSummary();
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      configurable: true,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await new Promise(r => setTimeout(r, 50));
+    expect(b.messages).toHaveLength(0);
   });
 
   it('starts the wait again at each edit, so a run of ticks is one commit', () => {
