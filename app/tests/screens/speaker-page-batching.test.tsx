@@ -29,6 +29,15 @@ import { SpeakerPage } from '../../src/screens/SpeakerPage';
 import { parseSpeakers, serializeSpeakers } from '../../src/data/yaml';
 import { configYaml, speaker as double } from '../helpers/data-doubles';
 import type { Speaker } from '../../src/data/types';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+/** The provider's own source, for the one claim below that is about how the
+ *  timer is managed rather than about what a volunteer sees. */
+const DataContextSource = readFileSync(
+  resolve(__dirname, '../../src/data/DataContext.tsx'),
+  'utf-8',
+);
 
 function encodeUtf8(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -139,9 +148,9 @@ describe('how many commits the work makes', () => {
 
   it('shows the work as done before it is written', async () => {
     // Held work a volunteer cannot see is work they do not know they can
-    // lose — and a box that un-ticks itself for thirty seconds is worse than
-    // a commit per tick. The screen draws from the same function the write
-    // transforms with.
+    // lose — and a box that un-ticks itself until the next write is worse
+    // than a commit per tick. The screen draws from the same function the
+    // write transforms with.
     const b = backend([delivered()]);
     vi.stubGlobal('fetch', b.fetchMock);
     show('spk-001');
@@ -207,9 +216,10 @@ describe('how many commits the work makes', () => {
   });
 
   it('writes what is held on its own, once the volunteer has stopped', async () => {
-    // The timer, which is what makes this safe to leave alone: a volunteer
-    // who ticks a box and walks away has their work written thirty seconds
-    // later, without touching anything.
+    // The backstop: a volunteer who ticks a box and walks away has their
+    // work written without touching anything. It is the last of the four
+    // ways a queue is emptied and the only one nobody performs, which is why
+    // it can afford to be as long as it is.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const b = backend([delivered()]);
     vi.stubGlobal('fetch', b.fetchMock);
@@ -218,11 +228,31 @@ describe('how many commits the work makes', () => {
     await tickTheForumSummary();
     expect(b.messages).toHaveLength(0);
 
+    // Still held a second short of the window. Without this the reading
+    // above would pass for any timer at all, including one that wrote
+    // immediately -- and the length of this wait is the whole thing being
+    // decided, because it is how much work a dead machine would take.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(119_000);
+    });
+    expect(b.messages).toHaveLength(0);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
     });
 
     await waitFor(() => expect(b.messages).toHaveLength(1));
     expect(b.messages[0]).toBe('data: spk-001 runbook delivered/forum-summary=true');
+  });
+
+  it('starts the wait again at each edit, so a run of ticks is one commit', () => {
+    // What a window means: it is time since the *last* edit, not since the
+    // first. A volunteer working down a phase never has a batch cut in half
+    // because they happened to start two minutes ago.
+    //
+    // Read off the provider's own constant rather than performed, because
+    // performing it would mean advancing the clock between two ticks and
+    // asserting a negative about a timer that has been replaced.
+    expect(DataContextSource).toContain('if (timerRef.current !== null) clearTimeout(timerRef.current);');
   });
 });

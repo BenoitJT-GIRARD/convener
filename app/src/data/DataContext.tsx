@@ -289,13 +289,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   /** How long a queue waits before it writes itself.
    *
-   *  Chosen from the measurement rather than picked: on the session that
-   *  exhausted an instance's month, the median gap between one volunteer's
-   *  commits was 10 seconds and the quartile 4. Thirty seconds collapses 22
-   *  batchable writes to 4; sixty collapses them to 3, and two minutes to 1.
-   *  The curve is flat past thirty and the exposure -- work a closed tab
-   *  would lose -- grows in a straight line, so thirty is where those cross. */
-  const QUEUE_MS = 30_000;
+   *  **The measurement this was first fitted to was the wrong cadence.** It
+   *  came from the session that exhausted an instance's month: median gap
+   *  between commits 10 seconds, lower quartile 4. But that was the person
+   *  who built the series walking a runbook he already knew, to see whether
+   *  it worked -- not somebody doing the work the line describes. A
+   *  volunteer ticks "posted on LinkedIn" after posting on LinkedIn. The
+   *  gaps are minutes, and a window fitted to a demonstration would flush
+   *  between nearly every one of them and batch nothing.
+   *
+   *  Two minutes, then, and the exposure that buys is smaller than it
+   *  sounds: this timer is the *backstop*, not the mechanism. A queue is
+   *  written when the volunteer leaves the record, when any other write goes
+   *  through, and when they press the control that says so -- the timer only
+   *  ever fires for a tab left open and walked away from, and closing that
+   *  tab asks the browser to warn first. What is at risk is ticks made in
+   *  the last two minutes by somebody whose machine then died.
+   *
+   *  Longer would batch more and is not obviously wrong; it has not been
+   *  taken because nothing has measured a real volunteer's cadence yet, and
+   *  this is the direction where being wrong costs somebody's work rather
+   *  than somebody's minutes. */
+  const QUEUE_MS = 120_000;
 
   async function queueSpeakerEdit(id: string, item: QueuedEdit): Promise<void> {
     if (!token) return;
