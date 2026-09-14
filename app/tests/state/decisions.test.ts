@@ -280,25 +280,65 @@ describe('the grammar of decision commits', () => {
     );
   });
 
+/**
+ * One sample of every `Edit` there is, enumerated by the compiler.
+ *
+ * Keyed on `Edit['part']`, so a variant added to the union makes this fail to
+ * compile until a sample is written for it -- which is what makes the two
+ * readings below exhaustive rather than as complete as somebody remembered.
+ * The hand-written list this replaces had already lost `edition-counter`.
+ */
+const EVERY_EDIT: { [K in Edit['part']]: Extract<Edit, { part: K }> } = {
+  'admin-fields': { part: 'admin-fields' },
+  'edition-counter': { part: 'edition-counter' },
+  'post-archive-metrics': { part: 'post-archive-metrics' },
+  field: { part: 'field', key: 'title' },
+  'runbook-box': {
+    part: 'runbook-box',
+    key: itemKey('approved/invitation-sent'),
+    ticked: true,
+  },
+  checklist: { part: 'checklist', lines: 3 },
+  owner: { part: 'owner', key: itemKey('scheduled/T-30/visuals'), cleared: false },
+};
+
   it('has no slot for a field value in a bookkeeping subject', () => {
     // The defect this closes: `set ${k}` widened to `set ${k}=${v}` put a
     // researcher's typed answer into a permanent commit subject and left
     // every test green, because `what` was a bare `string` with a doc
     // comment asking callers not to. `Edit` names the part that moved and
     // has nowhere to put what was written on it.
-    const edits: Edit[] = [
-      { part: 'admin-fields' },
-      { part: 'post-archive-metrics' },
-      { part: 'field', key: 'title' },
-      { part: 'runbook-box', key: itemKey('approved/invitation-sent'), ticked: true },
-      { part: 'owner', key: itemKey('scheduled/T-30/visuals'), cleared: false },
-      { part: 'owner', key: itemKey('scheduled/T-30/visuals'), cleared: true },
-    ];
-    // Every phrase the five parts can render is one the other language
-    // already reads back as bookkeeping. A reword on either side fails here.
+    // Every phrase every part can render is one the other language already
+    // reads back as bookkeeping. A reword on either side fails here.
     const ordinary = new Set(cases.commit_message_ordinary.map(c => c.message));
-    for (const edit of edits) {
+    for (const edit of Object.values(EVERY_EDIT)) {
       expect(ordinary, JSON.stringify(edit)).toContain(dataEdit(identifier('spk-001'), edit));
+    }
+    // The `owner` variant is the one whose *other* arm renders differently,
+    // and a map keyed on `part` can hold only one of them.
+    expect(ordinary).toContain(
+      dataEdit(identifier('spk-001'), {
+        part: 'owner',
+        key: itemKey('scheduled/T-30/visuals'),
+        cleared: true,
+      }),
+    );
+  });
+
+  it('lets no part of an edit reach a commit without passing the last net', () => {
+    // The defect this closes, and it happened: `editPart` gained a phrase
+    // for a batch of checklist lines, `isSubject` did not, and the guard
+    // refused the write at the moment a volunteer pressed save. Nothing in
+    // this suite saw it, because the list above was kept by hand and had
+    // already drifted -- it was missing `edition-counter` too.
+    //
+    // `EVERY_EDIT` is keyed on `Edit['part']`, so a variant added to the
+    // union fails to compile here until somebody supplies one. The two
+    // readings below then force the phrase through both halves of the
+    // grammar.
+    for (const edit of Object.values(EVERY_EDIT)) {
+      const subject = dataEdit(identifier('spk-001'), edit);
+      expect(isSubject(subject), subject).toBe(true);
     }
   });
 

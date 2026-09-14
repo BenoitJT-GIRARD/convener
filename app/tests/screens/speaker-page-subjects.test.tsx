@@ -102,6 +102,10 @@ describe('what the record screen writes down', () => {
     show(delivered());
     const input = await screen.findByLabelText(/Registrations/i);
     fireEvent.change(input, { target: { value: '128' } });
+    // Held, not written: the screen queues a checklist edit and writes it on
+    // a timer, on a transition, or here. The subject is what this file is
+    // about, so it is read off the write the button makes.
+    fireEvent.click(await screen.findByRole('button', { name: 'Save now' }));
     await waitFor(() => expect(b.messages).toHaveLength(1));
     expect(b.messages[0]).toBe('data: spk-001 set registrations');
     expect(b.messages[0]).not.toContain('128');
@@ -120,6 +124,7 @@ describe('what the record screen writes down', () => {
     const box = label.closest('div.border')!.querySelector('input[type="checkbox"]');
     if (!(box instanceof HTMLInputElement)) throw new Error('no checkbox found');
     fireEvent.click(box);
+    fireEvent.click(await screen.findByRole('button', { name: 'Save now' }));
     await waitFor(() => expect(b.messages).toHaveLength(1));
     expect(b.messages[0]).toBe('data: spk-001 runbook delivered/forum-summary=true');
   });
