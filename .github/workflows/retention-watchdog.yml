@@ -119,6 +119,37 @@ on:
 
 jobs:
   watchdog:
+    # **Not on the product's own repository, on a schedule.** This is an
+    # instance's daily operation: it wants that instance's data, that
+    # instance's secrets, and an operator who is answerable for the result.
+    # `BenoitJT-GIRARD/convener` is where the product is *developed*. What
+    # lives there under `instance/` is a worked example -- the invented
+    # Example Collective -- and running an instance's operations over it
+    # fails every morning for reasons that are all correct: there is no
+    # minting token, no retention token, and nobody to tell.
+    #
+    # A daily failure is worse than nothing. It is the notification that
+    # stops being read, and when something real starts failing beside it
+    # nobody looks. That had already happened here: a push in the daily
+    # sweep had been broken on both repositories for days behind exactly
+    # this noise.
+    #
+    # **The comparison is with the repository, and the direction matters.**
+    # A duplicate has an address of its own, so it runs; only the one
+    # repository named here does not. Written the other way round -- run
+    # only where some marker says "instance" -- a duplicate that forgot the
+    # marker would silently stop sweeping, minting and destroying, which is
+    # the failure this product must never have.
+    #
+    # `workflow_dispatch` is deliberately still allowed through, so a
+    # maintainer can exercise the path by hand on the repository they are
+    # working in.
+    #
+    # The address is the one `declarations/standing-up.yml` gives an
+    # operator for their `upstream` remote, and
+    # `tools/tests/repository/test_workflows.py` holds the two together.
+    if: >-
+      github.repository != 'BenoitJT-GIRARD/convener' || github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

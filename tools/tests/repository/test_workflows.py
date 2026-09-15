@@ -6316,3 +6316,114 @@ def test_the_reader_would_see_the_line_that_caused_this() -> None:
 
     assert flagged(was), "the reader no longer recognises the defect it was written for"
     assert not flagged(fixed), "the reader flags the shape that fixes it"
+
+
+# An instance's daily operations, and the one
+# repository they must not run on.
+#
+# `BenoitJT-GIRARD/convener` is where this product is developed. What
+# lives there under `instance/` is a worked example, so an instance's
+# scheduled operations fail there every morning for reasons that are all
+# correct -- no minting token, no retention token, nobody to tell. A daily
+# failure is worse than nothing: it is the notification that stops being
+# read, and the submission-queue push had already been broken on both this
+# repository and the instance derived from it for days behind exactly that
+# noise.
+#
+# Two readings, because the guard can fail in two directions. It can name
+# the wrong repository, and it can miss a workflow.
+# ------------------------------------------------------------------ #
+
+#: The repository this product is developed in, as its own guards spell it.
+PRODUCT_REPOSITORY = "BenoitJT-GIRARD/convener"
+
+
+def _scheduled(data: Any) -> bool:
+    on = data.get(True, data.get("on"))
+    return isinstance(on, dict) and "schedule" in on
+
+
+def test_the_guard_names_the_repository_the_operator_is_told_to_add() -> None:
+    """One address, two files.
+
+    `declarations/standing-up.yml` hands an operator the `upstream` remote
+    to add, and these guards name the repository not to run on. They are
+    the same repository, and a rename that moved one and not the other
+    would leave every instance's operations running against a repository
+    that no longer exists -- or, worse, leave the product's own running
+    again and nobody reading the failures.
+    """
+    standing_up = (ROOT / "declarations" / "standing-up.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert f"github.com/{PRODUCT_REPOSITORY}.git" in standing_up, (
+        f"{PRODUCT_REPOSITORY} is what the workflow guards compare against, "
+        "but declarations/standing-up.yml does not hand an operator that "
+        "repository as their upstream remote -- one of the two has moved"
+    )
+
+
+def test_every_scheduled_operation_that_needs_a_secret_carries_the_guard() -> None:
+    """Which workflows, derived rather than listed.
+
+    An instance's operation is one that runs on a schedule *and* needs
+    something only an instance has -- a secret beyond `GITHUB_TOKEN`. The
+    product's own scheduled work (`security.yml`'s weekly scan,
+    `demonstration.yml`'s republish) needs neither, and must keep running
+    here.
+
+    Derived so that a scheduled workflow added later, with a secret in it,
+    fails this rather than joining the morning's failures.
+    """
+    # `exclude` is the monitor's own file, which is not a candidate here
+    # either: it runs on `workflow_run`, never on a schedule.
+    bearing = set(
+        _secret_bearing_workflow_names(
+            ROOT / WORKFLOWS_DIR, exclude=ROOT / SECRET_WORKFLOW_MONITOR
+        )
+    )
+    missing: list[str] = []
+    for path in sorted((ROOT / WORKFLOWS_DIR).glob("*.yml")):
+        data = safe_load(path.read_text(encoding="utf-8"))
+        if not _scheduled(data) or data.get("name") not in bearing:
+            continue
+        guards = [str(job.get("if", "")) for job in data["jobs"].values()]
+        if not any(PRODUCT_REPOSITORY in guard for guard in guards):
+            missing.append(path.name)
+
+    assert not missing, (
+        "these workflows run on a schedule and need a secret only an "
+        f"instance has, but no job of theirs is guarded on {PRODUCT_REPOSITORY}: "
+        + ", ".join(missing)
+        + ".\nThey will fail here every morning, and a daily failure is the "
+        "notification people stop reading."
+    )
+
+
+def test_the_guard_lets_a_duplicate_through_and_a_dispatch_too() -> None:
+    """The direction, which is the half that matters.
+
+    Written the other way round -- run only where some marker says
+    "instance" -- a duplicate that forgot the marker would silently stop
+    sweeping, minting and destroying. So the comparison must be `!=` against
+    the one repository that is not an instance, never `==` against something
+    an instance has to remember to set.
+    """
+    for path in sorted((ROOT / WORKFLOWS_DIR).glob("*.yml")):
+        data = safe_load(path.read_text(encoding="utf-8"))
+        for name, job in data["jobs"].items():
+            guard = str(job.get("if", ""))
+            if PRODUCT_REPOSITORY not in guard:
+                continue
+            where = f"{path.name}::{name}"
+            assert f"github.repository != '{PRODUCT_REPOSITORY}'" in guard, (
+                f"{where} compares the repository with something other than "
+                "`!=` -- an instance that does not match would then stop "
+                "running its own operations, silently"
+            )
+            assert "github.event_name != 'schedule'" in guard, (
+                f"{where} skips the product on every event, not only on a "
+                "schedule -- a maintainer must still be able to exercise the "
+                "path by hand with workflow_dispatch"
+            )
