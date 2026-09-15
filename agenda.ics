@@ -1,0 +1,19 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//The Example Collective//Monthly Reading Group//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:The Example Collective Monthly Reading Group
+BEGIN:VEVENT
+UID:https://benoitjt-girard.github.io/convener/events/mrg-5/
+DTSTAMP:20261015T103000Z
+DTSTART:20261015T103000Z
+DTEND:20261015T120000Z
+SUMMARY:Anagnosis (ἀνάγνωσις): reading as a shared act\, from the
+  scriptorium to the group chat
+DESCRIPTION:One word\, two thousand years\, and the same argument about whe
+ ther\nreading is done alone.\n
+LOCATION:https://benoitjt-girard.github.io/convener/events/mrg-5/
+URL:https://benoitjt-girard.github.io/convener/events/mrg-5/
+END:VEVENT
+END:VCALENDAR
+

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; script-src &#39;self&#39;; style-src &#39;self&#39;; img-src &#39;self&#39;; font-src &#39;self&#39;; connect-src &#39;self&#39; https://api.github.com; base-uri &#39;none&#39;; object-src &#39;none&#39;; form-action &#39;self&#39;">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
+    <meta charset="UTF-8" />
+    <!-- The product's own mark, not the charter's, and not a file drawn
+         here: `scripts/copy-mark.mjs` copies assets/brand/convener/convener-mark.svg
+         into public/ before every build, and that script's own comment
+         carries the reasoning -- a charter declares a palette and a motif,
+         never a logotype, so there is nothing here for it to follow, and
+         this file is served before any script has run, exactly as the
+         <title> below says of the cockpit's own name. -->
+    <link rel="icon" type="image/svg+xml" href="/convener/app/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The organiser cockpit's own name, in the product's words. The
+         instance's own is set from `instance/config.json` the moment
+         `src/main.tsx` runs (`document.title`): this file is a static
+         document Vite serves before any script has run, so a `{{ }}` here
+         would be published verbatim and an env placeholder would need a
+         `.env` this project deliberately does not carry. -->
+    <title>Workshop cockpit</title>
+    <!-- Fonts are self-hosted from /fonts/ -- see the @font-face block in
+         src/design/tokens.css. This head used to preconnect to Google's
+         font CDN and load a stylesheet from it, on pages that carry a
+         signup form and a certificate lookup -- exactly the surfaces this
+         project built a consent apparatus to keep third parties away from
+         (see tokens.css's own comment for the two
+         host names, and app/tests/scripts/no-third-party-fonts.test.ts for the
+         guard). -->
+    <link rel="preload" href="/convener/app/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <script type="module" crossorigin src="/convener/app/assets/index-vRgojYRq.js"></script>
+    <link rel="stylesheet" crossorigin href="/convener/app/assets/index-DvJNClNl.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

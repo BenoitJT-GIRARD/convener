@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<rss version="2.0">
+<channel>
+<title>TEC Monthly Reading Group</title>
+<link>https://benoitjt-girard.github.io/convener/</link>
+<description>An invented series, shipped as this product&#39;s own worked example.</description>
+<item>
+<title>Anagnosis (ἀνάγνωσις): reading as a shared act, from the scriptorium to the group chat</title>
+<link>https://benoitjt-girard.github.io/convener/events/mrg-5/</link>
+<guid isPermaLink="true">https://benoitjt-girard.github.io/convener/events/mrg-5/</guid>
+<pubDate>Thu, 15 Oct 2026 10:30:00 GMT</pubDate>
+<description>One word, two thousand years, and the same argument about whether
+reading is done alone.
+</description>
+</item>
+<item>
+<title>Reading aloud, and who it is for</title>
+<link>https://benoitjt-girard.github.io/convener/events/mrg-4/</link>
+<guid isPermaLink="true">https://benoitjt-girard.github.io/convener/events/mrg-4/</guid>
+<pubDate>Thu, 10 Sep 2026 10:30:00 GMT</pubDate>
+<description>On the difference between a text read to a room and the same text read
+alone.
+</description>
+</item>
+<item>
+<title>The books a group abandons, and what that says about the group</title>
+<link>https://benoitjt-girard.github.io/convener/events/mrg-3/</link>
+<guid isPermaLink="true">https://benoitjt-girard.github.io/convener/events/mrg-3/</guid>
+<pubDate>Thu, 23 Apr 2026 10:30:00 GMT</pubDate>
+<description>What a half-read shelf records about the people who chose it.
+</description>
+</item>
+<item>
+<title>Note-taking in the margin</title>
+<link>https://benoitjt-girard.github.io/convener/events/mrg-2/</link>
+<guid isPermaLink="true">https://benoitjt-girard.github.io/convener/events/mrg-2/</guid>
+<pubDate>Thu, 22 Jan 2026 11:30:00 GMT</pubDate>
+<description>A session on marginalia, and on what a shared copy of a book records
+that a private one does not.
+</description>
+</item>
+<item>
+<title>What a reading group is for, and the three ways one usually stops being for it</title>
+<link>https://benoitjt-girard.github.io/convener/events/mrg-1/</link>
+<guid isPermaLink="true">https://benoitjt-girard.github.io/convener/events/mrg-1/</guid>
+<pubDate>Thu, 16 Oct 2025 10:30:00 GMT</pubDate>
+<description>A first session on why a group that reads together drifts, and what the
+people who keep one going do about it.
+</description>
+</item>
+</channel>
+</rss>

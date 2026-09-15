@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200"
+     viewBox="0 0 1200 1200" font-family="Archivo, 'Segoe UI', Arial, Helvetica, sans-serif">
+  <title>TEC Monthly Reading Group — announcement image</title>
+  <desc>Square announcement image, 1200x1200, for the forum and LinkedIn. Edit
+  the text in any SVG editor (Inkscape, Figma, Illustrator, a browser plus a
+  text editor). Everything inside id="variable" changes for each event;
+  everything inside id="fixed" is the series identity and stays put.</desc>
+
+  <!-- Generated, not drawn: tools/scripts/generate_brand_css.py writes this file
+  from instance/data/brand.json (the colours and the motif) and instance/config.json
+  (the names). Change one of those, run that command, and commit what it
+  writes; an edit made here is overwritten, and the check fails until it
+  is. Once you have downloaded a copy it is yours, of course: edit that as
+  freely as you like. -->
+  <g id="fixed">
+    <rect width="1200" height="1200" fill="#fecac1"/>
+    <rect y="0" width="1200" height="168" fill="#f4f0f1"/>
+    <rect y="400" width="1200" height="146" fill="#f4f0f1"/>
+
+    <!-- The motif: the drawing the charter names, in the charter's own
+         motif colour and at its own weight so neither can drift from it,
+         painted before the words rather than over them. It carries no text
+         and every word on this page is placed clear of it. Move or delete
+         it freely; if you move a word instead, keep it out of the stroke,
+         because a heavy line behind dark type is unreadable type. -->
+    <g id="motif" fill="none" stroke="#012765"
+       stroke-width="24.48"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 168.36 315.38
+               L 168.36 204
+               L 21.96 204
+               L 21.96 549.6
+               L 168.36 549.6
+               L 168.36 438.22
+               M 1092.17 101.33
+               L 1092.17 30
+               L 1185.94 30
+               L 1185.94 251.35
+               L 1092.17 251.35
+               L 1092.17 180.01"/>
+    </g>
+
+    <!-- Wordmark. The device is the charter's own drawing again, at the
+         size of a mark and clipped to its box, drawn rather than embedded:
+         an SVG that references an external logo file is an SVG that
+         travels broken. The dot is the one the mark closes on. The rule
+         underlines the two together. Nothing here is anybody's logo: put
+         your own in its place if you have one. -->
+    <svg class="block" x="165" y="57" width="100" height="100"
+         viewBox="0 0 100 100"
+         aria-hidden="true" focusable="false">
+      <path d="M 14.03 26.28
+                   L 14.03 17
+                   L 1.83 17
+                   L 1.83 45.8
+                   L 14.03 45.8
+                   L 14.03 36.52
+                   M 91.01 8.44
+                   L 91.01 2.5
+                   L 98.83 2.5
+                   L 98.83 20.95
+                   L 91.01 20.95
+                   L 91.01 15"
+            fill="none" stroke="#012765" stroke-width="2.04"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="82.99" cy="49.84" r="9.31" fill="#fd6b52"/>
+    </svg>
+    <text x="282" y="112" font-size="50"
+          font-weight="500"><tspan fill="#012765">forum.example.test</tspan></text>
+    <rect x="165" y="157" width="955" height="4"
+          fill="#012765"/>
+
+    <text x="600" y="272" text-anchor="middle" font-size="50"
+          font-weight="900" letter-spacing="1"
+          fill="#012765">MONTHLY READING GROUP</text>
+    <text x="600" y="330" text-anchor="middle" font-size="31"
+          fill="#000000">Join the discussion before and after the talk at</text>
+    <text x="600" y="372" text-anchor="middle" font-size="31"
+          font-weight="700" fill="#000000">forum.example.test</text>
+  </g>
+
+  <g id="variable">
+    <!-- TALK TITLE. Two lines, split by hand — SVG does not wrap text. A
+         very long title: drop the font-size and use three lines. -->
+    <text text-anchor="middle" font-size="44" font-weight="700"
+          fill="#012765">
+      <tspan x="600" y="458">{{speaker.title}}</tspan>
+      <tspan x="600" y="512"></tspan>
+    </text>
+
+    <!-- DATE AND TIME. Written out the way it is said aloud; the app holds
+         {{speaker.date}} as 2026-11-12 and {{speaker.time}} as 12:30 (CET). -->
+    <text x="600" y="600" text-anchor="middle" font-size="40"
+          font-weight="700"
+          fill="#012765">{{speaker.date}} at {{speaker.time}} (CET)</text>
+
+    <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
+         File &gt; Import, then send the image behind this white frame. Keep
+         the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
+    <g transform="rotate(4 885.89 900)">
+      <rect class="block" x="685.89" y="690" width="420" height="470"
+            fill="#ffffff"/>
+      <rect x="707.89" y="712" width="376" height="376"
+            fill="#fedad4"/>
+      <text x="895.89" y="912" text-anchor="middle" font-size="26"
+            fill="#794658">speaker photo</text>
+      <text x="1083.89" y="1128" text-anchor="end" font-size="30"
+            font-weight="800" fill="#522f3c">{{speaker.name}}</text>
+      <text x="1083.89" y="1152" text-anchor="end" font-size="19"
+            fill="#522f3c">{{speaker.affiliation}}</text>
+    </g>
+  </g>
+
+  <g id="fixed-what-to-expect">
+    <text x="240" y="730" font-size="34" font-weight="800"
+          fill="#000000">WHAT TO EXPECT?</text>
+    <text font-size="27" fill="#000000">
+      <tspan x="320" y="796" font-weight="800"
+             fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
+      <tspan x="320" y="832">questions to the speaker</tspan>
+      <tspan x="320" y="868">at forum.example.test</tspan>
+      <tspan x="320" y="944" font-weight="800"
+             fill="#012765">D-DAY: </tspan><tspan>Presentation</tspan>
+      <tspan x="320" y="980">followed by a discussion</tspan>
+      <tspan x="320" y="1016">with the audience</tspan>
+      <tspan x="320" y="1092" font-weight="800"
+             fill="#012765">AFTER: </tspan><tspan>Continue the</tspan>
+      <tspan x="320" y="1128">discussion and connect</tspan>
+      <tspan x="320" y="1164">with peers</tspan>
+    </text>
+
+    <!-- REGISTRATION QR. Generate it from the registration link with any
+         offline generator, or in the app; then drop it over this square.
+         It is the one block on this page that stands on the far side of
+         the motif rather than inside the corridor with the words: it
+         takes whatever ground the drawing leaves between it and the left
+         edge, over its own rows, and is as wide as that ground allows. -->
+    <text x="24" y="898" font-size="32" font-weight="800"
+          fill="#000000">REGISTER</text>
+    <text x="24" y="936" font-size="32" font-weight="800"
+          fill="#000000">HERE</text>
+    <rect class="block" x="24" y="960" width="180" height="180"
+          fill="#ffffff"/>
+    <rect x="42" y="978" width="144"
+          height="144" fill="none"
+          stroke="#b18f9b" stroke-width="3" stroke-dasharray="10 8"/>
+    <text x="114" y="1058" text-anchor="middle"
+          font-size="22" fill="#794658">QR code</text>
+  </g>
+</svg>

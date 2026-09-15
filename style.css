@@ -1,0 +1,1318 @@
+/* The public showcase's stylesheet
+ *
+ * Every value below comes from the charter in force -- instance/data/brand.json if
+ * this instance has chosen its colours, assets/brand/convener/brand.json if it has
+ * not (tools/convener_ops/publication/brand.py::source) -- which is the one source of fact
+ * for the identity and carries the reasoning for each token. Do not
+ * introduce a colour here that is not in that file: the block below is
+ * generated from it, and tools/scripts/generate_brand_css.py --check fails on a
+ * stylesheet that has drifted.
+ *
+ * The palette is the designer's own, read out of the originals rather than
+ * out of the *_test_dev.svg reconstruction that this stylesheet used until
+ * now. That reconstruction had shifted the purple, darkened the turquoise
+ * ground, and replaced the warm neutrals with cold slate — and the darkening
+ * cost real accessibility: purple on turquoise measured 4.44:1, below AA for
+ * normal text, where the measured charter gives 7.93:1. Going back to the
+ * originals is the more accessible choice here, not a trade against it.
+ *
+ * Editorial information architecture, hairlines instead of card chrome,
+ * past webinars as a TOC-style index with Watch + Discuss actions.
+ */
+
+/* Self-hosted, and that is a requirement rather than a preference: this site
+ * previously linked fonts.googleapis.com and preconnected to fonts.gstatic.com,
+ * which sends every visitor's address to a third party — on a site that carries
+ * a data-protection notice, and which is required to work without
+ * introducing the least dependency on a third-party service. The files
+ * sit beside their licences in ../fonts/ at the repository root -- shared
+ * with the
+ * application's own copy step (app/scripts/copy-fonts.mjs) rather than a
+ * second, separately committed set.
+ *
+ * Archivo stands in for the designer's Akzidenz-Grotesk and Neue Machina,
+ * both of which are commercial licences and cannot ship on a zero-cost
+ * public site. One variable file covers every weight the site uses, which
+ * is also why display and body are the same family here where the
+ * originals used two.
+ * See instance/data/brand.json for the full reasoning.
+ *
+ * The path-prefix defect: the three `url(...)` references
+ * below are deliberately relative (`fonts/...`, no leading slash), not
+ * `| url`-filtered like an `href`/`src` in a template. A relative URL
+ * inside a stylesheet resolves against *the stylesheet's own address*, not
+ * the page that loads it -- so `fonts/archivo-....woff2` finds
+ * `<prefix>fonts/...` from a stylesheet served at `<prefix>style.css`, and
+ * finds `/fonts/...` from one served at a bare localhost root, whatever
+ * the prefix is, with no `pathPrefix` (`.eleventy.js`) to configure and
+ * nothing here that could disagree with it. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/archivo-latin-standard-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  /* Latin Extended: speaker names carry ő, ș, ł and their neighbours, and an
+   * academic audience is international by construction. */
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/archivo-latin-ext-standard-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+/* BEGIN GENERATED TOKENS -- tools/scripts/generate_brand_css.py */
+  /* Grounds: the field fills the page, the bands run across it, white
+   * appears only inside photographic frames. */
+  --paper:          #ffffff;
+  --surface:        #f4f0f1;
+  --surface-2:      #fecac1;
+
+  /* Text: warm, never slate -- the warmth is the single thing that most
+   * distinguishes this identity from a palette assembled out of defaults. */
+  --ink:            #522f3c;
+  --ink-mute:       #794658;
+  --ink-faint:      #8a596b;
+
+  /* The plain field value is a GROUND and must never carry text.
+   * field-text is the readable variant, for links and text accents. */
+  --field:          #fecac1;
+  --field-text:     #a24535;
+  --field-tint:     #fedad4;
+
+  --dominant:       #012765;
+  --dominant-hover: #011f51;
+  --dominant-tint:  #d8dde7;
+
+  /* No instance/data/brand.json equivalent: no original the designer drew ever
+   * needed a rejection colour or a soft informational one. Measured against
+   * this file's own --surface (the band), the certificate-verification
+   * panel's ground: see instance/data/brand.json's contrast._comment for
+   * both numbers. */
+  --danger:         #9b2226;
+  --info:           #4a6c75;
+
+  /* Rules and borders only -- never text. */
+  --rule:           #d0bbc3;
+  --rule-strong:    #b18f9b;
+  --select:         rgba(254, 202, 193, 0.35);
+
+  /* White as a foreground/border role, distinct in name from --paper (the
+   * ground) though currently the same value: text and a border drawn on a
+   * coloured background need "white" as a role of its own. */
+  --white:          #ffffff;
+  --white-rgb:      255, 255, 255;
+/* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
+
+  --gutter:         clamp(1.25rem, 4vw, 2.5rem);
+  --content-w:      1100px;
+
+  --ff-display:     "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --ff-body:        "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --ff-mono:        "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+::selection { background: var(--select); color: var(--ink); }
+
+html { -moz-osx-font-smoothing: grayscale; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+body {
+  /* The field is the ground -- D-18. The bands (masthead,
+   * section__head, colophon) sit on top of it; overflow-x is clipped here
+   * because those bands bleed full-width off their own centred container
+   * with a box-shadow spread that runs to 100vmax on either side. */
+  background: var(--field);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: 17px;
+  line-height: 1.55;
+  font-feature-settings: "kern", "liga";
+  overflow-x: hidden;
+}
+
+a {
+  /* The dominant, not field-text: the field is a ground now, and a plain
+   * link can land directly on it (prose in a future page's notice or
+   * abstract), where field-text measures 3.81 -- below AA. The dominant
+   * clears both grounds it can appear on (7.93 on the field, 11.26 on a
+   * band). */
+  color: var(--dominant);
+  /* The underline is a text decoration and not a bottom border, which is
+   * the property a box owns. A link's rule and a box's edge were the same
+   * declaration here, and `a` is one component more specific than a lone
+   * class -- so `a.unstyled`, the helper that takes the underline off a
+   * link that is really a button or a wordmark, beat `.masthead__access`
+   * and flattened the bottom edge of its box. Every component that wanted
+   * a real border had to write the collision back out of itself
+   * (`a.btn`'s width and style, `.archive__action`'s and
+   * `.colophon__nav a`'s `border-bottom: 0`), and the one that did not
+   * was drawn with three sides. Borders belong to boxes now, and nothing
+   * about a link reaches into one. */
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .22em;
+  transition: color .15s, text-decoration-color .15s;
+}
+a:hover { color: var(--ink); }
+a.unstyled, a.unstyled:hover { text-decoration: none; }
+
+.container {
+  max-width: var(--content-w);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+/* ── Not configured ───────────────────────────────
+ * The band an unconfigured duplicate publishes above its own masthead --
+ * `_includes/layout.njk` emits it only while `site.unconfigured` is not
+ * empty, so a configured instance carries neither the markup nor a
+ * reserved strip of page.
+ *
+ * A band ground with a --danger rule, not a --danger ground: this is the
+ * one band that has to be readable before anything else on the page, and
+ * --danger measures 7.00 against --surface (AA needs 4.5) where white on
+ * --danger would have been the same colour doing less work. --ink for the
+ * sentence itself (10.12 on the same ground) so the eyebrow is what
+ * carries the alarm, exactly as .notice__eyebrow already does. */
+.unconfigured {
+  background: var(--surface);
+  border-bottom: 6px solid var(--danger);
+}
+.unconfigured__inner {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+/* No measure. This is a plate rather than reading matter -- a band a
+   visitor locates and takes in at a glance -- and a measure inside a
+   full-bleed band renders as a column somebody forgot to finish. See
+   .colophon__legal for the rule and what decided it. */
+.unconfigured__inner p { }
+.unconfigured__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-bottom: .5rem;
+}
+.unconfigured__keys {
+  font-family: var(--ff-mono);
+  font-size: .82rem;
+  word-break: break-word;
+}
+
+/* ── Demonstration ────────────────────────────────
+ * The band the product's own demonstration publishes above its own
+ * masthead -- `_includes/layout.njk` emits it only while `site.demo` is
+ * set, so an instance somebody runs carries neither the markup nor a
+ * reserved strip of page.
+ *
+ * The shape of `.unconfigured` above, in the field rather than in
+ * --danger: this says what a page is, where that one says what is wrong
+ * with it, and a second alarm-coloured band would leave a duplicate that
+ * really is misconfigured with nothing to stand out against.
+ *
+ * --field carries the rule and --field-text the eyebrow, never the other
+ * way round: the plain field value is a ground and 1.61 against white in
+ * every charter this product ships. No figure is written here because
+ * every charter measures its own -- the pairing is `field_text_on_band`,
+ * one of the fourteen `tools/scripts/generate_brand_css.py` recomputes on
+ * every run and refuses below 4.5. */
+.demonstration {
+  background: var(--surface);
+  border-bottom: 6px solid var(--field);
+}
+.demonstration__inner {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+/* A plate, for the reason .unconfigured__inner p states. */
+.demonstration__inner p { }
+.demonstration__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--field-text);
+  margin-bottom: .5rem;
+}
+
+/* ── Masthead ─────────────────────────────────────────────── */
+/* The identity band -- one of the bands, full-bleed, the same role the
+ * logo band carries at the top of the designer's own composition.
+ * Everything below it is the field (D-18); this is the one place it is
+ * interrupted before the page even begins its content. */
+.masthead {
+  position: relative;
+  background: var(--surface);
+  border-bottom: 4px solid var(--dominant);
+}
+.masthead__motif {
+  /* The same drawing .hero__motif and .coda__motif set, extended to the
+   * one piece of chrome every page shares (D-18's "other pages" have no
+   * hero of their own yet). Deliberately allowed to run past the
+   * masthead's own bottom edge into the field below -- the designer's own
+   * loop crosses from the band into the field the same way, and .masthead
+   * has no overflow:hidden of its own so it can. Kept to the left and low
+   * so it does not compete with .hero__motif, which already owns the
+   * top-right on this page.
+   *
+   * The offset is a fraction of a rem rather than three. A family draws
+   * across the whole canvas it is handed -- the ribbon's tail and loop
+   * down the left edge, the bracket's left arm against it -- so an offset
+   * of a fifth of this box's own width carried that side's ink off the
+   * page and left the masthead showing whatever happened to sit in the
+   * middle. */
+  stroke: var(--dominant);
+  position: absolute;
+  pointer-events: none;
+  left: -.4rem;
+  top: -1.5rem;
+  width: min(150px, 32vw);
+  height: auto;
+  opacity: .5;
+  z-index: 0;
+}
+.masthead__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.masthead__brand {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+  color: var(--dominant);
+  text-transform: uppercase;
+}
+.masthead__brand:hover { color: var(--dominant); }
+.masthead__brand-mark {
+  font-family: var(--ff-mono);
+  text-transform: none;
+  color: var(--dominant);
+  font-size: .95rem;
+}
+.masthead__brand-name {
+  font-family: var(--ff-display);
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: .04em;
+}
+.masthead__brand-sub {
+  font-family: var(--ff-display);
+  font-weight: 500;
+  font-size: .85rem;
+  letter-spacing: .04em;
+}
+.masthead__access {
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--dominant);
+  border: 1px solid var(--dominant);
+  background: transparent;
+  padding: .45rem .9rem;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.masthead__access::after { content: " →"; margin-left: .25rem; }
+.masthead__access:hover {
+  background: var(--dominant);
+  border-color: var(--dominant);
+  color: var(--white);
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  padding: 5rem 0 4.5rem;
+  overflow: hidden;
+}
+.hero__inner {
+  position: relative;
+  z-index: 1;
+}
+.hero__motif {
+  /* The charter's motif, in its own motif.stroke, i.e. the dominant.
+   * Never a hand-typed hex here: the SVG in index.njk carries no colour of
+   * its own and takes this rule's stroke instead. */
+  stroke: var(--dominant);
+  position: absolute;
+  pointer-events: none;
+  right: -3rem;
+  top: 1rem;
+  width: min(420px, 45vw);
+  height: auto;
+  opacity: .85;
+  z-index: 0;
+}
+.hero__eyebrow {
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dominant);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.hero__eyebrow::before {
+  content: "";
+  height: 2px;
+  background: var(--dominant);
+  width: 2.5rem;
+}
+.hero__title {
+  /* The dominant, not ink: brand.json names the dominant for "headlines...
+   * the dominant colour, not an accent", and the designer's own headline is
+   * solid on the field -- matches dominant_on_field, 7.93. */
+  font-family: var(--ff-display);
+  font-weight: 900;
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  line-height: .98;
+  letter-spacing: -0.025em;
+  color: var(--dominant);
+  max-width: 14ch;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+.hero__title em {
+  /* No colour of its own any more: field-text on the field it now sits on
+   * measures 3.81, below AA. The originals never split a headline's colour
+   * either -- it inherits the same dominant as the rest of .hero__title. */
+  font-style: normal;
+}
+.hero__lede {
+  font-family: var(--ff-body);
+  font-weight: 400;
+  font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+  line-height: 1.5;
+  color: var(--ink-mute);
+  max-width: 50ch;
+  margin-bottom: 2.5rem;
+}
+.hero__actions {
+  display: flex;
+  gap: .9rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Event page ───────────────────────────────────────────── */
+.event-lead__back {
+  font-family: var(--ff-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dominant);
+  margin-bottom: 2rem;
+}
+.event-lead__back a { text-decoration: none; }
+.event-lead__back a:hover { text-decoration: underline; }
+
+/* The one-screen data-protection notice, which the event page carries
+ * before the form -- surface, not paper, so it reads as a distinct panel against
+ * the field, the same role .feature__rail's border plays. */
+.notice {
+  border: 2px solid var(--rule-strong);
+  background: var(--surface);
+  padding: 1.5rem 1.75rem;
+  max-width: 62ch;
+  margin-bottom: 1.5rem;
+}
+.notice__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--dominant);
+  margin-bottom: .85rem;
+}
+.notice p + p { margin-top: .85rem; }
+
+/* ── Registration island ─────────────────────────────────────
+ * `app/src/islands/signup/SignupForm.tsx`'s own class names -- plain,
+ * semantic strings, not Tailwind utilities: this component renders inside
+ * a page that already loads this stylesheet, and pulling in the app's own
+ * Tailwind build here (complete with its `@tailwind base` reset) would
+ * apply site-wide, to elements this form does not own, rather than stay
+ * scoped to its own subtree. `.notice`/`.notice__eyebrow`, above, are
+ * reused as-is for the boundaries panel, the "not available" refusal and
+ * the "sent" confirmation -- one box style for every one-screen message
+ * on this page, not a second one invented per state. */
+.signup-form { max-width: 42rem; }
+.signup-form__status { color: var(--ink-mute); padding: .5rem 0 1rem; }
+
+.signup-form__fields { max-width: 32rem; }
+.signup-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 32rem) {
+  .signup-form__row { grid-template-columns: 1fr; }
+}
+.signup-form__field {
+  display: block;
+  margin-bottom: 1rem;
+}
+.signup-form__field > span {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .3rem;
+}
+.signup-form__field input {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  font: inherit;
+  color: var(--ink);
+}
+.signup-form__field input:focus {
+  outline: 0;
+  border-color: var(--dominant);
+  box-shadow: 0 0 0 3px var(--field-tint);
+}
+.signup-form__checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  font-size: .92rem;
+  margin-bottom: 1.25rem;
+}
+.signup-form__checkbox input { margin-top: .2rem; }
+.signup-form__fields button[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.signup-form__error {
+  /* `--dominant`, not `--dominant-hover`: this text sits directly on the
+   * field, and `--dominant` on the field is the pairing
+   * `instance/data/brand.json` already measures (7.93, AAA) -- `--dominant-hover` is
+   * used elsewhere only as a background or a hover border, never as text
+   * on this ground, and introducing it here would be a new pairing no
+   * measurement covers yet: every text-on-ground pairing introduced is
+   * measured before it is used. */
+  color: var(--dominant);
+  font-weight: 700;
+  margin-top: .85rem;
+}
+
+/* ── Certificate verification island ─────────────────────────
+ * `app/src/islands/verify/VerifyPage.tsx`'s own class names -- plain,
+ * semantic strings, the same reasoning `.signup-form`'s own comment gives:
+ * this component renders inside a page that already loads this
+ * stylesheet, and pulling in the app's own Tailwind build here would leak
+ * site-wide. `.notice` (above) is reused as the one panel shape for every
+ * answer this page gives -- valid, revoked, not verifiable, state
+ * unknown, and the token-less register-only answers -- one band-coloured
+ * box against the field, four accent colours, not five separate
+ * panel styles invented per state. */
+.verify { max-width: 42rem; }
+.verify__panel { border-left-width: 6px; }
+.verify__panel--primary { border-left-color: var(--field-text); }
+.verify__panel--accent  { border-left-color: var(--dominant); }
+.verify__panel--danger  { border-left-color: var(--danger); }
+.verify__panel--info    { border-left-color: var(--info); }
+.verify__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: .85rem;
+}
+/* `--dominant` on `--surface` is `dominant_on_band`, already measured at
+ * 11.26 (instance/data/brand.json). `--field-text` on `--surface` is a
+ * newer pairing -- field_text_on_band, 5.41, recorded
+ * in instance/data/brand.json alongside the rest of that table, under the standing
+ * rule that every text-on-ground pairing introduced is measured and the
+ * table updated. `--danger`/`--info` are measured on the same ground
+ * too, recorded in instance/data/brand.json's contrast._comment rather than as a
+ * recomputed pairing, since neither is a instance/data/brand.json colour. */
+.verify__eyebrow--primary { color: var(--field-text); }
+.verify__eyebrow--accent  { color: var(--dominant); }
+.verify__eyebrow--danger  { color: var(--danger); }
+.verify__eyebrow--info    { color: var(--info); }
+.verify__panel p { margin-top: 0; }
+.verify__panel p + p { margin-top: .85rem; }
+.verify__id { font-family: var(--ff-mono); font-size: .82rem; }
+.verify__details { margin-top: 1rem; }
+.verify__details div + div { margin-top: .3rem; }
+.verify__details dt {
+  display: inline;
+  color: var(--ink-mute);
+}
+.verify__details dd { display: inline; margin: 0; }
+.verify__checking { color: var(--ink-mute); }
+
+/* The way in for a visit that reached this page with no link at all --
+ * `VerifyPage.tsx::HandEntry`. The field, label and error shapes are
+ * `.signup-form`'s own, repeated under this island's own prefix rather
+ * than shared, exactly as `.survey-form` below repeats them: each
+ * island's block stays readable on its own, and none of the three moves
+ * under another's edit. Both colours are pairings
+ * instance/data/brand.json already measures -- `--ink-mute` on the field
+ * for a label and a hint, which `.verify__checking` above already uses,
+ * and `--dominant` on the field for an error, 7.93 and AAA, the pairing
+ * `.signup-form__error` gives its own reasoning for. Both fields are set
+ * in `--ff-mono`, the face `.verify__id` already prints an identifier in:
+ * what goes in them is a code being copied character by character. */
+.verify__entry-title {
+  font-family: var(--ff-display);
+  font-size: 1.15rem;
+  margin: 0 0 .75rem;
+}
+.verify__form {
+  max-width: 32rem;
+  margin-top: 1.25rem;
+}
+.verify__field { margin-bottom: 1.25rem; }
+.verify__field > label {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .3rem;
+}
+.verify__hint {
+  margin: 0 0 .45rem;
+  font-size: .88rem;
+  color: var(--ink-mute);
+}
+.verify__field input,
+.verify__field textarea {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  font: inherit;
+  font-family: var(--ff-mono);
+  font-size: .85rem;
+  color: var(--ink);
+}
+.verify__field textarea { resize: vertical; }
+.verify__field input:focus,
+.verify__field textarea:focus {
+  outline: 0;
+  border-color: var(--dominant);
+  box-shadow: 0 0 0 3px var(--field-tint);
+}
+.verify__error {
+  color: var(--dominant);
+  font-weight: 700;
+  margin-top: .85rem;
+}
+.verify__again { margin-top: 1.25rem; }
+
+/* ── Post-event survey island ────────────────────────────────
+ * `app/src/islands/survey/SurveyForm.tsx`'s own class names -- plain,
+ * semantic strings, the same reasoning `.signup-form`'s own comment
+ * gives: this component renders inside a page that already loads this
+ * stylesheet, and pulling in the app's own Tailwind build here would leak
+ * site-wide. `.notice`/`.notice__eyebrow` (above) are reused as-is for
+ * the "not available", "not open" and "sent" states -- one box style for
+ * every one-screen message on this page, not a second one invented per
+ * state, the identical discipline `.signup-form`'s own states already
+ * follow. `.btn`/`.btn--primary` (below) are reused for the submit
+ * button, the same button style `.signup-form__fields` already uses. */
+.survey-form { max-width: 42rem; }
+.survey-form__status { color: var(--ink-mute); padding: .5rem 0 1rem; }
+.survey-form__fields { max-width: 32rem; }
+.survey-form__fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+.survey-form__legend {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .6rem;
+  padding: 0;
+}
+.survey-form__options {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+}
+.survey-form__option {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .92rem;
+}
+.survey-form__field { display: block; margin-bottom: 1rem; }
+.survey-form__field > span {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .3rem;
+}
+.survey-form__hint { font-size: .82rem; color: var(--ink-mute); margin: .2rem 0 .5rem; }
+.survey-form__textarea {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  font: inherit;
+  color: var(--ink);
+  resize: vertical;
+}
+.survey-form__textarea:focus {
+  outline: 0;
+  border-color: var(--dominant);
+  box-shadow: 0 0 0 3px var(--field-tint);
+}
+.survey-form__counter {
+  display: block;
+  text-align: right;
+  font-size: .78rem;
+  color: var(--ink-faint);
+  margin-top: .3rem;
+}
+.survey-form__fields button[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.survey-form__error {
+  /* `--dominant`, not `--dominant-hover` -- the identical pairing rationale
+   * `.signup-form__error`'s own comment gives: this text sits directly on
+   * the field, and `--dominant` on the field is the measured
+   * pairing (`instance/data/brand.json`), not `--dominant-hover`. */
+  color: var(--dominant);
+  font-weight: 700;
+  margin-top: .85rem;
+}
+
+/* The "Discuss" pill an upcoming edition carries once
+ * `forum_thread` is set -- reuses `.archive__action--alt`, the same pill
+ * the past section below and the homepage archive already render, just
+ * spaced clear of the registration island above it (event.njk's own
+ * comment explains why it is attached here rather than a new band). */
+.event__discuss { margin-top: 1.75rem; }
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  font-family: var(--ff-display);
+  font-size: .88rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  padding: .85rem 1.6rem;
+  border: 2px solid;
+  border-radius: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+  display: inline-block;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.btn--primary {
+  /* The dominant, not the field: the field is the page's ground now
+   * (D-18), and a field-filled button on the field has no visible edge at
+   * all -- never mind that white text on the field measures 1.61. White on
+   * the dominant measures 12.74 (instance/data/brand.json). */
+  background: var(--dominant);
+  color: var(--white);
+  border-color: var(--dominant);
+}
+.btn--primary:hover {
+  background: var(--dominant-hover);
+  border-color: var(--dominant-hover);
+  color: var(--white);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--dominant);
+  border-color: var(--dominant);
+}
+.btn--ghost:hover {
+  background: var(--dominant);
+  color: var(--white);
+}
+
+/* ── Section ──────────────────────────────────────────────── */
+.section {
+  padding: 3.5rem 0 2.5rem;
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+.section__head {
+  /* A band, full-bleed, the same role the designer's own "title" band
+   * plays mid-composition -- a labelled divider crossing the
+   * field. `.section` is both the outer section and the width-limiting
+   * container on one element (merged in the markup), so there is no
+   * separate full-width wrapper to paint a band behind; ::before paints
+   * one instead, sized to the viewport and re-centred on it, without
+   * touching the markup. Constrained to top:0/bottom:0 so it fills only
+   * this element's own height -- a spread box-shadow was tried first and
+   * rejected, because a shadow spreads by its radius in every direction,
+   * flooding the whole page with the band's colour rather than just this
+   * band. */
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+  padding: 1.1rem 0;
+}
+.section__head::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  background: var(--surface);
+  z-index: -1;
+}
+.section__num {
+  font-family: var(--ff-mono);
+  font-size: .85rem;
+  color: var(--dominant);
+  font-weight: 500;
+  min-width: 1.5ch;
+}
+.section__label {
+  font-family: var(--ff-display);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.section__count {
+  margin-left: auto;
+  font-family: var(--ff-mono);
+  font-size: .76rem;
+  color: var(--ink-faint);
+  letter-spacing: .08em;
+}
+
+/* ── Featured upcoming ───────────────────────────────────── */
+.feature {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.75rem;
+  padding-bottom: 1rem;
+}
+@media (min-width: 760px) {
+  .feature {
+    grid-template-columns: 8rem 1fr;
+    gap: 2.75rem;
+    align-items: start;
+  }
+}
+.feature__rail {
+  /* The dominant, not the field: this rail now sits directly on the
+   * field (D-18), where a rule in the field's own colour is invisible
+   * against its ground. */
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  padding-top: .35rem;
+  border-top: 3px solid var(--dominant);
+}
+.feature__vol {
+  /* The dominant, not field-text: field-text on the field it now sits on
+   * measures 3.81, below AA. */
+  font-family: var(--ff-display);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dominant);
+}
+.feature__code {
+  font-family: var(--ff-mono);
+  font-size: 1rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+.feature__date {
+  font-family: var(--ff-mono);
+  font-size: .82rem;
+  color: var(--ink-mute);
+  line-height: 1.45;
+}
+.feature__date strong {
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.feature__body { max-width: 58ch; }
+.feature__title {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+.feature__speaker {
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--dominant);
+  margin-bottom: 1rem;
+}
+.feature__speaker .feature__affil {
+  font-weight: 400;
+  color: var(--ink-mute);
+}
+.feature__abstract {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--ink);
+  margin-bottom: 1.75rem;
+  max-width: 56ch;
+}
+
+.feature--empty {
+  padding: 1rem 0;
+}
+.feature.feature--empty {
+  /* The compound selector, not `.feature--empty` alone: the empty state
+   * has only one child (its `<p>`), so above 760px it would otherwise
+   * land in `.feature`'s first grid column -- 8rem wide, meant for
+   * `.feature__rail` -- squeezing the message into a ten-character ribbon
+   * of text before its own `max-width: 52ch` on `.feature--empty p` ever
+   * gets a chance to apply. `.feature.feature--empty` (two classes,
+   * specificity 0,2,0) outranks `.feature`'s own `@media (min-width:
+   * 760px)` rule (one class, 0,1,0) regardless of source order, so this
+   * stays correct even if the stylesheet is reordered later -- unlike a
+   * plain `.feature--empty` override, which would only win by accident of
+   * appearing later in the file.
+   */
+  grid-template-columns: 1fr;
+}
+.feature--empty p {
+  font-family: var(--ff-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--ink-mute);
+  max-width: 52ch;
+}
+
+/* ── Archive (TOC-style) ─────────────────────────────────── */
+.archive {
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+.archive__row {
+  display: grid;
+  grid-template-columns: 5rem 1fr auto;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.25rem .25rem;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+  transition: background .15s;
+}
+.archive__row:hover { background: var(--surface); }
+.archive__num {
+  font-family: var(--ff-mono);
+  font-size: .92rem;
+  font-weight: 500;
+  color: var(--dominant);
+  letter-spacing: .03em;
+  font-variant-numeric: tabular-nums;
+}
+.archive__main {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+}
+.archive__title {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.3;
+  color: var(--ink);
+}
+/* The row's own colour, inherited rather than left to the default link
+ * colour: the title is a link to the edition's own page
+ * and must not change the row's visual weight -- only the hover signals
+ * that it goes somewhere. */
+.archive__title a { color: inherit; }
+.archive__title a:hover { color: var(--dominant); }
+.archive__meta {
+  font-size: .88rem;
+  color: var(--ink-mute);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .65rem;
+  align-items: baseline;
+}
+.archive__meta strong {
+  font-weight: 600;
+  color: var(--dominant);
+}
+.archive__date {
+  /* ink-mute, not ink-faint: this row sits on the field by
+   * default (D-18), where ink-faint measures 3.51, below AA; ink-mute
+   * clears both grounds it can appear on -- 4.62 on the field, 6.56 on the
+   * band .archive__row:hover reveals. */
+  font-family: var(--ff-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-mute);
+  letter-spacing: .03em;
+  font-size: .82rem;
+  margin-left: auto;
+}
+.archive__actions {
+  display: flex;
+  gap: .85rem;
+  align-items: center;
+  white-space: nowrap;
+}
+.archive__action {
+  /* The dominant on the tint, not field-text on it. Found by running
+   * check-a11y against each of the four charters a duplicate may name,
+   * which is the first time any of them had been built: field-text on
+   * field-tint measures 4.72 at this instance's charter and fails at two
+   * of the four -- 4.50 at assets/brand/chevrons (axe, measuring unrounded, calls
+   * it 4.498 and refuses it) and 3.87 at assets/brand/steps. It was never a
+   * pairing any charter's own contrast table held, so
+   * generate_brand_css.py --check could not see it, and check-a11y only
+   * ever renders one charter. Both are now recorded as
+   * dominant_on_field_tint under assets/brand/, so the recomputation covers it.
+   *
+   * The dominant is 8.18 to 10.95 on the same tint at every charter this
+   * repository holds, and it is what .archive__action--alt below and this
+   * rule's own :hover already reach for, on the identical argument
+   * .btn--primary makes: the dominant is the ink this palette can put
+   * anywhere. field-text keeps every ground it was derived against --
+   * white and the band -- and loses the one it was not. */
+  font-family: var(--ff-display);
+  font-size: .74rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dominant);
+  padding: .35rem .6rem;
+  background: var(--field-tint);
+  transition: background .15s, color .15s;
+}
+.archive__action:hover {
+  /* Carried for a long time as a known, recorded defect rather than
+   * fixed on the spot -- a solid
+   * field fill under white text measures 1.61 (instance/data/brand.json's
+   * `_forbidden`), badly below the 4.5 floor for normal text; a browser's
+   * own rendering measured it at 2.54. The dominant, not the field, for the
+   * identical reason `.btn--primary` already fills with the dominant rather
+   * than the page's own ground (see that rule's comment): white
+   * on the dominant is 12.74 (`instance/data/brand.json`'s `white_on_dominant`, already
+   * measured -- no new pairing to add). `.archive__action--alt:hover`
+   * already used this same fill; this now matches it rather than
+   * disagreeing on hover while differing on the resting state above.
+   */
+  background: var(--dominant);
+  color: var(--white);
+}
+.archive__action--alt {
+  color: var(--dominant);
+  background: var(--dominant-tint);
+}
+.archive__action--alt:hover {
+  background: var(--dominant);
+  color: var(--white);
+}
+.archive__action--disabled {
+  /* ink-mute, not ink-faint -- background is transparent, so this reads
+   * against the field by default; see .archive__date above. */
+  font-family: var(--ff-display);
+  font-size: .74rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  cursor: default;
+  padding: .35rem .6rem;
+  border: 1px dashed var(--rule-strong);
+  background: transparent;
+}
+@media (max-width: 720px) {
+  .archive__row {
+    grid-template-columns: 4ch 1fr;
+  }
+  .archive__date { grid-column: 2 / -1; margin-left: 0; margin-top: -.25rem; }
+  .archive__actions { grid-column: 2 / -1; margin-top: .4rem; }
+}
+
+/* ── Archive filters ─────────────────────────────── */─────────
+/* Every option here is a link to a statically generated page (D-18's
+ * "static pages, interactivity in islands", extended to a listing rather
+ * than a form) -- no script decides what is shown, so the archive stays
+ * filterable with JavaScript disabled. `.archive-filters__current` marks
+ * the page already open: not a link to itself, `aria-current="page"`
+ * instead -- see `_includes/archive-filters.njk`'s own comment. */
+.archive-filters {
+  margin-bottom: 1.75rem;
+}
+.archive-filters__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.archive-filters a,
+.archive-filters__current {
+  display: inline-block;
+  font-family: var(--ff-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: .4rem .8rem;
+  border: 1px solid var(--rule-strong);
+}
+.archive-filters a {
+  /* ink-mute on the field (the ground this bar sits on, same as
+   * .archive__date and .archive__action--disabled) measures 4.62 --
+   * clears AA. The dominant fill on hover/current is white_on_dominant,
+   * 12.74. */
+  color: var(--ink-mute);
+}
+.archive-filters a:hover {
+  color: var(--white);
+  background: var(--dominant);
+  border-color: var(--dominant);
+}
+.archive-filters__current {
+  color: var(--white);
+  background: var(--dominant);
+  border-color: var(--dominant);
+  cursor: default;
+}
+
+/* The empty state a filter, or a not-yet-populated archive, shows -- the
+ * same tone `.feature--empty p` gives an empty "up next" section, but
+ * this component never sits inside `.feature`'s own two-column grid, so
+ * it needs no compound selector to escape it (see that rule's own
+ * comment for the bug that made one necessary there). */
+.archive-empty {
+  font-family: var(--ff-display);
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--ink-mute);
+  max-width: 52ch;
+  padding: .5rem 0 1.5rem;
+}
+
+/* ── Coda ─────────────────────────────────────────────────── */
+.coda {
+  margin-top: 5rem;
+  position: relative;
+  padding: 4rem 0;
+  background: var(--dominant);
+  color: var(--white);
+  overflow: hidden;
+}
+.coda__motif {
+  /* The field here rather than the motif's usual dominant: the coda's own
+   * background *is* the dominant (.coda below), and a drawing in that same
+   * colour would not be visible on it. Still a charter colour, never a
+   * hand-typed hex. */
+  stroke: var(--field);
+  position: absolute;
+  pointer-events: none;
+  left: -2rem;
+  bottom: 0;
+  width: min(360px, 40vw);
+  height: auto;
+  opacity: .35;
+}
+.coda__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+@media (min-width: 760px) {
+  .coda__inner {
+    grid-template-columns: 1fr auto;
+    gap: 3rem;
+  }
+}
+.coda__text {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--white);
+  max-width: 26ch;
+  text-transform: uppercase;
+}
+.coda__text em {
+  font-style: normal;
+  color: var(--field);
+}
+.coda .btn--ghost {
+  color: var(--white);
+  border-color: var(--white);
+  background: transparent;
+}
+.coda .btn--ghost:hover {
+  background: var(--white);
+  color: var(--dominant);
+  border-color: var(--white);
+}
+
+/* ── Colophon ─────────────────────────────────────────────── */
+.colophon {
+  /* A layer of its own, the same declaration .masthead__inner,
+   * .hero__inner and .coda__inner already make. A motif is absolutely
+   * positioned inside the section it decorates, and an absolutely
+   * positioned box paints above the static content that follows it: the
+   * footer is the one block of text that follows every section on the
+   * page. */
+  position: relative;
+  z-index: 1;
+  padding: 2.5rem 0 3rem;
+  background: var(--surface);
+  border-top: 1px solid var(--rule);
+}
+.colophon__inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+/* No measure, and the cap that used to be here is the thing this rule is
+   about. At 48ch and .88rem it rendered 364px of a 1100px column -- 33%,
+   breaking a one-line credit across three. Measured at six viewport widths
+   it never moved between 820px and 1920px, while the page grew by 1100px
+   around it. A reading measure on a line nobody reads through bought
+   nothing and cost that. */
+.colophon__credit {
+  font-size: .88rem;
+  color: var(--ink-mute);
+}
+.colophon__credit a {
+  color: var(--field-text);
+  text-decoration-color: var(--field);
+}
+.colophon__credit em { color: var(--ink-faint); font-style: italic; }
+.colophon__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.colophon__nav a {
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.colophon__nav a:hover { color: var(--dominant); }
+/* The licence notice: a full-width row under the credit and the navigation,
+   set on the same --ink-mute over --surface pairing .colophon__credit and
+   .colophon__nav already use, so it introduces no colour and no contrast
+   figure that was not already measured.
+
+   **A plate takes the width; a text you read keeps a measure.** That is the
+   rule, and this row is a plate: a notice somebody locates, never a
+   paragraph anybody reads through. `flex-basis: 100%` gives it a line of
+   its own and nothing bounds the text inside it.
+
+   There was a 78ch cap here, and an argument beside it saying the showcase
+   is a reading surface where the cockpit is an operating one. The argument
+   was written to defend the difference rather than to decide it, and the
+   difference does not survive being looked at: the two surfaces rendered
+   the same notice, at the same 12px, at 543px and 1132px. The cockpit's
+   footer -- `max-w-content mx-auto`, no measure on the paragraph -- was
+   right, and this was the odd one out. */
+.colophon__legal {
+  flex-basis: 100%;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.1rem;
+  font-size: .76rem;
+  line-height: 1.55;
+  color: var(--ink-mute);
+}
+.colophon__legal strong {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.colophon__legal a {
+  color: var(--field-text);
+  text-decoration-color: var(--field);
+}
+
+@media (max-width: 640px) {
+  .hero { padding: 3.5rem 0 3rem; }
+  .section { padding: 2.5rem 0 1.5rem; }
+  .feature__rail { border-top: 3px solid var(--dominant); padding-top: .5rem; }
+  /* Down into the hero's own lower right, clear of the text column. A
+   * family draws across the whole canvas it is handed, and at this width
+   * the text column is the whole page: a box centred on the hero puts the
+   * drawing's own stroke through the headline, in the headline's colour. */
+  .hero__motif { width: 45vw; right: -6rem; top: auto; bottom: 1rem; transform: none; }
+  .masthead__motif { width: 30vw; left: -.4rem; }
+  .coda { margin-top: 3.5rem; padding: 3rem 0; }
+}
