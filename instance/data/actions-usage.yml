@@ -2,62 +2,66 @@
 # A LOWER BOUND, never the bill: the free minutes belong to the organisation and are shared.
 v: 1
 latest:
-  observed_on: '2026-09-14'
-  since: '2026-09-08'
+  observed_on: '2026-09-15'
+  since: '2026-09-09'
   window_days: 7
   runs: 200
   uncosted_runs: 1
   truncated: true
-  billed_minutes: 611
-  scheduled_minutes: 5
+  billed_minutes: 595
+  scheduled_minutes: 12
   submission_minutes: 0
-  development_minutes: 606
-  projected_monthly_minutes: 2653
+  development_minutes: 583
+  projected_monthly_minutes: 2584
   busiest_submission_day: ''
   busiest_submissions: 0
   by_event:
   - event: pull_request
-    minutes: 309
+    minutes: 293
   - event: push
-    minutes: 254
+    minutes: 253
   - event: dynamic
-    minutes: 37
-  - event: workflow_run
-    minutes: 6
+    minutes: 33
   - event: schedule
-    minutes: 5
+    minutes: 12
+  - event: workflow_run
+    minutes: 4
   by_workflow:
   - workflow: Quality
-    minutes: 287
+    minutes: 278
   - workflow: Security
-    minutes: 155
+    minutes: 151
   - workflow: Accessibility
-    minutes: 37
-  - workflow: pages build and deployment
     minutes: 35
+  - workflow: pages build and deployment
+    minutes: 32
   - workflow: Validate data
     minutes: 22
   - workflow: Deploy app
     minutes: 21
-  - workflow: Demonstration
-    minutes: 12
   - workflow: Derive the decision register
     minutes: 12
-  - workflow: Preview
+  - workflow: Demonstration
     minutes: 11
+  - workflow: Preview
+    minutes: 10
   - workflow: Publish showcase
     minutes: 7
   - workflow: Monitor secret-bearing workflow runs
-    minutes: 6
+    minutes: 4
+  - workflow: Sweep and notify the board
+    minutes: 4
+  - workflow: Tell the registrants of a cancelled edition
+    minutes: 2
   - workflow: Visuals production
     minutes: 2
-  - workflow: 'Configured Graph Update: uv in /tools #1573735985'
-    minutes: 1
   - workflow: 'Configured Graph Update: uv in /tools #1573806610'
     minutes: 1
-  - workflow: Sweep and notify the board
+  - workflow: Mint event keys
     minutes: 1
-  - workflow: Tell the registrants of a cancelled edition
+  - workflow: Retention liveness watchdog
+    minutes: 1
+  - workflow: Retention sweep
     minutes: 1
   submissions_by_day: []
 history:
@@ -75,4 +79,9 @@ history:
   runs: 200
   minutes: 611
   projected_monthly: 2653
+  busiest_submissions: 0
+- day: '2026-09-15'
+  runs: 200
+  minutes: 595
+  projected_monthly: 2584
   busiest_submissions: 0
