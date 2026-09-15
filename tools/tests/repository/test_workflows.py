@@ -6239,3 +6239,80 @@ def test_the_security_scanner_is_declared_run_and_reads_its_own_suppressions() -
         f"convener_ops ({suppressing}) -- the walk stopped at the package's "
         "own directory, and whatever the sub-packages silence is unread"
     )
+
+
+# ------------------------------------------------------------------ #
+# A `--depth` fetch marks the *repository* shallow, not
+# the ref it fetched -- and GitHub refuses a push from a shallow
+# repository. It refuses it as `! [remote rejected] main -> main
+# (Internal Server Error)`, a 500 rather than a sentence, which is why a
+# three-attempt retry loop sat on top of this for days without anybody
+# getting near the cause.
+#
+# It was not hypothetical. `sweep-and-notify.yml` read the submission
+# queue with `git fetch --depth=1` into the working checkout, and two
+# steps later that same checkout pushed the day's observation of the
+# queue. The daily run failed every day, on the repository this product is
+# developed in *and* on the instance derived from it -- the instance's own
+# scheduled sweep was already failing this way eleven hours before its
+# Actions allowance ran out, which is how long it can take for a daily
+# failure notification to stop being read.
+#
+# `git clone --depth` is a different thing and is left alone: it makes a
+# *new* repository somewhere else, which is exactly the shape this rule
+# asks a fetch to take.
+# ------------------------------------------------------------------ #
+
+
+def test_no_shallow_fetch_touches_a_checkout_that_pushes() -> None:
+    """Every `git fetch --depth` names a repository of its own.
+
+    Not "no workflow may fetch shallowly": the cheapness is worth having,
+    and the queue branch gains a commit per submission whose history is
+    never rewritten, so a full fetch is a cost that grows for ever for one
+    listing. What the fetch may not do is make the checkout shallow, and
+    `--git-dir` is how it says where it is working instead.
+    """
+    offenders: list[str] = []
+    for path in sorted((ROOT / WORKFLOWS_DIR).glob("*.yml")):
+        for number, line in enumerate(
+            path.read_text(encoding="utf-8").split("\n"), start=1
+        ):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            if "git fetch" not in stripped and "fetch --no-tags" not in stripped:
+                continue
+            if "--depth" not in stripped:
+                continue
+            if "--git-dir" in stripped:
+                continue
+            offenders.append(f"{path.name}:{number}: {stripped}")
+
+    assert not offenders, (
+        "these lines fetch shallowly into whatever repository they are run "
+        "in, and a `--depth` fetch marks that repository shallow:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nIf the job later pushes, GitHub refuses it with `! [remote "
+        "rejected] ... (Internal Server Error)` and no explanation. Fetch "
+        "into a bare repository of its own with `--git-dir` instead -- see "
+        "sweep-and-notify.yml's queue steps."
+    )
+
+
+def test_the_reader_would_see_the_line_that_caused_this() -> None:
+    """Positive control, on the line as it was actually written. A reader
+    that missed it would let the rule above pass over an empty set."""
+    was = 'if ! git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"; then'
+    fixed = 'if ! git --git-dir="$QUEUE_GIT" fetch --no-tags --depth=1 \\'
+
+    def flagged(line: str) -> bool:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            return False
+        if "git fetch" not in stripped and "fetch --no-tags" not in stripped:
+            return False
+        return "--depth" in stripped and "--git-dir" not in stripped
+
+    assert flagged(was), "the reader no longer recognises the defect it was written for"
+    assert not flagged(fixed), "the reader flags the shape that fixes it"

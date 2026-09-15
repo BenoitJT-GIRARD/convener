@@ -323,20 +323,50 @@ jobs:
         # directory, so a queued entry can never be caught by a `git add`
         # meant for `instance/data/` and committed to the default branch -- which is
         # the one place it must never land (see this block's own comment).
+          # The bare repository this read uses, and the token it needs.
+          QUEUE_GIT: ${{ runner.temp }}/queue.git
+          GH_TOKEN: ${{ github.token }}
+        # **Into a repository of its own, and that is the whole of the fix
+        # here.** This read used to `git fetch --depth=1` into the working
+        # checkout, which is how git is asked for one commit cheaply -- and a
+        # `--depth` fetch marks the *repository* shallow, not just the ref it
+        # fetched. Two steps later, "Record what the queue still holds"
+        # pushes, and GitHub refuses a push from a shallow repository with
+        # `! [remote rejected] main -> main (Internal Server Error)` -- a 500
+        # rather than a sentence, which is why three attempts and a retry loop
+        # never got anywhere near the cause.
+        #
+        # It had been failing every day on both the repository this product is
+        # developed in and the instance derived from it, and the daily run's
+        # own failure notification is exactly the thing nobody reads twice.
+        #
+        # Keeping `--depth=1` matters: the queue branch gains a commit per
+        # submission and its history is never rewritten, so a full fetch is a
+        # cost that grows for ever for one listing. Doing it in a bare
+        # repository under the runner's temporary directory keeps the fetch as
+        # cheap as it was and leaves the checkout that has to push untouched.
         run: |
           set -e
-          rm -rf "$RUNNER_TEMP/queue"
+          rm -rf "$RUNNER_TEMP/queue" "$QUEUE_GIT"
           mkdir -p "$RUNNER_TEMP/queue"
           : > "$RUNNER_TEMP/queue-names.txt"
-          if ! git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"; then
+          git init --bare -q "$QUEUE_GIT"
+          # Authenticated explicitly: `actions/checkout` puts its credentials
+          # in the *checkout's* own config, which a separate repository does
+          # not have, and an instance's cockpit is private (D-15).
+          if ! git --git-dir="$QUEUE_GIT" fetch --no-tags --depth=1 \
+               "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+               "$QUEUE_BRANCH"; then
             echo "no $QUEUE_BRANCH branch yet -- nothing has ever been queued"
             exit 0
           fi
-          git ls-tree -r --name-only FETCH_HEAD -- queue > "$RUNNER_TEMP/queue-names.txt"
+          git --git-dir="$QUEUE_GIT" ls-tree -r --name-only FETCH_HEAD -- queue \
+            > "$RUNNER_TEMP/queue-names.txt"
           while IFS= read -r path; do
             [ -n "$path" ] || continue
             mkdir -p "$RUNNER_TEMP/queue/$(dirname "$path")"
-            git cat-file blob "FETCH_HEAD:$path" > "$RUNNER_TEMP/queue/$path"
+            git --git-dir="$QUEUE_GIT" cat-file blob "FETCH_HEAD:$path" \
+              > "$RUNNER_TEMP/queue/$path"
           done < "$RUNNER_TEMP/queue-names.txt"
           echo "fetched $(wc -l < "$RUNNER_TEMP/queue-names.txt") queued entries"
       - name: Plan what the drain will need
@@ -526,27 +556,39 @@ jobs:
           QUEUE_BRANCH: submission-queue
           CLEAR_FILE: ${{ runner.temp }}/queue-clear.txt
           WORKTREE: ${{ runner.temp }}/queue-worktree
-        # A worktree on the queue branch rather than a second checkout: the
-        # drained result is already committed in *this* checkout, and it
-        # must not be disturbed to remove files from an unrelated branch.
+          QUEUE_GIT: ${{ runner.temp }}/queue.git
+          GH_TOKEN: ${{ github.token }}
+        # **Entirely in the queue's own repository**, which is two fixes in
+        # one line. The `--depth=1` fetch marked the *working checkout*
+        # shallow, and a later step in this job pushes to the default branch
+        # -- GitHub refuses a push from a shallow repository with
+        # `! [remote rejected] main -> main (Internal Server Error)`, a 500
+        # rather than a sentence. And the worktree it added was a worktree of
+        # an unrelated orphan branch inside the checkout's own git directory,
+        # which is a thing to leave lying around beside the files this job
+        # commits.
         #
-        # Failing here is not a lost submission. Every entry stays in the
-        # queue and `instance/data/queue-ledger.yml` already names it as handled, so
-        # tomorrow's drain clears it without applying it a second time.
+        # This step only ever failed to bite because it is skipped when the
+        # drain handled nothing, which it has so far always been -- it is on
+        # the path that runs the first time a real submission arrives.
+        #
+        # `-c user.*` rather than `git config`: the identity belongs to this
+        # one commit, and writing it into a repository's config is a second
+        # thing to remember to keep out of the checkout.
         run: |
           set -e
           if [ ! -s "$CLEAR_FILE" ]; then
             echo "the drain handled nothing that needs clearing"
             exit 0
           fi
-          git config user.name "convener-queue"
-          git config user.email "convener-queue@users.noreply.github.com"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          [ -d "$QUEUE_GIT" ] || git init --bare -q "$QUEUE_GIT"
 
           for attempt in 1 2 3; do
-            git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"
+            git --git-dir="$QUEUE_GIT" fetch --no-tags --depth=1 "$remote" "$QUEUE_BRANCH"
             rm -rf "$WORKTREE"
-            git worktree prune
-            git worktree add --detach "$WORKTREE" FETCH_HEAD
+            git --git-dir="$QUEUE_GIT" worktree prune
+            git --git-dir="$QUEUE_GIT" worktree add --detach "$WORKTREE" FETCH_HEAD
             while IFS= read -r path; do
               [ -n "$path" ] || continue
               git -C "$WORKTREE" rm -q --ignore-unmatch -- "$path"
@@ -555,8 +597,11 @@ jobs:
               echo "the queue no longer holds any of it -- an earlier run cleared it"
               exit 0
             fi
-            git -C "$WORKTREE" commit -q -m "queue: clear what the drain handled"
-            if git -C "$WORKTREE" push origin "HEAD:refs/heads/$QUEUE_BRANCH"; then
+            git -C "$WORKTREE" \
+              -c user.name="convener-queue" \
+              -c user.email="convener-queue@users.noreply.github.com" \
+              commit -q -m "queue: clear what the drain handled"
+            if git -C "$WORKTREE" push "$remote" "HEAD:refs/heads/$QUEUE_BRANCH"; then
               exit 0
             fi
             echo "clearing push rejected (attempt $attempt/3) -- re-fetching the queue and retrying"
@@ -617,6 +662,10 @@ jobs:
         if: always() && steps.queue-fetch.outcome == 'success'
         env:
           QUEUE_BRANCH: submission-queue
+          # The bare repository the fetch step built. This step pushes, so it
+          # must not be the one a `--depth` fetch marks shallow.
+          QUEUE_GIT: ${{ runner.temp }}/queue.git
+          GH_TOKEN: ${{ github.token }}
           CONVENER_QUEUE_WAITING_FILE: ${{ runner.temp }}/queue-waiting.txt
           CONVENER_QUEUE_DEFERRED_FILE: ${{ runner.temp }}/queue-deferred.txt
           # Step-level, never job-level: the recording code must not be
@@ -644,8 +693,14 @@ jobs:
           git config user.email "convener-queue@users.noreply.github.com"
 
           : > "$CONVENER_QUEUE_WAITING_FILE"
-          if git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"; then
-            git ls-tree -r --name-only FETCH_HEAD -- queue > "$CONVENER_QUEUE_WAITING_FILE"
+          # The same separate repository the fetch step built, for the same
+          # reason: a `--depth` fetch marks this checkout shallow, and this
+          # step is about to push to it.
+          if git --git-dir="$QUEUE_GIT" fetch --no-tags --depth=1 \
+               "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+               "$QUEUE_BRANCH"; then
+            git --git-dir="$QUEUE_GIT" ls-tree -r --name-only FETCH_HEAD -- queue \
+              > "$CONVENER_QUEUE_WAITING_FILE"
           else
             echo "no $QUEUE_BRANCH branch yet -- nothing has ever been queued"
           fi
