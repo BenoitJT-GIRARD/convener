@@ -175,9 +175,25 @@ const ISLAND_PAGE_BUDGET_GZIP_BYTES = 110 * 1024;
  *  B gzip, would have been red here. 231 KiB is 236,544 B and would have
  *  passed it; 230 KiB is 235,520 B and would not.
  *
- *  **There is no third raise available.** The next time this goes red the
- *  honest answer is to take weight out, because any ceiling above this one
- *  stops catching the defect the check was written for.
+ *  **There is no third raise available.** Any ceiling above this one stops
+ *  catching the defect the check was written for.
+ *
+ *  **And that is what happened next, so the rule held.** A grouped
+ *  dependency update (React 19.2.8 to 19.3.0 among sixteen) took the reading
+ *  to 238,106 B -- above even the defective bundle, so raising was not open.
+ *  What came out instead was the markdown pipeline: `react-markdown` and
+ *  `remark-gfm`, seventy-one packages, 45,808 B gzip measured by building
+ *  once with them and once without, imported by one file and needed by the
+ *  few screens that render handbook content. It is fetched when a screen
+ *  needs it now (`app/src/content/Markdown.tsx`), so this reading is 183,818
+ *  B and the headroom is 51,702 -- a fifth of the budget rather than the 4%
+ *  it was set with.
+ *
+ *  Stated honestly: that is the *first* load. A volunteer who opens a content
+ *  screen downloads the same bytes in two steps. This budget is about what
+ *  arrives before anything is on screen, which is the right thing for it to
+ *  be about, and the split is a real improvement to that and not to the
+ *  total.
  */
 const COCKPIT_BUDGET_GZIP_BYTES = 230 * 1024;
 
