@@ -70,6 +70,39 @@ jobs:
           # cost down. Reduces run time only; changes nothing this job
           # checks.
           enable-cache: true
+      # **Here, and here is why.** The question this asks is about the
+      # push that woke the workflow: did a merge carry a file the instance
+      # owns? `declarations/boundary.yml` says upstream cannot ship those
+      # values correctly for anybody else, `.gitattributes` gives their
+      # paths the `ours` merge driver to enforce it, and a merge driver runs
+      # only on a conflict -- so a file one side alone changed is taken from
+      # that side without the driver ever being called. Measured on the
+      # instance this product was derived for: three weeks with no Actions
+      # minutes froze every ledger its own jobs write, and the next merge
+      # carried three of them.
+      #
+      # It lives in this job rather than in one of its own because this is
+      # the only job that runs on *every* push to the default branch and
+      # already holds the whole history (`fetch-depth: 0`) -- so the reading
+      # costs seconds inside a job that was running anyway. A workflow of
+      # its own would bill a minute per push, every push, for a question
+      # that has an answer worth hearing about twice a month.
+      #
+      # **Before the derivation, not after.** The derivation commits and
+      # pushes, so once it has run `HEAD` is its own commit and the merge is
+      # a generation back -- the reading would find no merge and pass.
+      #
+      # `continue-on-error`, with the refusal at the end of the job: the
+      # register still gets derived either way. A repository that has
+      # carried a ledger it should not needs a red run and a correction, not
+      # a governance record that stops being regenerated until somebody
+      # notices. Same shape as the Check/Fail pairs in
+      # `sweep-and-notify.yml`.
+      - name: Check that the merge kept this instance's own files
+        id: merge-check
+        continue-on-error: true
+        working-directory: tools
+        run: uv run --frozen convener-check-merge-kept-the-instance
       - name: Derive and commit
         # On a rejected push, re-derive against the
         # refreshed tip rather than `git pull --rebase` -- the same shape
@@ -105,4 +138,9 @@ jobs:
             git reset --hard "origin/$GITHUB_REF_NAME"
           done
           echo "::error::push failed after 3 attempts -- the register was not saved"
+          exit 1
+      - name: Fail if the merge carried a file this instance owns
+        if: steps.merge-check.outcome == 'failure'
+        run: |
+          echo "::error::this push carried files that belong to this instance -- see the annotations on the step above, and docs/operating/taking-an-update.md for the two commands that put them back"
           exit 1
