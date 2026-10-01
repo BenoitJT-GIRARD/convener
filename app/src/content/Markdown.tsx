@@ -24,6 +24,17 @@ import { slugify } from './transclude';
  * what this buys: the *first* load drops by those 45 KB; somebody who opens a
  * content screen downloads the same bytes, in two steps.
  *
+ * **It made two readings wait longer, and the first diagnosis of that was
+ * wrong.** `visual-kit.test.tsx`'s flyer link and
+ * `consent-request.test.tsx`'s message stopped finding what they render.
+ * React had just gone 19.2.8 to 19.3.0 in the same batch, and holding that
+ * version made them pass -- which looked like the answer and was not: run on
+ * their own they pass on both versions, and run inside the full suite they
+ * failed on both. Rendering content is simply two awaits deep now, the text
+ * and then the renderer, and testing-library's one-second window is a window
+ * this suite's own load decides. `tests/helpers/setup.ts` carries the
+ * measurement and the setting.
+ *
  * **Nothing here may be imported by `InlineContent`.** That is the whole
  * point of the split, and a static import would quietly undo it --
  * `app/tests/content/markdown-is-loaded-when-it-is-needed.test.ts` reads for
