@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess  # nosec B404
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +29,7 @@ from convener_ops.cli.journey.registration import (
     DEFERRED_FIELD_SEPARATOR,
     QUEUE_DEFERRED_ENV,
 )
+from convener_ops.declaration import boundary
 from convener_ops.declaration.paths import (
     DATA_DIR,
     repo_root,
@@ -944,3 +946,103 @@ def check_actions_usage_liveness() -> int:
         f"{elapsed} day(s) ago -- healthy"
     )
     return 0
+
+
+def _git(root: Path, arguments: list[str]) -> str:
+    """`git <arguments>` in `root`, or a `RuntimeError` naming what failed.
+
+    Separate from its caller so the caller reads as the question it asks
+    rather than as subprocess plumbing, and so a failure to *run* git is
+    told apart from git answering.
+    """
+    result = subprocess.run(  # nosec B603 B607
+        ["git", *arguments],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        first = next(iter(result.stderr.strip().splitlines()), "")
+        raise RuntimeError(f"git {' '.join(arguments)} failed: {first}")
+    return result.stdout
+
+
+def check_merge_kept_the_instance() -> int:
+    """`convener-check-merge-kept-the-instance`: did the update just taken
+    leave this instance's own records alone?
+
+    **What this exists for.** `declarations/boundary.yml` says of the
+    instance's ledgers that "none of it is a value upstream could ship
+    correctly for anybody else", and `.gitattributes` gives those paths the
+    `ours` merge driver so that a merge cannot carry one. A merge driver
+    runs **only on a conflict**, and a file that one side alone has changed
+    has none -- so git takes that side without ever calling the driver.
+    When that side is upstream, the instance silently inherits upstream's
+    value, and the rule the declaration states is simply not applied.
+
+    Measured, on the instance this product was derived for: three weeks
+    with no Actions minutes froze every ledger its own jobs write while the
+    product's kept moving, and the next merge carried three of them --
+    `retention-last-run.yml`, `actions-usage.yml`, `queue-watch.yml`. The
+    first makes an instance claim its retention sweep ran on a day it did
+    not, which is a false assurance on exactly the record
+    `check_retention_liveness` above calls a promise with legal weight. The
+    second is what the budget alarm reasons from, so it would have reasoned
+    from the product's consumption instead of its own.
+
+    **A check rather than only a procedure.**
+    `docs/operating/taking-an-update.md` now takes the instance's own files
+    back before committing the merge, which is the prevention. This is the
+    net: a procedure can be half-followed, skipped on a tired evening, or
+    run by somebody reading an older copy of the page, and none of those
+    leave a trace. This can fail, and failing is the whole of what it is
+    for.
+
+    Says "not a merge" and exits clean on an ordinary commit, which is
+    every commit on an instance except the handful a descent makes. An
+    addition is not a violation -- upstream introducing a new ledger is how
+    a duplicate ever gets the file, and its own jobs overwrite the value on
+    their next run; see `boundary.overwritten_by_a_merge`.
+    """
+    root = repo_root()
+    parents = _git(root, ["rev-list", "--parents", "-n", "1", "HEAD"]).split()
+    if len(parents) < 3:
+        print("HEAD is not a merge -- nothing to check")
+        return 0
+
+    raw = _git(root, ["diff", "--name-status", "HEAD^1", "HEAD"])
+    changes: list[tuple[str, str]] = []
+    for line in raw.splitlines():
+        fields = line.split("\t")
+        if len(fields) >= 2:
+            # A rename or a copy carries two paths; the destination is the
+            # one that now holds the content, and the one a reader has to
+            # go and look at.
+            changes.append((fields[0], fields[-1]))
+
+    carried = boundary.overwritten_by_a_merge(changes, boundary.load(root))
+    if not carried:
+        print("the merge left every file this instance owns alone")
+        return 0
+
+    print(
+        "::error::this merge changed files that belong to this instance, and "
+        "upstream cannot ship their values correctly for anybody else "
+        "(declarations/boundary.yml says so of each of them):",
+        file=sys.stderr,
+    )
+    for name in carried:
+        print(f"::error::  {name}", file=sys.stderr)
+    print(
+        "::error::Take this instance's own version back -- "
+        "`git restore --source=HEAD^1 --staged --worktree -- <path>` for each, "
+        "then commit the correction. The `ours` merge driver did not catch "
+        "these because a merge driver only runs on a conflict, and a file "
+        "only upstream changed has none. See "
+        "docs/operating/taking-an-update.md.",
+        file=sys.stderr,
+    )
+    return 1

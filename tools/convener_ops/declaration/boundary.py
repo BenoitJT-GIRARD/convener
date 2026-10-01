@@ -749,3 +749,47 @@ def code_among(relatives: Iterable[str]) -> tuple[str, ...]:
             if PurePosixPath(name).suffix.lower() in CODE_SUFFIXES
         )
     )
+
+
+def overwritten_by_a_merge(
+    changes: Iterable[tuple[str, str]], boundary: Boundary
+) -> tuple[str, ...]:
+    """The instance's own files that a merge changed or removed.
+
+    **The defect this reads for, and why `merge=ours` cannot.** This
+    declaration says of the instance's ledgers that "none of it is a value
+    upstream could ship correctly for anybody else", and `.gitattributes`
+    gives those paths the `ours` merge driver to enforce it. A merge driver
+    runs **only on a conflict**. A file that one side alone has changed has
+    no conflict, so git takes that side and never calls the driver -- and if
+    the side that changed it is upstream, the instance silently inherits
+    upstream's value.
+
+    Measured, on the instance this product was derived for: three weeks
+    without Actions minutes froze every ledger its own jobs write, while
+    the product's kept moving. The merge then carried
+    `retention-last-run.yml`, `actions-usage.yml` and `queue-watch.yml`.
+    The first makes an instance claim its retention sweep ran on a day it
+    did not -- a false assurance on a promise with legal reach. The second
+    feeds the budget alarm, so it would have reasoned from the *product's*
+    consumption.
+
+    **An addition is not a violation**, and that is the distinction this
+    function exists to make. Upstream introducing a new ledger is how a
+    duplicate ever gets the file at all; its own jobs overwrite the value on
+    their next run. What must never arrive is a *change* to a file the
+    instance already had, or its removal.
+
+    `changes` is `(status, path)` as `git diff --name-status` gives it, so
+    this can be exercised against a list somebody made up rather than only
+    against whatever a merge happens to have done -- the same reason
+    `code_among` above takes paths rather than walking.
+    """
+    return tuple(
+        sorted(
+            path
+            for status, path in changes
+            if status[:1] in {"M", "D", "R", "C", "T"}
+            and boundary.owner_of(path) == INSTANCE
+        )
+    )

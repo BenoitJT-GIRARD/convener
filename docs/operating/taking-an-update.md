@@ -24,6 +24,7 @@ practice: you fetch from it and you never push to it.
 git pull --ff-only origin main
 git fetch upstream
 git merge upstream/main
+uv run --frozen --project tools convener-check-merge-kept-the-instance
 ```
 
 **The first line is not housekeeping, and it is not optional.** Your clone is
@@ -160,6 +161,53 @@ Then push. A push runs every workflow this repository has, which on a private
 repository is billed against your organisation's Actions allowance — so batch
 several upstream releases into one merge rather than taking each as it lands,
 if you are watching that budget.
+
+## When the last line refuses
+
+It is telling you the merge carried a file that belongs to this instance, and
+naming each one. Put them back and amend the merge:
+
+```sh
+git restore --source=HEAD^1 --staged --worktree -- <each path it named>
+git commit --amend --no-edit
+uv run --frozen --project tools convener-check-merge-kept-the-instance
+```
+
+`HEAD^1` is this instance's own side of the merge, so that restores the values
+this repository had before the update — which are the correct ones, because
+`declarations/boundary.yml` says of every one of these files that *"none of it
+is a value upstream could ship correctly for anybody else"*.
+
+**Why a check is needed at all, when `.gitattributes` already gives these
+paths the `ours` merge driver.** Because a merge driver runs **only on a
+conflict**. A file that one side alone has changed has no conflict, so git
+takes that side and never calls the driver — and when that side is upstream,
+the value arrives silently. The driver is doing its job; its job simply does
+not cover this case, and nothing about the rule being declared makes it
+applied.
+
+**This is not a corner case, and it has happened.** On the instance this
+product was derived for, three weeks without Actions minutes froze every
+ledger its own jobs write — `retention-last-run.yml`, `actions-usage.yml`,
+`queue-watch.yml` — while the product's kept moving. The next merge carried
+all three. The first makes this instance claim its retention sweep ran on a
+day it did not, which is a false assurance on the one record the retention
+watchdog treats as a promise with legal weight. The second is what the
+Actions budget alarm reasons from, so it would have reasoned from the
+product's consumption instead of this instance's.
+
+No outage is needed to reach it. Any two releases taken without this
+instance's own jobs running in between leave the same gap.
+
+**An addition is not a refusal.** Upstream introducing a *new* ledger is how
+this repository ever gets the file at all, and your own jobs write the value
+on their next run. What the check refuses is a change to a file you already
+had, or its removal.
+
+If you push before running it, the same reading runs in continuous
+integration — it is a step of `derive-decision-register.yml`, the one workflow
+that runs on every push to `main` — so the answer arrives either way. Before
+the push is cheaper.
 
 ## Before your first merge, once
 
