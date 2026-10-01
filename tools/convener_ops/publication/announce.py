@@ -87,7 +87,7 @@ from typing import Any, Final
 
 from ..declaration.published import load_identity
 from ..journey.registration import signup_url
-from .visual import date_line
+from .visual import date_line, start_local
 
 __all__ = [
     "forum_announcement",
@@ -251,6 +251,16 @@ def _talk_date(row: Mapping[str, Any]) -> date:
     return date.fromisoformat(str(row["date"]))
 
 
+def _talk_start(row: Mapping[str, Any]) -> str:
+    """The edition's own recorded start time, as the public feed carries it.
+
+    `.get`, not `[...]`, and the difference is the point: `date` is
+    required of any row these templates are drafted for, whereas `time` is
+    blank on every record whose date is not locked yet. `start_local` is
+    what turns that blank into the standing hour, in one place."""
+    return str(row.get("time", ""))
+
+
 def _speaker_namespace(row: Mapping[str, Any]) -> dict[str, str]:
     """The `{{ speaker.… }}` fields the forum, professional-network and
     mailing-list templates read -- every one of them `PUBLISHABLE_ALWAYS`
@@ -263,7 +273,7 @@ def _speaker_namespace(row: Mapping[str, Any]) -> dict[str, str]:
         "title": str(row.get("title", "")),
         "abstract": str(row.get("abstract", "")),
         "edition_code": str(row.get("id", "")),
-        "when": date_line(_talk_date(row)),
+        "when": date_line(_talk_date(row), start_local(_talk_start(row))),
         "signup_link": signup_url(_event_id(row)),
         "forum_thread": str(row.get("forum_thread", "")),
     }
@@ -284,7 +294,7 @@ def _public_namespace(row: Mapping[str, Any]) -> dict[str, str]:
         "name": str(row.get("speaker_name", "")),
         "affiliation": str(row.get("speaker_affiliation", "")),
         "title": str(row.get("title", "")),
-        "when": date_line(_talk_date(row)),
+        "when": date_line(_talk_date(row), start_local(_talk_start(row))),
         "youtube_url": str(row.get("youtube_url", "")),
         "bio": str(row.get("bio", "")),
         "forum_thread": str(row.get("forum_thread", "")),

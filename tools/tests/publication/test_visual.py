@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import replace
-from datetime import date, datetime, timedelta, tzinfo
+from datetime import date, datetime, time, timedelta, tzinfo
 from pathlib import Path
 from typing import Any, Final
 
@@ -44,6 +44,7 @@ from convener_ops.publication.visual import (
     _TITLE_FONT_MAX_MRG,
     _TITLE_FONT_MIN_MRG,
     FIXTURE_ANNOUNCEMENT,
+    STANDING_START_LOCAL,
     Announcement,
     _affiliation_font_size,
     _frame_photo_html,
@@ -128,17 +129,28 @@ def test_the_fixture_actually_covers_both_seasons() -> None:
 
 
 def test_date_line_states_the_computed_weekday_and_zone_in_winter() -> None:
-    assert date_line(date(2026, 3, 12)) == "Thursday, 12 March 2026 at 12:30 CET"
+    line = date_line(date(2026, 3, 12), STANDING_START_LOCAL)
+    assert line == "Thursday, 12 March 2026 at 12:30 CET"
 
 
 def test_date_line_states_the_computed_weekday_and_zone_in_summer() -> None:
-    assert date_line(date(2026, 4, 2)) == "Thursday, 2 April 2026 at 12:30 CEST"
+    line = date_line(date(2026, 4, 2), STANDING_START_LOCAL)
+    assert line == "Thursday, 2 April 2026 at 12:30 CEST"
+
+
+def test_date_line_states_the_hour_it_is_given_not_the_standing_one() -> None:
+    # The whole reason this function takes an hour. Every surface composed
+    # the sentence from the constant, so an edition the record held at 18:00
+    # was announced, postered and calendared at 12:30.
+    line = date_line(date(2026, 10, 8), time(18, 0))
+    assert line == "Thursday, 8 October 2026 at 18:00 CEST"
 
 
 def test_date_line_computes_the_real_weekday_not_a_fixed_one() -> None:
     # 2025-02-05 is a Wednesday, not the reference poster's own "Thursday" --
     # a value left over from whichever edition it was hand-drawn for.
-    assert date_line(date(2025, 2, 5)).startswith("Wednesday, 5 February 2025")
+    line = date_line(date(2025, 2, 5), STANDING_START_LOCAL)
+    assert line.startswith("Wednesday, 5 February 2025")
 
 
 def test_paris_standing_start_never_returns_an_empty_offset_or_abbreviation() -> None:
@@ -517,6 +529,7 @@ def test_announcement_defaults_portrait_to_none() -> None:
     ann = Announcement(
         title="t",
         talk_date=date(2026, 1, 1),
+        talk_time=STANDING_START_LOCAL,
         speaker_name="n",
         speaker_affiliation="a",
         event_id="mrg-1",
@@ -858,7 +871,7 @@ def test_the_banner_still_shows_title_date_frame_and_register() -> None:
         _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
     )
     assert "On analytical engines" in doc
-    assert date_line(date(2026, 3, 12)) in doc
+    assert date_line(date(2026, 3, 12), STANDING_START_LOCAL) in doc
     assert '<figure class="frame">' in doc
     assert doc.count("data-registration-code-slot") == 1
 

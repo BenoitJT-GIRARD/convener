@@ -73,11 +73,20 @@ class TestForumAnnouncement:
         module's own prose, must appear in the rendered text -- a
         hand-rolled composition of the same facts could never produce it
         by accident, so this fails the moment this module goes back to
-        composing English by hand instead of reading the file."""
+        composing English by hand instead of reading the file.
+
+        Anchored on a sentence that states no time, deliberately. It used
+        to be "our standing time of 12:30 Paris time on a Thursday", which
+        was in that template until the template was found contradicting
+        itself: that sentence sat four lines above `{{ speaker.when }}`, so
+        a post announcing an edition held at 18:00 named both hours. A
+        reading whose anchor is a hard-typed convention has an interest in
+        that convention staying put.
+        """
         text = forum_announcement(_row(), root=ROOT)
         assert (
-            "we host a stellar speaker presenting their work at our "
-            "standing time of 12:30 Paris time on a Thursday" in text
+            "**Post your questions and insights below** and help shape the "
+            "webinar discussion" in text
         )
 
     def test_points_at_the_event_page_never_the_room(self) -> None:

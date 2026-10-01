@@ -6,7 +6,7 @@
 
 **Title:** {{ instance.series }} {{ speaker.edition_code }}: {{ speaker.title }}
 
-Don't miss the next {{ instance.organisation }} webinar! As usual, we host a stellar speaker presenting their work at our standing time of 12:30 Paris time on a Thursday — so everyone can join.
+Don't miss the next {{ instance.organisation }} webinar! As usual, we host a stellar speaker presenting their work — online, at the time below, so everyone can join.
 
 In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), who will present:
 

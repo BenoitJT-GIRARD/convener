@@ -1,5 +1,5 @@
 """D-14: `paris_standing_start`/`date_line` (Python),
-`parisStandingStart` (`.eleventy.js`) and `parisStandingStart`/`dateLine`
+`parisStandingStart` (`.eleventy.js`) and `parisStandingStart`/`dateTimeLine`
 (TypeScript, `app/src/state/derived.ts`) are three independent
 implementations of the identical Europe/Paris seasonal-offset rule -- three
 languages, three runtimes, so three implementations are legitimate (D-14),
@@ -33,7 +33,11 @@ from typing import Any
 import pytest
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.publication.visual import date_line, paris_standing_start
+from convener_ops.publication.visual import (
+    STANDING_START_LOCAL,
+    date_line,
+    paris_standing_start,
+)
 
 _ROOT = repo_root()
 _FIXTURE_PATH = Path(__file__).parents[1] / "fixtures" / "paris-standing-start.json"
@@ -44,7 +48,10 @@ _FIXTURE: list[dict[str, Any]] = json.loads(_FIXTURE_PATH.read_text(encoding="ut
 def test_python_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     talk_date = date.fromisoformat(case["iso_date"])
     assert paris_standing_start(talk_date) == (case["offset"], case["abbreviation"])
-    assert date_line(talk_date) == case["date_line"]
+    # The standing hour, passed explicitly: this fixture binds the seasonal
+    # rule and nothing else. Where an edition's hour comes from is a second
+    # rule with a fixture of its own, `edition-start.json`.
+    assert date_line(talk_date, STANDING_START_LOCAL) == case["date_line"]
 
 
 def test_the_fixture_covers_both_sides_of_both_dst_boundaries() -> None:

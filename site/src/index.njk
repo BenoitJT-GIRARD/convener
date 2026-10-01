@@ -61,14 +61,14 @@ layout: layout.njk
         <p class="feature__vol">Upcoming</p>
         <p class="feature__code">{{ e.id }}</p>
         {#
-          The same `parisStandingStart` derivation event.njk
-          uses for its own rail, so this card cannot state a different
-          season's offset for the same edition -- see that template's
-          own comment.
+          The same `eventStart` derivation event.njk uses for its own
+          rail, so this card cannot state a different season's offset --
+          or a different hour -- for the same edition. See that
+          template's own comment.
         #}
         <p class="feature__date">
           <strong>{{ e.date }}</strong><br>
-          {{ (e.date | parisStandingStart).label }}
+          {{ (e | eventStart).label }}
         </p>
       </aside>
       <div class="feature__body">

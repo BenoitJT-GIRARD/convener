@@ -5,9 +5,9 @@ CALSCALE:GREGORIAN
 X-WR-CALNAME:The Example Collective internal agenda
 BEGIN:VEVENT
 UID:https://example-instance.github.io/example-showcase/events/mrg-5/
-DTSTAMP:20261008T103000Z
-DTSTART:20261008T103000Z
-DTEND:20261008T120000Z
+DTSTAMP:20261008T160000Z
+DTSTART:20261008T160000Z
+DTEND:20261008T173000Z
 SUMMARY:Anagnosis (ἀνάγνωσις): reading as a shared act\, from the
   scriptorium to the group chat
 LOCATION:https://example-instance.github.io/example-showcase/events/mrg-5/

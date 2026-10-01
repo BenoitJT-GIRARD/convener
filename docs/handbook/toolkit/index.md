@@ -12,10 +12,12 @@ record's own field names, reached through the object that holds them:
   `{{ speaker.affiliation }}`, `{{ speaker.country }}`, `{{ speaker.bio }}`;
 - their talk — `{{ speaker.title }}`, `{{ speaker.abstract }}`,
   `{{ speaker.edition_code }}`, `{{ speaker.date }}`, `{{ speaker.time }}`,
-  `{{ speaker.when }}` (the date and time together, with the real Paris
-  offset for that day — "Thursday, 12 March 2026 at 12:30 CET" — never
-  write `{{ speaker.time }}` beside a hand-typed "CET": half the year that
-  is wrong), `{{ speaker.zoom_link }}`, `{{ speaker.forum_thread }}`,
+  `{{ speaker.when }}` (the date and time together, this edition's own hour
+  with the real Paris offset for that day — "Thursday, 8 October 2026 at
+  18:00 CEST" — and the one to reach for: never write a time by hand, and
+  never write `{{ speaker.time }}` beside a hand-typed "CET", because half
+  the year that is wrong and the series does not always run at its usual
+  hour), `{{ speaker.zoom_link }}`, `{{ speaker.forum_thread }}`,
   `{{ speaker.youtube_url }}`, `{{ speaker.live_peak }}`;
 - the people around it — `{{ host_1.name }}`, `{{ host_2.name }}`,
   `{{ proposed_by.name }}`;

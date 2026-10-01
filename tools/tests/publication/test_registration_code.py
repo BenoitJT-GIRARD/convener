@@ -37,7 +37,12 @@ from convener_ops.publication.registration_code import (
     forum_code_target,
     registration_code_svg,
 )
-from convener_ops.publication.visual import Announcement, render_announcement
+from convener_ops.publication.visual import (
+    STANDING_START_LOCAL,
+    Announcement,
+    render_announcement,
+    start_local,
+)
 
 ROOT = repo_root()
 _W, _H = 1200.0, 1200.0
@@ -84,6 +89,7 @@ def test_the_rendered_page_carries_a_code_that_decodes_to_the_signup_url() -> No
     announcement = Announcement(
         title="On analytical engines",
         talk_date=date(2026, 3, 12),
+        talk_time=STANDING_START_LOCAL,
         speaker_name="Ada Lovelace",
         speaker_affiliation="Analytical Engines Institute",
         event_id="mrg-9",
@@ -118,6 +124,7 @@ def test_the_registration_code_is_drawn_in_brand_black() -> None:
         Announcement(
             title="t",
             talk_date=date(2026, 1, 1),
+            talk_time=STANDING_START_LOCAL,
             speaker_name="n",
             speaker_affiliation="a",
             event_id="mrg-1",
@@ -167,6 +174,10 @@ def test_a_room_link_never_reaches_the_encoded_code() -> None:
     announcement = Announcement(
         title=entry["title"],
         talk_date=date.fromisoformat(entry["date"]),
+        # Off the fixture row, the way the production renderer reads it --
+        # a poster drawn here for an edition held at another hour has to be
+        # the poster production would draw.
+        talk_time=start_local(str(entry.get("time", ""))),
         speaker_name=entry["speaker_name"],
         speaker_affiliation=entry["speaker_affiliation"],
         event_id=event_id,

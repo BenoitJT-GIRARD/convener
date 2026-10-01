@@ -1,3 +1,12 @@
+// @vitest-environment node
+//
+// Nothing in `tests/scripts/` renders anything: each one exercises a
+// build-time Node script. Under the suite-wide `environment: 'jsdom'`
+// these eleven files each built a DOM they never touched, and the ones
+// that copy real directories then ran out of the 5s default budget under
+// load -- a test whose verdict depends on the machine's load is not a
+// test. Measured: jsdom was being created 109 times for 72% of the
+// suite's tracked time.
 /**
  * What this instance numbers its editions, on this side of the language
  * boundary.

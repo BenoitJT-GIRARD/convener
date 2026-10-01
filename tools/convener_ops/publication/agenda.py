@@ -69,14 +69,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, Final
 
 from ..declaration import published
 from ..governance.notify import Deadline, due_date
 from ..governance.rule import PARIS
 from ..journey.registration import signup_url
-from .visual import STANDING_START_LOCAL
+from .visual import start_local
 
 #: `instance/data/config.yml::seminar_duration_minutes`'s own fallback --
 #: `sweep.sweep`'s identical `int(config.get("seminar_duration_minutes") or
@@ -173,13 +173,29 @@ def _utc_stamp(instant: datetime) -> str:
     return instant.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
-def _edition_start(talk_date: date) -> datetime:
-    """The real Europe/Paris instant this project's standing 12:30 start
-    resolves to on `talk_date`, DST included. See the module docstring for
-    why this reads `governance.PARIS` directly rather than calling
-    `visual.paris_standing_start`.
+def _recorded_start(event: Mapping[str, Any]) -> str:
+    """The edition's own recorded start time, as the public feed carries it.
+
+    Blank on every record whose date is not locked yet, which
+    `visual.start_local` reads as the standing hour. This feed only ever
+    writes a VEVENT for a `scheduled` edition, so in practice the field is
+    filled -- but a feed that threw on the one row that was not would take
+    the whole calendar down with it."""
+    return str(event.get("time", ""))
+
+
+def _edition_start(talk_date: date, start: time) -> datetime:
+    """The real Europe/Paris instant `start` resolves to on `talk_date`, DST
+    included. See the module docstring for why this reads `governance.PARIS`
+    directly rather than calling `visual.paris_standing_start`.
+
+    `start` comes from `visual.start_local`, which is the one reading of
+    what an edition's hour is. This function combined the standing constant
+    instead until a subscribed calendar client was found showing 12:30 for
+    an edition agreed for 18:00 -- the wrong hour in the one artefact whose
+    entire purpose is to put the right hour in somebody's diary.
     """
-    return datetime.combine(talk_date, STANDING_START_LOCAL, tzinfo=PARIS)
+    return datetime.combine(talk_date, start, tzinfo=PARIS)
 
 
 def _edition_vevent(event: Mapping[str, Any], *, duration_minutes: int) -> str:
@@ -206,7 +222,9 @@ def _edition_vevent(event: Mapping[str, Any], *, duration_minutes: int) -> str:
     if not edition_code:
         raise ValueError("edition_code is blank")
     url = signup_url(edition_code.lower())
-    start = _edition_start(date.fromisoformat(str(event["date"])))
+    start = _edition_start(
+        date.fromisoformat(str(event["date"])), start_local(_recorded_start(event))
+    )
     dtstart = _utc_stamp(start)
     dtend = _utc_stamp(start + timedelta(minutes=duration_minutes))
     return _fold_all(
