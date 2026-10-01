@@ -1,50 +1,24 @@
-import { Children, isValidElement, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import ReactMarkdown from 'react-markdown';
-import type { Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { fetchContent, editUrlFor, handbookUrl } from './fetch';
-import { slugify } from './transclude';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { fetchContent, editUrlFor } from './fetch';
 import { substitute, substituteWithoutSpeaker, type SubstitutionContext } from './render';
 import { useAuth } from '../auth/AuthContext';
 import { isDemoMode } from '../data/demo';
 
-/** The text of a heading, whatever react-markdown made of its inline
- *  markup -- a heading may hold emphasis or code, and the anchor is
- *  computed from the words rather than from the nodes. */
-function headingText(children: ReactNode): string {
-  return Children.toArray(children)
-    .map(child => {
-      if (typeof child === 'string' || typeof child === 'number') return String(child);
-      if (isValidElement<{ children?: ReactNode }>(child)) {
-        return headingText(child.props.children);
-      }
-      return '';
-    })
-    .join('');
-}
-
 /**
- * Every heading of a rendered page carries the anchor its own prose
- * already links to.
+ * The markdown renderer, fetched when a screen actually renders content.
  *
- * `transclude.ts::slugify` is GitHub's rule, and it is the rule the
- * registry's own fragments are declared under, so a heading is reachable
- * by the same name from a link, from an include and from this. Without
- * these, `#/handbook/toolkit/run-of-show#results-that-have-not-been-peer-
- * reviewed` would open the right page at the top of it.
+ * `react-markdown` and `remark-gfm` are seventy-one packages of the unified
+ * pipeline and weigh 45,808 B gzip -- 21% of this bundle, measured. Most
+ * screens a volunteer opens render no handbook content: the pipeline, the
+ * agenda, the board, the settings. They were all paying for a markdown
+ * renderer on arrival.
  *
- * Page renders only: an inline render is a fragment dropped into a
- * screen that already has headings of its own, and several of them can
- * sit on one screen, so ids there would be duplicates rather than
- * anchors.
+ * It must stay a dynamic import. A static one would put the pipeline back in
+ * the entry chunk and nothing on screen would change, so
+ * `app/tests/content/markdown-is-loaded-when-it-is-needed.test.ts` reads for
+ * it; `src/content/Markdown.tsx` carries the rest of the argument.
  */
-const HEADING_ANCHORS: Components = {
-  h1: ({ children }) => <h1 id={slugify(headingText(children))}>{children}</h1>,
-  h2: ({ children }) => <h2 id={slugify(headingText(children))}>{children}</h2>,
-  h3: ({ children }) => <h3 id={slugify(headingText(children))}>{children}</h3>,
-  h4: ({ children }) => <h4 id={slugify(headingText(children))}>{children}</h4>,
-};
+const Markdown = lazy(() => import('./Markdown'));
 
 interface Props {
   contentKey: string;
@@ -111,13 +85,12 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
         </div>
       )}
       <div className={wrapperCls}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          urlTransform={href => handbookUrl(contentKey, href)}
-          components={variant === 'page' ? HEADING_ANCHORS : undefined}
-        >
-          {rendered}
-        </ReactMarkdown>
+        {/* The same wording the fetch above shows, because to a volunteer it
+            is the same wait: the text is on its way, or the renderer is, and
+            which of the two is not a distinction worth a second sentence. */}
+        <Suspense fallback={<p className="text-ink-muted text-sm">Loading content…</p>}>
+          <Markdown text={rendered} contentKey={contentKey} variant={variant} />
+        </Suspense>
       </div>
       {variant === 'inline' && (
         <div className="mt-2 flex justify-end gap-2">
