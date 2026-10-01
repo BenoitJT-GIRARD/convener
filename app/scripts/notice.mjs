@@ -32,7 +32,15 @@ const INSTANCE_NAMED = 'instance/config.json';
 /** Every key the declaration has to carry, and the whole of it. Exported so
  *  the browser-side reader can hold the shape it is handed against this list
  *  rather than against a second spelling of it. */
-export const FIELDS = ['product', 'copyright', 'terms', 'warranty', 'licence_name', 'licence_url'];
+export const FIELDS = [
+  'product',
+  'source_url',
+  'copyright',
+  'terms',
+  'warranty',
+  'licence_name',
+  'licence_url',
+];
 
 /** The two names an instance gives the thing it is running, in the order a
  *  duplicate is likeliest to have reached for one of them.

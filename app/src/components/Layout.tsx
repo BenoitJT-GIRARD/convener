@@ -159,7 +159,21 @@ export function Layout() {
             bundle by `vite.config.ts`'s own define -- see `src/notice.ts`. */}
         <div className="max-w-content mx-auto px-6 pb-6 pt-4 border-t border-border text-xs text-ink-muted">
           <p>
-            <span className="font-display font-bold tracking-wide">{notice.product}</span>
+            {/* The product's own name, linking to its source. Section 13
+                of the License asks a modified version offered over a network
+                to offer its Corresponding Source; a notice that names the
+                product without saying where it came from leaves a reader of
+                a derived instance to go looking. `rel="noreferrer"` for the
+                same reason every outward link in this application carries
+                it. */}
+            <a
+              href={notice.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="font-display font-bold tracking-wide underline"
+            >
+              {notice.product}
+            </a>
             {' · '}
             {notice.copyright}. {notice.terms} {notice.warranty}{' '}
             <a

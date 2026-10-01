@@ -33,7 +33,15 @@ const INSTANCE_NAMED = 'instance/config.json';
 /** Every key the declaration has to carry, and the whole of it. Exported so
  *  that the check "each of these reaches a rendered page" is a sweep of this
  *  list rather than four assertions somebody has to remember to extend. */
-const FIELDS = ['product', 'copyright', 'terms', 'warranty', 'licence_name', 'licence_url'];
+const FIELDS = [
+  'product',
+  'source_url',
+  'copyright',
+  'terms',
+  'warranty',
+  'licence_name',
+  'licence_url',
+];
 
 /** The two names an instance gives the thing it is running, in the order a
  *  duplicate is likeliest to have reached for one of them.

@@ -237,7 +237,13 @@
       page.
     #}
     <p class="colophon__legal">
-      <strong>{{ notice.product }}</strong> &middot; {{ notice.copyright }}.
+      {#- The product's own name, linking to its source. Section 13 of the
+          License asks a modified version offered over a network to offer its
+          Corresponding Source; a notice that names the product without saying
+          where it came from leaves a reader of a derived instance to go
+          looking for it. -#}
+      <strong><a href="{{ notice.source_url }}">{{ notice.product }}</a></strong>
+      &middot; {{ notice.copyright }}.
       {{ notice.terms }} {{ notice.warranty }}
       <a href="{{ notice.licence_url }}" rel="license">{{ notice.licence_name }}</a>
     </p>
