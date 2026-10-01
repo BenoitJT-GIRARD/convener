@@ -1,6 +1,19 @@
 # Which dependency trees Dependabot watches, and what a duplicate does with
 # this file.
 #
+# Merging one of its pull requests
+# -------------------------------
+# Squash it with a message of your own, never the one GitHub offers. The
+# offer carries the body of Dependabot's own commit, which ends in
+# `Signed-off-by:` and `Co-authored-by:` trailers -- and
+# `convener-check-commits` refuses an attribution trailer outright, so the
+# `commits` gate goes red on the merge itself. One such merge has already
+# happened here. The gate reads only the range under review, so the next
+# push is green again and the message stays in the history as the one commit
+# that does not follow the grammar; the way to not add a second is:
+#
+#     gh pr merge <n> --squash --body "" --delete-branch
+#
 # Every surface with a lockfile is audited, and only two were updated
 # ------------------------------------------------------------------
 # Seven dependency trees are committed here, and every one of them already

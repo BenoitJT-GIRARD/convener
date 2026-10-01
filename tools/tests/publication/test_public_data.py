@@ -362,19 +362,57 @@ def test_no_recording_in_the_shipped_file_sits_on_a_refusal() -> None:
     speakers = safe_load(path.read_text(encoding="utf-8"))
     assert isinstance(speakers, list)
 
-    carrying = [s for s in speakers if s.get("youtube_url")]
-    assert carrying, (
-        "no row in the shipped file carries a recording link at all, so "
-        "this guard has nothing to read -- it is vacuous again, which is "
-        "the defect it was written to leave behind"
-    )
-    for entry in carrying:
+    for entry in [s for s in speakers if s.get("youtube_url")]:
         assert entry.get("publication", {}).get("consent") != "refused", (
             f"{entry['id']} carries a recording link and its speaker "
             "refused. Clear the link when a consent is withdrawn -- "
             "`to_public` would keep it out of the feed today, but the link "
             "is in a file that is read, copied and hand-edited, and the "
             "refusal is the whole point"
+        )
+
+
+def test_the_example_exercises_the_refusal_this_rule_is_about() -> None:
+    """The non-vacuity, where it belongs.
+
+    The rule above reads this repository's own records, which is where it
+    has to be -- it is the rule, and it is about live data. But it used to
+    *also* insist that at least one row carried a recording link, so that a
+    passing run meant something had been checked. On this repository that
+    holds: `exm-001` and `exm-003` carry one. On a duplicate it cannot. A
+    series that has not yet published a recording has no row to read, and no
+    amount of correctness makes one appear -- so the assertion refused every
+    instance derived from this product, for having run no seminars yet.
+
+    So the demand moves here, onto the example the product ships, which
+    carries three. The rule is exercised against data that always exists;
+    what it guards stays pointed at data that matters.
+    """
+    from convener_ops.declaration.paths import repo_root
+    from convener_ops.declaration.yaml_safe import safe_load
+
+    path = (
+        repo_root()
+        / "examples"
+        / "the-example-collective"
+        / "instance"
+        / "data"
+        / "speakers.yml"
+    )
+    speakers = safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(speakers, list)
+
+    carrying = [s for s in speakers if s.get("youtube_url")]
+    assert carrying, (
+        "no row of the worked example carries a recording link, so the rule "
+        "above is exercised against nothing anywhere -- it is vacuous, which "
+        "is the defect that demand was written to leave behind"
+    )
+    for entry in carrying:
+        assert entry.get("publication", {}).get("consent") != "refused", (
+            f"{entry['id']} in the worked example carries a recording link "
+            "while its speaker refused, so the example no longer shows the "
+            "state the rule forbids"
         )
 
 

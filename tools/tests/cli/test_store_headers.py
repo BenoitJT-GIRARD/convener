@@ -16,8 +16,6 @@ looking at.
 
 from __future__ import annotations
 
-import pytest
-
 from convener_ops.cli import store
 
 FALLBACK = "# a fresh file gets this\n"
@@ -83,18 +81,44 @@ def test_the_speakers_writer_keeps_the_header_the_sweep_used_to_delete() -> None
     assert store.SPEAKERS_HEADER not in written
 
 
-@pytest.mark.shipped_data
-def test_the_shipped_speakers_file_still_carries_its_own_explanation() -> None:
+def test_the_example_speakers_file_still_carries_its_own_explanation() -> None:
     """An anchor, because this one was lost once and nothing noticed for a
     day. It is prose rather than a value, so nothing else in this suite would
-    miss it."""
-    from convener_ops.declaration.paths import DATA_DIR, repo_root
+    miss it.
 
-    text = (repo_root() / DATA_DIR / "speakers.yml").read_text(encoding="utf-8")
+    **It reads `examples/`, and that is a correction.** It used to read this
+    repository's own `instance/data/speakers.yml`, which is the example only
+    here -- on a duplicate that file holds a real series, whose speakers are
+    real people and whose header says nothing of the kind. So the anchor
+    could not pass on any instance derived from this product, and
+    `taking-an-update.md` names `sh gates.sh` as the verification to run
+    before pushing a descent: the documented check was red on every
+    duplicate, for a property that was never true of one.
+
+    `examples/the-example-collective/` is product-owned and ships with every
+    clone, so reading it asks the same question everywhere -- does the
+    worked example still explain that nobody in it is real -- and gets the
+    same answer.
+
+    What guards a *live* instance's header is not this: it is
+    `store.under_its_own_header` and the four readings above it, which hold
+    a writer to whatever header the file it is rewriting already had.
+    """
+    from convener_ops.declaration.paths import repo_root
+
+    text = (
+        repo_root()
+        / "examples"
+        / "the-example-collective"
+        / "instance"
+        / "data"
+        / "speakers.yml"
+    ).read_text(encoding="utf-8")
     header = [line for line in text.split("\n")[:80] if line.lstrip().startswith("#")]
 
     assert len(header) > 20, (
-        "instance/data/speakers.yml has lost its header again. It explains "
-        "that nobody in the file is real, which is the one thing a reader "
-        "needs to know before reading it -- see this module's own docstring"
+        "examples/the-example-collective/instance/data/speakers.yml has lost "
+        "its header again. It explains that nobody in the file is real, "
+        "which is the one thing a reader needs to know before reading it -- "
+        "see this module's own docstring"
     )
