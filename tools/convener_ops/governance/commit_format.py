@@ -32,7 +32,9 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess  # nosec B404
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final
 
@@ -422,6 +424,31 @@ def check_commits() -> int:
 NO_PARENT: Final = "0" * 40
 
 
+#: `git log`'s own option for "only this branch's own commits", and the one
+#: option every caller of `log_range` inherits rather than spelling out.
+#:
+#: **A repository answers for the commits it wrote, not for the ones it
+#: fetched.** Without this, a duplicate that merges an upstream release puts
+#: every commit of that release under its own grammar check -- and the first
+#: one that fails turns *its* `Quality` red for something it did not write and
+#: cannot fix without rewriting another repository's history. That is the same
+#: argument `check_commits` already makes for not judging this project's own
+#: phase 1, applied across a repository boundary instead of across time: a
+#: check that demanded the past be rewritten would be turned off rather than
+#: obeyed.
+#:
+#: It is not an amnesty. A merge commit stays under review -- it is this
+#: branch's own -- and so does every commit made here. What leaves the range
+#: is the second-parent side of a merge, which is another branch's work, judged
+#: where it was written: on its own pull request, where `base` names that
+#: branch's own starting point and the range covers exactly its commits.
+#:
+#: Named here, in the value `convener-commit-range` prints, so that
+#: `quality.yml` and `gates.sh` cannot be given different `git log` options --
+#: which is half of the defect this constant was added for.
+FIRST_PARENT: Final = "--first-parent"
+
+
 def log_range(base: str, before: str, head: str) -> list[str]:
     """The `git log` arguments naming exactly the commits under review.
 
@@ -439,12 +466,85 @@ def log_range(base: str, before: str, head: str) -> list[str]:
     repository: the arguments are handed to `git log` and the commits that come
     back are counted, so a range that resolves to nothing fails there rather
     than passing in CI.
+
+    Every shape carries `FIRST_PARENT` -- see that constant for why a
+    repository answers for its own commits and not for the ones a merge
+    brought in.
     """
     head = head.strip() or "HEAD"
     start = base.strip() or before.strip()
     if not start or not start.strip("0"):
-        return ["-1", head]
-    return [f"{start}..{head}"]
+        return [FIRST_PARENT, "-1", head]
+    return [FIRST_PARENT, f"{start}..{head}"]
+
+
+#: Where a run with no GitHub event behind it looks for its starting point, in
+#: order, stopping at the first that names a commit.
+#:
+#: `@{u}` is the branch's own upstream, which is literally what the next push
+#: will be measured against, so a local run and the `push` run it precedes
+#: read the same commits. `origin/HEAD` answers for a branch that has never
+#: been pushed and therefore has no upstream yet -- the ordinary state of work
+#: in progress -- and selects what a pull request from it would, which is the
+#: run that will actually judge it.
+_LOCAL_STARTS: Final = ("@{u}", "origin/HEAD")
+
+
+def _adds_commits(name: str) -> bool:
+    """Whether `name..HEAD` names at least one commit, on the first-parent
+    line, in the repository `git` is run from.
+
+    One question, not two, and deliberately the *stronger* one. A starting
+    point that exists but selects nothing is worse than no starting point at
+    all: `convener-check-commits` reads an empty stream, prints "0 commit
+    message(s) OK" and the gate goes green having verified nothing -- the
+    exact failure `tests/governance/test_commit_range.py` was written
+    against, and the one an earlier draft of `local_start` reintroduced by
+    offering `origin/HEAD` on a branch that had not committed yet. `rev-list`
+    answers both halves: an unknown ref is a non-zero exit, a known one that
+    adds nothing is a count of zero.
+    """
+    result = subprocess.run(  # nosec B603 B607
+        ["git", "rev-list", "--count", FIRST_PARENT, f"{name}..HEAD"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        return False
+    return result.stdout.strip() not in ("", "0")
+
+
+def local_start(adds_commits: Callable[[str], bool] = _adds_commits) -> str:
+    """The starting point for a run with no GitHub event, or `""` if the
+    repository offers none that selects anything.
+
+    **Why this exists.** `log_range` falls back to `-1 head` when it is given
+    no starting point, which is right for the one case it was written for --
+    the first push to a branch, where there is genuinely nothing to subtract
+    from. Run by hand there is no event either, so `gates.sh` took that same
+    fallback and checked **one** commit while the push it was verifying
+    checked thirty-six. The gate that opens by promising it runs "every gate
+    `quality.yml` runs, one target each" answered a narrower question than CI
+    without saying so, and a duplicate taking a release got a red run on a
+    commit its own green verification could not reach.
+
+    Erring towards too few commits is still the safe direction, and a run
+    that finds no usable starting point still ends at `-1 HEAD` -- one real
+    commit, never none. That is why the question asked of each candidate is
+    "does it select anything" rather than "does it exist": on a branch with
+    no commits of its own, `origin/HEAD` exists and selects nothing, and
+    offering it would turn this fix into the very defect it is for.
+
+    `adds_commits` is injected so the tests can drive every branch without a
+    remote; nothing in the product passes it.
+    """
+    for name in _LOCAL_STARTS:
+        if adds_commits(name):
+            return name
+    return ""
 
 
 def commit_range() -> int:
@@ -454,14 +554,17 @@ def commit_range() -> int:
     and nothing else. Reading the three values from the environment rather
     than from `sys.argv` keeps the workflow's `env:` block the single place
     the GitHub event is named.
+
+    With no event in the environment -- a run by hand, `gates.sh` -- the
+    starting point comes from the repository instead (`local_start`), so that
+    the two ask the same question. Only `BEFORE` is filled in that way, never
+    `BASE`: a pull request's base is a fact about a pull request, and
+    inventing one locally would claim a review that is not happening.
     """
-    print(
-        " ".join(
-            log_range(
-                os.environ.get("BASE", ""),
-                os.environ.get("BEFORE", ""),
-                os.environ.get("HEAD", ""),
-            )
-        )
-    )
+    base = os.environ.get("BASE", "")
+    before = os.environ.get("BEFORE", "")
+    head = os.environ.get("HEAD", "")
+    if not base.strip() and not before.strip():
+        before = local_start()
+    print(" ".join(log_range(base, before, head)))
     return 0

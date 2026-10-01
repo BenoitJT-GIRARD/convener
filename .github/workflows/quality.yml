@@ -294,10 +294,13 @@ jobs:
           # Intentional, not an oversight: `commit_format.commit_range()`'s
           # own docstring says the workflow "reads them unquoted into
           # `git log`, so this prints one line and nothing else."
-          # `log_range()` returns either one token (`"start..head"`) or two
-          # (`"-1 head"`, when there is no commit to subtract from) --
-          # quoting `$range` would pass `"-1 head"` to `git log` as a
-          # single bad revision instead of two arguments. Found by
+          # `log_range()` returns `--first-parent` and then either one
+          # token (`"start..head"`) or two (`"-1 head"`, when there is no
+          # commit to subtract from) -- quoting `$range` would hand all of
+          # that to `git log` as one bad revision. Every `git log` option
+          # this check uses comes from that function and none is spelled
+          # here, so this file and `gates.sh` cannot be given different
+          # ones: they were, and a duplicate paid for it. Found by
           # `actionlint` (the workflow-schema job below), not by this
           # project's own tests: PyYAML has no opinion on shell inside a
           # `run:` block.
