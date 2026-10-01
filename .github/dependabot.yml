@@ -14,6 +14,14 @@
 #
 #     gh pr merge <n> --squash --body "" --delete-branch
 #
+# That one commit went on to turn a *duplicate's* `Quality` red. Taking a
+# release down into an instance merges this history into theirs, and the
+# whole merged range was under their own grammar check -- so they got an
+# error naming a commit they had not written and could not fix. The range
+# is `--first-parent` now (`commit_format.FIRST_PARENT`): a repository
+# answers for the commits it wrote, not for the ones it fetched. The
+# instruction above still stands, because the commit is still wrong here.
+#
 # Every surface with a lockfile is audited, and only two were updated
 # ------------------------------------------------------------------
 # Seven dependency trees are committed here, and every one of them already

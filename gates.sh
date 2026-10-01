@@ -200,9 +200,17 @@ case "${1:-all}" in
   integrations) cd tools && uv run --frozen convener-check-config ;;
   commits)   range="$(cd tools && uv run --frozen convener-commit-range)"
              # Unquoted on purpose, the way `quality.yml` spells it: the
-             # range is either one token (`start..head`) or two
-             # (`-1 head`), and quoting would hand `git log` one bad
-             # revision instead of two arguments. See `commit_format`.
+             # range is `--first-parent` and then one token
+             # (`start..head`) or two (`-1 head`), and quoting would hand
+             # `git log` one bad revision instead of several arguments.
+             #
+             # Every option comes from `convener-commit-range`, and so
+             # does the starting point: with no GitHub event in the
+             # environment that command reads the branch's own upstream
+             # (`commit_format.local_start`). It did not, and fell back to
+             # `-1 HEAD` -- so this gate read one commit where the push it
+             # was verifying read thirty-six, and answered green to a
+             # question it had not asked. See `commit_format`.
              # shellcheck disable=SC2086
              git log --format=%B%x00 $range | (cd tools && uv run --frozen convener-check-commits) ;;
   generated) cd tools && uv run --frozen convener-register --check \
