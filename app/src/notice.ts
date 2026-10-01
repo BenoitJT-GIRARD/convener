@@ -33,6 +33,13 @@ export interface ProductNotice {
   /** The software's name -- what a fork renames, and the only field of this
    *  notice a fork may change (TRADEMARK.md). */
   product: string;
+  /** Where this product's source is. The name above links to it: section 13
+   *  of the licence asks a modified version offered over a network to offer
+   *  its Corresponding Source, and a notice that names the product without
+   *  saying where it came from leaves a reader of a derived instance to go
+   *  looking. It is the product's address and never an instance's -- the same
+   *  reason every other field here carries no instance value. */
+  source_url: string;
   /** The copyright notice section 0 of the licence asks for. */
   copyright: string;
   /** That a licensee may convey the work, and under what. */

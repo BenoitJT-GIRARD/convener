@@ -117,6 +117,7 @@ AGPL_SHA256 = "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
 #: it that could drift on its own.
 FIELDS = (
     "product",
+    "source_url",
     "copyright",
     "terms",
     "warranty",
@@ -769,4 +770,64 @@ def test_the_cockpit_prints_every_field_of_the_notice() -> None:
     assert missing == [], (
         f"{COCKPIT_LAYOUT.name} no longer prints {missing} -- a footer that "
         "displays part of a notice displays no Appropriate Legal Notice"
+    )
+
+
+def test_the_notice_points_at_the_repository_the_operator_is_told_to_add() -> None:
+    """`source_url` is where this product's source is, and three other files
+    already say where that is.
+
+    `declarations/standing-up.yml` hands an operator the `upstream` remote to
+    add, `convener_ops.declaration.user_agent` names it in every outbound
+    request, and the scheduled operations guard on it so they do not run on
+    the product's own repository. A notice naming a fourth address would send
+    a reader of a derived instance somewhere the product itself does not
+    recognise -- which is the one thing this field exists to prevent.
+    """
+    import json
+
+    from convener_ops.declaration import user_agent
+
+    notice = json.loads((ROOT / "NOTICE.json").read_text(encoding="utf-8"))
+    url = notice["source_url"]
+    standing_up = (ROOT / "declarations" / "standing-up.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert url.startswith("https://github.com/"), (
+        f"NOTICE.json's source_url is {url!r}, which is not an address a "
+        "reader can clone from"
+    )
+    assert f"{url}.git" in standing_up, (
+        f"NOTICE.json points a reader at {url}, but "
+        "declarations/standing-up.yml hands an operator a different "
+        "repository as their upstream remote"
+    )
+    assert url in user_agent.USER_AGENT, (
+        f"NOTICE.json points a reader at {url}, but the user agent every "
+        "outbound request carries names a different one"
+    )
+
+
+def test_the_product_s_own_name_is_the_link_in_both_footers() -> None:
+    """Both renderings, read as text.
+
+    The notice is one declaration and two toolchains, and they have drifted
+    before -- which is what `NOTICE.json`'s own comment spends a paragraph
+    on. A field added to the declaration and wired into one footer only
+    leaves the other saying less than it is obliged to.
+    """
+    cockpit = (ROOT / "app" / "src" / "components" / "Layout.tsx").read_text(
+        encoding="utf-8"
+    )
+    showcase = (ROOT / "site" / "src" / "_includes" / "layout.njk").read_text(
+        encoding="utf-8"
+    )
+
+    assert "notice.source_url" in cockpit, (
+        "the cockpit's footer names the product without linking it to the "
+        "source -- see NOTICE.json's own comment on why the link is there"
+    )
+    assert "notice.source_url" in showcase, (
+        "the showcase's footer names the product without linking it to the source"
     )
