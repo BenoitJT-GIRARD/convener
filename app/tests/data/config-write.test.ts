@@ -163,10 +163,26 @@ describe('writing config.yml without deleting the reasoning in it', () => {
     // defaulting it, so the writer falls back to a fresh dump and never
     // reaches the question. Read here so the absent branch stays absent for a
     // reason somebody can check.
-    const without = SHIPPED.split('\n')
-      .filter(line => !line.startsWith('instructions:'))
-      .join('\n');
+    // The key *and whatever is indented under it*. Filtering the one line
+    // works only while the value is a scalar, which it is in the example
+    // this repository ships (`instructions: ''`) and is not on an instance
+    // that has joining instructions to give: those are a block, and removing
+    // its first line leaves two orphaned indented lines, so `parseConfig`
+    // refused the indentation rather than the missing key. The reading then
+    // failed on every instance that had filled the field in — for having
+    // filled it in.
+    const kept: string[] = [];
+    let inside = false;
+    for (const line of SHIPPED.split('\n')) {
+      if (line.startsWith('instructions:')) {
+        inside = true;
+        continue;
+      }
+      if (inside && /^[ \t]/.test(line)) continue;
+      inside = false;
+      kept.push(line);
+    }
 
-    expect(() => parseConfig(without)).toThrow(/missing "instructions"/);
+    expect(() => parseConfig(kept.join('\n'))).toThrow(/missing "instructions"/);
   });
 });
