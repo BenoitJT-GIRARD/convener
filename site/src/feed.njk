@@ -48,7 +48,7 @@ permalink: "/feed.xml"
 <title>{{ e.title }}</title>
 <link>{{ itemUrl }}</link>
 <guid isPermaLink="true">{{ itemUrl }}</guid>
-<pubDate>{{ e.date | rfc822 }}</pubDate>
+<pubDate>{{ e | rfc822 }}</pubDate>
 <description>{{ itemDescription }}</description>
 </item>
 {%- endfor %}

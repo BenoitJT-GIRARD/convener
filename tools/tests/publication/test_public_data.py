@@ -87,6 +87,12 @@ _EXPECTED_PUBLIC_COLUMNS = frozenset(
         "id",
         "title",
         "date",
+        # Said here deliberately, which is what this set is for. `time` was
+        # classified publishable and mapped to no column, so no edition's
+        # hour reached the feed -- and every surface downstream substituted
+        # the series' standing 12:30 for it, publishing an edition agreed
+        # for 18:00 at the wrong hour.
+        "time",
         "status",
         "abstract",
         "photo_url",

@@ -5,7 +5,7 @@ import {
   toPublicFields,
   type PublicSpeakerFields,
 } from '../state/consent';
-import { dateLine, dateTimeLine, roomText } from '../state/derived';
+import { dateTimeLine, roomText, startLocal } from '../state/derived';
 import { agreedSlot, offeredDatesLine } from '../state/dates';
 import { eventIdOf } from '../state/agenda';
 import type { Config, Speaker } from '../data/types';
@@ -185,14 +185,20 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       youtube_url: s.youtube_url,
       forum_thread: s.forum_thread,
       signup_link: signupLink(s.edition_code),
-      // "Thursday, 12 March 2026 at 12:30 CET" -- the real Europe/Paris
-      // offset for this edition's own date, computed rather than a hand-typed
-      // zone label (`state/derived.ts::dateLine`'s own docstring). Every
-      // template stating a date and time together reads this rather than
-      // pasting `{{ speaker.date }}` beside a literal "CET": the reference
-      // poster's own defect, hard-typing the zone regardless of season, was
-      // wrong for three of this project's own five fixture editions.
-      when: dateLine(s.date),
+      // "Thursday, 8 October 2026 at 18:00 CEST" -- this edition's own
+      // date, its own hour and the real Europe/Paris offset for both,
+      // computed rather than hand-typed (`state/derived.ts::dateTimeLine`'s
+      // own docstring). Every template stating a date and time together
+      // reads this rather than pasting `{{ speaker.date }}` beside a literal
+      // "CET": the reference poster's own defect, hard-typing the zone
+      // regardless of season, was wrong for three of this project's own five
+      // fixture editions.
+      //
+      // `startLocal`, not the standing hour this used to compose from. The
+      // record carries the hour agreed in the negotiation, and an edition
+      // held at 18:00 was announced at 12:30 on every surface that read
+      // this field.
+      when: dateTimeLine(s.date, startLocal(s.time)),
       // The negotiation, as a message names it. These two are what make a
       // draft follow the dates rather than a field that is empty until three
       // statuses later: the invitation asks about the evenings on offer, and
@@ -215,7 +221,11 @@ function buildContext(ctx: SubstitutionContext): Resolved {
     r.host_1 = { name: s.host_1 };
     r.host_2 = { name: s.host_2 };
     r.proposed_by = { name: s.proposed_by };
-    r.public = { ...toPublicFields(s), signup_link: signupLink(s.edition_code), when: dateLine(s.date) };
+    r.public = {
+      ...toPublicFields(s),
+      signup_link: signupLink(s.edition_code),
+      when: dateTimeLine(s.date, startLocal(s.time)),
+    };
   }
   if (ctx.today) r.today = ctx.today;
   return r;

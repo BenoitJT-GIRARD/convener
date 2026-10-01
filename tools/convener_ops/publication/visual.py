@@ -291,6 +291,7 @@ __all__ = [
     "is_wide",
     "paris_standing_start",
     "render_announcement",
+    "start_local",
 ]
 
 #: Same convention as `brand.INSTANCE_PATH`: relative to the repository root,
@@ -300,9 +301,15 @@ __all__ = [
 #: with the product's charter instead.
 BRAND_PATH: Final = brand.INSTANCE_PATH
 
-#: This project's one standing start time, Europe/Paris local. The
-#: JavaScript twin of this exact constant is
-#: `site/.eleventy.js::STANDING_START_LOCAL`.
+#: The series' *standing* start time, Europe/Paris local -- the hour an
+#: edition runs at when its own record names none. The JavaScript twin of
+#: this exact constant is `site/.eleventy.js::STANDING_START_LOCAL`.
+#:
+#: A convention, not a rule, and the difference is the whole of `start_local`
+#: below: the date negotiation offers evenings with their own hours and
+#: `lockDate` (`app/src/state/dates.ts`) copies the agreed one onto the
+#: record, so an edition's real start is a field. This constant answers only
+#: for a record that has not reached that point.
 STANDING_START_LOCAL: Final = time(12, 30)
 
 #: Fixed English names, not `date.strftime('%A'/'%B')`: `strftime`'s day
@@ -336,6 +343,49 @@ _MONTHS: Final = (
 )
 
 
+def start_local(recorded: str | None) -> time:
+    """The hour an edition actually starts, Europe/Paris local: the one its
+    own record names, or `STANDING_START_LOCAL` when it names none.
+
+    The one place on this side that decides what an edition's start time
+    *is*, so that no surface can answer the question differently from
+    another. `app/src/state/derived.ts::startLocal` and
+    `site/.eleventy.js::eventStartLocal` are the other two readings, bound to
+    this one by `tools/tests/fixtures/edition-start.json` (D-14).
+
+    **Why this function exists at all.** Every statement of an edition's
+    time used to come from the constant: `date_line` substituted it,
+    `agenda.py::_edition_start` combined it, the showcase build hard-typed
+    it. The record has carried the agreed hour since `lockDate`
+    (`app/src/state/dates.ts`) began copying it off the accepted slot, and
+    the negotiation offers evenings with hours of their own -- the worked
+    example this repository ships offers 18:00. So an edition agreed for
+    18:00 was announced, postered and *calendared* at 12:30:
+    `instance/public-data/agenda-internal.ics` carried
+    `DTSTART:20261008T103000Z` for an edition whose record said `18:00`,
+    committed, five and a half hours out, for a seminar a week away.
+
+    An empty string is the ordinary state of a record whose date is not
+    locked yet, and the convention is the right answer there -- a draft
+    announcement for an edition with no agreed hour should read the way the
+    series usually runs. Anything else is refused rather than guessed:
+    `governance.validate` holds `time` to `HH:MM` and *Validate data* is a
+    gate, so a value of another shape means the record reached here without
+    passing it, and publishing an invented hour would be worse than
+    stopping.
+    """
+    if not recorded:
+        return STANDING_START_LOCAL
+    try:
+        return time.fromisoformat(recorded)
+    except ValueError as exc:
+        raise ValueError(
+            f"{recorded!r} is not an HH:MM start time -- see "
+            "convener_ops.governance.validate.TIME_RE, which the "
+            "*Validate data* gate enforces"
+        ) from exc
+
+
 def paris_standing_start(talk_date: date) -> tuple[str, str]:
     """The real Europe/Paris UTC offset and CET/CEST abbreviation for this
     project's standing 12:30 local start time, on `talk_date`.
@@ -352,6 +402,15 @@ def paris_standing_start(talk_date: date) -> tuple[str, str]:
     reads the IANA database directly and returns exactly 'CET' or 'CEST'
     for this zone, unambiguous at 12:30 because Europe/Paris's own DST
     transitions always happen in the small hours.
+
+    It keeps probing at the standing hour even for an edition that runs at
+    another one, and that is not an oversight left behind by `start_local`:
+    the offset asked for here is the offset in force on `talk_date`, and
+    Europe/Paris changes it between 02:00 and 03:00. Any hour a seminar is
+    plausibly held at falls on the same side of that change as 12:30 does,
+    so one probe answers for all of them -- whereas probing at the edition's
+    own hour would put this function's answer at the mercy of the one hour
+    per year that does not exist and the one that happens twice.
 
     Returns `(offset, abbreviation)`, e.g. `("+01:00", "CET")` or
     `("+02:00", "CEST")`.
@@ -371,28 +430,35 @@ def paris_standing_start(talk_date: date) -> tuple[str, str]:
     return f"{sign}{hours:02d}:{minutes:02d}", abbreviation
 
 
-def date_line(talk_date: date) -> str:
+def date_line(talk_date: date, start: time) -> str:
     """ "Thursday, 12 March 2026 at 12:30 CET" -- the corrected twin of the
     reference poster's own "Thursday, the DATE at 12h30 (CET)".
 
-    Two corrections, both computed rather than assumed: the weekday name
+    Three corrections, all computed rather than assumed: the weekday name
     comes from `talk_date.weekday()`, not a fixed "Thursday" left over from
-    whichever edition the original was drawn for, and the zone label comes
-    from `paris_standing_start` rather than a hard-typed "(CET)". The
-    "12h30 (CET)" spelling is not reproduced either -- this project's own
-    showcase already settled on "12:30 CET"/"12:30 CEST" with no parentheses
-    (`site/.eleventy.js::parisStandingStart`'s own `label`), and stating
-    the time two different ways on two surfaces of the same announcement
-    would be its own small disagreement.
+    whichever edition the original was drawn for; the zone label comes
+    from `paris_standing_start` rather than a hard-typed "(CET)"; and the
+    hour comes from `start`, which a caller reads off the record through
+    `start_local`. The "12h30 (CET)" spelling is not reproduced either --
+    this project's own showcase already settled on "12:30 CET"/"12:30 CEST"
+    with no parentheses (`site/.eleventy.js::parisStandingStart`'s own
+    `label`), and stating the time two different ways on two surfaces of
+    the same announcement would be its own small disagreement.
+
+    `start` is required and has no default, deliberately. It held
+    `STANDING_START_LOCAL` as a default in all but name for as long as this
+    function took a date alone, which is how every caller came to state a
+    convention where the record held a fact -- see `start_local` for what
+    that cost. A caller that has no record to read says so by passing
+    `start_local("")`, in one visible place, rather than by omitting an
+    argument.
     """
     weekday = _WEEKDAYS[talk_date.weekday()]
     month = _MONTHS[talk_date.month - 1]
     _, abbreviation = paris_standing_start(talk_date)
-    hh = STANDING_START_LOCAL.hour
-    mm = STANDING_START_LOCAL.minute
     return (
         f"{weekday}, {talk_date.day} {month} {talk_date.year} at "
-        f"{hh:02d}:{mm:02d} {abbreviation}"
+        f"{start.hour:02d}:{start.minute:02d} {abbreviation}"
     )
 
 
@@ -992,10 +1058,18 @@ class Announcement:
     announcement *is*. `speaker_affiliation` may be `""` (a speaker with
     none to show), which `_frame_html` handles by omitting the second
     caption line entirely rather than rendering an empty one.
+
+    `talk_time` is on that same footing, and was not here at all until a
+    poster was found printing the series' standing hour over an edition
+    agreed for another one. A caller resolves it with `start_local` off the
+    record, so a poster for an edition with no agreed hour still reads the
+    way the series usually runs -- but it says so by resolving the field,
+    not by this class quietly supplying a time of its own.
     """
 
     title: str
     talk_date: date
+    talk_time: time
     speaker_name: str
     speaker_affiliation: str
     event_id: str
@@ -1027,9 +1101,15 @@ class Announcement:
 #: drew a different QR, and failed
 #: `render-and-compare` against reference images no substitution can
 #: convert. A committed image is exactly where an identity must not be.
+#:
+#: The standing hour, spelled out through the constant rather than typed:
+#: the reference images are versioned, so this fixture holds the ordinary
+#: case on purpose and an edition at another hour is read where it belongs,
+#: in `tools/tests/fixtures/edition-start.json`.
 FIXTURE_ANNOUNCEMENT: Final = Announcement(
     title="On analytical engines",
     talk_date=date(2026, 3, 12),
+    talk_time=STANDING_START_LOCAL,
     speaker_name="Ada Lovelace",
     speaker_affiliation="Analytical Engines Institute",
     event_id="mrg-9",
@@ -1068,7 +1148,7 @@ def render_announcement(
     identity = load_identity(root)
     safe_title = html.escape(announcement.title) if announcement.title else "Talk title"
     title_size = _num(_title_font_size(announcement.title or "Talk title"))
-    when = date_line(announcement.talk_date)
+    when = date_line(announcement.talk_date, announcement.talk_time)
     doc_title = html.escape(
         f"{identity.strapline} — {announcement.title}"
         if announcement.title

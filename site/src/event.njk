@@ -69,18 +69,21 @@ eleventyComputed:
 #}
 {% set eventUrl = page.url | absoluteUrl %}
 {#
-  The series' standing start time is 12:30 *Europe/Paris
-  local time*, not a fixed UTC offset -- `+01:00` (CET) roughly late
-  October to late March, `+02:00` (CEST) the rest of the year.
-  `parisStandingStart` (site/.eleventy.js) derives both the JSON-LD
-  `startDate` and the visible "12:30 CET"/"12:30 CEST" label below from
-  the edition's own date, once, so the two cannot disagree the way a
-  hard-typed `+01:00` used to (silently wrong on three of this project's
-  five fixture editions). See that filter's own comment for why `time` --
-  the field that would let a per-edition value override this standing
-  one -- does not reach this data yet.
+  An edition's start is a *Europe/Paris local* time, not a fixed UTC
+  offset -- `+01:00` (CET) roughly late October to late March, `+02:00`
+  (CEST) the rest of the year. `eventStart` (site/.eleventy.js) derives
+  both the JSON-LD `startDate` and the visible label below from this
+  edition's own date and its own hour, once, so the two cannot disagree
+  the way a hard-typed `+01:00` used to (silently wrong on three of this
+  project's five fixture editions).
+
+  The hour comes off the row, through `eventStartLocal`, falling back to
+  the series' standing 12:30 for a row that carries none. It was the
+  standing hour unconditionally until an edition the record held at 18:00
+  was published here at 12:30 -- in the `startDate` a search engine reads
+  as well as in the label a reader does.
 #}
-{% set parisTime = event.date | parisStandingStart %}
+{% set parisTime = event | eventStart %}
 
 {#
   This same fallback -- abstract, else

@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import subprocess
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -1782,14 +1783,17 @@ def test_the_paris_offset_and_label_agree_across_every_edition_and_the_dst_bound
         )
         data = _json_ld(page)
         offset, abbreviation = _expected_paris_start(str(event["date"]))
+        start = _fixture_start(event)
         seen_abbreviations.add(abbreviation)
-        assert data["startDate"] == f"{event['date']}T12:30:00{offset}", (
-            f"{event_id}'s startDate is {data['startDate']!r}, expected an "
-            f"offset of {offset!r} for {event['date']} in Europe/Paris"
+        assert data["startDate"] == f"{event['date']}T{start}:00{offset}", (
+            f"{event_id}'s startDate is {data['startDate']!r}, expected "
+            f"{start} at an offset of {offset!r} for {event['date']} in "
+            "Europe/Paris"
         )
-        assert f"12:30 {abbreviation}" in page, (
-            f"{event_id}'s page does not visibly state '12:30 {abbreviation}', "
-            f"even though its structured data's startDate carries offset {offset}"
+        assert f"{start} {abbreviation}" in page, (
+            f"{event_id}'s page does not visibly state "
+            f"'{start} {abbreviation}', even though its structured data's "
+            f"startDate carries {start} at offset {offset}"
         )
     assert seen_abbreviations == {"CET", "CEST"}, (
         f"{_EVENTS_FIXTURE.as_posix()}'s editions all fall in the same "
@@ -1801,10 +1805,21 @@ def test_the_paris_offset_and_label_agree_across_every_edition_and_the_dst_bound
     upcoming_id = _the_one_scheduled_event_id()
     upcoming = next(e for e in events if str(e["id"]).lower() == upcoming_id)
     _, upcoming_abbreviation = _expected_paris_start(str(upcoming["date"]))
+    upcoming_start = _fixture_start(upcoming)
     home_page = (built_site / "index.html").read_text(encoding="utf-8")
-    assert f"12:30 {upcoming_abbreviation}" in home_page, (
+    assert f"{upcoming_start} {upcoming_abbreviation}" in home_page, (
         "the homepage's own 'Up next' card does not visibly state "
-        f"'12:30 {upcoming_abbreviation}' for {upcoming_id}"
+        f"'{upcoming_start} {upcoming_abbreviation}' for {upcoming_id}"
+    )
+    # The scheduled edition carries an hour of its own in the committed
+    # fixture, so this pair of assertions is the end-to-end reading: a build
+    # that went back to composing from the standing constant would state
+    # 12:30 here and fail, which is the regression the whole change exists
+    # to stop.
+    assert upcoming_start != "12:30", (
+        f"{_EVENTS_FIXTURE.as_posix()}'s scheduled edition runs at the "
+        "standing hour, so nothing above can tell a build that reads the "
+        "record from one that hard-types the convention"
     )
 
 
@@ -2163,12 +2178,26 @@ def _expected_paris_start(iso_date: str) -> tuple[str, str]:
     return f"{sign}{hours:02d}:{minutes:02d}", abbreviation
 
 
-def _expected_rfc822(iso_date: str) -> str:
+def _fixture_start(event: Mapping[str, Any]) -> str:
+    """The hour this edition should be stated at: its own, or the series'
+    standing 12:30 when it carries none.
+
+    Re-read here rather than imported from
+    `convener_ops.publication.visual.start_local`, for the same reason
+    `_expected_paris_start` re-derives the offset instead of calling
+    `parisStandingStart`: this module checks the built site against an
+    independent computation, and a helper that shared the implementation
+    under test would agree with it however wrong both were.
+    """
+    return str(event.get("time") or "12:30")
+
+
+def _expected_rfc822(iso_date: str, start: str) -> str:
     """The RFC-822/1123 `pubDate` `site/.eleventy.js`'s own `rfc822` filter
     should produce for `iso_date`, computed independently in Python rather
     than by re-implementing that filter's own `Date` arithmetic: the
-    series' standing 12:30 Europe/Paris local start time
-    (`_expected_paris_start`), converted to UTC/GMT -- exactly what
+    edition's own Europe/Paris local start time, on the date's own
+    offset (`_expected_paris_start`), converted to UTC/GMT -- exactly what
     JavaScript's `Date.prototype.toUTCString()` emits. Day and month names
     are a fixed, English lookup table rather than `strftime('%a'/'%b')`:
     those are locale-dependent in Python, and this project has already
@@ -2177,7 +2206,8 @@ def _expected_rfc822(iso_date: str) -> str:
     locale would be exactly that kind of hidden disagreement again.
     """
     year, month, day = (int(part) for part in iso_date.split("-"))
-    local = datetime(year, month, day, 12, 30, 0, tzinfo=_PARIS)
+    hour, minute = (int(part) for part in start.split(":"))
+    local = datetime(year, month, day, hour, minute, 0, tzinfo=_PARIS)
     utc = local.astimezone(UTC)
     weekday = _ENGLISH_WEEKDAYS[utc.weekday()]
     month_name = _ENGLISH_MONTHS[utc.month - 1]
@@ -2227,7 +2257,13 @@ def test_feed_publication_dates_come_from_the_editions_own_date_never_the_clock(
     assert by_link, "feed.xml carries no <item> to check pubDate on"
     for event in events:
         url = _absolute(f"/events/{str(event['id']).lower()}/")
-        assert by_link[url] == _expected_rfc822(str(event["date"]))
+        assert by_link[url] == _expected_rfc822(
+            str(event["date"]), _fixture_start(event)
+        ), (
+            f"{event['id']}'s pubDate disagrees with the instant its own "
+            "startDate states -- a feed and a page naming one edition two "
+            "different hours"
+        )
 
 
 @pytest.fixture(scope="module")

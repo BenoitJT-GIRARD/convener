@@ -22,6 +22,12 @@
  * covered by `test_site.py`'s own RFC-822/JSON-LD assertions -- so this
  * script checks only the one function `.eleventy.js` actually owns:
  * `startDate`'s UTC offset and the visible "12:30 CET"/"12:30 CEST" label.
+ *
+ * The hour is passed in, at the standing value, because this fixture binds
+ * the *seasonal* rule and nothing else. That an edition's hour comes off
+ * its own row is a second rule with a second shared fixture of its own,
+ * `tools/tests/fixtures/edition-start.json`, checked by
+ * `check-edition-start.cjs` beside this file.
  */
 
 const { readFileSync } = require('node:fs');
@@ -43,7 +49,7 @@ let failures = 0;
 for (const testCase of cases) {
   const isoDate = testCase.iso_date;
   const { offset, abbreviation } = testCase;
-  const { startDate, label } = parisStandingStart(isoDate);
+  const { startDate, label } = parisStandingStart(isoDate, '12:30');
   const expectedStart = `${isoDate}T12:30:00${offset}`;
   const expectedLabel = `12:30 ${abbreviation}`;
   if (startDate !== expectedStart) {

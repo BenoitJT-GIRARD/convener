@@ -1,0 +1,50 @@
+[
+  {
+    "why": "an edition agreed for an evening states that evening, not the convention",
+    "iso_date": "2026-10-08",
+    "recorded_time": "18:00",
+    "start_local": "18:00",
+    "offset": "+02:00",
+    "date_line": "Thursday, 8 October 2026 at 18:00 CEST"
+  },
+  {
+    "why": "a record with no agreed hour yet reads the way the series usually runs",
+    "iso_date": "2026-10-08",
+    "recorded_time": "",
+    "start_local": "12:30",
+    "offset": "+02:00",
+    "date_line": "Thursday, 8 October 2026 at 12:30 CEST"
+  },
+  {
+    "why": "the fallback is the convention even in the other season",
+    "iso_date": "2026-03-12",
+    "recorded_time": "",
+    "start_local": "12:30",
+    "offset": "+01:00",
+    "date_line": "Thursday, 12 March 2026 at 12:30 CET"
+  },
+  {
+    "why": "a recorded hour before the standing one, so a passing test cannot be reading 'later than 12:30'",
+    "iso_date": "2026-03-12",
+    "recorded_time": "09:00",
+    "start_local": "09:00",
+    "offset": "+01:00",
+    "date_line": "Thursday, 12 March 2026 at 09:00 CET"
+  },
+  {
+    "why": "a recorded hour equal to the convention is still read off the row",
+    "iso_date": "2025-06-12",
+    "recorded_time": "12:30",
+    "start_local": "12:30",
+    "offset": "+02:00",
+    "date_line": "Thursday, 12 June 2025 at 12:30 CEST"
+  },
+  {
+    "why": "an evening in the winter half, so the hour and the season vary independently",
+    "iso_date": "2025-02-05",
+    "recorded_time": "19:30",
+    "start_local": "19:30",
+    "offset": "+01:00",
+    "date_line": "Wednesday, 5 February 2025 at 19:30 CET"
+  }
+]

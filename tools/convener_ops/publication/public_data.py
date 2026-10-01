@@ -124,16 +124,26 @@ NEVER_PUBLISHED = frozenset(
 #: carries. `links` is a list where every other column is a string and no
 #: consumer of the feed asks for it, so it is permitted and unpublished.
 #:
-#: `time` is the same shape of absence, found while adding structured
-#: event data to the showcase: nothing here maps any column to it, so no
-#: edition's `time` ever reaches `events-public.json` even though it is
-#: classified `PUBLISHABLE_ALWAYS` -- confirmed by regenerating that file
-#: from `instance/data/speakers.yml` and inspecting the output. The site's own
-#: templates (`site/.eleventy.js::parisStandingStart`) read no field for
-#: it either, and say so at the point that would otherwise be silent about
-#: overriding it. Wiring `time` through both sides is a real feature this
-#: project has not built (a per-edition start time other than the series'
-#: standing 12:30), not a bug in this mapping today.
+#: `time` was that same shape of absence and it was not harmless. Nothing
+#: here mapped a column to it, so no edition's `time` reached
+#: `events-public.json` even though it is classified `PUBLISHABLE_ALWAYS`,
+#: and this comment used to call that "a real feature this project has not
+#: built ... not a bug in this mapping today". It was a bug. The feature
+#: *was* built, on every side but this one: the date negotiation offers
+#: evenings with hours of their own, `lockDate` copies the agreed hour onto
+#: the record, and `derived.ts` reads that hour to decide whether an
+#: edition has finished. Only the surfaces that *state* the hour went on
+#: substituting the series' standing 12:30 for it -- so an edition agreed
+#: for 18:00 was announced, postered and calendared at 12:30, and
+#: `instance/public-data/agenda-internal.ics` carried the wrong hour,
+#: committed, for a seminar a week out. Publishing the column is what lets
+#: the three readings (`visual.start_local`, `derived.ts::startLocal`,
+#: `.eleventy.js::eventStartLocal`) read a fact instead of a convention.
+#:
+#: It discloses nothing new. `PUBLISHABLE_ALWAYS` already held it, for the
+#: reason that set exists: the hour a public seminar starts is the
+#: announcement, and withholding it would not protect the speaker, it
+#: would cancel the event.
 #:
 #: `zoom_link` is the same shape of absence for a sharper reason. This
 #: mapping used to carry `"registration_link": "zoom_link"` -- publishing
@@ -154,6 +164,7 @@ PUBLIC_FIELD_SOURCES = {
     "id": "edition_code",
     "title": "title",
     "date": "date",
+    "time": "time",
     "status": "status",
     "abstract": "abstract",
     "photo_url": "photo_url",

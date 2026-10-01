@@ -65,10 +65,43 @@ export function parisToday(): string {
   return parisDayOf(new Date());
 }
 
-/** This project's one standing start time, Europe/Paris local. Mirrors
+/** The series' *standing* start time, Europe/Paris local -- the hour an
+ *  edition runs at when its own record names none. Mirrors
  *  `tools/convener_ops/publication/visual.py::STANDING_START_LOCAL` and
- *  `site/.eleventy.js::STANDING_START_LOCAL`. */
-const STANDING_START_LOCAL = '12:30';
+ *  `site/.eleventy.js::STANDING_START_LOCAL`.
+ *
+ *  Exported for `startLocal` below and for the tests that pin the seasonal
+ *  rule at the ordinary hour; nothing else should read it. A surface that
+ *  states an edition's time reads `startLocal`, because the hour an edition
+ *  runs at is a field on the record and this is only its fallback. */
+export const STANDING_START_LOCAL = '12:30';
+
+/**
+ * The hour an edition actually starts, Europe/Paris local: the one its own
+ * record names, or `STANDING_START_LOCAL` when it names none.
+ *
+ * The one place on this side that decides what an edition's start time *is*.
+ * `tools/convener_ops/publication/visual.py::start_local` and
+ * `site/.eleventy.js::eventStartLocal` are the other two readings, bound to
+ * this one by `tools/tests/fixtures/edition-start.json` (D-14).
+ *
+ * **What it replaced.** `dateLine(isoDate)` used to compose this sentence
+ * from the constant, and `content/render.ts` fed both `speaker.when` and
+ * `public.when` through it -- so every template stating an edition's time
+ * stated the convention, however clearly the record said otherwise. The
+ * record has carried the agreed hour since `dates.ts::lockDate` began
+ * copying it off the accepted slot, `isFinished` below already reads it, and
+ * the negotiation offers evenings at hours of their own. That function is
+ * gone rather than fixed: while a one-argument `dateLine` existed, the next
+ * surface to state a time would have reached for it again.
+ *
+ * An empty string is the ordinary state of a record whose date is not locked
+ * yet, and the convention is the right answer there -- a draft for an
+ * edition with no agreed hour should read the way the series usually runs.
+ */
+export function startLocal(recorded: string): string {
+  return recorded || STANDING_START_LOCAL;
+}
 
 const _WEEKDAYS = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
@@ -132,29 +165,26 @@ export function parisStandingStart(isoDate: string): { offset: string; abbreviat
 /**
  * "Thursday, 12 March 2026 at 12:30 CET" -- the one sentence a drafted
  * announcement states an edition's date and time in, computed rather than
- * assembled by hand so the zone label can never be a stale copy-paste.
- * Mirrors `tools/convener_ops/publication/visual.py::date_line` -- fixed English weekday and
- * month names rather than `toLocaleDateString`, for the same reason that
- * module gives: a rendered page's wording must not depend on the locale of
- * whatever machine renders it.
+ * assembled by hand so neither the zone label nor the hour can be a stale
+ * copy-paste. Mirrors
+ * `tools/convener_ops/publication/visual.py::date_line` -- fixed English
+ * weekday and month names rather than `toLocaleDateString`, for the same
+ * reason that module gives: a rendered page's wording must not depend on
+ * the locale of whatever machine renders it.
  *
  * `''` for an unparseable or empty `isoDate`, so a record with no date yet
  * shows the ordinary `«missing: …»` marker (`content/render.ts::substitute`)
- * rather than a thrown error surfacing as a broken screen.
- */
-export function dateLine(isoDate: string): string {
-  return dateTimeLine(isoDate, STANDING_START_LOCAL);
-}
-
-/**
- * The same sentence for an hour that is not the standing one.
+ * rather than a thrown error surfacing as a broken screen. `''` for an
+ * empty `time` on the same grounds -- a caller that has a record but no
+ * agreed hour passes `startLocal(s.time)` and so never reaches that branch.
  *
- * The negotiation offers evenings with their own start times -- a slot is a
- * day *and* an hour, and `state/dates.ts` says so -- so a draft invitation
- * naming three of them cannot use `dateLine`, which would print the standing
- * 12:30 against every one of them. That is the reference poster's own defect
- * in a second place: a time written from a convention rather than from the
- * record.
+ * **The hour is an argument, with no standing-time overload beside it.**
+ * There was one, `dateLine(isoDate)`, and every caller used it: a slot is a
+ * day *and* an hour, `state/dates.ts` says so, and the negotiation offers
+ * evenings at hours of their own -- so an announcement drafted through that
+ * overload printed the standing 12:30 against an edition the record had at
+ * 18:00. The reference poster's own defect, in the last place it survived:
+ * a time written from a convention rather than from the record.
  *
  * `parisStandingStart` is still what answers for the zone, and still probed
  * at midday UTC: Europe/Paris changes its clocks in the small hours, so the

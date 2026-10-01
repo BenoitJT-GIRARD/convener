@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import editionStartFixture from '../../../tools/tests/fixtures/edition-start.json';
 import parisStandingStartFixture from '../../../tools/tests/fixtures/paris-standing-start.json';
 import { substitute } from '../../src/content/render';
 import {
@@ -27,7 +28,12 @@ import {
   recordingWithheld,
   toPublicFields,
 } from '../../src/state/consent';
-import { dateLine, parisStandingStart } from '../../src/state/derived';
+import {
+  STANDING_START_LOCAL,
+  dateTimeLine,
+  parisStandingStart,
+  startLocal,
+} from '../../src/state/derived';
 import type { Publication, Speaker } from '../../src/data/types';
 import { speaker as double } from '../helpers/data-doubles';
 
@@ -302,7 +308,26 @@ describe('a drafted date names the real Paris offset, never a hard-coded one', (
     ({ iso_date: iso, offset, abbreviation, date_line: line }) => {
       expect(parisStandingStart(iso).abbreviation).toBe(abbreviation);
       expect(parisStandingStart(iso).offset).toBe(offset);
-      expect(dateLine(iso)).toBe(line);
+      // The standing hour, passed explicitly: this fixture binds the
+      // seasonal rule and nothing else. Where an edition's hour comes from
+      // is a second rule with a second shared fixture, below.
+      expect(dateTimeLine(iso, STANDING_START_LOCAL)).toBe(line);
+    },
+  );
+
+  // D-14, the second shared fixture: an edition's start hour comes off its
+  // own record, falling back to the standing hour when it carries none.
+  // `tools/tests/repository/test_edition_start_fixture.py` runs the
+  // identical cases against Python and `.eleventy.js`.
+  //
+  // What it binds, measured: every surface stating an edition's time used
+  // to compose it from the constant, so an edition the record held at
+  // 18:00 was announced, postered, syndicated and calendared at 12:30.
+  it.each(editionStartFixture)(
+    '$iso_date at $recorded_time states $start_local',
+    ({ iso_date: iso, recorded_time: recorded, start_local: expected, date_line: line }) => {
+      expect(startLocal(recorded)).toBe(expected);
+      expect(dateTimeLine(iso, startLocal(recorded))).toBe(line);
     },
   );
 
@@ -310,8 +335,12 @@ describe('a drafted date names the real Paris offset, never a hard-coded one', (
     // 12 March 2026 is a Thursday; 11 June 2026 is a Thursday too, but 10
     // September 2026 is not -- so a fixed "Thursday" would only ever be
     // caught by a date the series does not actually use.
-    expect(dateLine('2026-09-10')).toMatch(/^Thursday, 10 September 2026 at 12:30 CEST$/);
-    expect(dateLine('2026-03-12')).toMatch(/^Thursday, 12 March 2026 at 12:30 CET$/);
+    expect(dateTimeLine('2026-09-10', '12:30')).toMatch(
+      /^Thursday, 10 September 2026 at 12:30 CEST$/,
+    );
+    expect(dateTimeLine('2026-03-12', '12:30')).toMatch(
+      /^Thursday, 12 March 2026 at 12:30 CET$/,
+    );
   });
 
   it('every public draft states the date and time as one computed line', () => {
@@ -324,5 +353,57 @@ describe('a drafted date names the real Paris offset, never a hard-coded one', (
       const out = substitute(page(file), ctx);
       expect(out).toContain('11 June 2026 at 12:30 CEST');
     }
+  });
+
+  // The defect this whole area exists to stop, read on the rendered text
+  // rather than on the template source. A drafted message used to carry a
+  // time twice: once computed from the record and once written into the
+  // prose from the series' convention -- `invitation.md`'s "The format is a
+  // Thursday, 12:30-14:00 CET" sat directly above the evenings on offer,
+  // and `forum-post-announce.md`'s "our standing time of 12:30 Paris time"
+  // sat four lines above `{{ speaker.when }}`. On an edition held at
+  // another hour each of those messages contradicted itself, in a message
+  // going to the speaker and to a public forum.
+  //
+  // Read as "no clock time the record did not put there", on an edition
+  // deliberately away from the convention, so a sentence reintroducing
+  // 12:30 is caught whichever template it is written into.
+  it('no outward draft states a time the record did not give it', () => {
+    const evening = archivedSpeaker({
+      date: '2026-10-08',
+      time: '18:00',
+      candidate_dates: [{ date: '2026-10-08', time: '18:00', answer: 'accepted' }],
+    });
+    const ctx = { speaker: evening, today: '2026-10-01' };
+
+    for (const file of [
+      'handbook/toolkit/emails/invitation.md',
+      'handbook/toolkit/emails/promotion-starting.md',
+      'handbook/toolkit/emails/reminder.md',
+      'handbook/toolkit/emails/talk-details.md',
+      'handbook/toolkit/forum-post-announce.md',
+      'handbook/toolkit/linkedin-post.md',
+      'handbook/toolkit/mailing-list-announce.md',
+    ]) {
+      const out = substitute(page(file), ctx);
+      const times = [...out.matchAll(/\d{1,2}:\d{2}/g)].map(m => m[0]);
+      expect(times.filter(found => found !== '18:00'), file).toEqual([]);
+    }
+  });
+
+  it('would catch a convention written back into a draft', () => {
+    // Positive control, on a template-shaped string rather than on a real
+    // file: the assertion above passes trivially if `substitute` ever
+    // stopped returning the prose, and a reader cannot tell those two
+    // apart from a green run.
+    const evening = archivedSpeaker({ date: '2026-10-08', time: '18:00' });
+    const out = substitute(
+      ['The format is a Thursday, 12:30-14:00 CET.', '', 'When: {{ speaker.when }}'].join('\n'),
+      { speaker: evening, today: '2026-10-01' },
+    );
+    const times = [...out.matchAll(/\d{1,2}:\d{2}/g)].map(m => m[0]);
+
+    expect(times).toContain('18:00');
+    expect(times.filter(found => found !== '18:00')).toEqual(['12:30', '14:00']);
   });
 });

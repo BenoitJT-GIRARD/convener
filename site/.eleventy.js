@@ -166,25 +166,36 @@ const NOTICE = notice();
 
 const SITE_ORIGIN = PUBLISHED.origin;
 
-// The series' one standing start time, Europe/Paris *local*
-// -- what a recurring seminar series means by "the seminar starts at
-// 12:30" is 12:30 in Paris, not a fixed UTC offset that happens to be
-// right for half the year. `instance/data/speakers.yml` carries a `time` field
-// per record, and `public_data.py::PUBLISHABLE_ALWAYS` classifies it as
-// publishable -- but `PUBLIC_FIELD_SOURCES`, the mapping that actually
-// decides what a built row carries, has no entry pointing any column at
-// it, so `time` never reaches `events-public.json` (confirmed by
-// regenerating that file from the real `instance/data/speakers.yml` and
-// inspecting the output, not merely by reading the two files side by
-// side) and so never reaches this project's own `events.json` either.
-// With nothing to read per edition, this stays one constant rather than
-// a per-edition value with a fallback the other side can never populate
-// -- "do not build a path to data that cannot arrive", a rule this
-// project has already paid for five times. The day `time` is wired
-// through `PUBLIC_FIELD_SOURCES`, this is the one constant to replace
-// with `event.time || STANDING_START_LOCAL`, in `parisStandingStart`
-// below.
+// The series' *standing* start time, Europe/Paris *local* -- what a
+// recurring seminar series means by "the seminar starts at 12:30" is
+// 12:30 in Paris, not a fixed UTC offset that happens to be right for
+// half the year.
+//
+// A fallback now, not the answer. This comment used to explain that
+// `time`, though classified `PUBLISHABLE_ALWAYS`, reached no column of
+// `PUBLIC_FIELD_SOURCES` and so could not arrive here -- and it named the
+// change to make on the day it did: "replace this constant with
+// `event.time || STANDING_START_LOCAL`". That day came, because the
+// absence was not harmless: an edition the record held at 18:00 was
+// published, labelled, syndicated and calendared at 12:30. `time` is now a
+// published column and `eventStartLocal` below is the one place this build
+// reads it.
 const STANDING_START_LOCAL = '12:30';
+
+// The hour an edition actually starts, Europe/Paris local: the one its own
+// row names, or the standing hour when it names none.
+//
+// `app/src/state/derived.ts::startLocal` and
+// `tools/convener_ops/publication/visual.py::start_local` are the other two
+// readings of this one rule, bound to this one by
+// `tools/tests/fixtures/edition-start.json` (D-14).
+//
+// A blank is the ordinary state of a row whose date is not locked yet --
+// `events.json` carries every published edition, not only the scheduled
+// ones -- so the convention is the right answer there and not a guess.
+function eventStartLocal(event) {
+  return (event && event.time) || STANDING_START_LOCAL;
+}
 
 // Europe/Paris's own UTC offset and abbreviation for the
 // *edition's own date*, at the standing local time above -- +01:00/CET
@@ -215,7 +226,7 @@ const STANDING_START_LOCAL = '12:30';
 // transition day itself, so a midday-UTC probe always resolves the
 // offset actually in effect at 12:30 Paris local time on that same
 // calendar date -- transition days included.
-function parisStandingStart(isoDate) {
+function parisStandingStart(isoDate, startLocal) {
   const probe = new Date(`${isoDate}T12:00:00Z`);
   // `timeZoneName: 'shortOffset'` is stable across locales ('GMT+1',
   // 'GMT+2'); the CET/CEST *abbreviation* is not -- `en-US`'s own ICU
@@ -241,9 +252,20 @@ function parisStandingStart(isoDate) {
   // to keep in step with the one `Intl` resolved above.
   const abbreviation = offset === '+02:00' ? 'CEST' : 'CET';
   return {
-    startDate: `${isoDate}T${STANDING_START_LOCAL}:00${offset}`,
-    label: `${STANDING_START_LOCAL} ${abbreviation}`,
+    startDate: `${isoDate}T${startLocal}:00${offset}`,
+    label: `${startLocal} ${abbreviation}`,
   };
+}
+
+// The same derivation for a whole event row, which is what every template
+// and filter below actually has in hand.
+//
+// Templates reach this through the `eventStart` filter, and a Nunjucks pipe
+// carries one value -- so a filter over `event.date` could not be handed the
+// hour, and every template that used one stated the standing time. Taking
+// the row rather than its date is what makes the hour impossible to omit.
+function eventStart(event) {
+  return parisStandingStart(event.date, eventStartLocal(event));
 }
 
 // The fallback description for an
@@ -458,7 +480,7 @@ function icsUtcStamp(isoWithOffset, minutes) {
 // casually than a web page, so a room link reaching a `LOCATION` field
 // would end up on devices this project never intended it to.
 function agendaVevent(event) {
-  const { startDate } = parisStandingStart(event.date);
+  const { startDate } = eventStart(event);
   const dtstart = icsUtcStamp(startDate);
   const dtend = icsUtcStamp(startDate, SEMINAR_DURATION_MINUTES);
   const url = eventPageUrl(event);
@@ -602,15 +624,17 @@ module.exports = function (cfg) {
     });
   });
 
-  // `event.date | parisStandingStart` for both the JSON-LD `startDate`
-  // (event.njk) and the visible "12:30 CET"/"12:30 CEST" label
-  // (event.njk, index.njk) -- one Paris-DST computation feeding every
-  // place this project states the edition's start time, so they cannot
-  // state three different answers about the same date. See
-  // `parisStandingStart`'s own comment above for the derivation and for
-  // why `time` (the field that would otherwise let a per-edition value
-  // override the standing 12:30) does not reach this data yet.
-  cfg.addFilter('parisStandingStart', parisStandingStart);
+  // `event | eventStart` for both the JSON-LD `startDate` (event.njk) and
+  // the visible "18:00 CEST"/"12:30 CET" label (event.njk, index.njk) --
+  // one Paris-DST computation feeding every place this project states the
+  // edition's start time, so they cannot state three different answers
+  // about the same edition. See `parisStandingStart` and `eventStartLocal`
+  // above for the derivation and for why the hour comes off the row.
+  //
+  // The row, not `event.date`: this filter took the date until an edition
+  // at 18:00 was labelled 12:30 on the event page and on the index, and a
+  // date is precisely the argument that cannot carry the hour.
+  cfg.addFilter('eventStart', eventStart);
 
   // `event | eventDescription` for event.njk's `pageDescription` (its
   // <meta>/Open Graph/Twitter Card tags) and its own JSON-LD
@@ -625,11 +649,14 @@ module.exports = function (cfg) {
   // every rebuild churn the feed for a reason that has nothing to do with
   // its actual content (the same failure `parisToday()`/`paris_today`
   // exists to rule out on the Python side of this project). `isoDate` is
-  // always `YYYY-MM-DD` (`events.json`'s own shape); `parisStandingStart`
-  // above resolves the real Europe/Paris offset for that date rather than
-  // a fixed `+01:00` -- see its own comment for why that fix matters here.
-  cfg.addFilter('rfc822', function (isoDate) {
-    return new Date(parisStandingStart(isoDate).startDate).toUTCString();
+  // `eventStart` above resolves the real Europe/Paris offset for the
+  // edition's date rather than a fixed `+01:00`, and its hour off the row
+  // -- see its own comment for why both matter here. It takes the row for
+  // that reason: a `pubDate` that disagreed with the `startDate` of the
+  // same edition in the same build would be this project stating one
+  // instant two ways.
+  cfg.addFilter('rfc822', function (event) {
+    return new Date(eventStart(event).startDate).toUTCString();
   });
 
   // `events | agendaCalendar` for `src/agenda.njk` -- see
@@ -681,3 +708,4 @@ module.exports = function (cfg) {
 // shared_fixture` (`site/` carries no JS test runner of its own -- no new
 // dependency -- so that Python suite is this function's only test).
 module.exports.parisStandingStart = parisStandingStart;
+module.exports.eventStartLocal = eventStartLocal;

@@ -619,6 +619,12 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
             visual.Announcement(
                 title=str(row.get("title", "")),
                 talk_date=talk_date,
+                # The edition's own hour, falling back to the series'
+                # standing one for a row that carries none
+                # (`visual.start_local`). A poster printed the standing hour
+                # over an edition agreed for another one until `time` became
+                # a published column.
+                talk_time=visual.start_local(str(row.get("time", ""))),
                 speaker_name=str(row.get("speaker_name", "")),
                 speaker_affiliation=str(row.get("speaker_affiliation", "")),
                 event_id=event_id,
