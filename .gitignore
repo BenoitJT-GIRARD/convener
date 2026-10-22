@@ -1,0 +1,5 @@
+# This repository holds only generated output (D-15) -- nothing here is
+# built locally any more, so there is nothing of a local toolchain's own to
+# ignore. Kept for ordinary OS cruft only.
+.DS_Store
+Thumbs.db
