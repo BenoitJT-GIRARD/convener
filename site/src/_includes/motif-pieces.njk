@@ -13,8 +13,11 @@
 {% endmacro %}
 
 {# The hero's own two: one for a wide screen, which runs down the right-hand
-   margin, and one for a narrow screen, cut by the top-right corner. #}
-{% macro heroPieces(motif) %}
-{{ piece(motif, "hero-wide") }}
+   margin and on behind the first band, and one for a narrow screen, cut by
+   the top-right corner. A hero with no band under it passes `closed`, so its
+   stroke leaves through the right edge instead of running down into the
+   field with nothing to end behind. #}
+{% macro heroPieces(motif, closed=false) %}
+{% if closed %}{{ piece(motif, "hero-wide-closed") }}{% else %}{{ piece(motif, "hero-wide") }}{% endif %}
 {{ piece(motif, "hero-corner") }}
 {% endmacro %}

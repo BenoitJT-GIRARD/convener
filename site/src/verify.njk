@@ -19,7 +19,7 @@ eleventyComputed:
 <section class="hero">
   {# The charter's motif, the same one the home page's hero draws -- see
      src/_data/motif.json and tools/scripts/generate_motif.py. #}
-  {% if motif.pieces %}{{ heroPieces(motif) }}{% else %}
+  {% if motif.pieces %}{{ heroPieces(motif, true) }}{% else %}
   <svg class="hero__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
     <path d="{{ motif.path }}"/>
   </svg>
