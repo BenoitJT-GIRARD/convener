@@ -660,9 +660,10 @@ Skipping the step costs one event's manual attendance import through the
 fallback above, never a cancelled seminar and never a security incident.
 
 **The notice in step 3 is wired up.** Declare the date in
-`instance/data/credential-renewals.yml` and the daily sweep posts to the
-board thread a fortnight before it, and turns its own run red from that
-point on — `tools/convener_ops/maintenance/credential_expiry.py` carries the
+`instance/data/credential-renewals.yml` and the daily sweep reminds the
+board thread on each Monday of the fortnight before it, posts at once on the
+day it stops working, and turns its own run red from that day until the date
+is renewed — `tools/convener_ops/maintenance/credential_expiry.py` carries the
 argument for why the date is declared rather than discovered, which is that
 nothing in this repository can read it. The date has to be written back at
 each renewal, in the same sitting, by whoever renews it; that is the whole

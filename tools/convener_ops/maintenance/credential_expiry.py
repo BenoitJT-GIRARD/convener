@@ -61,6 +61,7 @@ from typing import Any, Final
 
 from convener_ops.declaration.paths import DATA_DIR, repo_root
 from convener_ops.declaration.yaml_safe import safe_load
+from convener_ops.governance.notify import is_digest_day
 
 #: Where the dates are declared. Under `instance/data/`, which
 #: `declarations/boundary.yml` hands to the instance whole: these dates are
@@ -72,6 +73,9 @@ RENEWALS_PATH: Final = DATA_DIR / "credential-renewals.yml"
 #: because `operations.md` already puts the meeting token's renewal
 #: "alongside the other T-7 preparations" -- a notice arriving after that
 #: point would arrive after the moment it was meant to inform.
+#:
+#: Inside the window the Board hears on the digest's day, so a fortnight is
+#: two reminders rather than fourteen messages; `to_post` says when else.
 NOTICE_DAYS: Final = 14
 
 #: The shape of a repository secret's name, which is all this file may
@@ -248,6 +252,29 @@ def due(
     return sorted(found, key=lambda finding: (finding.days_left, finding.secret_name))
 
 
+def failing(findings: list[Finding]) -> list[Finding]:
+    """The ones that have stopped working: due today, or already past.
+
+    Only these turn the run red. A credential inside its notice window still
+    works, and a red run every morning for a fortnight before each renewal of
+    a 31-day token was red for half of every month -- the colour stops
+    meaning anything long before the token does.
+    """
+    return [finding for finding in findings if finding.days_left <= 0]
+
+
+def to_post(findings: list[Finding], today: date) -> bool:
+    """Whether today's run tells the Board.
+
+    On the digest's day while anything is due, and on the day one stops
+    working whatever the weekday -- the one notice that cannot wait for a
+    Monday. Every run's log still carries the annotations either way.
+    """
+    if any(finding.days_left == 0 for finding in findings):
+        return True
+    return bool(findings) and is_digest_day(today)
+
+
 def summary(renewals: list[Renewal], findings: list[Finding], today: date) -> str:
     """What the run's log says even when nothing is due.
 
@@ -274,11 +301,12 @@ def message(findings: list[Finding], today: date) -> str:
     lines = ["**A credential is about to stop working.**", ""]
     for finding in findings:
         renewal = finding.renewal
-        when = (
-            f"expired {-finding.days_left} day(s) ago"
-            if finding.expired
-            else f"expires in {finding.days_left} day(s)"
-        )
+        if finding.expired:
+            when = f"expired {-finding.days_left} day(s) ago"
+        elif finding.days_left == 0:
+            when = "stops working today"
+        else:
+            when = f"expires in {finding.days_left} day(s)"
         lines.append(f"- `{renewal.secret_name}` — {when}, on {renewal.expires}.")
         lines.append(f"  Renewed through: {renewal.renewed_by}")
     lines += [
@@ -296,7 +324,7 @@ def annotation_lines(findings: list[Finding]) -> list[str]:
     them without anybody opening the log."""
     return [
         (
-            f"::{'error' if finding.expired else 'warning'}::"
+            f"::{'error' if finding.days_left <= 0 else 'warning'}::"
             f"{finding.renewal.secret_name} "
             + (
                 f"expired on {finding.renewal.expires}"

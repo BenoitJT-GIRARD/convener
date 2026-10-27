@@ -888,23 +888,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file renewals-body.md
-      - name: Fail if a credential is about to stop working
+      - name: Fail if a credential has stopped working
         # D-25, and in YAML rather than in an exit code for the same reason
         # the three alarms above are: this job goes red whenever the finding
         # fired, whether or not a channel was configured to also post to. An
         # unconfigured integration must never be able to turn a real finding
         # into silence.
         #
-        # Red for a notice rather than only for an expiry, and that is the
-        # decision rather than an oversight: this is the one watchdog here
-        # whose subject gives no signal of its own. The retention token fails
-        # loudly, the publish token logs a line, and the meeting token falls
-        # back to the manual adapter and says nothing at all -- so the red
-        # has to arrive while there is still time to act on it, not on the
-        # day it stops working.
-        if: always() && steps.credential-expiry.outputs.renewal_alert == 'true'
+        # Red from the day a credential stops working, and not for the
+        # fortnight before it. That fortnight used to be red too, because the
+        # meeting token falls back to the manual adapter and says nothing --
+        # but against a 31-day token it made the job red half of every month,
+        # and a colour that is on half the time is read as noise. The notice
+        # still arrives in time: a warning annotation on every run, and the
+        # Board's reminder on each Monday of the window
+        # (`credential_expiry.to_post`).
+        if: always() && steps.credential-expiry.outputs.renewal_failing == 'true'
         run: |
-          echo "::error::a credential declared in instance/data/credential-renewals.yml is inside its notice window or already past it -- see the annotations above, and docs/operating/operations.md for the renewal each one names"
+          echo "::error::a credential declared in instance/data/credential-renewals.yml has stopped working -- see the annotations above, and docs/operating/operations.md for the renewal each one names"
           exit 1
       - name: Compose
         id: compose

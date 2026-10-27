@@ -24,6 +24,7 @@ from helpers import instance_identity
 
 from convener_ops.cli.maintenance import check_credential_expiry
 from convener_ops.declaration.paths import repo_root
+from convener_ops.declaration.yaml_safe import safe_load
 from convener_ops.maintenance import credential_expiry
 
 TODAY = date(2026, 9, 12)
@@ -240,8 +241,16 @@ class _FixedDatetime:
         return self._fixed
 
 
+#: A Saturday, and the Monday after it -- the day the digest goes out.
+SATURDAY = datetime(2026, 9, 12, 9, 0, tzinfo=UTC)
+MONDAY = datetime(2026, 9, 14, 9, 0, tzinfo=UTC)
+
+
 def _repo(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, declared: str | None
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    declared: str | None,
+    on: datetime = SATURDAY,
 ) -> Path:
     if declared is not None:
         path = tmp_path / credential_expiry.RENEWALS_PATH
@@ -250,10 +259,7 @@ def _repo(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.delenv("CONVENER_NOTIFY_THREAD", raising=False)
     monkeypatch.delenv("CONVENER_NOTIFY_MENTION", raising=False)
-    monkeypatch.setattr(
-        "convener_ops.cli.maintenance.datetime",
-        _FixedDatetime(datetime(2026, 9, 12, 9, 0, tzinfo=UTC)),
-    )
+    monkeypatch.setattr("convener_ops.cli.maintenance.datetime", _FixedDatetime(on))
     return tmp_path
 
 
@@ -271,26 +277,83 @@ def _github_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return out
 
 
-def test_a_credential_inside_the_window_fires_and_names_it(
+def _meeting_token(expires: str) -> str:
+    return (
+        "v: 1\nrenewals:\n"
+        "  - secret: CONVENER_MEETING_API_TOKEN\n"
+        f"    expires: {expires}\n"
+        "    renewed_by: docs/operating/operations.md, Meeting platform\n"
+    )
+
+
+def test_a_coming_expiry_is_annotated_every_day_and_posted_on_mondays_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The case this was built for: the meeting token, a week out, on an
-    instance where nothing else would say so."""
-    _repo(
-        tmp_path,
-        monkeypatch,
-        "v: 1\nrenewals:\n"
-        "  - secret: CONVENER_MEETING_API_TOKEN\n"
-        "    expires: 2026-09-20\n"
-        "    renewed_by: docs/operating/operations.md, Meeting platform\n",
-    )
+    instance where nothing else would say so. Every run's log says it; the
+    Board reads it in Monday's reminder rather than every morning, and no
+    run turns red while the token still works -- red every day for a
+    fortnight before each renewal of a 31-day token was half the month."""
+    _repo(tmp_path, monkeypatch, _meeting_token("2026-09-20"))
+    out = _github_output(tmp_path, monkeypatch)
+
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "false"
+    assert _outputs(out)["renewal_failing"] == "false"
+    printed = capsys.readouterr().out
+    assert "::warning::CONVENER_MEETING_API_TOKEN" in printed
+    assert "2026-09-20" in printed
+
+    _repo(tmp_path, monkeypatch, _meeting_token("2026-09-20"), on=MONDAY)
+    out = _github_output(tmp_path, monkeypatch)
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "true"
+    assert _outputs(out)["renewal_failing"] == "false"
+
+
+def test_the_day_it_stops_working_is_posted_at_once_and_turns_the_run_red(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Whatever the weekday: the one notice that cannot wait for Monday."""
+    _repo(tmp_path, monkeypatch, _meeting_token("2026-09-12"))
     out = _github_output(tmp_path, monkeypatch)
 
     assert check_credential_expiry() == 0
     assert _outputs(out)["renewal_alert"] == "true"
-    printed = capsys.readouterr().out
-    assert "::warning::CONVENER_MEETING_API_TOKEN" in printed
-    assert "2026-09-20" in printed
+    assert _outputs(out)["renewal_failing"] == "true"
+
+
+def test_an_expired_credential_turns_every_run_red_and_is_posted_on_mondays(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _repo(tmp_path, monkeypatch, _meeting_token("2026-09-10"))
+    out = _github_output(tmp_path, monkeypatch)
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "false"
+    assert _outputs(out)["renewal_failing"] == "true"
+
+    _repo(tmp_path, monkeypatch, _meeting_token("2026-09-10"), on=MONDAY)
+    out = _github_output(tmp_path, monkeypatch)
+    assert check_credential_expiry() == 0
+    assert _outputs(out)["renewal_alert"] == "true"
+    assert _outputs(out)["renewal_failing"] == "true"
+
+
+def test_the_workflow_posts_on_an_alert_and_fails_on_an_expiry() -> None:
+    """Two outputs, two steps: posting follows `renewal_alert`, the red
+    follows `renewal_failing`, and neither reads the other."""
+    workflow = safe_load(
+        (repo_root() / ".github" / "workflows" / "sweep-and-notify.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps = {step.get("name"): step for step in workflow["jobs"]["daily"]["steps"]}
+    post = steps["Tell the board a credential is about to stop working"]
+    fail = steps["Fail if a credential has stopped working"]
+    assert "outputs.renewal_alert == 'true'" in post["if"]
+    assert "renewal_failing" not in post["if"]
+    assert "outputs.renewal_failing == 'true'" in fail["if"]
+    assert "renewal_alert" not in fail["if"]
 
 
 def test_a_healthy_declaration_is_quiet_but_still_says_what_it_read(
@@ -311,6 +374,7 @@ def test_a_healthy_declaration_is_quiet_but_still_says_what_it_read(
 
     assert check_credential_expiry() == 0
     assert _outputs(out)["renewal_alert"] == "false"
+    assert _outputs(out)["renewal_failing"] == "false"
     printed = capsys.readouterr().out
     assert "1 declared renewal date(s)" in printed
     assert "::warning::" not in printed
@@ -327,6 +391,7 @@ def test_an_instance_declaring_nothing_is_quiet_and_says_that_too(
 
     assert check_credential_expiry() == 0
     assert _outputs(out)["renewal_alert"] == "false"
+    assert _outputs(out)["renewal_failing"] == "false"
     assert "declares no renewal dates" in capsys.readouterr().out
 
 
