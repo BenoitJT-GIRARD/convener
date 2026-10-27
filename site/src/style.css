@@ -410,7 +410,8 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   width: 10rem;
   height: 10rem;
 }
-.motif-piece--hero-wide {
+.motif-piece--hero-wide,
+.motif-piece--hero-wide-closed {
   /* On past the hero's foot, through the first section's top padding and
    * into its band, which hides the end. */
   top: 0;
@@ -434,7 +435,8 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
 .motif-piece--coda-right { top: 0; right: 0; width: 10rem; height: 100%; }
 .motif-piece--coda-left { bottom: 0; left: 0; width: 10rem; height: 100%; }
 @media (min-width: 1180px) {
-  .motif-piece--hero-wide { display: block; }
+  .motif-piece--hero-wide,
+  .motif-piece--hero-wide-closed { display: block; }
   .motif-piece--hero-corner { display: none; }
 }
 @media (min-width: 1320px) {

@@ -218,8 +218,33 @@ def test_every_hero_sets_the_motifs_page_pieces_when_the_charter_draws_them() ->
     assert len(heroes) >= 5, f"the sweep found only {len(heroes)} hero template(s)"
     for path in heroes:
         source = path.read_text(encoding="utf-8")
-        assert "{% if motif.pieces %}{{ heroPieces(motif) }}" in source, (
-            f"{path.name} has a hero that never sets the motif's page pieces"
+        assert re.search(
+            r"\{% if motif\.pieces %\}\{\{ heroPieces\(motif(, true)?\) \}\}", source
+        ), f"{path.name} has a hero that never sets the motif's page pieces"
+
+
+def test_a_hero_with_no_band_under_it_lets_its_stroke_out_through_the_right_edge() -> (
+    None
+):
+    """The wide piece runs on below the hero and ends behind the first band.
+    Under a hero with no band, nothing would hide that end and the stroke
+    would stop in the field, the very cut-off the pieces exist to remove; so
+    such a hero asks for the closed variant, and one with a band must not."""
+    heroes = sorted(
+        path
+        for path in SITE_SRC.glob("*.njk")
+        if '<section class="hero">' in path.read_text(encoding="utf-8")
+    )
+    for path in heroes:
+        source = path.read_text(encoding="utf-8")
+        after_hero = source[source.index('<section class="hero">') :]
+        nxt = after_hero.index('<section class="section')
+        first_section = after_hero[nxt : after_hero.index("</section>", nxt)]
+        has_band = 'class="section__head"' in first_section
+        closed = "heroPieces(motif, true)" in source
+        assert closed is not has_band, (
+            f"{path.name}: the first section {'has' if has_band else 'has no'} band, "
+            f"so its hero must {'not ' if has_band else ''}ask for the closed variant"
         )
 
 

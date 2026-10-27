@@ -538,7 +538,9 @@ CLEARANCE_STROKE_WIDTHS: Final = 1.0
 # through the right edge. The purple band near the foot of the home page
 # carries two quieter pieces of its own, one each side. A narrow screen has
 # no margin beside its text, so it gets one loop cut by the top-right
-# corner instead. Coordinates are CSS pixels at the showcase's scale.
+# corner instead. A hero with no band under it gets a variant whose stroke
+# leaves through the right edge again. Coordinates are CSS pixels at the
+# showcase's scale.
 
 #: Distance from the right edge at which the stroke passes behind the first
 #: band, shared by the two pieces that meet there.
@@ -557,6 +559,23 @@ PAGE_PIECES: Final[dict[str, Piece]] = {
             Through((336, 470), (-0.3, 1)),
             Through((_BAND_CROSSING, 580), (0, 1)),
             Through((_BAND_CROSSING, 1010), (0, 1)),
+        ),
+    ),
+    # The same loop for a hero with no band under it (the verification and
+    # survey pages): with nothing to pass behind, the stroke comes back in
+    # lower and leaves through the right edge again, the poster's own short
+    # tail, instead of running down into the field.
+    "hero-wide-closed": piece(
+        420,
+        1000,
+        align="xMaxYMin slice",
+        stroke_width=14,
+        steps=(
+            Through((152, -40), (0.3, 1)),
+            Arc((371, 146), 117, 200, 20),
+            Through((542, 293), (-0.45, 1)),
+            Through((356, 400), (-0.1, 1)),
+            Through((470, 470), (1, 0.2)),
         ),
     ),
     "below-band": piece(
