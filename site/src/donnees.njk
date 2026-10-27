@@ -53,13 +53,17 @@ pageDescription: "What personal data this series holds, why, for how long, and h
   </div>
 </section>
 
-<section class="section container" id="contact">
+<section class="section container">
   <header class="section__head">
     <span class="section__num">02</span>
     <span class="section__label">Your rights</span>
   </header>
 
-  <div class="notice">
+  {# The anchor every "contact us" on the showcase leads to. On this box
+     rather than on the section: an id on the section renames, for axe,
+     the section head's nodes that site/scripts/check-a11y.mjs has
+     already reviewed. #}
+  <div class="notice" id="contact">
     <p class="notice__eyebrow">Access, correction, erasure</p>
     <p>
       You can ask to see, correct or erase your data, or withdraw your
