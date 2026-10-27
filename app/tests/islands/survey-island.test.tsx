@@ -120,7 +120,7 @@ describe('SurveyForm -- does not duplicate the survey page\'s own notice', () =>
     const text = document.body.textContent ?? '';
     expect(text).not.toMatch(/before you answer/i);
     expect(text).not.toMatch(/90 days/);
-    expect(text).not.toMatch(/recorded as present/i);
+    expect(text).not.toMatch(/only to people who attended/i);
   });
 
   it('renders no copy of the notice even while the key is loading or unavailable', () => {

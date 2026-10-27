@@ -188,8 +188,8 @@ def _join_labels(labels: Sequence[str]) -> str:
 #: `test_confirmation.py` against the docs copy, the same way
 #: `MATCHING_INSTRUCTION` is.
 UPDATE_WARNING: Final = (
-    "If that was not you, someone else may have used your e-mail address. "
-    "Please reply to this message straight away and we will look into it"
+    "If you did not make this change, someone else may have used your email "
+    "address. Please reply to this email straight away and we will look into it"
 )
 
 
@@ -269,9 +269,8 @@ MATCHING_INSTRUCTION: Final = (
 #: docstring). Names the documented fallback, so a participant is
 #: never told nothing about how they will be recognised.
 _NO_CODE_FALLBACK: Final = (
-    "We could not generate a matching code for this event, so we will "
-    "match your attendance by the e-mail address and the name on this "
-    "registration instead."
+    "We could not create a matching code for this seminar, so we will find "
+    "you in our attendance record by your name and email address instead."
 )
 
 #: The organisation's own contact address -- not invented for this
@@ -302,17 +301,16 @@ CONTACT_EMAIL: Final = published.load_identity().contact
 SIGN_OFF: Final = f"{published.load_identity().organisation} team"
 
 _DATA_PROTECTION = (
-    "Data protection. We hold your name, e-mail address and institution "
-    "only for this event, encrypted under a key that exists only for it; "
-    "the key is destroyed 90 days after the event, after which the data "
-    "is permanently unreadable. It is never published, and it is only "
-    "ever decrypted automatically, to record your registration and to "
-    "issue your certificate."
+    "Your data: we keep your name, email address and institution only for "
+    "this seminar. They are encrypted, never published, and used only to "
+    "record your registration and send your certificate. They are "
+    "permanently deleted 90 days after the seminar."
 )
 
 _RIGHTS_NOTICE = (
-    "To see, correct, withdraw or erase your data before then, or for "
-    f"any other question, reply to this message or write to {CONTACT_EMAIL}."
+    "To see, correct or erase your data, or to withdraw your consent, reply "
+    f"to this email or write to {CONTACT_EMAIL}. The same goes for any other "
+    "question."
 )
 
 
@@ -332,9 +330,9 @@ def compose(
     pure function of its arguments, and `registration.matching_code` is
     already the one place that derivation happens (see its own docstring).
     """
-    subject = "Your registration is confirmed"
+    subject = "Registration confirmed"
     if event.title:
-        subject = f"{subject} — {event.title}"
+        subject = f"{subject}: {event.title}"
 
     what = f" for {event.title}" if event.title else ""
     when = f" on {event.date}" if event.date else ""
@@ -377,10 +375,7 @@ def compose(
     if event.room.instructions:
         lines.append(event.room.instructions)
     if not event.room.join_url and not event.room.instructions:
-        lines.append(
-            "The room link for this event has not been set yet -- we will "
-            "send it as soon as it is, to this same address."
-        )
+        lines.append("We will email you the room link as soon as it is set.")
     lines.append("")
 
     if matching_code:
@@ -390,10 +385,9 @@ def compose(
             f"{registration.first_name} {registration.surname} {matching_code}"
         )
         lines.append(
-            "We compare that name against our attendance record after the "
-            "seminar to issue your certificate, so a display name that "
-            "does not carry this code means we may not be able to find "
-            "you in the room."
+            "We use it to find you in our attendance record after the "
+            "seminar and send your certificate. Without the code, we may "
+            "not be able to find you."
         )
     else:
         lines.append(_NO_CODE_FALLBACK)
@@ -401,9 +395,8 @@ def compose(
 
     if changed:
         lines.append(
-            "This confirms an update to an earlier registration for this "
-            f"event: we changed the {_join_labels(list(changed))}. "
-            f"{UPDATE_WARNING}."
+            "This confirms a change to your earlier registration: we "
+            f"updated the {_join_labels(list(changed))}. {UPDATE_WARNING}."
         )
         lines.append("")
 

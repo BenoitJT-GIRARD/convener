@@ -192,7 +192,7 @@ def test_compose_subject_names_the_event_when_known() -> None:
 
 def test_compose_subject_is_still_sensible_with_no_event_title() -> None:
     message = compose(_registration(), _BLANK_EVENT, "WXYZ-2345")
-    assert message.subject == "Your registration is confirmed"
+    assert message.subject == "Registration confirmed"
 
 
 def test_compose_carries_the_room_link() -> None:
@@ -207,7 +207,7 @@ def test_compose_carries_the_room_instructions_when_present() -> None:
 
 def test_compose_says_something_sensible_with_no_room_link_yet() -> None:
     message = compose(_registration(), _BLANK_EVENT, "WXYZ-2345")
-    assert "has not been set yet" in message.body
+    assert "as soon as it is set" in message.body
 
 
 def test_compose_carries_the_matching_code_and_its_exact_instruction() -> None:
@@ -242,20 +242,20 @@ def test_compose_names_the_fallback_cascade_with_no_code() -> None:
     attendance will be matched, not simply omit the sentence."""
     message = compose(_registration(), _EVENT, None)
     assert MATCHING_INSTRUCTION not in message.body
-    assert "match your attendance" in message.body
+    assert "by your name and email address instead" in message.body
 
 
 def test_compose_carries_the_data_protection_notice_and_the_rights_notice() -> None:
     message = compose(_registration(), _EVENT, "WXYZ-2345")
-    assert "Data protection." in message.body
+    assert "Your data:" in message.body
     assert "90 days" in message.body
-    assert "reply to this message" in message.body
+    assert "reply to this email" in message.body
     assert CONTACT_EMAIL in message.body
 
 
 def test_compose_says_nothing_about_an_update_when_nothing_changed() -> None:
     message = compose(_registration(), _EVENT, "WXYZ-2345", changed=())
-    assert "This confirms an update" not in message.body
+    assert "This confirms a change" not in message.body
     assert UPDATE_WARNING not in message.body
 
 
@@ -269,8 +269,8 @@ def test_compose_names_what_changed_and_warns_when_something_did() -> None:
     changed field would still satisfy a check for that word alone."""
     message = compose(_registration(), _EVENT, "WXYZ-2345", changed=("institution",))
     assert (
-        "This confirms an update to an earlier registration for this "
-        "event: we changed the institution."
+        "This confirms a change to your earlier registration: we updated "
+        "the institution."
     ) in message.body
     assert UPDATE_WARNING in message.body
 
@@ -861,7 +861,7 @@ def test_signup_url_matches_the_shared_fixtures_worked_examples(
 #: What a confirmation must never say while printing a way in on the next
 #: line. It is also a promise nothing in this repository keeps: there is no
 #: queue of editions with a pending link, no job that notices and no reminder.
-PENDING_LINK = "has not been set yet"
+PENDING_LINK = "as soon as it is set"
 
 
 def _body(*, join_url: str = "", instructions: str = "") -> str:

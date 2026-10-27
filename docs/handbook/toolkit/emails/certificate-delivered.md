@@ -22,13 +22,13 @@ before it is attached and sent.*
 
 ---
 
-**Subject:** Your certificate of attendance — [the event's title, when known]
+**Subject:** Your certificate of attendance: [the event's title, when known]
 
 Dear [participant's first name],
 
 Attached is your certificate of attendance for [the event's title], as a
-self-contained web page you can open in any browser — print it, or use your
-browser's own "print to PDF" if you would rather keep a PDF copy.
+web page you can open in any browser. To keep a PDF copy, open it and use
+your browser's "Print to PDF".
 
 Identifier: [the certificate's identifier]
 

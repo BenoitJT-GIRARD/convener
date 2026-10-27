@@ -520,8 +520,8 @@ def test_handle_registration_confirmation_names_what_changed_on_an_update(
     # paragraph of every message ever composed, so a check for it alone
     # would still pass a mutant naming the wrong changed field.
     assert (
-        "This confirms an update to an earlier registration for this "
-        "event: we changed the institution."
+        "This confirms a change to your earlier registration: we updated "
+        "the institution."
     ) in body
     # Named, never quoted: neither the old nor the new value appears.
     assert "Analytical Engines Institute" not in body
@@ -553,7 +553,7 @@ def test_handle_registration_confirmation_says_nothing_about_an_update_the_first
 
     assert len(RecordingSmtpClient.sent) == 1
     body = RecordingSmtpClient.sent[0].get_content()
-    assert "This confirms an update" not in body
+    assert "This confirms a change" not in body
 
 
 def test_handle_registration_confirmation_degrades_with_no_speaker_record(
@@ -810,7 +810,7 @@ def test_resend_confirmation_does_not_claim_an_update(
 
     assert len(RecordingSmtpClient.sent) == 1
     resent = RecordingSmtpClient.sent[0].get_content()
-    assert "This confirms an update" not in resent
+    assert "This confirms a change" not in resent
 
     _assert_no_leak(capsys)
 

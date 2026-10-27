@@ -18,7 +18,7 @@ otherwise published, and this e-mail is the one channel it goes out on.*
 
 ---
 
-**Subject:** Your registration is confirmed — [the event's title, when known]
+**Subject:** Registration confirmed: [the event's title, when known]
 
 Dear [participant's first name],
 
@@ -33,22 +33,21 @@ Join here: [the room link]
 nowhere else:** [the matching code]
 
 So your display name should read exactly: [your first name] [your surname]
-[the matching code] — for example, Ada Lovelace WXYZ-2345.
+[the matching code], for example Ada Lovelace WXYZ-2345.
 
-We compare that name against our attendance record after the seminar to
-issue your certificate, so a display name that does not carry this code
-means we may not be able to find you in the room. If no code could be
-generated for this event, we say so instead, and fall back to matching your
-e-mail address and the name on this registration.
+We use it to find you in our attendance record after the seminar and
+send your certificate. Without the code, we may not be able to find you.
+If no code could be created for this seminar, we say so instead, and find
+you by your name and email address.
 
 ---
 
 ## Only present when this confirmation replaces an earlier one
 
-This confirms an update to an earlier registration for this event: we
-changed the [field or fields that changed, named, never quoted]. If that
-was not you, someone else may have used your e-mail address. Please reply
-to this message straight away and we will look into it.
+This confirms a change to your earlier registration: we updated the
+[field or fields that changed, named, never quoted]. If you did not make
+this change, someone else may have used your email address. Please reply to
+this email straight away and we will look into it.
 
 *Why this section exists at all: registrations are matched by address, and
 our entry point has no shared secret to check — a browser cannot hold one —
@@ -60,15 +59,14 @@ value is worth protecting, a field name is not.*
 
 ---
 
-**Data protection.** We hold your name, e-mail address and institution only
-for this event, encrypted under a key that exists only for it; the key is
-destroyed 90 days after the event, after which the data is permanently
-unreadable. It is never published, and it is only ever decrypted
-automatically, to record your registration and to issue your certificate.
+Your data: we keep your name, email address and institution only for this
+seminar. They are encrypted, never published, and used only to record your
+registration and send your certificate. They are permanently deleted 90 days
+after the seminar.
 
-To see, correct, withdraw or erase your data before then, or for any other
-question, reply to this message or write to {{ instance.contact }} —
-the same address the registration page itself names for this right.
+To see, correct or erase your data, or to withdraw your consent, reply to
+this email or write to {{ instance.contact }}. The same goes for any other
+question.
 
 Best regards,
 {{ instance.organisation }} team

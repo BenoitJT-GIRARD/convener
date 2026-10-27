@@ -13,7 +13,7 @@ or paste it into whatever they ask for.*
 
 ---
 
-**Subject:** {{ instance.organisation }} — {{ speaker.title }}
+**Subject:** {{ instance.organisation }}: {{ speaker.title }}
 
 Hello,
 

@@ -26,15 +26,14 @@ have.*
 
 ---
 
-**Subject:** Tell us what you thought — [the event's title, when known]
+**Subject:** Tell us what you thought: [the event's title, when known]
 
 Dear [participant's first name],
 
 Thank you for attending [the event's title]. We would like to hear what
 you thought.
 
-This short, optional survey is only sent to people we have recorded as
-present at this event.
+We send this short, optional survey only to people who attended.
 
 Answer the survey here: [the survey link for this event]
 
