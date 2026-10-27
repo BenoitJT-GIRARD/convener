@@ -50,6 +50,11 @@
 # known-vulnerable package from one advisory to the next time somebody
 # thinks to look, and it is worth paying here.
 #
+# A group covers version updates unless it says otherwise, so each entry
+# carries a second one, `security`, for the pull requests an advisory
+# opens between rounds. Without it every advisory arrived alone, one
+# package in one directory: nine pull requests in six days in October 2026.
+#
 # What a duplicate does with this file, and where that is written
 # ---------------------------------------------------------------
 # Not here. Every manifest and every lockfile named below belongs to the
@@ -96,6 +101,9 @@ updates:
       interval: monthly
     groups:
       all:
+        patterns: ['*']
+      security:
+        applies-to: security-updates
         patterns: ['*']
     # Three majors, held back, because a group is one pull request
     # ------------------------------------------------------------
@@ -168,6 +176,9 @@ updates:
     groups:
       all:
         patterns: ['*']
+      security:
+        applies-to: security-updates
+        patterns: ['*']
   # Not a lockfile, and watched for the same reason the trees above are: a
   # pinned action is a dependency with a digest instead of a version, and
   # `.github/workflows/` pins every one of them.
@@ -177,4 +188,7 @@ updates:
       interval: monthly
     groups:
       all:
+        patterns: ['*']
+      security:
+        applies-to: security-updates
         patterns: ['*']

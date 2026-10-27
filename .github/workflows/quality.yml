@@ -195,6 +195,7 @@ jobs:
           # checks.
           enable-cache: true
       - name: Install
+        id: install
         working-directory: tools
         run: uv sync --all-extras
       # `tests/repository/test_site.py` builds the real `site/`
@@ -265,9 +266,6 @@ jobs:
       - name: Security patterns
         working-directory: tools
         run: uv run --frozen bandit -q -r convener_ops
-      - name: Dependency audit
-        working-directory: tools
-        run: uv run --frozen pip-audit
       - name: Tests
         working-directory: tools
         run: uv run --frozen pytest --cov=convener_ops --cov-report=term-missing
@@ -433,6 +431,18 @@ jobs:
         # above: writes nothing, and fails on a release that bumped one of
         # the two numbers.
         run: uv run --frozen python scripts/generate_changelog.py --check
+      # Last, and run whatever came before it: ahead of the tests, an
+      # advisory published overnight skipped every step below it. What is
+      # audited is `convener-ops`'s own dependencies, exported from the
+      # lockfile without the `dev` group and checked by hash; the checkers
+      # in that group run on a runner and reach nothing this package does.
+      # test_dependency_audit_workflow.py holds both halves.
+      - name: Dependency audit
+        if: always() && steps.install.outcome == 'success'
+        working-directory: tools
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt --quiet -o "$RUNNER_TEMP/requirements.txt"
+          uv run --frozen pip-audit --disable-pip --require-hashes -r "$RUNNER_TEMP/requirements.txt"
 
   # The former `typescript`, `site` and `spelling` jobs, merged.
   # Three jobs, one Node, one checkout -- and `app/`'s own `npm ci` run
@@ -567,16 +577,16 @@ jobs:
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs
-      # The same quality chain this project already holds Python to
-      # (`uv run --frozen pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
-      # axe-core, puppeteer-core) went unaudited until this step existed.
-      # Queries npm's own advisory database, the identical shape of network
-      # call `pip-audit` already makes in this same chain; not a test, and
-      # no account or paid service involved.
+      # `site/`'s dependencies (Eleventy, axe-core, puppeteer-core) are all
+      # build-time tooling, so the whole tree is audited and only a critical
+      # advisory blocks: the line every tree that ships no package of its
+      # own is held to, argued in test_dependency_audit_workflow.py
+      # (`test_tooling_trees_block_only_on_a_critical_advisory`). Findings
+      # below it are still printed here and listed on the Security tab.
       - name: Dependency audit site
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
-        run: npm audit
+        run: npm audit --audit-level=critical
       # The showcase's templates live in this repository (D-15), and for a
       # while the construction that reads them never ran in CI --
       # this is that construction. `site/src/_data/events.json` is
@@ -671,14 +681,14 @@ jobs:
       # `npm audit` could find here ever reaches the deployed Worker.
       # `wrangler` (which bundles and deploys it) and `vitest` are its
       # entire dependency tree, exactly `site/`'s own shape (an all-tooling
-      # package.json): no flag, never `--omit=dev`, which would exempt
-      # every dependency this package declares and pass regardless of what
-      # it found (D-25, and `test_the_workflow_audits_site_dependencies`'s
-      # own reasoning for `site/`, applied here for the same cause).
+      # package.json): never `--omit=dev`, which would exempt every
+      # dependency this package declares and pass regardless of what it
+      # found (D-25). The whole tree is audited and, as for `site/` above,
+      # only a critical advisory blocks.
       - name: Dependency audit auth-proxy
         if: always() && steps.install-auth-proxy.outcome == 'success'
         working-directory: services/auth-proxy
-        run: npm audit
+        run: npm audit --audit-level=critical
       - name: Lint auth-proxy
         if: always() && steps.install-auth-proxy.outcome == 'success'
         working-directory: services/auth-proxy
@@ -699,11 +709,11 @@ jobs:
         run: npm ci
       # Same shape as services/auth-proxy's
       # own step above -- no `dependencies`, `wrangler`/`vitest` are the
-      # whole tree, no flag, never `--omit=dev` (D-25).
+      # whole tree, never `--omit=dev` (D-25), blocking on critical only.
       - name: Dependency audit form-relay
         if: always() && steps.install-form-relay.outcome == 'success'
         working-directory: services/form-relay
-        run: npm audit
+        run: npm audit --audit-level=critical
       - name: Lint form-relay
         if: always() && steps.install-form-relay.outcome == 'success'
         working-directory: services/form-relay
@@ -726,11 +736,11 @@ jobs:
         run: npm ci
       # Same shape as services/auth-proxy's
       # own step above -- no `dependencies`, `wrangler`/`vitest` are the
-      # whole tree, no flag, never `--omit=dev` (D-25).
+      # whole tree, never `--omit=dev` (D-25), blocking on critical only.
       - name: Dependency audit signup-relay
         if: always() && steps.install-signup-relay.outcome == 'success'
         working-directory: services/signup-relay
-        run: npm audit
+        run: npm audit --audit-level=critical
       - name: Lint signup-relay
         if: always() && steps.install-signup-relay.outcome == 'success'
         working-directory: services/signup-relay

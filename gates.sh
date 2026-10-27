@@ -84,7 +84,6 @@
 #   Format check -> lint
 #   Types -> types
 #   Security patterns -> security
-#   Dependency audit -> audit
 #   Tests -> tests
 #   Integration status -> integrations
 #   Commit messages -> commits
@@ -97,6 +96,7 @@
 #   Directory map -> generated
 #   Rule index -> generated
 #   Changelog -> generated
+#   Dependency audit -> audit
 #   Dependency audit (production) -> audit
 #   Dependency audit (development tooling, reported in the job summary) -> none
 #   Lint app -> app
@@ -150,7 +150,8 @@
 # `.github/dependabot.yml` watches it beside the other six; its `npm
 # audit` is a step of `visuals.yml` and of `visuals-production.yml`,
 # which are the two workflows that install the pinned renderer, and
-# neither is in this runner's claim. `cd tools/visuals && npm audit` is
+# neither is in this runner's claim. `cd tools/visuals && npm audit
+# --audit-level=critical` is
 # that seventh. It needs no browser -- what it needs is an `npm ci` in a
 # tree no target here installs.
 #
@@ -192,10 +193,6 @@ case "${1:-all}" in
   lint)      cd tools && uv run --frozen python -m ruff check . && uv run --frozen python -m ruff format --check . ;;
   types)     cd tools && uv run --frozen python -m mypy ;;
   security)  cd tools && uv run --frozen python -m bandit -q -r convener_ops ;;
-  audit)     (cd tools && uv run --frozen python -m pip_audit)
-             (cd app && npm audit --omit=dev)
-             (cd site && npm audit)
-             for r in auth-proxy form-relay signup-relay; do (cd "services/$r" && npm audit); done ;;
   tests)     cd tools && uv run --frozen python -m pytest --cov=convener_ops --cov-report=term-missing ;;
   integrations) cd tools && uv run --frozen convener-check-config ;;
   commits)   range="$(cd tools && uv run --frozen convener-commit-range)"
@@ -222,12 +219,18 @@ case "${1:-all}" in
                && uv run --frozen python scripts/generate_directory_map.py --check \
                && uv run --frozen python scripts/generate_rule_index.py --check \
                && uv run --frozen python scripts/generate_changelog.py --check ;;
+  audit)     (cd tools && req="$(mktemp)" \
+               && uv export --frozen --no-dev --no-emit-project --format requirements-txt --quiet -o "$req" \
+               && uv run --frozen python -m pip_audit --disable-pip --require-hashes -r "$req")
+             (cd app && npm audit --omit=dev)
+             (cd site && npm audit --audit-level=critical)
+             for r in auth-proxy form-relay signup-relay; do (cd "services/$r" && npm audit --audit-level=critical); done ;;
   app)       cd app && npm run lint && npm run typecheck && npm run test:cov && npm run build ;;
   site)      cd site && npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs && npm run build ;;
   budget)    cd site && npm run check:budget -- --app-dir ../app/dist ;;
   spelling)  npx --yes cspell@8 lint --no-progress ;;
   relays)    for r in auth-proxy form-relay signup-relay; do (cd "services/$r" && npx --yes eslint@9 src test && npm test); done ;;
   workflows) actionlint -shellcheck= -pyflakes= .github/workflows/*.yml ;;
-  all)       for gate in lint types security audit tests integrations commits generated app site budget spelling relays workflows; do sh "$0" "$gate"; done ;;
-  *) echo "usage: sh $0 [lint|types|security|audit|tests|integrations|commits|generated|app|site|budget|spelling|relays|workflows|all]" >&2; exit 2 ;;
+  all)       for gate in lint types security tests integrations commits generated audit app site budget spelling relays workflows; do sh "$0" "$gate"; done ;;
+  *) echo "usage: sh $0 [lint|types|security|tests|integrations|commits|generated|audit|app|site|budget|spelling|relays|workflows|all]" >&2; exit 2 ;;
 esac
