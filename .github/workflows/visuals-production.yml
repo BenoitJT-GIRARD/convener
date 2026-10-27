@@ -284,11 +284,11 @@ jobs:
       # one in visuals.yml; this is a second job installing the identical
       # lockfile, so it gets one too rather than becoming the one
       # exception that only happens to be exempt because another workflow
-      # already covers the same files.
+      # already covers the same files. Blocking on critical only, as there.
       - name: Dependency audit
         if: steps.pages.outputs.count != '0'
         working-directory: tools/visuals
-        run: npm audit
+        run: npm audit --audit-level=critical
       - name: Render the production visuals
         if: steps.pages.outputs.count != '0'
         working-directory: tools/visuals

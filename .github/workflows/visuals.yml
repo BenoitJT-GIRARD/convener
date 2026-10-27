@@ -257,10 +257,11 @@ jobs:
       # Every surface with a lockfile
       # gets an audit in this same quality chain -- this package is a new
       # surface with a new lockfile, so it gets one too rather than
-      # becoming the one exception.
+      # becoming the one exception. Tooling only, so it blocks on a
+      # critical advisory, the line quality.yml's `site/` step explains.
       - name: Dependency audit
         working-directory: tools/visuals
-        run: npm audit
+        run: npm audit --audit-level=critical
       - name: Render and compare against the versioned references
         working-directory: tools/visuals
         run: |

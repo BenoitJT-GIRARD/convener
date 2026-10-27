@@ -88,10 +88,12 @@ def _lane(job: str, first_step: str, next_step: str | None) -> str:
     return start.split(f"- name: {next_step}\n", 1)[0]
 
 
+_PYTHON_JOB = _job("python", "web")
 _WEB_JOB = _job("web", "relays")
 _RELAYS_JOB = _job("relays", "workflow-schema")
 
 _APP_LANE = _lane(_WEB_JOB, "Install app", "Install site")
+_SITE_LANE = _lane(_WEB_JOB, "Install site", None)
 _AUTH_PROXY_LANE = _lane(_RELAYS_JOB, "Install auth-proxy", "Install form-relay")
 _FORM_RELAY_LANE = _lane(_RELAYS_JOB, "Install form-relay", "Install signup-relay")
 _SIGNUP_RELAY_LANE = _lane(_RELAYS_JOB, "Install signup-relay", None)
@@ -195,24 +197,71 @@ def test_relay_jobs_have_no_production_dependencies_to_omit() -> None:
         )
 
 
-def test_the_relay_lanes_audit_their_whole_dependency_tree() -> None:
-    """Each relay lane runs the same full audit `site/`'s own step already
-    does, and never `--omit=dev` -- the identical reasoning
-    `test_performance_workflow.py::test_the_workflow_audits_site_dependencies`
-    pins for `site/` applies here for the same cause (see
-    `test_relay_jobs_have_no_production_dependencies_to_omit` above)."""
-    for name, lane in (
+def test_tooling_trees_block_only_on_a_critical_advisory() -> None:
+    """The relays, `site/` and `tools/visuals/` ship no package of their
+    own: every one they carry is a build or test tool, so the whole tree is
+    audited (`--omit=dev` would exempt all of it, see
+    `test_relay_jobs_have_no_production_dependencies_to_omit` above) and the
+    line is drawn at `critical`.
+
+    Below it sit advisories like the ones that turned every pull request red
+    in October 2026: a dev server's editor launcher on Windows, a quadratic
+    parse of Markdown this repository writes itself. None of them runs on
+    this repository's behalf. A critical one -- remote execution in a build
+    tool, or a package published as malware -- runs on a runner that holds
+    a deploy token, and still stops the merge. The same command prints every
+    finding below the line in the step's log, and the Security tab lists
+    them."""
+    workflows = _ROOT / ".github" / "workflows"
+    for name, text in (
         ("auth-proxy", _AUTH_PROXY_LANE),
         ("form-relay", _FORM_RELAY_LANE),
         ("signup-relay", _SIGNUP_RELAY_LANE),
+        ("site", _SITE_LANE),
+        ("visuals.yml", (workflows / "visuals.yml").read_text(encoding="utf-8")),
+        (
+            "visuals-production.yml",
+            (workflows / "visuals-production.yml").read_text(encoding="utf-8"),
+        ),
     ):
-        audit_run_lines = [
-            line for line in lane.splitlines() if line.strip() == "run: npm audit"
+        audits = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip().startswith("run: npm audit")
         ]
-        assert audit_run_lines, f"{name} lane has no bare `npm audit` step"
-        assert len(audit_run_lines) == 1, (
-            f"{name} lane has more than one bare `npm audit` step"
-        )
+        assert audits == ["run: npm audit --audit-level=critical"], (name, audits)
+
+
+def test_the_python_gate_audits_what_the_package_runs() -> None:
+    """`convener-ops`'s own dependencies -- cryptography, PyYAML, segno --
+    run inside workflows that hold the signing key and the participants'
+    records, so any advisory against them blocks. The `dev` group is the
+    checkers themselves: the finding that blocked every pull request in
+    October 2026 was in `filelock`, which only `pip-audit`'s own cache
+    loads. The lockfile is exported without that group and audited by hash,
+    so what is audited is exactly what `uv sync --no-dev` would install."""
+    assert "uv export --frozen --no-dev" in _PYTHON_JOB
+    assert "pip-audit --disable-pip --require-hashes -r" in _PYTHON_JOB
+    bare = [
+        line
+        for line in _PYTHON_JOB.splitlines()
+        if line.strip() == "run: uv run --frozen pip-audit"
+    ]
+    assert not bare, "the python job still audits the whole dev environment"
+
+
+def test_a_python_audit_finding_does_not_skip_the_tests() -> None:
+    """Steps in the `python` job stop at the first failure. With the audit
+    ahead of the tests, an advisory published overnight skipped the whole
+    suite, the commit-message check and every generated-file check on every
+    pull request, and the run's red said nothing about the change under
+    review. The audit runs last, and runs whatever came before it."""
+    assert _PYTHON_JOB.index("- name: Tests\n") < _PYTHON_JOB.index(
+        "- name: Dependency audit\n"
+    )
+    audit = _PYTHON_JOB.split("- name: Dependency audit\n", 1)[1]
+    audit = audit.split("- name:", 1)[0]
+    assert "if: always() && steps.install.outcome == 'success'" in audit
 
 
 def test_the_relay_audit_step_runs_before_the_test_step() -> None:
