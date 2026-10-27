@@ -9,6 +9,6 @@
     "render": "node render-production.mjs"
   },
   "devDependencies": {
-    "puppeteer": "25.12.0"
+    "puppeteer": "25.16.0"
   }
 }
