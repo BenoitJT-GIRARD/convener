@@ -1408,7 +1408,7 @@ it.
 | `CONVENER_RETENTION_TOKEN` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CONVENER_SIGNING_KEY` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CONVENER_MATCHING_SALT` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
-| `CONVENER_NOTIFY_THREAD` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
+| `CONVENER_NOTIFY_THREAD` | repository-variable | `cockpit` | Settings → Secrets and variables → Actions → Variables → New repository variable |
 | `CONVENER_NOTIFY_MENTION` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CONVENER_SMTP_HOST` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |
 | `CONVENER_SMTP_PORT` | repository-secret | `cockpit` | Settings → Secrets and variables → Actions → Secrets → New repository secret |

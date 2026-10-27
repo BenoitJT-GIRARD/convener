@@ -3987,9 +3987,33 @@ def test_a_workflow_that_lost_its_secret_is_flagged_as_over_watched(
     assert watched - expected == {"Retired"}
 
 
+def test_the_notification_thread_is_read_as_a_variable_not_a_secret() -> None:
+    """An issue number is not a credential, and as a secret it cost every
+    log its digits: GitHub masks a secret's value wherever it appears, and
+    a board thread is often issue 1 -- one instance's logs read
+    `expired on 2026-***0-***3`. A variable is not masked, so every
+    workflow reads it from `vars.`, and the declaration that tells an
+    operator where to set it says the same."""
+    for path in sorted((ROOT / WORKFLOWS_DIR).glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        assert "secrets.CONVENER_NOTIFY_THREAD" not in text, path.name
+    for name in ("sweep-and-notify.yml", SECRET_WORKFLOW_MONITOR.name):
+        text = (ROOT / WORKFLOWS_DIR / name).read_text(encoding="utf-8")
+        assert "vars.CONVENER_NOTIFY_THREAD" in text, name
+    declaration = safe_load(
+        (ROOT / "declarations/standing-up.yml").read_text(encoding="utf-8")
+    )
+    (entry,) = [
+        setting
+        for setting in declaration["secrets"]
+        if setting["name"] == "CONVENER_NOTIFY_THREAD"
+    ]
+    assert entry["kind"] == "repository-variable"
+
+
 def test_the_monitor_would_otherwise_qualify_to_watch_itself() -> None:
-    """`secret-workflow-monitor.yml` itself references `secrets.
-    CONVENER_NOTIFY_THREAD` and `secrets.CONVENER_NOTIFY_MENTION` to post its own
+    """`secret-workflow-monitor.yml` itself references
+    `secrets.CONVENER_NOTIFY_MENTION` to post its own
     alert, so `_declares_a_secret_beyond_github_token` reads `True` for
     it -- it would qualify for its own watch list by the same rule every
     other workflow is held to. The `exclude=` parameter in

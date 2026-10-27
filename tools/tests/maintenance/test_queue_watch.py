@@ -705,7 +705,7 @@ def test_the_alarm_uses_the_channel_that_already_exists_with_its_own_body() -> N
     assert "queue-body.md" in step["run"]
     assert "notify-body.md" not in step["run"]
     assert "budget-body.md" not in step["run"]
-    assert step["env"]["THREAD"] == "${{ secrets.CONVENER_NOTIFY_THREAD }}"
+    assert step["env"]["THREAD"] == "${{ vars.CONVENER_NOTIFY_THREAD }}"
 
 
 def test_an_overdue_entry_turns_the_daily_job_red_on_its_own() -> None:
