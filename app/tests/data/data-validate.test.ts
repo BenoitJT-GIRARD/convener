@@ -6,6 +6,7 @@ import { DataShapeError } from '../../src/data/validate';
 import { friendlyError } from '../../src/github/errors';
 import { CONFIG, SPEAKERS } from '../helpers/boundary-samples';
 import { config, configYaml, speaker, speakersYaml } from '../helpers/data-doubles';
+import cases from '../../../tools/tests/fixtures/governance-cases.json';
 
 /** The message a volunteer would actually be shown for `text`. */
 function refusal(read: () => unknown): string {
@@ -145,6 +146,20 @@ describe('what a volunteer is told when instance/data/speakers.yml is malformed'
     expect(message).toContain('instance/data/speakers.yml');
     expect(message).toContain('speaker 1 (spk-001)');
     expect(message).toContain('"postponed"');
+  });
+
+  // The same table tools/tests/governance/test_validate.py reads: the validator
+  // CI runs and the one this app runs have to agree on what `source` may hold.
+  it.each(cases.speaker_source_cases)('$name', c => {
+    const yaml = speakersYaml([speaker()]).replace(
+      'source: organizer',
+      `source: ${JSON.stringify(c.source)}`,
+    );
+    if (c.valid) {
+      expect(parseSpeakers(yaml)[0].source).toBe(c.source);
+    } else {
+      expect(refusal(() => parseSpeakers(yaml))).toContain('"source"');
+    }
   });
 
   it('falls back to the position when even the id is unusable', () => {

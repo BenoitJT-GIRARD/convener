@@ -618,6 +618,15 @@ def validate_speakers(
                 f"arrived ({proposed_by!r}) -- that is source's answer"
             )
 
+        # The cockpit refuses a file whose `source` is outside this
+        # vocabulary (`app/src/data/validate.ts`), and this is the check CI
+        # runs: let one through here and a green run is followed by an app
+        # that will not open the file. `speaker_source_cases` in the shared
+        # fixture holds both sides to the same answer.
+        source = entry.get("source")
+        if source not in SOURCES:
+            errors.append(f"{where}: invalid source {source!r}")
+
         # career_stage and publication are required since the v3 migration
         # to schema v3 gave every speaker both. They were
         # checked only when present while the real data was still v2; now
