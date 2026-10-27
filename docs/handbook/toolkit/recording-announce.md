@@ -16,7 +16,7 @@ yet and there is nothing here to post — the event's own page says under
 
 ---
 
-**Subject:** Now online — {{ public.title }}
+**Subject:** Now online: {{ public.title }}
 
 The recording of our seminar with **{{ public.name }}** ({{ public.affiliation }}),
 *{{ public.title }}*, given {{ public.when }}, is now online:

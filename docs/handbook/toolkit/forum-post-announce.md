@@ -15,8 +15,8 @@ In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), 
 *(Insert the session image here.)*
 
 - **When:** {{ speaker.when }}
-- **Where:** online — registration needed
-- **Registration:** {{ speaker.signup_link }} — this is not the room link, which is never published anywhere but the confirmation e-mail (see [Registration confirmed](emails/registration-confirmed.md))
+- **Where:** online, registration needed
+- **Registration:** {{ speaker.signup_link }} (the room link comes by email once you register)
 
 **Abstract**
 
