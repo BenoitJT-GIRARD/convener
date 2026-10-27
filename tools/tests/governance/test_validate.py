@@ -50,6 +50,24 @@ def test_a_minimal_lead_is_valid() -> None:
     assert validate_speakers([speaker()], editions=EDITIONS) == []
 
 
+@pytest.mark.parametrize("case", CASES["speaker_source_cases"], ids=lambda c: c["name"])
+def test_source_is_held_to_the_vocabulary_the_cockpit_reads(
+    case: dict[str, Any],
+) -> None:
+    """The same table `app/tests/data/data-validate.test.ts` reads. This
+    validator is the one CI runs, so a value it let through that the
+    cockpit refuses was a green check followed by an app that would not open
+    the file."""
+    errors = validate_speakers([speaker(source=case["source"])], editions=EDITIONS)
+    about_source = [error for error in errors if "source" in error]
+    if case["valid"]:
+        assert about_source == []
+    else:
+        assert about_source == [
+            f"speakers[0] (spk-001): invalid source {case['source']!r}"
+        ]
+
+
 def test_top_level_must_be_a_list() -> None:
     errors = validate_speakers({"id": "spk-001"}, editions=EDITIONS)
     assert errors == ["speakers.yml: top-level must be a list"]

@@ -359,6 +359,12 @@ jobs:
       - name: Sync and commit the share banner
         env:
           GH_TOKEN: ${{ github.token }}
+        # What this commits stays in history for good, so the banner never
+        # carries a portrait: a photograph committed here would outlive a
+        # withdrawn consent and the retention period alike.
+        # `cli/publication.py::_scheduled_announcements` says what that rules
+        # out and what a portrait would take instead.
+        #
         # On a rejected push, re-derive against the
         # refreshed tip rather than `git pull --rebase`. `git reset --hard`
         # would discard the local commit's own site/src/banners changes

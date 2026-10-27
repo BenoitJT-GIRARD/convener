@@ -2617,5 +2617,38 @@
     "_comment_padding": "Both envelopes are the identical length (11354 base64 characters) despite carrying different feedback text -- confirming the fixed-size plaintext padding survey.py::_pad and encrypt.ts::padPlaintext both apply before AES-GCM. Regenerated the same way as the original capture: the literal, unedited output of encryptSurveyResponse run once under Node's own crypto.subtle. A third case carries 2000 non-Latin code points at the feedback boundary -- the case the byte-bound check exists because of. Its envelope is the literal, unedited output of encryptSurveyResponse run once under Node's own crypto.subtle, generated the same way as the first two.",
     "pad_bytes": 8192,
     "_comment_pad_bytes": "The fixed plaintext pad target both survey.py::_PLAINTEXT_PAD_BYTES and encrypt.ts::PLAINTEXT_PAD_BYTES must agree on -- bound here, independently of either module's own symbol, so a change to either constant that is not also made here fails a fixture-consistency test rather than passing silently because a test happened to compare the same (changed) symbol to itself."
-  }
+  },
+  "_speaker_source_comment": "How a lead arrived: the one closed vocabulary of a speaker record that tools/convener_ops/governance/validate.py::validate_speakers named and never applied, while app/src/data/validate.ts refused anything outside it at read time. convener-validate is what CI runs, so a value one side loads and the other refuses passed CI and then stopped the cockpit from opening the file (issue #126). Both sides read this table.",
+  "speaker_source_cases": [
+    {
+      "name": "a lead from the public form",
+      "source": "form",
+      "valid": true
+    },
+    {
+      "name": "a lead the board went looking for",
+      "source": "outreach",
+      "valid": true
+    },
+    {
+      "name": "a lead an organiser entered",
+      "source": "organizer",
+      "valid": true
+    },
+    {
+      "name": "a channel this product does not know",
+      "source": "completely-made-up-channel",
+      "valid": false
+    },
+    {
+      "name": "a blank source",
+      "source": "",
+      "valid": false
+    },
+    {
+      "name": "the right word in the wrong case",
+      "source": "Form",
+      "valid": false
+    }
+  ]
 }
