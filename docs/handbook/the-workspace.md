@@ -63,10 +63,11 @@ anything about a person, and none of them needs a volunteer's machine to be on.
 - **The nightly sweep** moves a talk to delivered once its date has passed, and
   parks a lead whose vote window has run out. It also prints what the
   inactivity rule would propose about Board membership, and applies none of it.
-- **The daily digest** posts one comment to the Board's notification thread
-  saying what moved. Urgent things — a lead from the public form, a vote
-  reaching its threshold, an objection — are posted when they happen instead of
-  waiting for the morning.
+- **The weekly digest** posts one comment to the Board's notification thread
+  on Monday morning, saying what moved in the past seven days and what is
+  overdue, and nothing at all in a week where neither happened. Urgent things —
+  a lead from the public form, a vote reaching its threshold, an objection —
+  are posted when they happen instead of waiting for Monday.
 - **The decision register** is rewritten from the commit history on every push,
   which is why [that page](governance/register.md) says not to edit it.
 - **The public feed** is published for the public site from the records that

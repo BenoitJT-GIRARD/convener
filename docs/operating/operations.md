@@ -885,8 +885,8 @@ address, affiliation, country, talk title or board login is ever included —
 
 **To verify:** from `tools/`, run `uv run --frozen convener-check-config`; *Board
 notifications* moves from `absent` to `production`. Run
-`uv run --frozen convener-notify-digest --dry-run` to read the day's message without
-sending anything.
+`uv run --frozen convener-notify-digest --dry-run` to read the week's message
+on any day, without sending anything.
 
 ## Event registration keys
 

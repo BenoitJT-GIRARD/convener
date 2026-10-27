@@ -62,7 +62,7 @@ parking a lead there is not a rejection either.
 
 The overdue sentences are `app/src/state/sla.ts`'s, not a second set
 --------------------------------------------------------------------
-The overdue list belongs in the daily digest, and the screens already
+The overdue list belongs in the weekly digest, and the screens already
 have that wording. Two implementations of one sentence is the
 cross-language divergence this repository has been bitten by four times, so
 the Python half below is an explicit twin of `app/src/state/sla.ts` and the two
@@ -215,7 +215,7 @@ def _publication_refused(speaker: Mapping[str, Any]) -> bool:
     to it by `lateness_cases` in
     `tools/tests/fixtures/governance-cases.json` -- it is read by `due_date`
     below, which is itself the twin of `sla.ts::dueDate`, so a change on one
-    side that missed the other would put a deadline in the daily digest that
+    side that missed the other would put a deadline in the weekly digest that
     the screens no longer show, or the reverse.
 
     Two refusals and only two: the speaker's own `refused`, and the board's
@@ -518,7 +518,7 @@ def immediate_events(before: Any, after: Any) -> list[Event]:
 
 
 # ------------------------------------------------------------------ #
-# The daily digest
+# The weekly digest
 # ------------------------------------------------------------------ #
 
 # The digest is composed only of facts the record itself dates -- there is no
@@ -551,7 +551,7 @@ def _parked_on(entry: Mapping[str, Any], config: Any) -> str:
     for a record that is parked, has an opened window, and reached no
     decision. What it costs is that a sweep which does not run on its
     scheduled morning parks a day late while this still names the day the
-    window closed; `daily_digest`'s docstring says so rather than leaving the
+    window closed; `weekly_digest`'s docstring says so rather than leaving the
     reader to find out.
     """
     if entry.get("status") != "parked":
@@ -564,13 +564,13 @@ def _parked_on(entry: Mapping[str, Any], config: Any) -> str:
     return (opened + timedelta(days=vote_window_days(config) + 1)).isoformat()
 
 
-def _happened_today(speakers: Sequence[Any], config: Any, today: str) -> list[str]:
+def _happened_on(speakers: Sequence[Any], config: Any, today: str) -> list[str]:
     """Everything the repository records as having happened on `today`.
 
     Derived from stored days rather than from a diff, deliberately: the digest
     takes no "yesterday's file" argument, so it cannot report something that
     left no date behind, and it cannot invent one either. What that costs is
-    stated in `daily_digest`'s docstring.
+    stated in `weekly_digest`'s docstring.
     """
     lines: list[str] = []
     for entry in speakers:
@@ -645,18 +645,42 @@ def _overdue_lines(speakers: Sequence[Any], config: Any, today: str) -> list[str
     return [f"{rid}: {overdue_text(i)}, {waiting_since(i)}" for rid, i in late]
 
 
-def daily_digest(speakers: Any, config: Any, now: datetime) -> str | None:
-    """One message for a day, or `None` when the day has nothing in it.
+#: The day the digest goes out: Monday, read as a Paris day like every other
+#: day here.
+DIGEST_WEEKDAY: Final = 0
 
-    `None` when nothing is dated today **and** nothing is overdue. That is the
-    property the whole channel rests on: a digest that arrives every morning
-    saying nothing gets filtered into a folder within a fortnight, and once it
-    is filtered the day something *does* happen is filtered with it. Silence is
-    therefore a feature, and it is the most important test in this module.
+#: How many days one digest covers: the seven ending on the day it goes out,
+#: so one week's digest starts the day after the last one's ended.
+DIGEST_DAYS: Final = 7
+
+
+def is_digest_day(day: date) -> bool:
+    """Whether `day`, a Paris day, is the one the digest goes out on."""
+    return day.weekday() == DIGEST_WEEKDAY
+
+
+def weekly_digest(speakers: Any, config: Any, now: datetime) -> str | None:
+    """One message for the week ending on `now`'s day, or `None` when the week
+    has nothing in it.
+
+    Weekly rather than daily since October 2026. A message every morning to
+    every Board member, repeating the overdue list it had sent the day
+    before, was the mail its readers had stopped opening -- which is how a
+    channel loses the one message that matters. What cannot wait a week does
+    not wait: `immediate_events` and the watchdogs post the day they happen.
+
+    This composes; it does not decide the day. `is_digest_day` does, in the
+    command that posts, so a dry run can show any day what Monday would say.
+
+    `None` when nothing is dated in the week **and** nothing is overdue. That
+    is the property the whole channel rests on: a digest that arrives saying
+    nothing gets filtered into a folder, and once it is filtered the week
+    something *does* happen is filtered with it. Silence is therefore a
+    feature, and it is the most important test in this module.
 
     `now` is an instant; the day is taken in Paris (`governance.paris_today`),
     never off a UTC clock, so a run between 00:00 and 02:00 Paris does not
-    report yesterday.
+    shift the week by a day.
 
     **The one automatic transition, and how it is dated.** There is
     exactly one -- `expire_votes`
@@ -681,16 +705,22 @@ def daily_digest(speakers: Any, config: Any, now: datetime) -> str | None:
     """
     if not isinstance(speakers, Sequence) or isinstance(speakers, str | bytes):
         speakers = []
-    today = paris_today(now).isoformat()
+    today = paris_today(now)
+    days = [
+        (today - timedelta(days=back)).isoformat()
+        for back in range(DIGEST_DAYS - 1, -1, -1)
+    ]
 
-    happened = _happened_today(speakers, config, today)
-    late = _overdue_lines(speakers, config, today)
+    happened = [
+        f"{day} {line}" for day in days for line in _happened_on(speakers, config, day)
+    ]
+    late = _overdue_lines(speakers, config, today.isoformat())
     if not happened and not late:
         return None
 
-    lines = [f"Workshop series digest - {today}", ""]
+    lines = [f"Workshop series digest - {days[0]} to {days[-1]}", ""]
     if happened:
-        lines.append("Recorded today")
+        lines.append("Recorded this week")
         lines += [f"  - {line}" for line in happened]
         lines.append("")
     if late:

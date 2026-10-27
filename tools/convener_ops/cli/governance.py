@@ -17,7 +17,7 @@ import re
 import subprocess  # nosec B404
 import sys
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final
 
@@ -33,16 +33,19 @@ from convener_ops.declaration.paths import (
 from convener_ops.declaration.yaml_safe import safe_load as yaml_safe_load
 from convener_ops.governance.dispatch_alert import alert_message
 from convener_ops.governance.notify import (
-    daily_digest,
+    DIGEST_WEEKDAY,
     dispatch,
     immediate_events,
+    is_digest_day,
     render_events,
+    weekly_digest,
 )
 from convener_ops.governance.register import (
     LOG_FORMAT,
     entries_from_log,
     render_register,
 )
+from convener_ops.governance.rule import paris_today
 from convener_ops.governance.validate import (
     board_target_report,
     validate_config,
@@ -244,9 +247,16 @@ def notify_immediate() -> int:
 
 
 def notify_digest() -> int:
-    """`convener-notify-digest`: one message for the day, or none at all.
+    """`convener-notify-digest`: one message for the week, on Mondays, or none
+    at all.
 
-    `--dry-run` composes and prints, and writes nothing.
+    Runs every day with the daily job, and reads the data every day, so an
+    unreadable file is reported the morning it appears rather than on the
+    next Monday. On any other day it composes nothing and says when the next
+    digest is due.
+
+    `--dry-run` composes and prints the week ending today, whatever the day,
+    and writes nothing.
     """
     root = repo_root()
     speakers, errors = store.load(root / DATA_DIR / "speakers.yml")
@@ -256,7 +266,14 @@ def notify_digest() -> int:
             print(f"  - {error}")
         return 1
 
-    return _notify(daily_digest(speakers or [], cfg or {}, datetime.now(UTC)))
+    now = datetime.now(UTC)
+    today = paris_today(now)
+    if "--dry-run" not in sys.argv[1:] and not is_digest_day(today):
+        due = today + timedelta(days=(DIGEST_WEEKDAY - today.weekday()) % 7)
+        print(f"the digest goes out on Mondays; the next one is due on {due}")
+        return 0
+
+    return _notify(weekly_digest(speakers or [], cfg or {}, now))
 
 
 def alert_secret_workflow_run() -> int:

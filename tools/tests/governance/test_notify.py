@@ -33,7 +33,6 @@ from convener_ops.governance.notify import (
     THREAD_ENV,
     THRESHOLD_REACHED,
     Channel,
-    daily_digest,
     dispatch,
     immediate_events,
     overdue,
@@ -41,6 +40,7 @@ from convener_ops.governance.notify import (
     render_events,
     resolve_channel,
     waiting_since,
+    weekly_digest,
 )
 from convener_ops.governance.rule import vote_window_days
 from convener_ops.maintenance.sweep import expire_votes
@@ -303,8 +303,45 @@ def test_malformed_input_produces_no_events_rather_than_raising() -> None:
 
 
 # ------------------------------------------------------------------ #
-# daily_digest: silence when nothing happened
+# weekly_digest: one message a week, and silence when nothing happened
 # ------------------------------------------------------------------ #
+
+
+def _opened(day: str) -> dict[str, Any]:
+    return lead(
+        id=f"spk-{day[-2:]}",
+        status="lead",
+        selection={"ballots": [], "opened_on": day, "decided_on": ""},
+    )
+
+
+def test_the_digest_covers_the_seven_days_ending_on_the_day_it_goes_out() -> None:
+    """Weekly since October 2026: a message every morning to every Board
+    member, mostly repeating the day before, was the mail people stop
+    reading. The week is the seven days ending on the day it is composed,
+    so consecutive weeks meet without a gap and without a day reported
+    twice."""
+    digest = weekly_digest(
+        [_opened("2026-08-12"), _opened("2026-08-18")], make_config(), NOW
+    )
+    assert digest is not None
+    assert "spk-12: the vote window opened" in digest
+    assert "spk-18: the vote window opened" in digest
+    assert weekly_digest([_opened("2026-08-11")], make_config(), NOW) is None
+
+
+def test_each_line_of_the_week_says_which_day_it_was_recorded() -> None:
+    digest = weekly_digest(
+        [_opened("2026-08-18"), _opened("2026-08-14")], make_config(), NOW
+    )
+    assert digest is not None
+    assert "2026-08-14 spk-14: the vote window opened" in digest
+    assert digest.index("2026-08-14 spk-14") < digest.index("2026-08-18 spk-18")
+
+
+def test_the_digest_goes_out_on_mondays() -> None:
+    assert notify.is_digest_day(date(2026, 8, 17))
+    assert not any(notify.is_digest_day(date(2026, 8, day)) for day in range(18, 24))
 
 
 def test_a_day_with_nothing_dated_and_nothing_overdue_produces_no_digest() -> None:
@@ -318,12 +355,12 @@ def test_a_day_with_nothing_dated_and_nothing_overdue_produces_no_digest() -> No
         lead(id="spk-001", status="confirmed"),
         lead(id="spk-002", status="archived"),
     ]
-    assert daily_digest(speakers, make_config(), NOW) is None
+    assert weekly_digest(speakers, make_config(), NOW) is None
 
 
 def test_an_empty_repository_produces_no_digest() -> None:
-    assert daily_digest([], make_config(), NOW) is None
-    assert daily_digest(None, None, NOW) is None
+    assert weekly_digest([], make_config(), NOW) is None
+    assert weekly_digest(None, None, NOW) is None
 
 
 def test_a_vote_window_opened_today_reaches_the_digest() -> None:
@@ -334,20 +371,20 @@ def test_a_vote_window_opened_today_reaches_the_digest() -> None:
             selection={"ballots": [], "opened_on": "2026-08-18", "decided_on": ""},
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-004: the vote window opened" in digest
 
 
-def test_a_vote_window_opened_yesterday_does_not_reach_todays_digest() -> None:
+def test_a_vote_window_opened_before_the_week_does_not_reach_its_digest() -> None:
     speakers = [
         lead(
             id="spk-004",
             status="lead",
-            selection={"ballots": [], "opened_on": "2026-08-17", "decided_on": ""},
+            selection={"ballots": [], "opened_on": "2026-08-11", "decided_on": ""},
         )
     ]
-    assert daily_digest(speakers, make_config(), NOW) is None
+    assert weekly_digest(speakers, make_config(), NOW) is None
 
 
 def test_a_lead_parked_by_the_sweep_today_reaches_the_digest() -> None:
@@ -366,13 +403,16 @@ def test_a_lead_parked_by_the_sweep_today_reaches_the_digest() -> None:
             selection={"ballots": [], "opened_on": "2026-08-07", "decided_on": ""},
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-004: the vote window closed and the lead was parked" in digest
 
 
-def test_a_lead_parked_on_another_day_does_not_reach_todays_digest() -> None:
-    for opened_on in ("2026-08-06", "2026-08-08", "2026-07-01"):
+def test_a_lead_parked_outside_the_week_does_not_reach_its_digest() -> None:
+    # Parked the day before the week began, the day after it ended, and long
+    # before: the vote window is ten days, so the lead parks eleven days after
+    # it opened.
+    for opened_on in ("2026-07-31", "2026-08-08", "2026-07-01"):
         speakers = [
             lead(
                 id="spk-004",
@@ -380,7 +420,7 @@ def test_a_lead_parked_on_another_day_does_not_reach_todays_digest() -> None:
                 selection={"ballots": [], "opened_on": opened_on, "decided_on": ""},
             )
         ]
-        digest = daily_digest(speakers, make_config(), NOW)
+        digest = weekly_digest(speakers, make_config(), NOW)
         assert digest is None or "was parked" not in digest, opened_on
 
 
@@ -396,7 +436,7 @@ def test_a_parked_lead_with_no_opened_on_is_not_dated() -> None:
             selection={"ballots": [], "opened_on": "", "decided_on": ""},
         )
     ]
-    assert daily_digest(speakers, make_config(), NOW) is None
+    assert weekly_digest(speakers, make_config(), NOW) is None
 
 
 def test_the_parked_line_follows_the_window_the_sweep_actually_applies() -> None:
@@ -414,10 +454,10 @@ def test_the_parked_line_follows_the_window_the_sweep_actually_applies() -> None
         selection={"ballots": [], "opened_on": "2026-07-27", "decided_on": ""},
     )
     assert vote_window_days(cfg) == 21
-    digest = daily_digest([entry], cfg, NOW)
+    digest = weekly_digest([entry], cfg, NOW)
     assert digest is not None
     assert "spk-004: the vote window closed and the lead was parked" in digest
-    assert "was parked" not in (daily_digest([entry], make_config(), NOW) or "")
+    assert "was parked" not in (weekly_digest([entry], make_config(), NOW) or "")
 
 
 def test_a_parked_lead_that_reached_a_decision_is_not_announced_as_expiring() -> None:
@@ -433,7 +473,7 @@ def test_a_parked_lead_that_reached_a_decision_is_not_announced_as_expiring() ->
             "decided_on": "2026-08-10",
         },
     )
-    digest = daily_digest([entry], make_config(), NOW)
+    digest = weekly_digest([entry], make_config(), NOW)
     assert digest is None or "was parked" not in digest
 
 
@@ -448,7 +488,7 @@ def test_the_parked_line_is_the_line_the_sweep_would_produce_that_day() -> None:
     cfg = make_config()
     swept, changes = expire_votes([entry], cfg, NOW)
     assert changes, "the sweep does not park this record today"
-    digest = daily_digest(swept, cfg, NOW)
+    digest = weekly_digest(swept, cfg, NOW)
     assert digest is not None
     assert "spk-004: the vote window closed and the lead was parked" in digest
 
@@ -459,7 +499,7 @@ def test_a_nomination_opened_today_reaches_the_digest_without_naming_anyone() ->
             nomination(candidate="grace", sponsor="ada", opened_on="2026-08-18")
         ]
     )
-    digest = daily_digest([], cfg, NOW)
+    digest = weekly_digest([], cfg, NOW)
     assert digest is not None
     assert "nomination 1: a nomination window opened" in digest
     assert "grace" not in digest
@@ -476,7 +516,7 @@ def test_the_overdue_list_alone_is_enough_to_produce_a_digest() -> None:
             selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     # `vote_window_days: 10` in the double, and the board's decision deadline
     # is that number and no other.
@@ -495,7 +535,7 @@ def test_the_overdue_wording_in_the_digest_is_the_wording_the_screens_use() -> N
     )
     late = overdue(entry, make_config(), "2026-08-18")
     assert late is not None
-    digest = daily_digest([entry], make_config(), NOW)
+    digest = weekly_digest([entry], make_config(), NOW)
     assert digest is not None
     assert overdue_text(late) in digest
     assert waiting_since(late) in digest
@@ -509,7 +549,7 @@ def test_a_step_within_its_target_contributes_no_overdue_line() -> None:
             selection={"ballots": [], "opened_on": "2026-08-10", "decided_on": ""},
         )
     ]
-    assert daily_digest(speakers, make_config(), NOW) is None
+    assert weekly_digest(speakers, make_config(), NOW) is None
 
 
 def test_the_overdue_list_puts_the_longest_waiting_first() -> None:
@@ -525,7 +565,7 @@ def test_the_overdue_list_puts_the_longest_waiting_first() -> None:
             selection={"ballots": [], "opened_on": "2026-07-01", "decided_on": ""},
         ),
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert digest.index("spk-a") < digest.index("spk-b")
 
@@ -541,7 +581,7 @@ def test_the_day_is_the_paris_day_not_the_utc_one() -> None:
             selection={"ballots": [], "opened_on": "2026-08-18", "decided_on": ""},
         )
     ]
-    digest = daily_digest(speakers, make_config(), late_evening)
+    digest = weekly_digest(speakers, make_config(), late_evening)
     assert digest is not None
     assert "2026-08-18" in digest
 
@@ -554,8 +594,8 @@ def test_the_digest_is_the_same_text_when_composed_twice_for_the_same_day() -> N
             selection={"ballots": [], "opened_on": "2026-08-18", "decided_on": ""},
         )
     ]
-    first = daily_digest(speakers, make_config(), NOW)
-    second = daily_digest(
+    first = weekly_digest(speakers, make_config(), NOW)
+    second = weekly_digest(
         speakers, make_config(), datetime(2026, 8, 18, 20, tzinfo=UTC)
     )
     assert first == second
@@ -573,7 +613,7 @@ def test_an_automatic_transition_recorded_today_reaches_the_digest() -> None:
             youtube_url="https://example.org/watch",
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-007: the talk is recorded as delivered" in digest
 
@@ -590,7 +630,7 @@ def test_a_board_decision_recorded_today_reaches_the_digest() -> None:
             },
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-007: the board decision was recorded" in digest
 
@@ -612,7 +652,7 @@ def test_a_publication_approved_today_reaches_the_digest() -> None:
             },
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-007: the publication was approved" in digest
 
@@ -639,7 +679,7 @@ def test_an_objection_lodged_and_one_closed_today_both_reach_the_digest() -> Non
             },
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-007: an objection was lodged on the publication" in digest
     assert "spk-007: an objection on the publication was closed" in digest
@@ -669,7 +709,7 @@ def test_a_malformed_objection_entry_is_skipped_when_composing_the_digest() -> N
             },
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
+    digest = weekly_digest(speakers, make_config(), NOW)
     assert digest is not None
     assert "spk-007: an objection was lodged on the publication" in digest
 
@@ -697,7 +737,7 @@ def test_an_objection_unrelated_to_today_contributes_no_digest_line() -> None:
             },
         )
     ]
-    assert daily_digest(speakers, make_config(), NOW) is None
+    assert weekly_digest(speakers, make_config(), NOW) is None
 
 
 def test_a_nomination_objection_lodged_today_reaches_the_digest() -> None:
@@ -711,7 +751,7 @@ def test_a_nomination_objection_lodged_today_reaches_the_digest() -> None:
             )
         ]
     )
-    digest = daily_digest([], cfg, NOW)
+    digest = weekly_digest([], cfg, NOW)
     assert digest is not None
     assert "nomination 1: an objection was lodged" in digest
 
@@ -727,7 +767,7 @@ def test_a_nomination_objection_from_another_day_contributes_no_digest_line() ->
             )
         ]
     )
-    assert daily_digest([], cfg, NOW) is None
+    assert weekly_digest([], cfg, NOW) is None
 
 
 @pytest.mark.parametrize(
@@ -756,7 +796,7 @@ def test_an_unusable_sla_configuration_produces_no_deadline(sla_days: Any) -> No
     )
     cfg = make_config(sla_days=sla_days)
     assert overdue(entry, cfg, "2026-08-18") is None
-    assert daily_digest([entry], cfg, NOW) is None
+    assert weekly_digest([entry], cfg, NOW) is None
 
 
 @pytest.mark.parametrize("window", [7, 10, 14, 20], ids=str)
@@ -836,12 +876,12 @@ def test_a_day_that_is_not_an_iso_date_yields_no_lateness(today: str) -> None:
 
 def test_a_malformed_record_contributes_nothing_rather_than_raising() -> None:
     assert overdue("not a record", make_config(), "2026-08-18") is None
-    assert daily_digest(["not a record", 7, {}], make_config(), NOW) is None
+    assert weekly_digest(["not a record", 7, {}], make_config(), NOW) is None
 
 
 def test_malformed_nominations_contribute_nothing() -> None:
-    assert daily_digest([], make_config(nominations="none"), NOW) is None
-    assert daily_digest([], make_config(nominations=[7, {}]), NOW) is None
+    assert weekly_digest([], make_config(nominations="none"), NOW) is None
+    assert weekly_digest([], make_config(nominations=[7, {}]), NOW) is None
 
 
 # ------------------------------------------------------------------ #
@@ -973,7 +1013,7 @@ def every_rendering() -> list[str]:
             },
         ),
     ]
-    digest = daily_digest(entries, cfg, NOW)
+    digest = weekly_digest(entries, cfg, NOW)
     assert digest is not None
     for expected in (
         "the vote window opened",
@@ -1343,6 +1383,79 @@ def _no_ambient_channel(monkeypatch: pytest.MonkeyPatch) -> None:
     """No test inherits a channel from the machine it runs on."""
     monkeypatch.delenv(THREAD_ENV, raising=False)
     monkeypatch.delenv(MENTION_ENV, raising=False)
+
+
+class _FixedDatetime:
+    """Stands in for the `datetime` class `cli/governance.py` imports, so
+    the command runs on a chosen day rather than on the day the suite does."""
+
+    def __init__(self, fixed: datetime) -> None:
+        self._fixed = fixed
+
+    def now(self, tz: Any = None) -> datetime:
+        return self._fixed
+
+
+#: A Monday: the day the digest goes out.
+DIGEST_MORNING = datetime(2026, 8, 24, 8, 0, tzinfo=UTC)
+
+
+@pytest.fixture(autouse=True)
+def _on_the_digest_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every command below runs on a Monday unless it says otherwise."""
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.datetime", _FixedDatetime(DIGEST_MORNING)
+    )
+
+
+def test_the_digest_command_posts_nothing_on_any_other_day(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The overdue list is not news on a Tuesday: it waits for Monday,
+    with a channel configured and something to say."""
+    root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest"]
+    )
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.datetime",
+        _FixedDatetime(DIGEST_MORNING + timedelta(days=1)),
+    )
+    monkeypatch.setenv(THREAD_ENV, "42")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
+
+    assert cli.notify_digest() == 0
+
+    assert "goes out on Mondays" in capsys.readouterr().out
+    assert not (root / cli.NOTIFY_BODY).exists()
+
+
+def test_a_dry_run_composes_the_week_on_any_day(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An operator checking the channel should not have to wait for a
+    Monday to read what it would say."""
+    root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
+    monkeypatch.setattr("convener_ops.cli.governance.repo_root", lambda: root)
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.sys.argv", ["convener-notify-digest", "--dry-run"]
+    )
+    monkeypatch.setattr(
+        "convener_ops.cli.governance.datetime",
+        _FixedDatetime(DIGEST_MORNING + timedelta(days=3)),
+    )
+
+    assert cli.notify_digest() == 0
+
+    out = capsys.readouterr().out
+    assert "spk-004: Board decision is " in out
+    assert "[dry run]" in out
+    assert not (root / cli.NOTIFY_BODY).exists()
 
 
 def test_the_digest_writes_nothing_when_no_channel_is_configured(
