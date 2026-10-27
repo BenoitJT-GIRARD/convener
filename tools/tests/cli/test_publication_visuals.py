@@ -221,6 +221,48 @@ def test_a_consented_photo_url_is_still_not_embedded_but_is_reported(
     assert "::notice::" in capsys.readouterr().err
 
 
+def test_the_committed_banner_never_carries_a_portrait() -> None:
+    """The case the two reasons above do not cover: consent granted, the
+    gate open, and the image already inline as a `data:` URI, so nothing
+    would have to be fetched. It still stays out, because
+    `visuals-production.yml` commits the banner and a photograph in history
+    outlives the consent that let it in. If this fails, the change it caught
+    is a decision about the banner, not about this function: keep it
+    portrait-free, or stop committing it."""
+    workflow = yaml.safe_load(
+        (repo_root() / ".github" / "workflows" / "visuals-production.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    commits = [
+        str(step.get("run", ""))
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
+        if step.get("name") == "Sync and commit the share banner"
+    ]
+    assert any("git add site/src/banners" in run for run in commits), (
+        "the banner is no longer committed -- this test's premise has moved, "
+        "so revisit it rather than delete it"
+    )
+    inline = "data:image/png;base64,iVBORw0KGgo="
+    rows = to_public(
+        [
+            _scheduled(
+                photo_url=inline,
+                publication={
+                    "consent": "granted",
+                    "approved_by": "Board",
+                    "approved_on": "2026-01-01",
+                    "objections": [],
+                    "outcome": "published",
+                },
+            )
+        ]
+    )
+    [announcement] = _scheduled_announcements(rows)
+    assert announcement.portrait_data_uri is None
+
+
 def test_an_end_to_end_withheld_portrait_renders_the_no_portrait_variant() -> None:
     """The consent gate, proved end to end through the real production path: a real
     speaker record carrying a `photo_url` but no recorded consent, run

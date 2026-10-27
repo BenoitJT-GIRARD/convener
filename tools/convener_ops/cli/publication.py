@@ -592,6 +592,18 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
     silently doing nothing about it (D-25) -- the alternative
     is a gap that looks identical to the common, legitimate case of
     "nothing to embed".
+
+    **The reason that binds is the commit, not the network and not the
+    consent gate.** Both of those can be answered: fetch the image ahead of
+    the render, honour the gate, and a portrait could be inlined. But
+    `visuals-production.yml` commits the rendered share banner to
+    `site/src/banners/`, and a commit is final: a photograph in it outlives
+    a withdrawn consent, a deleted record and the end of the retention
+    period. Wanting a portrait is therefore a decision about the banner --
+    keep it portrait-free, or stop committing it and render it at
+    publication instead -- and never a change to this line.
+    `test_publication_visuals.py::test_the_committed_banner_never_carries_a_portrait`
+    holds it.
     """
     announcements: list[visual.Announcement] = []
     for row in rows:
@@ -628,6 +640,8 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
                 speaker_name=str(row.get("speaker_name", "")),
                 speaker_affiliation=str(row.get("speaker_affiliation", "")),
                 event_id=event_id,
+                # Never a portrait: the banner is committed, and a commit
+                # outlives consent. See this function's docstring.
                 portrait_data_uri=None,
             )
         )
