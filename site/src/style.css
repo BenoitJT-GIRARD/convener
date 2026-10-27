@@ -150,6 +150,13 @@ body {
   overflow-x: hidden;
 }
 
+/* A line breaks where the text and the screen put it, never at a width
+ * fixed in characters: headings share their words evenly across lines,
+ * and a paragraph does not leave one word alone on its last line. A
+ * browser without `text-wrap` wraps exactly as it did before. */
+h1, h2, h3 { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+
 a {
   /* The dominant, not field-text: the field is a ground now, and a plain
    * link can land directly on it (prose in a future page's notice or
@@ -309,8 +316,9 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
 }
 .masthead__brand {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: .65rem;
+  gap: .15rem .65rem;
   color: var(--dominant);
   text-transform: uppercase;
 }
@@ -400,14 +408,20 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
    * solid on the field -- matches dominant_on_field, 7.93. */
   font-family: var(--ff-display);
   font-weight: 900;
-  font-size: clamp(2.8rem, 7vw, 5rem);
+  /* The floor follows the screen, so the longest word of a title still
+   * fits a phone; a word that cannot fit at all breaks rather than being
+   * cut off by the hero's own overflow. */
+  font-size: clamp(2rem, 8.4vw, 5rem);
   line-height: .98;
   letter-spacing: -0.025em;
   color: var(--dominant);
-  max-width: 14ch;
+  overflow-wrap: break-word;
   margin-bottom: 1.5rem;
   text-transform: uppercase;
 }
+/* A hero that draws the motif keeps its title clear of it: the drawing
+ * owns the right of the hero, and a title set at full width ran under it. */
+.hero:has(> .hero__motif) .hero__title { max-width: 10.5em; }
 .hero__title em {
   /* No colour of its own any more: field-text on the field it now sits on
    * measures 3.81, below AA. The originals never split a headline's colour
@@ -420,7 +434,7 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   font-size: clamp(1.1rem, 1.6vw, 1.3rem);
   line-height: 1.5;
   color: var(--ink-mute);
-  max-width: 50ch;
+  max-width: 64ch;
   margin-bottom: 2.5rem;
 }
 .hero__actions {
@@ -450,8 +464,30 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   border: 2px solid var(--rule-strong);
   background: var(--surface);
   padding: 1.5rem 1.75rem;
-  max-width: 62ch;
+  max-width: 68ch;
   margin-bottom: 1.5rem;
+}
+/* A notice with a label of its own fills the column. From tablet width
+ * the label takes a rail on the left and the text keeps a reading measure
+ * beside it, the rail-and-body shape .feature already uses; a narrow box
+ * pinned to the left of a wide page is what this replaces. Without `:has`
+ * a notice keeps the width above. */
+.notice:has(> .notice__eyebrow) { max-width: none; }
+@media (min-width: 760px) {
+  .notice:has(> .notice__eyebrow) {
+    display: grid;
+    grid-template-columns: minmax(9rem, 14rem) minmax(0, 68ch);
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+  .notice:has(> .notice__eyebrow) > * { grid-column: 2; }
+  .notice:has(> .notice__eyebrow) > .notice__eyebrow {
+    grid-column: 1;
+    grid-row: 1 / span 9;
+  }
+  /* The label is a paragraph too, so `.notice p + p` would push the
+   * text below the label it now sits beside. */
+  .notice:has(> .notice__eyebrow) > .notice__eyebrow + * { margin-top: 0; }
 }
 .notice__eyebrow {
   font-family: var(--ff-display);
@@ -788,9 +824,24 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
 
 /* ── Section ──────────────────────────────────────────────── */
 .section {
-  padding: 3.5rem 0 2.5rem;
-  border-top: 1px solid var(--rule);
+  /* Block padding only: `.section` sits on the same element as
+   * `.container` (merged in the markup), and a shorthand here cancelled
+   * the container's side gutter, so a section's text began 2.5rem left
+   * of the hero's on a wide screen and touched the screen's edge on a
+   * phone. */
+  padding-block: 3.5rem 2.5rem;
   position: relative;
+}
+.section::before {
+  /* The rule above a section spans the text column, not the container's
+   * box: a border on `.section` itself ran a gutter past the text on
+   * either side. */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  border-top: 1px solid var(--rule);
 }
 .section__head {
   /* A band, full-bleed, the same role the designer's own "title" band
@@ -897,7 +948,7 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
-.feature__body { max-width: 58ch; }
+.feature__body { min-width: 0; }
 .feature__title {
   font-family: var(--ff-display);
   font-weight: 800;
@@ -923,7 +974,7 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   line-height: 1.65;
   color: var(--ink);
   margin-bottom: 1.75rem;
-  max-width: 56ch;
+  max-width: 64ch;
 }
 
 .feature--empty {
@@ -934,8 +985,7 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
    * has only one child (its `<p>`), so above 760px it would otherwise
    * land in `.feature`'s first grid column -- 8rem wide, meant for
    * `.feature__rail` -- squeezing the message into a ten-character ribbon
-   * of text before its own `max-width: 52ch` on `.feature--empty p` ever
-   * gets a chance to apply. `.feature.feature--empty` (two classes,
+   * of text instead of the full width it is given. `.feature.feature--empty` (two classes,
    * specificity 0,2,0) outranks `.feature`'s own `@media (min-width:
    * 760px)` rule (one class, 0,1,0) regardless of source order, so this
    * stays correct even if the stylesheet is reordered later -- unlike a
@@ -949,7 +999,6 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   font-weight: 500;
   font-size: 1.1rem;
   color: var(--ink-mute);
-  max-width: 52ch;
 }
 
 /* ── Archive (TOC-style) ─────────────────────────────────── */
@@ -1019,7 +1068,10 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   margin-left: auto;
 }
 .archive__actions {
+  /* Each label stays whole, and the row wraps rather than running off a
+   * phone's screen when an edition has all three links. */
   display: flex;
+  flex-wrap: wrap;
   gap: .85rem;
   align-items: center;
   white-space: nowrap;
@@ -1154,7 +1206,6 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   font-weight: 500;
   font-size: 1.05rem;
   color: var(--ink-mute);
-  max-width: 52ch;
   padding: .5rem 0 1.5rem;
 }
 
@@ -1201,7 +1252,7 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   line-height: 1.2;
   letter-spacing: -0.015em;
   color: var(--white);
-  max-width: 26ch;
+  text-wrap: balance;
   text-transform: uppercase;
 }
 .coda__text em {
@@ -1306,7 +1357,7 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
 
 @media (max-width: 640px) {
   .hero { padding: 3.5rem 0 3rem; }
-  .section { padding: 2.5rem 0 1.5rem; }
+  .section { padding-block: 2.5rem 1.5rem; }
   .feature__rail { border-top: 3px solid var(--dominant); padding-top: .5rem; }
   /* Down into the hero's own lower right, clear of the text column. A
    * family draws across the whole canvas it is handed, and at this width
