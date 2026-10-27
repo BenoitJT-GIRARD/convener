@@ -1003,13 +1003,20 @@ jobs:
         # a cap. `--paginate` would follow every page there is, which on
         # the one day this most matters -- a burst -- is the day it costs
         # the most calls.
+        #
+        # `status=completed`, because this run is always in its own
+        # listing and its `daily` job has no `completed_at` yet: read
+        # unfiltered, it came back uncosted every morning and the
+        # `unreadable` alarm turned the sweep red every morning. A run
+        # still going is not a cost that could not be read -- tomorrow's
+        # window still contains it and costs it then.
         run: |
           set -e
           pages=$(( (MAX_RUNS + 99) / 100 ))
           : > runs.jsonl
           truncated=false
           for page in $(seq 1 "$pages"); do
-            if ! answer="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/runs" -f "created=>=$SINCE" -F per_page=100 -F "page=$page")"; then
+            if ! answer="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/runs" -f "created=>=$SINCE" -f "status=completed" -F per_page=100 -F "page=$page")"; then
               echo "::error::could not list this repository's workflow runs -- nothing was measured, which is not the same as nothing having run"
               exit 1
             fi
