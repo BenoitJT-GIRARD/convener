@@ -22,6 +22,7 @@ eleventyComputed:
   pageTitle: "{{ yearInfo.year }} editions"
   pageDescription: "Seminars held in {{ yearInfo.year }}, with their recording and discussion when there is one."
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 {% from "archive-list.njk" import archiveList %}
 {% from "archive-filters.njk" import archiveFilters %}
 
@@ -31,6 +32,7 @@ eleventyComputed:
 {% endfor %}
 
 <section class="hero">
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% endif %}
   <div class="container hero__inner">
     <p class="hero__eyebrow">Archive &middot; {{ yearInfo.year }}</p>
     <h1 class="hero__title">{{ yearInfo.year }} editions.</h1>
@@ -42,6 +44,7 @@ eleventyComputed:
 </section>
 
 <section class="section container">
+  {% if motif.pieces %}{{ piece(motif, "below-band") }}{% endif %}
   <header class="section__head">
     <span class="section__num">01</span>
     <span class="section__label">{{ yearInfo.year }}</span>

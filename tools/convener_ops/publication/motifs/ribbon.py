@@ -60,6 +60,8 @@ import math
 from dataclasses import dataclass
 from typing import Final
 
+from convener_ops.publication.motif_pieces import Arc, Piece, Through, piece
+
 Point = tuple[float, float]
 
 
@@ -521,3 +523,77 @@ def outline(width: float, height: float) -> tuple[tuple[Point, ...], ...]:
 #: why the registry reads this off the family rather than holding one
 #: figure for all of them.
 CLEARANCE_STROKE_WIDTHS: Final = 1.0
+
+
+# ----------------------------------------------------------------------
+# Pieces for a page
+# ----------------------------------------------------------------------
+#
+# The same stroke, set in the boxes of a page instead of on a poster's one
+# canvas (`motif_pieces.py` says why a page needs pieces at all). On a wide screen
+# it comes in through the top of the hero, turns one loop the right edge
+# cuts, comes back in lower and runs straight down, 110 units in from the
+# right edge, until the first band hides it; under that band the
+# `below-band` piece picks it up at the same distance and lets it out
+# through the right edge. The purple band near the foot of the home page
+# carries two quieter pieces of its own, one each side. A narrow screen has
+# no margin beside its text, so it gets one loop cut by the top-right
+# corner instead. Coordinates are CSS pixels at the showcase's scale.
+
+#: Distance from the right edge at which the stroke passes behind the first
+#: band, shared by the two pieces that meet there.
+_BAND_CROSSING: Final = 310.0
+
+PAGE_PIECES: Final[dict[str, Piece]] = {
+    "hero-wide": piece(
+        420,
+        1000,
+        align="xMaxYMin slice",
+        stroke_width=14,
+        steps=(
+            Through((152, -40), (0.3, 1)),
+            Arc((371, 146), 117, 200, 20),
+            Through((542, 293), (-0.45, 1)),
+            Through((336, 470), (-0.3, 1)),
+            Through((_BAND_CROSSING, 580), (0, 1)),
+            Through((_BAND_CROSSING, 1010), (0, 1)),
+        ),
+    ),
+    "below-band": piece(
+        420,
+        360,
+        align="xMaxYMin slice",
+        stroke_width=14,
+        steps=(
+            Through((_BAND_CROSSING, -10), (0, 1)),
+            Through((292, 130), (0, 1)),
+            Through((318, 230), (0.5, 1)),
+            Through((440, 300), (1, 0.15)),
+        ),
+    ),
+    "hero-corner": piece(
+        160,
+        160,
+        align="xMaxYMin meet",
+        stroke_width=12,
+        steps=(Arc((150, 4), 74, 200, 60),),
+    ),
+    "coda-right": piece(
+        160,
+        260,
+        align="xMaxYMin slice",
+        stroke_width=14,
+        steps=(
+            Through((40, -12), (0.25, 1)),
+            Arc((170, 133), 92, 200, 110),
+            Through((150, 280), (0.3, 1)),
+        ),
+    ),
+    "coda-left": piece(
+        160,
+        260,
+        align="xMinYMax slice",
+        stroke_width=14,
+        steps=(Arc((2, 247), 100, 260, 375),),
+    ),
+}

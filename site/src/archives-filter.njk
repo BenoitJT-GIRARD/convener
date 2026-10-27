@@ -43,6 +43,7 @@ facets:
     lede: "Past seminars with a discussion on the forum."
     empty: "No seminar has a discussion yet."
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 {% from "archive-list.njk" import archiveList %}
 {% from "archive-filters.njk" import archiveFilters %}
 
@@ -56,6 +57,7 @@ facets:
 {% endfor %}
 
 <section class="hero">
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% endif %}
   <div class="container hero__inner">
     <p class="hero__eyebrow">Archive &middot; {{ facet.label }}</p>
     <h1 class="hero__title">{{ facet.label }}.</h1>
@@ -64,6 +66,7 @@ facets:
 </section>
 
 <section class="section container">
+  {% if motif.pieces %}{{ piece(motif, "below-band") }}{% endif %}
   <header class="section__head">
     <span class="section__num">01</span>
     <span class="section__label">{{ facet.label }}</span>

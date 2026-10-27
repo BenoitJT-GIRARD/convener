@@ -34,9 +34,12 @@ stroked drawing and none of them measures its weight differently.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Final, Protocol
+
+from convener_ops.publication.motif_pieces import Piece
 
 from . import bracket, chevrons, lattice, ribbon, steps
 
@@ -49,6 +52,7 @@ __all__ = [
     "STEPS",
     "CoveredCanvasError",
     "Family",
+    "Piece",
     "Point",
     "Span",
     "UnknownMotifFamilyError",
@@ -57,6 +61,7 @@ __all__ = [
     "free_spans",
     "names",
     "outline",
+    "page_pieces",
     "path",
     "safe_margins",
     "stroke_width",
@@ -127,6 +132,10 @@ class Family:
     #: in stroke widths. The family's own measurement -- see `ribbon.py`'s
     #: own constant for what the ribbon's two halves cover.
     clearance_stroke_widths: float
+    #: The pieces this family draws for a page, by the name of the box each
+    #: is drawn for (`motif_pieces.py`). Empty for a family that draws none, which
+    #: the showcase then draws the way it always has.
+    page_pieces: Mapping[str, Piece] = field(default_factory=dict)
 
 
 #: The ribbon: one continuous stroke, traced off one instance's own
@@ -139,6 +148,7 @@ RIBBON: Final = Family(
     path=ribbon.path,
     outline=ribbon.outline,
     clearance_stroke_widths=ribbon.CLEARANCE_STROKE_WIDTHS,
+    page_pieces=ribbon.PAGE_PIECES,
 )
 
 #: The product's own mark in straight segments -- what `assets/brand/convener/
@@ -242,6 +252,11 @@ def stroke_width(width: float, height: float, *, ratio: float) -> float:
 def path(name: str, width: float, height: float) -> str:
     """The named family's drawing, as an SVG path `d`."""
     return family(name).path(width, height)
+
+
+def page_pieces(name: str) -> Mapping[str, Piece]:
+    """The pieces the named family draws for a page, or none."""
+    return family(name).page_pieces
 
 
 def outline(name: str, width: float, height: float) -> tuple[tuple[Point, ...], ...]:

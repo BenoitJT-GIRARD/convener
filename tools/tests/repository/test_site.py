@@ -205,6 +205,36 @@ def test_a_section_keeps_the_container_gutter() -> None:
         )
 
 
+def test_every_hero_sets_the_motifs_page_pieces_when_the_charter_draws_them() -> None:
+    """A charter whose motif draws pieces for a page (`motif.pieces`) gets
+    them in every hero, so no page keeps a drawing stopped in the middle of
+    the field; a charter whose motif draws none keeps its single drawing,
+    so its pages are exactly what they were."""
+    heroes = sorted(
+        path
+        for path in SITE_SRC.glob("*.njk")
+        if '<section class="hero">' in path.read_text(encoding="utf-8")
+    )
+    assert len(heroes) >= 5, f"the sweep found only {len(heroes)} hero template(s)"
+    for path in heroes:
+        source = path.read_text(encoding="utf-8")
+        assert "{% if motif.pieces %}{{ heroPieces(motif) }}" in source, (
+            f"{path.name} has a hero that never sets the motif's page pieces"
+        )
+
+
+def test_the_masthead_keeps_its_single_drawing_only_without_pieces() -> None:
+    """With pieces, the hero carries the motif and the masthead's small copy
+    of it would be the same drawing twice on one screen."""
+    layout = (SITE_SRC / "_includes" / "layout.njk").read_text(encoding="utf-8")
+    guard = layout.index("{% if not motif.pieces %}")
+    assert (
+        guard
+        < layout.index('class="masthead__motif"')
+        < layout.index("{% endif %}", guard)
+    )
+
+
 @pytest.mark.parametrize(
     "selector",
     [".hero__title", ".coda__text", ".feature--empty p", ".archive-empty"],

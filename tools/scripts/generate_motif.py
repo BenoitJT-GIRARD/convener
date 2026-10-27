@@ -57,6 +57,14 @@ opacity its own stylesheet sets on the element (`.masthead__motif` at `.5`,
 `opacity-90`), so the per-path attributes go and the per-surface weighting
 stays.
 
+A family may also draw pieces for a page (`publication/motif_pieces.py`): one drawing
+per box -- the hero, the stretch under the first band, the band near the
+foot of the home page -- each entering and leaving through its own box's
+edges. When the family in force draws any, the site data carries them under
+`pieces` and the showcase sets them instead of the single path; when it
+draws none, the key is absent and nothing about the showcase changes. The
+cockpit's sign-in screen reads the single path either way.
+
 The colour is untouched. The stroke comes from `--dominant` -- from
 `--field` in the coda, where the dominant is the ground -- through
 `site/src/style.css`, and from Tailwind's `stroke-dominant` in the cockpit,
@@ -150,22 +158,35 @@ _SITE_NOTE: Final = (
 )
 
 
+def site_pieces(root: Path) -> dict[str, dict[str, str]]:
+    """The pieces the family in force draws for a page, as the showcase's
+    templates read them, or an empty mapping when it draws none."""
+    family = brand.motif_family(root)
+    return {
+        name: {
+            "view_box": drawn.view_box,
+            "align": drawn.align,
+            "stroke_width": _num(drawn.stroke_width),
+            "path": drawn.path,
+        }
+        for name, drawn in sorted(motifs.page_pieces(family).items())
+    }
+
+
 def render_site_data(root: Path) -> str:
     """`site/src/_data/motif.json` in full."""
     drawn = motif(root)
-    return (
-        json.dumps(
-            {
-                "_generated": _SITE_NOTE,
-                "family": drawn.family,
-                "view_box": drawn.view_box,
-                "path": drawn.path,
-                "stroke_width": drawn.stroke_width,
-            },
-            indent=2,
-        )
-        + "\n"
-    )
+    data: dict[str, object] = {
+        "_generated": _SITE_NOTE,
+        "family": drawn.family,
+        "view_box": drawn.view_box,
+        "path": drawn.path,
+        "stroke_width": drawn.stroke_width,
+    }
+    pieces = site_pieces(root)
+    if pieces:
+        data["pieces"] = pieces
+    return json.dumps(data, indent=2) + "\n"
 
 
 _APP_TEMPLATE: Final = """\

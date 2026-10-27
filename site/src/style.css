@@ -384,6 +384,65 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   opacity: .85;
   z-index: 0;
 }
+
+/* ── Motif pieces ─────────────────────────────────────────
+ * When the charter's motif draws pieces for a page
+ * (`_includes/motif-pieces.njk`), each sits in the box it was drawn for, so
+ * its stroke enters and leaves through that box's real edges instead of
+ * stopping in the field. Drawn in CSS pixels, so each is sized here and never
+ * stretched. They lie behind everything, a band's own z-index -1 included: a
+ * stroke that runs on below the hero goes behind the first band, and the
+ * `below-band` piece brings it out under the band at the same distance from
+ * the right edge. Pieces that need a margin beside the text only show once
+ * the margin is wide enough to hold them. */
+.motif-piece {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: -2;
+  stroke: var(--dominant);
+}
+.hero:has(> .motif-piece) { overflow: visible; }
+.motif-piece--hero-corner {
+  display: block;
+  top: 0;
+  right: 0;
+  width: 10rem;
+  height: 10rem;
+}
+.motif-piece--hero-wide {
+  /* On past the hero's foot, through the first section's top padding and
+   * into its band, which hides the end. */
+  top: 0;
+  right: 0;
+  width: 26.25rem;
+  height: calc(100% + 5rem);
+}
+.motif-piece--below-band {
+  /* From the top of the band, out to the page's right edge rather than the
+   * section's: `.section` is the centred container. */
+  top: 3.5rem;
+  right: calc((100% - 100vw) / 2);
+  width: 26.25rem;
+  height: 22.5rem;
+}
+.coda .motif-piece {
+  z-index: 0;
+  stroke: var(--field);
+  opacity: .5;
+}
+.motif-piece--coda-right { top: 0; right: 0; width: 10rem; height: 100%; }
+.motif-piece--coda-left { bottom: 0; left: 0; width: 10rem; height: 100%; }
+@media (min-width: 1180px) {
+  .motif-piece--hero-wide { display: block; }
+  .motif-piece--hero-corner { display: none; }
+}
+@media (min-width: 1320px) {
+  .motif-piece--below-band,
+  .motif-piece--coda-right,
+  .motif-piece--coda-left { display: block; }
+}
+
 .hero__eyebrow {
   font-family: var(--ff-display);
   font-size: .76rem;
@@ -421,7 +480,8 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
 }
 /* A hero that draws the motif keeps its title clear of it: the drawing
  * owns the right of the hero, and a title set at full width ran under it. */
-.hero:has(> .hero__motif) .hero__title { max-width: 10.5em; }
+.hero:has(> .hero__motif) .hero__title,
+.hero:has(> .motif-piece) .hero__title { max-width: 10.5em; }
 .hero__title em {
   /* No colour of its own any more: field-text on the field it now sits on
    * measures 3.81, below AA. The originals never split a headline's colour

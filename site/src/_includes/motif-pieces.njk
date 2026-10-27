@@ -1,0 +1,20 @@
+{#
+  The pieces of the charter's motif drawn for a page (`motif.pieces`,
+  written by tools/scripts/generate_motif.py from
+  tools/convener_ops/publication/motif_pieces.py), each set in the box it
+  was drawn for. A family that draws none leaves `motif.pieces` unset; every
+  caller checks that first and keeps its single drawing otherwise. Sizes,
+  places and colours are style.css's `.motif-piece` rules; nothing here
+  derives geometry.
+#}
+{% macro piece(motif, name) %}
+{% set drawn = motif.pieces[name] %}
+<svg class="motif-piece motif-piece--{{ name }}" viewBox="{{ drawn.view_box }}" preserveAspectRatio="{{ drawn.align }}" fill="none" stroke-width="{{ drawn.stroke_width }}" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="{{ drawn.path }}"/></svg>
+{% endmacro %}
+
+{# The hero's own two: one for a wide screen, which runs down the right-hand
+   margin, and one for a narrow screen, cut by the top-right corner. #}
+{% macro heroPieces(motif) %}
+{{ piece(motif, "hero-wide") }}
+{{ piece(motif, "hero-corner") }}
+{% endmacro %}

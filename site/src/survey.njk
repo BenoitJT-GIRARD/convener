@@ -31,6 +31,7 @@ eleventyComputed:
   pageTitle: "Survey — {{ event.title }}"
   pageDescription: "A short, optional survey about {{ event.title }}."
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 
 {#
   The post-event survey's own static page, one per event
@@ -53,6 +54,7 @@ eleventyComputed:
 #}
 
 <section class="hero">
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% endif %}
   <div class="container hero__inner">
     <p class="hero__eyebrow">Post-event survey</p>
     <h1 class="hero__title">What did you think?</h1>

@@ -1,6 +1,7 @@
 ---
 layout: layout.njk
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 
 {% set upcoming = [] %}
 {% set past = [] %}
@@ -13,9 +14,11 @@ layout: layout.njk
   {# The charter's motif -- src/_data/motif.json, written by
      tools/scripts/generate_motif.py from the family `motif.family` names.
      The stroke is .hero__motif's in style.css, the generated --dominant. #}
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% else %}
   <svg class="hero__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
     <path d="{{ motif.path }}"/>
   </svg>
+  {% endif %}
 
   {#
     The three lines of the hero are the declaration's, not this file's.
@@ -49,6 +52,7 @@ layout: layout.njk
 </section>
 
 <section class="section container">
+  {% if motif.pieces %}{{ piece(motif, "below-band") }}{% endif %}
   <header class="section__head">
     <span class="section__num">01</span>
     <span class="section__label">Up next</span>
@@ -140,9 +144,11 @@ layout: layout.njk
 <section class="coda">
   {# The same drawing again, in the field rather than the dominant -- see
      .coda__motif in style.css for why the coda inverts the ink. #}
+  {% if motif.pieces %}{{ piece(motif, "coda-left") }}{{ piece(motif, "coda-right") }}{% else %}
   <svg class="coda__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
     <path d="{{ motif.path }}"/>
   </svg>
+  {% endif %}
   <div class="container coda__inner">
     <p class="coda__text">
       Know someone whose work would <em>inspire</em> this community?
