@@ -1004,6 +1004,17 @@ def test_the_daily_job_reads_each_job_rather_than_a_wall_clock() -> None:
     assert "actions/runs" in script
 
 
+def test_the_daily_job_costs_only_the_runs_that_have_finished() -> None:
+    """The run doing the measuring is always in the listing it reads, and
+    its own `daily` job has no `completed_at` yet -- so it came back as
+    uncosted every morning, and `[unreadable]` turned the sweep red every
+    morning on a repository using a twentieth of its allowance. A run that
+    has not finished is not a cost that could not be read; it is one that
+    tomorrow's window, which still contains it, will read."""
+    script = _runs(_SWEEP_PATH, "daily")
+    assert '-f "status=completed"' in script
+
+
 def test_the_daily_job_needs_no_permission_beyond_what_it_already_had() -> None:
     """`actions: read` is what the two endpoints need, and `actions:
     write` -- already there for the publish-showcase dispatch -- includes

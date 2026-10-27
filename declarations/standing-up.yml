@@ -1440,15 +1440,15 @@ secrets:
       Salts a participant's matching code and the certificate register's
       fingerprint. Two derivations, one value, never rotated.
   - name: CONVENER_NOTIFY_THREAD
-    kind: repository-secret
+    kind: repository-variable
     home: cockpit
     set_through: >-
-      Settings → Secrets and variables → Actions → Secrets → New repository
-      secret
+      Settings → Secrets and variables → Actions → Variables → New repository
+      variable
     why: >-
-      The issue number the Board's digest is posted on. Not a secret in any
-      real sense; it lives here because it is set the same way its companion
-      is.
+      The issue number the Board's digest is posted on. A variable and not a
+      secret: GitHub masks a secret's value wherever it appears in a log, and
+      a thread that is issue 1 turned every digit 1 in every log into `***`.
   - name: CONVENER_NOTIFY_MENTION
     kind: repository-secret
     home: cockpit

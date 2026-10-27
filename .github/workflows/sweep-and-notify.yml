@@ -121,7 +121,7 @@ jobs:
       - name: Compose
         working-directory: tools
         env:
-          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
           # Where the branch was before this push, so every commit it carried
           # is covered rather than only the last. The all-zero name GitHub
@@ -132,7 +132,7 @@ jobs:
         if: hashFiles('notify-body.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file notify-body.md
 
   daily:
@@ -703,7 +703,7 @@ jobs:
           # able to see the board's channel except while it is composing a
           # message for it -- the same rule both Compose steps and the
           # budget measurement below hold themselves to.
-          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
         # The listing is taken from the branch tip *after* the drain, the
         # confirmations and the clearing have all finished, so what is
@@ -764,7 +764,7 @@ jobs:
           hashFiles('queue-body.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file queue-body.md
       - name: Fail if a submission has been waiting too long
         # D-25, and kept in YAML rather than in an exit code for the
@@ -832,7 +832,7 @@ jobs:
           # to see the board's channel except while it is composing a
           # message for it -- the same rule every Compose step and the
           # budget measurement below hold themselves to.
-          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
         run: uv run --frozen convener-check-registration-routing
       - name: Tell the board registrations are no longer being queued
@@ -846,7 +846,7 @@ jobs:
           hashFiles('routing-body.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file routing-body.md
       - name: Fail if registrations can no longer be queued
         # D-25, and kept in YAML rather than in an exit code for the same
@@ -874,7 +874,7 @@ jobs:
           # Step-level, never job-level: the checking code must not be able
           # to see the board's channel except while it is composing a
           # message for it.
-          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
         run: uv run --frozen convener-check-credential-expiry
       - name: Tell the board a credential is about to stop working
@@ -886,7 +886,7 @@ jobs:
           hashFiles('renewals-body.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file renewals-body.md
       - name: Fail if a credential is about to stop working
         # D-25, and in YAML rather than in an exit code for the same reason
@@ -917,7 +917,7 @@ jobs:
         if: always() && steps.uv.outcome == 'success'
         working-directory: tools
         env:
-          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
         run: uv run --frozen convener-notify-digest
       - name: Post
@@ -928,7 +928,7 @@ jobs:
           hashFiles('notify-body.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file notify-body.md
 
       # ----------------------------------------------------------------
@@ -1003,13 +1003,20 @@ jobs:
         # a cap. `--paginate` would follow every page there is, which on
         # the one day this most matters -- a burst -- is the day it costs
         # the most calls.
+        #
+        # `status=completed`, because this run is always in its own
+        # listing and its `daily` job has no `completed_at` yet: read
+        # unfiltered, it came back uncosted every morning and the
+        # `unreadable` alarm turned the sweep red every morning. A run
+        # still going is not a cost that could not be read -- tomorrow's
+        # window still contains it and costs it then.
         run: |
           set -e
           pages=$(( (MAX_RUNS + 99) / 100 ))
           : > runs.jsonl
           truncated=false
           for page in $(seq 1 "$pages"); do
-            if ! answer="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/runs" -f "created=>=$SINCE" -F per_page=100 -F "page=$page")"; then
+            if ! answer="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/runs" -f "created=>=$SINCE" -f "status=completed" -F per_page=100 -F "page=$page")"; then
               echo "::error::could not list this repository's workflow runs -- nothing was measured, which is not the same as nothing having run"
               exit 1
             fi
@@ -1049,7 +1056,7 @@ jobs:
           # able to see the board's channel except while it is composing a
           # message for it -- the same rule the two Compose steps above
           # hold themselves to.
-          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
         # Its own retry loop, the same fetch-and-reset-hard shape every
         # other push in this repository uses: the sweep step above may
@@ -1094,7 +1101,7 @@ jobs:
           hashFiles('budget-body.md') != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          THREAD: ${{ vars.CONVENER_NOTIFY_THREAD }}
         run: gh issue comment "$THREAD" --body-file budget-body.md
       - name: Fail if the budget is running out
         # D-25, and the one decision deliberately kept in YAML rather than

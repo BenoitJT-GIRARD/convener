@@ -870,8 +870,13 @@ delivery mechanism.
    stops reading.
 3. Ask each member to watch the thread, so GitHub emails them its comments.
 
-**Secrets to set:** `CONVENER_NOTIFY_THREAD` (the issue number) and
-`CONVENER_NOTIFY_MENTION` (the team handle, `@org/team`).
+**Secrets to set:**
+- Repository **variable** `CONVENER_NOTIFY_THREAD`, the issue number
+  (Settings → Secrets and variables → Actions → Variables). Not a secret:
+  GitHub masks a secret's value everywhere it appears in a log, so a thread
+  that is issue 1 would turn every digit 1 in every log into `***`.
+- Repository secret `CONVENER_NOTIFY_MENTION`, the team handle
+  (`@org/team`).
 
 **What travels:** record identifiers (`spk-014`), stored calendar days,
 `nomination N` labels and the four fixed step names. No speaker name, email

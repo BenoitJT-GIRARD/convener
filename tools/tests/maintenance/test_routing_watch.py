@@ -595,7 +595,7 @@ def test_the_finding_uses_the_channel_that_already_exists_with_its_own_body() ->
     assert "routing-body.md" in step["run"]
     for other in ("notify-body.md", "queue-body.md", "budget-body.md"):
         assert other not in step["run"]
-    assert step["env"]["THREAD"] == "${{ secrets.CONVENER_NOTIFY_THREAD }}"
+    assert step["env"]["THREAD"] == "${{ vars.CONVENER_NOTIFY_THREAD }}"
 
 
 def test_the_channel_is_never_visible_beyond_the_step_that_composes() -> None:
@@ -605,8 +605,11 @@ def test_the_channel_is_never_visible_beyond_the_step_that_composes() -> None:
     assert isinstance(workflow, dict)
     assert "CONVENER_NOTIFY_THREAD" not in workflow["jobs"]["daily"].get("env", {})
     step = _daily_step("Check that registrations can still be queued")
-    for name in ("CONVENER_NOTIFY_THREAD", "CONVENER_NOTIFY_MENTION"):
-        assert step["env"][name] == "${{ secrets." + name + " }}"
+    assert step["env"]["CONVENER_NOTIFY_THREAD"] == "${{ vars.CONVENER_NOTIFY_THREAD }}"
+    assert (
+        step["env"]["CONVENER_NOTIFY_MENTION"]
+        == "${{ secrets.CONVENER_NOTIFY_MENTION }}"
+    )
 
 
 def test_the_finding_turns_the_daily_job_red_on_its_own() -> None:
