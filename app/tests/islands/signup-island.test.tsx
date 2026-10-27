@@ -109,15 +109,16 @@ beforeEach(() => {
   vi.unstubAllEnvs();
 });
 
-// The two matching boundaries -- "present without having
-// registered" and "joined by telephone" -- named on the event page itself,
-// not only in docs/operating/operations.md. `event.njk` carries no copy of
-// this text (unlike the data-protection notice, which the njk template
-// now owns alone), so the island keeps rendering it -- a test here, rather
-// than trusting the JSX to keep saying it, is what makes removing it a red
-// build instead of a silent regression.
-describe('SignupForm -- the two matching boundaries', () => {
-  it('shows both boundaries before any field, not after', async () => {
+// The matching boundary a participant can act on -- "present without
+// having registered" -- named on the event page itself, not only in
+// docs/operating/operations.md. `event.njk` carries no copy of this text
+// (unlike the data-protection notice, which the njk template now owns
+// alone), so the island keeps rendering it -- a test here, rather than
+// trusting the JSX to keep saying it, is what makes removing it a red build
+// instead of a silent regression. The telephone boundary is deliberately not
+// stated: a series run entirely online meets no telephone joiner.
+describe('SignupForm -- the matching boundary', () => {
+  it('shows the boundary before any field, not after', async () => {
     stubKeyFetchOk();
     renderSignup();
     await screen.findByLabelText(/first name/i);
@@ -138,17 +139,16 @@ describe('SignupForm -- the two matching boundaries', () => {
     expect(text).toMatch(/you need to register to receive a certificate/i);
   });
 
-  it('states that a telephone joiner cannot be matched, and why', async () => {
+  it('does not warn about joining by telephone, which an online series never meets', async () => {
     stubKeyFetchOk();
     renderSignup();
     await screen.findByLabelText(/first name/i);
 
     const text = document.body.textContent ?? '';
-    expect(text).toMatch(/joining by phone means no certificate/i);
-    expect(text).toMatch(/a phone connection shows us no name and no email address/i);
+    expect(text).not.toMatch(/phone/i);
   });
 
-  it('shows both boundaries even while the key is still loading or unavailable', () => {
+  it('shows the boundary even while the key is still loading or unavailable', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response));
     renderSignup();
     expect(screen.getByText('About your certificate')).toBeInTheDocument();

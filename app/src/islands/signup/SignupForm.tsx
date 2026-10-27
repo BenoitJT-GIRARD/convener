@@ -155,13 +155,13 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
   }
 }
 
-// Two boundaries `tools/convener_ops/journey/attendance.py` draws, written
-// "on the event page, in the same place as 'present without having
-// registered'" -- not only in `docs/operating/operations.md`, which a
-// participant never reads. Neither is a matching weakness to keep
-// improving; both are stated here exactly as the matching cascade actually
-// behaves, not softened into "we will do our best". `event.njk` carries no
-// copy of this text, so keeping it here duplicates nothing.
+// The boundary `tools/convener_ops/journey/attendance.py` draws that a
+// participant can act on, written on the event page rather than only in
+// `docs/operating/operations.md`, which a participant never reads. The
+// other one, that a telephone connection cannot be matched, is not stated
+// here: a series that runs entirely online gets no telephone joiners, and a
+// warning about a case nobody meets is noise. `event.njk` carries no copy of
+// this text, so keeping it here duplicates nothing.
 function AttendanceBoundaries() {
   return (
     <div className="notice signup-form__boundaries">
@@ -169,11 +169,6 @@ function AttendanceBoundaries() {
       <p>
         <strong>You need to register to receive a certificate.</strong> We can only give one
         to people we can match to a registration.
-      </p>
-      <p>
-        <strong>Joining by phone means no certificate.</strong> A phone connection shows us no
-        name and no email address, so we cannot match it. Join with the room link instead and
-        put your matching code in your display name.
       </p>
     </div>
   );
