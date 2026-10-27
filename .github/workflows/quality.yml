@@ -576,7 +576,7 @@ jobs:
       - name: Lint site
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
-        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs
+        run: npx --yes eslint@9 .eleventy.js src/contact.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs
       # `site/`'s dependencies (Eleventy, axe-core, puppeteer-core) are all
       # build-time tooling, so the whole tree is audited and only a critical
       # advisory blocks: the line every tree that ships no package of its

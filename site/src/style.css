@@ -499,6 +499,20 @@ a.unstyled, a.unstyled:hover { text-decoration: none; }
   margin-bottom: .85rem;
 }
 .notice p + p { margin-top: .85rem; }
+/* A way to ask a question, set under a call to action and out of its way. */
+.aside {
+  margin-top: 1.25rem;
+  font-size: .92rem;
+  color: var(--ink-mute);
+}
+/* The data page's "Email us" line: the button that reveals the address
+ * (src/contact.js), then the address itself, on the line's baseline. */
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .85rem;
+}
 
 /* ── Registration island ─────────────────────────────────────
  * `app/src/islands/signup/SignupForm.tsx`'s own class names -- plain,

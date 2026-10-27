@@ -226,7 +226,7 @@ case "${1:-all}" in
              (cd site && npm audit --audit-level=critical)
              for r in auth-proxy form-relay signup-relay; do (cd "services/$r" && npm audit --audit-level=critical); done ;;
   app)       cd app && npm run lint && npm run typecheck && npm run test:cov && npm run build ;;
-  site)      cd site && npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs && npm run build ;;
+  site)      cd site && npx --yes eslint@9 .eleventy.js src/contact.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/demonstration.cjs scripts/notice.cjs scripts/published.cjs scripts/print-published.cjs && npm run build ;;
   budget)    cd site && npm run check:budget -- --app-dir ../app/dist ;;
   spelling)  npx --yes cspell@8 lint --no-progress ;;
   relays)    for r in auth-proxy form-relay signup-relay; do (cd "services/$r" && npx --yes eslint@9 src test && npm test); done ;;

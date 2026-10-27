@@ -307,6 +307,13 @@ function absoluteUrl(path) {
   return `${SITE_ORIGIN}${PATH_PREFIX.slice(0, -1)}${path}`;
 }
 
+// The contact address as the data page carries it: base64, decoded by
+// `src/contact.js` only when a visitor asks for it, so no published page
+// holds the address in a form a crawler collecting addresses can read.
+function contactCode(address) {
+  return Buffer.from(address, 'utf8').toString('base64');
+}
+
 // ------------------------------------------------------------------ //
 // The share image reaches the showcase.
 //
@@ -538,6 +545,7 @@ module.exports = function (cfg) {
   cfg.addGlobalData('notice', () => NOTICE);
 
   cfg.addPassthroughCopy('src/style.css');
+  cfg.addPassthroughCopy('src/contact.js');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
   // at runtime: this showcase admits no third-party dependency,
   // and a webfont request is one — it discloses every visitor's address.
@@ -603,6 +611,7 @@ module.exports = function (cfg) {
 
   // See `absoluteUrl`'s own comment above for what this does and why.
   cfg.addFilter('absoluteUrl', absoluteUrl);
+  cfg.addFilter('contactCode', contactCode);
   // `event | eventBannerUrl(banners)` for event.njk's own `pageImage` --
   // see `eventBannerUrl`'s own comment above for the argument in full.
   cfg.addFilter('eventBannerUrl', eventBannerUrl);

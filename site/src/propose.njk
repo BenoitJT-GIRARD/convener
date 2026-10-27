@@ -24,7 +24,7 @@ eleventyComputed:
   `https://forms.example.test/propose` from the day the old `site.json` was folded
   into the declaration for a long time -- so the button below was a
   live call to action on a public page, pointing at nothing. It now says
-  so and offers the contact address instead, which is the state a fresh
+  so and points to the contact section instead, which is the state a fresh
   duplicate is in too: nobody has built their form before their first
   publish.
 #}
@@ -33,10 +33,9 @@ eleventyComputed:
     <p class="hero__eyebrow">Propose a speaker</p>
     <h1 class="hero__title">Bring us <em>your</em> talk.</h1>
     <p class="hero__lede">
-      Propose yourself, or someone whose work you admire &mdash;
-      early-career researchers especially welcome. We ask who they are,
-      what they would talk about, and how to reach them; a volunteer from
-      the Editorial Board reads every proposal and gets back to you.
+      Propose yourself or someone whose work you admire. Early-career
+      researchers are especially welcome. A volunteer from the Editorial
+      Board reads every proposal.
     </p>
   </div>
 </section>
@@ -50,17 +49,13 @@ eleventyComputed:
   <div class="notice">
     <p class="notice__eyebrow">What to expect</p>
     <p>
-      A proposal takes a few minutes: the speaker&rsquo;s name and contact
-      details, a preliminary title and short abstract, and who is
-      proposing them if not themself. Nothing about a candidate speaker is
-      published without their own, separate consent, later, if the talk
-      is selected.
+      The form takes a few minutes. It asks for the speaker&rsquo;s name
+      and contact details, a provisional title, a short abstract and, if
+      you are proposing someone else, your own details.
     </p>
     <p>
-      {% if site.applyForm %}It is hosted on Tally, a third-party form
-      service &mdash; the only part of this process that is. {% endif %}Questions
-      about a proposal, or a request to withdraw one, go to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
+      Nothing about the speaker is published unless the talk is selected
+      and they agree.
     </p>
   </div>
 
@@ -68,13 +63,13 @@ eleventyComputed:
   <div class="hero__actions">
     <a class="btn btn--primary" href="{{ site.applyForm }}">Open the proposal form &rarr;</a>
   </div>
+  <p class="aside">To ask about a proposal or withdraw one, <a href="{{ '/data/' | url }}#contact">contact us</a>.</p>
   {% else %}
   <div class="notice">
     <p class="notice__eyebrow">Not open yet</p>
     <p>
-      The proposal form is not published yet. Until it is, send those
-      details to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a> and a
+      The proposal form is not open yet. In the meantime,
+      <a href="{{ '/data/' | url }}#contact">contact us</a> with the speaker&rsquo;s details and a
       volunteer from the Editorial Board will pick them up.
     </p>
   </div>

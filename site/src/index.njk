@@ -94,7 +94,7 @@ layout: layout.njk
     {% endfor %}
   {% else %}
     <div class="feature feature--empty">
-      <p>No seminar scheduled at the moment &mdash; the next one will be announced when it&rsquo;s set.</p>
+      <p>No seminar is scheduled yet. The next one will be announced here.</p>
     </div>
   {% endif %}
 </section>
@@ -128,7 +128,7 @@ layout: layout.njk
         {% if e.forum_thread %}
           <a class="archive__action archive__action--alt unstyled" href="{{ e.forum_thread }}" target="_blank" rel="noopener" aria-label="Discuss {{ e.title }}">Discuss</a>
         {% else %}
-          <span class="archive__action--disabled">No thread</span>
+          <span class="archive__action--disabled">No discussion</span>
         {% endif %}
       </div>
     </li>

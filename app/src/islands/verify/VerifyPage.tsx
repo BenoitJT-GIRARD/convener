@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from 'react';
-import { instanceIdentity } from '../../instance';
+import { instanceIdentity, showcasePath } from '../../instance';
 import { useEffect, useRef, useState } from 'react';
 import { verify } from '../../verify/verify';
 import type { VerifyResult } from '../../verify/verify';
@@ -160,13 +160,17 @@ import type { LookupResult } from '../../verify/register';
  * a query string, the browser history and the next page's `Referer`.
  */
 
-// The address a participant writes to about their own data. Declared
-// once in `instance/config.json` and carried into this
-// bundle by `vite.config.ts`'s own define, because this runs in a
-// participant's browser. A duplicate that left this literal here would
-// send its own participants' data-protection requests to the previous
-// instance's inbox.
-const contactEmail = () => instanceIdentity().contact;
+// Where a visitor asks us about a certificate: the showcase's data page,
+// whose contact section reveals the address only on request
+// (`site/src/contact.js`). Linked rather than written out, so this page
+// never puts the address where a crawler collecting addresses can read
+// it. The showcase's own path comes from `instance/config.json`, carried
+// into this bundle by `vite.config.ts`'s own define.
+const contactHref = () => `${showcasePath()}data/#contact`;
+
+function ContactUs() {
+  return <a href={contactHref()}>contact us</a>;
+}
 
 type Tone = 'primary' | 'accent' | 'danger' | 'info';
 
@@ -242,10 +246,7 @@ function CertificateDetails({ cert }: { cert: DisplayCertificate }) {
 function Valid({ cert }: { cert: DisplayCertificate }) {
   return (
     <Panel tone="primary" title="Certificate verified">
-      <p>
-        This certificate&apos;s signature is genuine, and our register confirms it is
-        currently issued.
-      </p>
+      <p>This certificate is genuine and has not been revoked.</p>
       <CertificateDetails cert={cert} />
     </Panel>
   );
@@ -255,10 +256,9 @@ function Revoked({ cert }: { cert: DisplayCertificate }) {
   return (
     <Panel tone="accent" title="Certificate revoked">
       <p>
-        This certificate&apos;s signature is genuine — it really was issued to the person
-        named below — but {instanceIdentity().organisation} has since revoked it. A revoked
-        certificate
-        should not be relied on to attest attendance.
+        This certificate was issued to the person named below, but{' '}
+        {instanceIdentity().organisation} has since revoked it. It no longer attests
+        attendance.
       </p>
       <CertificateDetails cert={cert} />
     </Panel>
@@ -281,22 +281,18 @@ function NotVerifiable({ entered }: { entered: boolean }) {
     <Panel tone="danger" title="We cannot confirm this certificate">
       <p>
         {entered
-          ? 'The code you entered does not check out against any signing key we currently publish.'
-          : "This link's signature does not check out against any signing key we currently publish."}{' '}
-        This is not proof that anything is wrong: the code may be damaged or incomplete, or it
-        may have been issued under a signing key not yet published here. We never show a name
-        or any other certificate detail when we cannot confirm a signature.
+          ? 'We could not confirm the link you entered.'
+          : 'We could not confirm this link.'}{' '}
+        It may be incomplete or damaged.
       </p>
       {entered && (
         <p>
-          Check what you entered against the certificate and try again: everything printed
-          after the <code>#</code> is part of the address, and a copy that stopped at a line
-          break stops being checkable.
+          Check that you copied the whole link, including everything after the{' '}
+          <code>#</code>, and try again.
         </p>
       )}
       <p>
-        If you believe this certificate is genuine, contact{' '}
-        <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
+        If you believe this certificate is genuine, <ContactUs />.
       </p>
     </Panel>
   );
@@ -314,10 +310,8 @@ function CannotCheckSignature() {
   return (
     <Panel tone="info" title="We cannot check this certificate right now">
       <p>
-        We could not load the signing keys we publish, so we could not check whether this
-        certificate&apos;s signature is genuine. This is not a sign that anything is wrong
-        with it — please try again shortly, or contact{' '}
-        <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a> if this persists.
+        We could not load what we need to check this certificate. Please try again in a
+        moment, or <ContactUs /> if it keeps happening.
       </p>
     </Panel>
   );
@@ -340,15 +334,20 @@ function StateUnknown({
   reason: 'register_unreachable' | 'no_identifier';
 }) {
   return (
-    <Panel tone="info" title="We cannot confirm the current state">
+    <Panel tone="info" title="We cannot confirm it is still valid">
       <p>
-        This certificate&apos;s signature is genuine — it was issued to the person named
-        below.{' '}
-        {reason === 'register_unreachable'
-          ? 'We could not reach our register just now to confirm whether it is still current or has since been revoked.'
-          : "This certificate does not carry an identifier we can look up, so we cannot confirm whether it is still current or has since been revoked."}{' '}
-        This is not a sign that the certificate is invalid — please try again shortly, or
-        contact <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
+        This certificate was issued to the person named below.{' '}
+        {reason === 'register_unreachable' ? (
+          <>
+            We could not reach our register to check whether it has been revoked since.
+            Please try again in a moment, or <ContactUs />.
+          </>
+        ) : (
+          <>
+            It carries no identifier, so we cannot check whether it has been revoked since.
+            To confirm it, <ContactUs />.
+          </>
+        )}
       </p>
       <CertificateDetails cert={cert} />
     </Panel>
@@ -365,13 +364,11 @@ function StateUnknown({
  */
 function NotInRegister({ cert }: { cert: DisplayCertificate }) {
   return (
-    <Panel tone="info" title="Not yet reflected in our register">
+    <Panel tone="info" title="Not yet in our register">
       <p>
-        This certificate&apos;s signature is genuine — it was issued to the person named
-        below. We read our register successfully, but it does not currently list this
-        certificate&apos;s identifier. This can happen briefly right after issuance and is not
-        a sign that anything is wrong — if it persists, contact{' '}
-        <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
+        This certificate was issued to the person named below, but our register does not
+        list it yet. This can happen just after a certificate is issued. If it lasts,{' '}
+        <ContactUs />.
       </p>
       <CertificateDetails cert={cert} />
     </Panel>
@@ -390,10 +387,9 @@ function NotInRegister({ cert }: { cert: DisplayCertificate }) {
 function RecordCaveat() {
   return (
     <p>
-      This confirms a record in our register, not the document itself — we have not checked
-      any certificate&apos;s signature or contents this way, and we cannot show a name without
-      the full verification link (with its token), usually printed as a QR code on the
-      certificate itself.
+      This only confirms what our register lists for this identifier, not the document in
+      front of you. To check the certificate itself and see the name on it, scan its code
+      or paste its full verification link.
     </p>
   );
 }
@@ -402,8 +398,8 @@ function RecordIssued({ identifier }: { identifier: string }) {
   return (
     <Panel tone="primary" title="Recorded as issued">
       <p>
-        Our register shows a certificate with identifier <IdentifierText id={identifier} /> was
-        issued and has not been revoked.
+        Our register lists certificate <IdentifierText id={identifier} /> as issued and not
+        revoked.
       </p>
       <RecordCaveat />
     </Panel>
@@ -414,8 +410,8 @@ function RecordRevoked({ identifier }: { identifier: string }) {
   return (
     <Panel tone="accent" title="Recorded as revoked">
       <p>
-        Our register shows a certificate with identifier <IdentifierText id={identifier} /> was
-        issued and has since been revoked.
+        Our register lists certificate <IdentifierText id={identifier} /> as issued and since
+        revoked.
       </p>
       <RecordCaveat />
     </Panel>
@@ -426,9 +422,8 @@ function RecordNotFound({ identifier }: { identifier: string }) {
   return (
     <Panel tone="danger" title="Not found in our register">
       <p>
-        We have no record of a certificate with identifier <IdentifierText id={identifier} />.
-        Check the identifier was typed correctly, or use the full verification link if you
-        have it.
+        Our register has no certificate <IdentifierText id={identifier} />. Check the
+        identifier, or scan the code on the certificate.
       </p>
     </Panel>
   );
@@ -436,11 +431,10 @@ function RecordNotFound({ identifier }: { identifier: string }) {
 
 function RecordUnknown({ identifier }: { identifier: string }) {
   return (
-    <Panel tone="info" title="We cannot confirm this right now">
+    <Panel tone="info" title="We cannot check this right now">
       <p>
-        We could not reach our register just now to look up identifier{' '}
-        <IdentifierText id={identifier} />. This is not a sign that anything is wrong — please
-        try again shortly.
+        We could not reach our register to look up <IdentifierText id={identifier} />. Please
+        try again in a moment.
       </p>
     </Panel>
   );
@@ -461,9 +455,8 @@ function InvalidIdentifierShape({ identifier }: { identifier: string }) {
   return (
     <Panel tone="danger" title="Not a certificate identifier">
       <p>
-        <IdentifierText id={identifier} /> is not shaped like one of our certificate
-        identifiers (32 lowercase hexadecimal characters). Check that you typed or copied it
-        correctly, or use the full verification link if you have it.
+        <IdentifierText id={identifier} /> is not a certificate identifier. An identifier has
+        32 characters, using only the digits 0 to 9 and the letters a to f.
       </p>
     </Panel>
   );
@@ -614,10 +607,10 @@ const MAX_ENTRY_LENGTH = 4096;
  */
 function shapeComplaint(identifier: string): string {
   const shape =
-    'A certificate identifier is 32 characters long and uses only the digits 0 to 9 and the letters a to f';
+    'An identifier has 32 characters, using only the digits 0 to 9 and the letters a to f';
   return identifier.length === 32
-    ? `${shape}. This one is the right length, so one of its characters is not one of those. Check it against the certificate and try again.`
-    : `${shape}; this one is ${identifier.length}. Check it against the certificate and try again.`;
+    ? `${shape}. This one has the right length, so one of its characters is not allowed. Check it against the certificate.`
+    : `${shape}. This one has ${identifier.length}. Check it against the certificate.`;
 }
 
 /**
@@ -626,11 +619,11 @@ function shapeComplaint(identifier: string): string {
  * Two fields, one for each thing a certificate has printed on it, and
  * either one is enough: the identifier alone answers from the register,
  * and the address carries the signed token, which is what lets a name be
- * shown. Neither is a placeholder standing in for a label, and each
- * carries its own format before anything is submitted rather than only
- * after -- `aria-describedby` on the field, so a screen reader reads the
- * format with the field rather than leaving it as an unannounced
- * paragraph nearby.
+ * shown. Each has a real label; the identifier's placeholder is an
+ * example of its format, never a stand-in for that label. Each hint says
+ * where on the certificate to look, through `aria-describedby`, so a
+ * screen reader reads it with the field rather than leaving it as an
+ * unannounced paragraph nearby.
  *
  * Whichever box an address is pasted into, it is read as one
  * (`parsePrintedAddress` is applied to both), because a person with one
@@ -680,9 +673,7 @@ function HandEntry({
       return;
     }
     if (!identifier) {
-      setError(
-        'Enter the identifier printed on the certificate, or paste the whole verification address printed under it.',
-      );
+      setError('Enter the identifier printed on the certificate, or paste its verification link.');
       identifierInput.current?.focus();
       return;
     }
@@ -697,12 +688,7 @@ function HandEntry({
 
   return (
     <div className="verify__entry">
-      <h2 className="verify__entry-title">Enter what is printed on the certificate</h2>
-      <p>
-        A certificate carries its identifier and the address to check it at, printed as text
-        and as a square code. Either one is enough, and neither is sent anywhere: the check
-        runs in this browser.
-      </p>
+      <h2 className="verify__entry-title">Enter the certificate details</h2>
       {/* `method="post"` on a page that would otherwise default to GET.
           Unreachable through React's own delegated submit handler, but if
           that handler ever failed to attach, a native submit would put a
@@ -713,13 +699,13 @@ function HandEntry({
         <div className="verify__field">
           <label htmlFor={IDENTIFIER_FIELD}>Certificate identifier</label>
           <p className="verify__hint" id={IDENTIFIER_HINT}>
-            32 characters, using the digits 0 to 9 and the letters a to f. It is printed on
-            the certificate under &ldquo;Identifier&rdquo;.
+            Printed on the certificate under &ldquo;Identifier&rdquo;.
           </p>
           <input
             ref={identifierInput}
             id={IDENTIFIER_FIELD}
             type="text"
+            placeholder="32 characters, for example 0a1b2c3d4e5f…"
             value={identifierText}
             onChange={e => setIdentifierText(e.target.value)}
             aria-describedby={error ? `${IDENTIFIER_HINT} ${ENTRY_ERROR}` : IDENTIFIER_HINT}
@@ -730,12 +716,10 @@ function HandEntry({
           />
         </div>
         <div className="verify__field">
-          <label htmlFor={ADDRESS_FIELD}>Verification address (optional)</label>
+          <label htmlFor={ADDRESS_FIELD}>Verification link (optional)</label>
           <p className="verify__hint" id={ADDRESS_HINT}>
-            The whole address printed under &ldquo;Verify this certificate at&rdquo;,
-            everything after the <code>#</code> included. With it we can show the name on the
-            certificate; with the identifier alone we can only confirm what our register
-            records.
+            To also see the name on the certificate, paste the full link printed under
+            &ldquo;Verify this certificate at&rdquo;.
           </p>
           <textarea
             id={ADDRESS_FIELD}

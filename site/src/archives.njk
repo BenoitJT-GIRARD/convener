@@ -8,7 +8,7 @@ eleventyComputed:
   # front-matter string is not rendered as a template, so the value
   # has to be computed for the substitution to actually happen --
   # `event.njk` above already uses this mechanism for the same two keys.
-  pageDescription: "Every seminar {{ site.organisation }} has hosted, with its recording and discussion thread where one exists."
+  pageDescription: "Every seminar {{ site.organisation }} has hosted, with its recording and discussion when there is one."
 ---
 {% from "archive-list.njk" import archiveList %}
 {% from "archive-filters.njk" import archiveFilters %}
@@ -19,9 +19,7 @@ eleventyComputed:
     <h1 class="hero__title">Past editions.</h1>
     <p class="hero__lede">
       Every seminar {{ site.organisation }} has hosted, with its recording and
-      discussion thread where one exists. Browse by year, or jump to what
-      you can watch or join today &mdash; every option below is a plain
-      page, so this works with JavaScript off.
+      discussion when there is one.
     </p>
   </div>
 </section>
@@ -35,5 +33,5 @@ eleventyComputed:
 
   {{ archiveFilters(archive.years, "all") }}
 
-  {{ archiveList(archive.past, "No edition has been delivered yet &mdash; check back after the next seminar.") }}
+  {{ archiveList(archive.past, "No seminar has taken place yet.") }}
 </section>

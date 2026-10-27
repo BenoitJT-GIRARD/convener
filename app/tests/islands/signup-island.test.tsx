@@ -135,7 +135,7 @@ describe('SignupForm -- the two matching boundaries', () => {
     await screen.findByLabelText(/first name/i);
 
     const text = document.body.textContent ?? '';
-    expect(text).toMatch(/turning up without registering does not make you eligible/i);
+    expect(text).toMatch(/you need to register to receive a certificate/i);
   });
 
   it('states that a telephone joiner cannot be matched, and why', async () => {
@@ -144,8 +144,8 @@ describe('SignupForm -- the two matching boundaries', () => {
     await screen.findByLabelText(/first name/i);
 
     const text = document.body.textContent ?? '';
-    expect(text).toMatch(/joining by telephone cannot be matched/i);
-    expect(text).toMatch(/no address and no display name for a phone connection/i);
+    expect(text).toMatch(/joining by phone means no certificate/i);
+    expect(text).toMatch(/a phone connection shows us no name and no email address/i);
   });
 
   it('shows both boundaries even while the key is still loading or unavailable', () => {
@@ -448,7 +448,7 @@ describe('SignupForm -- sending', () => {
     await fillForm();
     fireEvent.click(screen.getByRole('button', { name: /register/i }));
 
-    await screen.findByText(/registration is not open for this event yet/i);
+    await screen.findByText(/registration is not open yet/i);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -573,7 +573,7 @@ describe('SignupForm -- focus after a failed submission', () => {
       expect(document.activeElement).toBe(button);
 
       fireEvent.click(button);
-      await screen.findByText(/registration is not open for this event yet/i);
+      await screen.findByText(/registration is not open yet/i);
 
       // Assert on where focus actually landed, not that a ref was
       // touched: a fix that focused the wrong element (the alert's own

@@ -786,7 +786,7 @@ def test_the_second_instances_showcase_offers_its_own_proposal_form(
     assert f'href="{form}"' in text, (
         f"the second instance's propose page does not link its own form ({form})"
     )
-    assert "The proposal form is not published yet." not in text
+    assert "The proposal form is not open yet." not in text
 
 
 # ------------------------------------------------------------------ #

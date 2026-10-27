@@ -95,7 +95,7 @@ function Shell({ children }: { children: ReactNode }) {
             View a live demo
           </button>
           <p className="text-xs text-ink-muted mt-3">
-            No sign-in needed. Edits stay in this tab and are never saved.
+            No sign-in needed. Nothing you change is saved.
           </p>
         </div>
       </div>
@@ -252,8 +252,8 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
   return (
     <div className="space-y-6">
       <p className="text-ink-muted max-w-prose">
-        Sign in with your GitHub account. Click the button, then read and enter a short code
-        on github.com. No token to create or paste.
+        Sign in with your GitHub account. You will get a short code to enter on
+        github.com.
       </p>
       <button
         type="button"

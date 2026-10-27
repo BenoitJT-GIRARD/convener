@@ -69,6 +69,23 @@ module.exports = [
   // actually run inside the real browser page under test, where both
   // exist.
   {
+    // The contact script the data page loads: a browser module.
+    files: ['src/contact.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        document: 'readonly',
+        atob: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': 'error',
+      'no-undef': 'error',
+      eqeqeq: 'error',
+    },
+  },
+  {
     files: ['scripts/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,

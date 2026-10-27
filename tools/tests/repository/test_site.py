@@ -703,15 +703,14 @@ def test_the_survey_notice_precedes_the_reserved_place_for_the_survey_form(
     assert notice_at < placeholder_at
 
 
-def test_the_survey_pages_notice_states_anonymity_retention_and_a_real_contact_address(
+def test_the_survey_pages_notice_states_anonymity_retention_and_where_to_ask(
     built_site: Path,
 ) -> None:
     """The static half of the notice `SurveyForm.tsx::Notice` used to
-    render before it moved -- carried into `survey.njk` unchanged, so every
-    claim a review already earned (the anonymity wording,
-    the 90-day retention figure tied to the event's own key) still reads
-    even with JavaScript disabled, and even before the island's own
-    fetches ever run."""
+    render before it moved, so every claim a review already earned (who
+    receives the survey, the anonymity and what it costs the respondent,
+    the 90-day retention figure) still reads with JavaScript disabled, and
+    before the island's own fetches ever run."""
     event_id = _the_one_scheduled_event_id()
     page = (built_site / "survey" / event_id / "index.html").read_text(encoding="utf-8")
     # Normalised, the same idiom `_normalised_docs_template` uses in
@@ -720,12 +719,11 @@ def test_the_survey_pages_notice_states_anonymity_retention_and_a_real_contact_a
     # newline in the raw HTML even though it reads as one sentence to a
     # visitor's own browser, which collapses that whitespace itself.
     normalised = " ".join(page.split())
-    assert "recorded as present" in normalised.lower()
+    assert "only to people who attended" in normalised
     assert "anonymous" in normalised.lower()
-    assert "cannot find your own answers" in normalised
-    assert "destroyed together with the event" in normalised
-    assert "90 days after the event" in normalised
-    assert published.load_identity().contact in normalised
+    assert "cannot show, correct or delete your answers" in normalised
+    assert "permanently deleted 90 days after the event" in normalised
+    assert _CONTACT_SECTION_LINK in page
 
 
 def test_a_survey_page_carries_the_noscript_fallback_and_the_island_script(
@@ -925,22 +923,23 @@ def test_an_upcoming_event_page_shows_the_discuss_link_when_a_thread_is_set(
     )
 
 
-def test_the_event_pages_contact_address_matches_confirmations_own_constant() -> None:
-    """There is one contact address, and no template writes it out.
+#: Where every "contact us" on the showcase leads: the data page's
+#: contact section, the one place that offers the address (encoded, and
+#: decoded by `site/src/contact.js` only when a visitor asks for it).
+_CONTACT_SECTION_LINK = '/data/#contact"'
 
-    This used to bind `event.njk`'s own literal to `confirmation.py`'s.
-    The literal is gone: the template names `site.contact`,
-    which `.eleventy.js` derives from `instance/config.json`. So both
-    halves are asserted -- the template names it rather than spelling it,
-    and the *built* page carries the address `confirmation.py` sends from.
-    """
-    source = _EVENT_TEMPLATE.read_text(encoding="utf-8")
-    matches = re.findall(r"mailto:([^\"]+)", source)
-    assert matches, "event.njk no longer names a contact address"
-    assert set(matches) == {"{{ site.contact }}"}, (
-        f"event.njk writes a contact address out rather than naming it: "
-        f"{sorted(set(matches))}"
-    )
+
+def test_no_template_writes_or_links_the_contact_address() -> None:
+    """A published address is harvested for spam, so no template puts it
+    in a page. `donnees.njk` names `site.contact` once, through the
+    `contactCode` filter, and no template carries a `mailto:` at all."""
+    for template in sorted(SITE_SRC.rglob("*.njk")):
+        source = template.read_text(encoding="utf-8")
+        name = template.relative_to(SITE_SRC).as_posix()
+        assert "mailto:" not in source, f"{name} links the contact address directly"
+        uses = re.findall(r"site\.contact\b[^}]*", source)
+        expected = ["site.contact | contactCode "] if name == "donnees.njk" else []
+        assert uses == expected, f"{name} names site.contact as {uses}, not {expected}"
 
 
 # -------------------------------------------------------------------------- #
@@ -1219,7 +1218,7 @@ def test_the_empty_archive_states_a_reason_instead_of_an_empty_list(
     )
     assert "0 entries" in page
     assert '<ol class="archive">' not in page
-    assert "No edition has been delivered yet" in page
+    assert "No seminar has taken place yet." in page
 
 
 def test_an_empty_archive_generates_no_year_pages(
@@ -1252,8 +1251,8 @@ def test_the_two_field_filters_still_exist_on_a_wholly_empty_archive(
     discussions = (
         built_site_no_past_editions / "archives" / "discussions" / "index.html"
     ).read_text(encoding="utf-8")
-    assert "No past edition has a recording published yet." in recordings
-    assert "No past edition has an open discussion thread yet." in discussions
+    assert "No recording has been published yet." in recordings
+    assert "No seminar has a discussion yet." in discussions
 
 
 @pytest.fixture(scope="module")
@@ -1328,7 +1327,7 @@ def test_a_lone_past_editions_year_page_shows_it_disabled_both_ways(
     ).read_text(encoding="utf-8")
     assert event_id in page
     assert "No recording" in page
-    assert "No thread" in page
+    assert "No discussion" in page
 
 
 def test_both_field_filters_show_their_own_empty_state_though_the_archive_is_not(
@@ -1340,8 +1339,8 @@ def test_both_field_filters_show_their_own_empty_state_though_the_archive_is_not
     discussions = (
         built_site_one_bare_past_edition / "archives" / "discussions" / "index.html"
     ).read_text(encoding="utf-8")
-    assert "No past edition has a recording published yet." in recordings
-    assert "No past edition has an open discussion thread yet." in discussions
+    assert "No recording has been published yet." in recordings
+    assert "No seminar has a discussion yet." in discussions
     assert "0 entries" in recordings
     assert "0 entries" in discussions
 
@@ -1370,7 +1369,7 @@ def test_the_propose_page_offers_a_form_or_says_it_is_not_open(
     identity = published.load_identity()
     page = (built_site / "propose" / "index.html").read_text(encoding="utf-8")
     linked = f'href="{identity.proposal_form}"' in page
-    not_open = "The proposal form is not published yet." in page
+    not_open = "The proposal form is not open yet." in page
     assert linked is bool(identity.proposal_form_url), (
         "the propose page links a form the declaration does not offer, or "
         f"offers none when it does: proposal_form={identity.proposal_form!r}"
@@ -1381,46 +1380,49 @@ def test_the_propose_page_offers_a_form_or_says_it_is_not_open(
     assert published.PLACEHOLDER_MARKER not in page
 
 
-def test_propose_page_names_the_shared_contact_address(built_site: Path) -> None:
-    page = (built_site / "propose" / "index.html").read_text(encoding="utf-8")
-    assert f"mailto:{CONTACT_EMAIL}" in page
+def test_every_page_that_offers_contact_leads_to_the_contact_section(
+    built_site: Path,
+) -> None:
+    """The proposal page, the upcoming edition's registration notice, the
+    survey and the certificate check each say where to ask, and each
+    leads to the same section rather than to an address of its own."""
+    event_id = _the_one_scheduled_event_id()
+    for relative in (
+        "propose/index.html",
+        f"events/{event_id}/index.html",
+        f"survey/{event_id}/index.html",
+        "verify/index.html",
+    ):
+        page = (built_site / relative).read_text(encoding="utf-8")
+        assert _CONTACT_SECTION_LINK in page, f"{relative} no longer says where to ask"
 
 
 # ---- Information and data -------------------------------------------------
 
 
-def test_the_data_pages_contact_address_matches_confirmations_own_constant() -> None:
-    """The same thing held above for `event.njk`: one address, named
-    rather than spelled, in every template that offers it."""
-    source = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
-    matches = re.findall(r"mailto:([^\"]+)", source)
-    assert matches, "donnees.njk no longer names a contact address"
-    assert set(matches) == {"{{ site.contact }}"}, (
-        f"donnees.njk writes a contact address out rather than naming it: "
-        f"{sorted(set(matches))}"
-    )
-
-
-def test_every_built_page_that_offers_the_contact_address_gives_the_real_one(
+def test_the_data_page_reveals_the_real_contact_address_on_request(
     built_site: Path,
 ) -> None:
-    """The other half: a template that names `site.contact` and a build
-    that resolves it to something else would pass every assertion above.
-    Read off the built HTML, which is what a participant sees."""
-    pages = [
-        p
-        for p in sorted(built_site.rglob("*.html"))
-        if "mailto:" in p.read_text(encoding="utf-8")
-    ]
-    assert pages, "no built page offers a contact address at all"
-    for page in pages:
-        addresses = set(
-            re.findall(r"mailto:([^\"]+)", page.read_text(encoding="utf-8"))
-        )
-        assert addresses == {CONTACT_EMAIL}, (
-            f"{page.relative_to(built_site).as_posix()} offers {addresses}, "
-            f"not the one address this instance declares ({CONTACT_EMAIL})"
-        )
+    """The contact section carries the address `confirmation.py` sends
+    from, encoded, behind a button `contact.js` turns into a link. Read off
+    the built page, which is what a visitor's browser decodes."""
+    page = (built_site / "data" / "index.html").read_text(encoding="utf-8")
+    assert 'id="contact"' in page
+    codes = re.findall(r'data-contact="([^"]+)"', page)
+    assert len(codes) == 1, f"the data page offers {len(codes)} contact buttons"
+    assert base64.b64decode(codes[0]).decode("utf-8") == CONTACT_EMAIL
+    assert "/contact.js" in page
+    assert (built_site / "contact.js").is_file()
+
+
+def test_no_built_page_carries_the_contact_address_in_clear(built_site: Path) -> None:
+    """The other half of the template check: whatever the templates say,
+    the built HTML a crawler reads holds the address nowhere in clear."""
+    for page in sorted(built_site.rglob("*.html")):
+        text = page.read_text(encoding="utf-8")
+        name = page.relative_to(built_site).as_posix()
+        assert CONTACT_EMAIL not in text, f"{name} carries the contact address in clear"
+        assert "mailto:" not in text, f"{name} links an address directly"
 
 
 def test_the_data_page_never_restates_the_retention_figure() -> None:

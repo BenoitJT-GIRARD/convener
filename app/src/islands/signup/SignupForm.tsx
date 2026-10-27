@@ -167,15 +167,13 @@ function AttendanceBoundaries() {
     <div className="notice signup-form__boundaries">
       <p className="notice__eyebrow">About your certificate</p>
       <p>
-        <strong>Turning up without registering does not make you eligible.</strong> We only
-        recognise people we can match to a registration — register first if you want a
-        certificate.
+        <strong>You need to register to receive a certificate.</strong> We can only give one
+        to people we can match to a registration.
       </p>
       <p>
-        <strong>Joining by telephone cannot be matched.</strong> The meeting platform gives
-        us no address and no display name for a phone connection, so we cannot match you by
-        your email address or by your name that way. If you want a certificate, join with
-        the room link instead and put your matching code in your display name.
+        <strong>Joining by phone means no certificate.</strong> A phone connection shows us no
+        name and no email address, so we cannot match it. Join with the room link instead and
+        put your matching code in your display name.
       </p>
     </div>
   );
@@ -295,8 +293,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
         // otherwise -- there is simply nowhere to send it to.
         setSubmitState('error');
         setSubmitError(
-          'Registration is not open for this event yet, so nothing you typed has been ' +
-            'sent. Please try again later.',
+          'Registration is not open yet, so nothing has been sent. Please try again later.',
         );
         return;
       }
@@ -338,7 +335,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
       setSubmitState('sent');
     } catch {
       setSubmitState('error');
-      setSubmitError('Your registration could not be encrypted. Please try again.');
+      setSubmitError('Something went wrong preparing your registration. Please try again.');
     }
   }
 
@@ -427,8 +424,8 @@ export function SignupForm({ eventId }: { eventId?: string }) {
               onChange={e => setMembershipOptIn(e.target.checked)}
             />
             <span>
-              Also subscribe me to the announce list for future events. I can unsubscribe
-              with one click from any email, and I will be asked to reconfirm every year.
+              Also email me about future seminars. I can unsubscribe from any email, and I
+              will be asked to confirm once a year.
             </span>
           </label>
 
@@ -456,10 +453,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
       {submitState === 'sent' && (
         <div ref={sentPanelRef} role="alert" tabIndex={-1} className="notice signup-form__sent">
           <p className="notice__eyebrow">Registration sent</p>
-          <p>
-            A confirmation email carrying the room link and your matching code is on its
-            way.
-          </p>
+          <p>A confirmation email with the room link and your matching code is on its way.</p>
         </div>
       )}
     </div>
