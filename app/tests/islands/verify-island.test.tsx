@@ -144,11 +144,23 @@ describe('VerifyPage -- with a token', () => {
     expect(text).not.toMatch(/forged|forger|fake/i);
   });
 
+  it('sends a visitor to the contact section, never to an address written out on the page', async () => {
+    const truncated = cases.verification_rejects.find(c => c.name === 'truncated');
+    if (!truncated) throw new Error('fixture case not found');
+    stubFetch({});
+    renderVerify(SIGNED.identifier, truncated.token);
+
+    await screen.findByText('We cannot confirm this certificate');
+    const link = screen.getByRole('link', { name: 'contact us' });
+    expect(link.getAttribute('href')).toMatch(/\/data\/#contact$/);
+    expect(document.body.innerHTML).not.toMatch(/mailto:/);
+  });
+
   it('state unknown: genuine signature, register fetch fails (mutation 2 -- must never render "invalid")', async () => {
     stubFetch({ projection: 'fail' });
     renderVerify(SIGNED.identifier, SIGNED.token);
 
-    await screen.findByText('We cannot confirm the current state');
+    await screen.findByText('We cannot confirm it is still valid');
     // The signature was genuine, so the name is still shown -- this is
     // exactly the case the ordering exists for: an unreadable register must
     // never be presented the same way as an invalid certificate.
@@ -161,12 +173,12 @@ describe('VerifyPage -- with a token', () => {
     stubFetch({ projection: [] });
     renderVerify(SIGNED.identifier, SIGNED.token);
 
-    await screen.findByText('Not yet reflected in our register');
+    await screen.findByText('Not yet in our register');
     // A decisive fact from a register we *did* read successfully --
     // must never share StateUnknown's "we could not reach it" copy, and
     // the signature is still genuine, so the name still shows.
     expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
-    expect(screen.queryByText('We cannot confirm the current state')).not.toBeInTheDocument();
+    expect(screen.queryByText('We cannot confirm it is still valid')).not.toBeInTheDocument();
     const text = document.body.textContent ?? '';
     expect(text).not.toMatch(/could not reach our register/i);
   });
@@ -184,7 +196,7 @@ describe('VerifyPage -- with a token', () => {
 });
 
 describe('VerifyPage -- a signature-confirmed payload with no identifier field', () => {
-  it('renders "we cannot confirm the current state", never "certificate verified" -- this is our own bug, never a forger\'s', async () => {
+  it('renders "we cannot confirm it is still valid", never "certificate verified" -- this is our own bug, never a forger\'s', async () => {
     const { publicPem, privateKey } = await generateSigningKeyPair();
     const payload = { event: 'A workshop', name: 'Someone', date: '2026-01-01', duration_hours: 1.5 };
     const token = await signRawBytes(privateKey, new TextEncoder().encode(JSON.stringify(payload)));
@@ -194,7 +206,7 @@ describe('VerifyPage -- a signature-confirmed payload with no identifier field',
     // given.
     renderVerify('00000000000000000000000000000000', token);
 
-    await screen.findByText('We cannot confirm the current state');
+    await screen.findByText('We cannot confirm it is still valid');
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
     // Never asked the register: there was no identifier to ask it about.
     const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
@@ -221,8 +233,8 @@ describe('VerifyPage -- no token (the printed-page flow)', () => {
 
     await screen.findByText('Recorded as issued');
     const text = document.body.textContent ?? '';
-    expect(text).toMatch(/record in our register, not the document itself/i);
-    expect(text).toMatch(/cannot show a name/i);
+    expect(text).toMatch(/only confirms what our register lists for this identifier, not the document/i);
+    expect(text).toMatch(/see the name on it, scan its code/i);
   });
 
   it('recorded as revoked', async () => {
@@ -245,7 +257,7 @@ describe('VerifyPage -- no token (the printed-page flow)', () => {
     stubFetch({ projection: 'fail' });
     renderVerify(SIGNED.identifier);
 
-    await screen.findByText('We cannot confirm this right now');
+    await screen.findByText('We cannot check this right now');
     expect(screen.queryByText('Not found in our register')).not.toBeInTheDocument();
   });
 
@@ -277,21 +289,24 @@ describe('VerifyPage -- reached with no link at all', () => {
     render(<VerifyPage />);
 
     expect(
-      screen.getByRole('heading', { name: /enter what is printed on the certificate/i }),
+      screen.getByRole('heading', { name: /enter the certificate details/i }),
     ).toBeInTheDocument();
     // `getByLabelText`, not a placeholder or a nearby paragraph: a field
     // whose only description is text beside it has no label at all.
     expect(screen.getByLabelText(/certificate identifier/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/verification address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/verification link/i)).toBeInTheDocument();
   });
 
   it('states each field\'s format before anything is submitted, on the field itself', () => {
     render(<VerifyPage />);
 
     const identifier = screen.getByLabelText(/certificate identifier/i);
+    // The format is an example inside the field; where to find the
+    // identifier is the hint the field is described by.
+    expect(identifier.getAttribute('placeholder') ?? '').toMatch(/32 characters/);
     const describedBy = identifier.getAttribute('aria-describedby') ?? '';
     const hint = document.getElementById(describedBy.split(' ')[0] ?? '');
-    expect(hint?.textContent ?? '').toMatch(/32 characters/);
+    expect(hint?.textContent ?? '').toMatch(/under .Identifier./);
   });
 
   it('answers a typed identifier the way a token-less link does, and writes nothing into the URL', async () => {
@@ -318,7 +333,7 @@ describe('VerifyPage -- reached with no link at all', () => {
     render(<VerifyPage />);
 
     enter(
-      /verification address/i,
+      /verification link/i,
       `https://an-organisation-that-moved.invalid/convener/${SIGNED.verification_url_path}`,
     );
     check();
@@ -345,13 +360,13 @@ describe('VerifyPage -- reached with no link at all', () => {
     render(<VerifyPage />);
 
     enter(
-      /verification address/i,
+      /verification link/i,
       `#/${SIGNED.identifier}?token=${encodeURIComponent(truncated.token)}`,
     );
     check();
 
     await screen.findByText('We cannot confirm this certificate');
-    expect(screen.getByText(/check what you entered against the certificate/i)).toBeInTheDocument();
+    expect(screen.getByText(/copied the whole link/i)).toBeInTheDocument();
     const text = document.body.textContent ?? '';
     expect(text).not.toMatch(/forged|forger|fake/i);
   });
@@ -364,8 +379,8 @@ describe('VerifyPage -- reached with no link at all', () => {
     check();
 
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent(/32 characters long/);
-    expect(alert).toHaveTextContent(/this one is 30/);
+    expect(alert).toHaveTextContent(/32 characters/);
+    expect(alert).toHaveTextContent(/this one has 30/i);
     const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
     expect(calls.some(url => url.endsWith('/certificates.json'))).toBe(false);
   });
@@ -425,7 +440,7 @@ describe('VerifyPage -- the keys fetch itself failing must not read as "no key c
     // same shade of "danger" as one that is actually forged.
     expect(screen.queryByText('We cannot confirm this certificate')).not.toBeInTheDocument();
     const text = document.body.textContent ?? '';
-    expect(text).not.toMatch(/does not check out against any signing key/i);
+    expect(text).not.toMatch(/could not confirm (this|the) link/i);
   });
 });
 
@@ -473,14 +488,14 @@ describe('VerifyPage -- the four answers are genuinely distinct (not a shared fa
 
     stubFetch({ projection: 'fail' });
     const stateUnknown = renderVerify(SIGNED.identifier, SIGNED.token);
-    await screen.findByText('We cannot confirm the current state');
+    await screen.findByText('We cannot confirm it is still valid');
     stateUnknown.unmount();
 
     const headings = [
       'Certificate verified',
       'Certificate revoked',
       'We cannot confirm this certificate',
-      'We cannot confirm the current state',
+      'We cannot confirm it is still valid',
     ];
     expect(new Set(headings).size).toBe(4);
   });

@@ -12,7 +12,7 @@ pageTitle: "Verify a certificate"
 eleventyComputed:
   # See `archives.njk` for why this is computed rather than a plain
   # front-matter string.
-  pageDescription: "Confirm an attendance certificate issued by {{ site.organisation }}, using the identifier printed on it -- no account needed."
+  pageDescription: "Check an attendance certificate issued by {{ site.organisation }}. No account needed."
 ---
 
 <section class="hero">
@@ -26,9 +26,8 @@ eleventyComputed:
     <p class="hero__eyebrow">Certificate of attendance</p>
     <h1 class="hero__title">Check a certificate.</h1>
     <p class="hero__lede">
-      Follow the link or scan the code printed on a certificate issued by {{ site.organisation }},
-      or type in what is printed on it &mdash; either way the check runs here, in this browser,
-      with no account, and nothing about which certificate is being checked is sent to us.
+      Scan the code on a certificate issued by {{ site.organisation }}, or enter its
+      identifier below.
     </p>
   </div>
 </section>
@@ -56,9 +55,9 @@ eleventyComputed:
   <div id="verify-app" class="verify"></div>
   <noscript>
     <p class="notice">
-      Checking a certificate needs JavaScript enabled. If you cannot enable it, write to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a> with the
-      certificate identifier and we will check it by hand.
+      Checking a certificate here needs JavaScript. If you cannot turn it on,
+      <a href="{{ '/data/' | url }}#contact">contact us</a> with the certificate identifier and we
+      will check it for you.
     </p>
   </noscript>
   <script type="module" src="{{ '/app/islands/verify/verify.js' | url }}"></script>

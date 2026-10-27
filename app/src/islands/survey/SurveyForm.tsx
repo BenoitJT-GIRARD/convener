@@ -251,7 +251,7 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
         // way the 'closed' page's own message would otherwise imply.
         setSubmitState('error');
         setSubmitError(
-          'Submitting answers is not available yet, so nothing you typed has been sent. ' +
+          'The survey is not accepting answers yet, so nothing has been sent. ' +
             'Please try again later.',
         );
         return;
@@ -284,7 +284,7 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
       setSubmitState('sent');
     } catch {
       setSubmitState('error');
-      setSubmitError('Your answers could not be encrypted. Please try again.');
+      setSubmitError('Something went wrong preparing your answers. Please try again.');
     }
   }
 
@@ -311,7 +311,7 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
       {effectivePageState.status === 'closed' && (
         <div className="notice survey-form__closed">
           <p className="notice__eyebrow">This survey is not open</p>
-          <p>There is no survey currently open for this event.</p>
+          <p>There is no survey open for this seminar right now.</p>
         </div>
       )}
 
@@ -377,8 +377,7 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
                 type, not only in the page's own static notice above this
                 island's mount point. */}
             <p className="survey-form__hint">
-              Please do not include your name, email address, or anything else that
-              could identify you or anyone else.
+              Please leave out anything that could identify you or someone else.
             </p>
             <textarea
               value={feedback}

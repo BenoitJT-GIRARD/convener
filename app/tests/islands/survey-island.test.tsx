@@ -153,7 +153,7 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
     renderSurvey();
     await screen.findByRole('group', { name: /rate this session overall/i });
 
-    expect(screen.getByText(/do not include your name, email address/i)).toBeInTheDocument();
+    expect(screen.getByText(/leave out anything that could identify you/i)).toBeInTheDocument();
   });
 
   it('fetches the event public key from the event-scoped, same-origin path -- the same key registration uses', async () => {
@@ -441,7 +441,7 @@ describe('SurveyForm -- sending', () => {
     await answer();
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
-    await screen.findByText(/submitting answers is not available yet/i);
+    await screen.findByText(/the survey is not accepting answers yet/i);
     // Distinct wording from the 'closed' state's own message, which would
     // tell a participant whose survey *is* open to give up.
     expect(screen.queryByText(/this survey is not open$/i)).not.toBeInTheDocument();
@@ -498,7 +498,7 @@ describe('SurveyForm -- sending', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
-    await screen.findByText(/could not be encrypted/i);
+    await screen.findByText(/something went wrong preparing your answers/i);
     expect(screen.queryByText(/your answers have been sent/i)).not.toBeInTheDocument();
   });
 });

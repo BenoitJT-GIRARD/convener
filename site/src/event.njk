@@ -195,39 +195,33 @@ eleventyComputed:
 
   {#
     A one-screen data-protection notice on the
-    event page, before the form. The wording below is the one this project
-    settled on and shipped, originally at `app/src/signup/
-    SignupForm.tsx`'s own `Notice()` component (quoted here,
-    not redrafted). That component's own copy went once
+    event page, before the form. It began as `app/src/signup/
+    SignupForm.tsx`'s own `Notice()` component and moved here once
     the registration island mounted beneath this notice: D-18 keeps
     text that needs no interactivity as plain static HTML, so this block
-    is now the *only* copy, not a second one kept in step with a first --
+    is the *only* copy, not a second one kept in step with a first --
     see `app/src/islands/signup/SignupForm.tsx`'s own module comment.
     `tools/tests/journey/test_confirmation.py` still pins the retention figure
-    ("90 days") across this page, `confirmation.py` and the docs copy, and
-    `tools/tests/repository/test_site.py` pins the contact address below against
-    `confirmation.CONTACT_EMAIL` -- so neither the wording nor the address
-    can quietly drift from those.
+    ("90 days") across this page, `confirmation.py` and the docs copy. The
+    address to write to is not on this page: "contact us" leads to the data
+    page's contact section, the one place that offers it
+    (`tools/tests/repository/test_site.py` holds every page to that).
   #}
   <div class="notice">
     <p class="notice__eyebrow">Before you register</p>
     <p>
-      We collect your first name, surname and email address to register you for
-      this event and to issue your attendance certificate afterwards. Institution
-      is optional. Nothing else is asked for.
+      We ask for your name and email address to register you and to send
+      you an attendance certificate afterwards. Your institution is
+      optional.
     </p>
     <p>
-      <strong>Your browser encrypts this information before it is sent</strong>,
-      using this event&rsquo;s own key. Nobody &mdash; including us &mdash; can
-      read it until an organiser decrypts it as part of running the event. The
-      event&rsquo;s data, encrypted form included, is permanently destroyed
-      90 days after the event by destroying the key that could ever read it
-      again.
+      <strong>Your details are encrypted in your browser before they are
+      sent</strong>, and only the organisers can read them. They are
+      permanently deleted 90 days after the event.
     </p>
     <p>
-      To access, correct or erase your data before that date, write to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
-      Read the full
+      To see, correct or erase them before then,
+      <a href="{{ '/data/' | url }}#contact">contact us</a>. The
       {# This used to link the private source repository
          directly (D-15), which returns GitHub's own 404 to a public
          visitor. `donnees.njk` already linked the same record at its
@@ -241,7 +235,7 @@ eleventyComputed:
          test_the_governance_record_link_agrees_on_every_page_that_makes_
          it` reads both templates and pins them equal. #}
       <a href="{{ '/app/docs/handbook/governance/traitement-donnees.md' | absoluteUrl }}">data-protection record</a>
-      for what we hold, why, and for how long.
+      has the full details.
     </p>
   </div>
 
@@ -267,9 +261,8 @@ eleventyComputed:
   <div id="registration-form" data-event-id="{{ event.id | lower }}"></div>
   <noscript>
     <p class="notice">
-      Registering needs JavaScript enabled. If you cannot enable it, write to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>
-      and we will register you by hand.
+      The registration form needs JavaScript. If you cannot turn it on,
+      <a href="{{ '/data/' | url }}#contact">contact us</a> and we will register you by hand.
     </p>
   </noscript>
   <script type="module" src="{{ '/app/islands/signup/signup.js' | url }}"></script>
@@ -305,7 +298,7 @@ eleventyComputed:
     {% if event.forum_thread %}
       <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener" aria-label="Discuss {{ event.title }}">Discuss</a>
     {% else %}
-      <span class="archive__action--disabled">No thread yet</span>
+      <span class="archive__action--disabled">No discussion yet</span>
     {% endif %}
     {#
       The post-event survey, which had no link on this site at all: it was

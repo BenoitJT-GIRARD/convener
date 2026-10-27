@@ -140,7 +140,7 @@ describe('main.tsx -- finding and reading the mount point', () => {
 
     // Which is the way in, not a refusal: with nothing in the fragment
     // this island offers the fields instead of a dead end.
-    await screen.findByText('Enter what is printed on the certificate');
+    await screen.findByText('Enter the certificate details');
   });
 });
 

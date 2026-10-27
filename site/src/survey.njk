@@ -29,7 +29,7 @@ permalink: "/survey/{{ event.id | lower }}/"
 sitemap: false
 eleventyComputed:
   pageTitle: "Survey — {{ event.title }}"
-  pageDescription: "A short, optional post-event survey for {{ event.title }}."
+  pageDescription: "A short, optional survey about {{ event.title }}."
 ---
 
 {#
@@ -57,7 +57,7 @@ eleventyComputed:
     <p class="hero__eyebrow">Post-event survey</p>
     <h1 class="hero__title">What did you think?</h1>
     <p class="hero__lede">
-      A short, optional survey for {{ event.title }}. Three questions, all short.
+      Three short questions about {{ event.title }}. Answering is optional.
     </p>
   </div>
 </section>
@@ -79,28 +79,21 @@ eleventyComputed:
   <div class="notice">
     <p class="notice__eyebrow">Before you answer</p>
     <p>
-      This short, optional survey is only sent to people we have recorded as present at
-      this event. Three questions, all short.
+      This survey is sent only to people who attended.
     </p>
     <p>
-      <strong>Your browser encrypts your answers before they are sent</strong>, using
-      this event&rsquo;s own key &mdash; the same key, and the same protection, as your
-      registration. Nobody &mdash; including us &mdash; can read your answers until an
-      organiser decrypts them as part of running the event.
+      <strong>Your answers are encrypted in your browser before they are
+      sent</strong>, and only the organisers can read them.
     </p>
     <p>
-      <strong>Your answers are anonymous.</strong> Nothing here &mdash; no name, no
-      address, no matching code &mdash; is sent alongside them, and that is deliberate.
-      Because of that, we cannot find your own answers to show them to you, correct them
-      or erase them individually once sent: there is nothing on file that says which
-      answers are yours. Please do not write your name, your email address, or anything
-      else that could identify you or anyone else, in the free-text box below.
+      <strong>Your answers are anonymous.</strong> Nothing that identifies
+      you is sent with them, so we cannot show, correct or delete your
+      answers once they are sent. Please leave out anything that could
+      identify you or someone else.
     </p>
     <p>
-      All answers for this event, like your registration, are permanently destroyed
-      together with the event&rsquo;s key 90 days after the event. Questions about this
-      survey can be sent to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
+      All answers are permanently deleted 90 days after the event. For any
+      question about this survey, <a href="{{ '/data/' | url }}#contact">contact us</a>.
     </p>
   </div>
 
@@ -122,9 +115,8 @@ eleventyComputed:
   <div id="survey-form" data-event-id="{{ event.id | lower }}"></div>
   <noscript>
     <p class="notice">
-      Answering this survey needs JavaScript enabled. If you cannot enable it, write to
-      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a> and we
-      will note your feedback by hand.
+      The survey needs JavaScript. If you cannot turn it on,
+      <a href="{{ '/data/' | url }}#contact">contact us</a> and we will note your feedback by hand.
     </p>
   </noscript>
   <script type="module" src="{{ '/app/islands/survey/survey.js' | url }}"></script>

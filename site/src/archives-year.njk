@@ -20,7 +20,7 @@ permalink: "/archives/{{ yearInfo.year }}/"
 # has resolved which year a given generated page is for.
 eleventyComputed:
   pageTitle: "{{ yearInfo.year }} editions"
-  pageDescription: "Every seminar delivered in {{ yearInfo.year }}, with its recording and discussion thread where one exists."
+  pageDescription: "Seminars held in {{ yearInfo.year }}, with their recording and discussion when there is one."
 ---
 {% from "archive-list.njk" import archiveList %}
 {% from "archive-filters.njk" import archiveFilters %}
@@ -35,8 +35,8 @@ eleventyComputed:
     <p class="hero__eyebrow">Archive &middot; {{ yearInfo.year }}</p>
     <h1 class="hero__title">{{ yearInfo.year }} editions.</h1>
     <p class="hero__lede">
-      Every seminar delivered in {{ yearInfo.year }}, with its recording
-      and discussion thread where one exists.
+      Seminars held in {{ yearInfo.year }}, with their recording and
+      discussion when there is one.
     </p>
   </div>
 </section>
