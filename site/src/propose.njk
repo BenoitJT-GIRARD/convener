@@ -7,6 +7,7 @@ eleventyComputed:
   # front-matter string.
   pageDescription: "Propose yourself, or someone whose work you admire, to speak in the {{ site.title }}."
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 {#
   The public entry point to the proposal pipeline `tools/convener_ops/
   proposal.py` already implements: a Tally form, its webhook signed and
@@ -29,6 +30,7 @@ eleventyComputed:
   publish.
 #}
 <section class="hero">
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% endif %}
   <div class="container hero__inner">
     <p class="hero__eyebrow">Propose a speaker</p>
     <h1 class="hero__title">Bring us <em>your</em> talk.</h1>
@@ -41,6 +43,7 @@ eleventyComputed:
 </section>
 
 <section class="section container">
+  {% if motif.pieces %}{{ piece(motif, "below-band") }}{% endif %}
   <header class="section__head">
     <span class="section__num">01</span>
     <span class="section__label">Before you start</span>

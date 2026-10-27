@@ -10,10 +10,12 @@ eleventyComputed:
   # `event.njk` above already uses this mechanism for the same two keys.
   pageDescription: "Every seminar {{ site.organisation }} has hosted, with its recording and discussion when there is one."
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 {% from "archive-list.njk" import archiveList %}
 {% from "archive-filters.njk" import archiveFilters %}
 
 <section class="hero">
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% endif %}
   <div class="container hero__inner">
     <p class="hero__eyebrow">Archive</p>
     <h1 class="hero__title">Past editions.</h1>
@@ -25,6 +27,7 @@ eleventyComputed:
 </section>
 
 <section class="section container">
+  {% if motif.pieces %}{{ piece(motif, "below-band") }}{% endif %}
   <header class="section__head">
     <span class="section__num">01</span>
     <span class="section__label">All editions</span>

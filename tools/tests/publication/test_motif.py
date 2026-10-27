@@ -167,6 +167,32 @@ def test_every_family_draws_its_own_path_through_the_generator(
     )
 
 
+@pytest.mark.parametrize("family", sorted(motifs.FAMILIES))
+def test_the_site_data_carries_pieces_only_for_a_family_that_draws_them(
+    family: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A family that draws pieces for a page gets them in the site data,
+    each one exactly as the family drew it; a family that draws none adds
+    no key at all, so its showcase is built exactly as before."""
+    charter = json.loads((ROOT / brand.DEFAULT_PATH).read_text(encoding="utf-8"))
+    charter[brand.MOTIF_KEY][brand.MOTIF_FAMILY] = family
+    written = tmp_path / brand.INSTANCE_PATH
+    written.parent.mkdir(parents=True, exist_ok=True)
+    written.write_text(json.dumps(charter), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    data = json.loads(render_site_data(tmp_path))
+    drawn = motifs.page_pieces(family)
+
+    if not drawn:
+        assert "pieces" not in data
+        return
+    assert sorted(data["pieces"]) == sorted(drawn)
+    for name, piece in drawn.items():
+        assert data["pieces"][name]["path"] == piece.path
+        assert data["pieces"][name]["view_box"] == piece.view_box
+
+
 def test_an_unknown_family_stops_the_generator_and_names_the_ones_there_are(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -172,9 +172,11 @@
      read from src/_data/motif.json; nothing here derives geometry. No
      colour of its own either: the stroke comes from .masthead__motif in
      style.css, which takes it from the generated --dominant token. #}
+  {% if not motif.pieces %}
   <svg class="masthead__motif" viewBox="{{ motif.view_box }}" fill="none" stroke-width="{{ motif.stroke_width }}" stroke-linecap="round" aria-hidden="true">
     <path d="{{ motif.path }}"/>
   </svg>
+  {% endif %}
   <div class="container masthead__inner">
     <a href="{{ '/' | url }}" class="masthead__brand unstyled">
       <span class="masthead__brand-mark">No.</span>

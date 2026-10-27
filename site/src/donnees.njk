@@ -4,6 +4,7 @@ permalink: "/data/"
 pageTitle: "Data & privacy"
 pageDescription: "What personal data this series holds, why, for how long, and how to exercise your rights."
 ---
+{% from "motif-pieces.njk" import piece, heroPieces %}
 {#
   Filename kept in French, as it was first written -- the same precedent
   `docs/handbook/governance/traitement-donnees.md` already set, registered in
@@ -24,6 +25,7 @@ pageDescription: "What personal data this series holds, why, for how long, and h
   catch drifting.
 #}
 <section class="hero">
+  {% if motif.pieces %}{{ heroPieces(motif) }}{% endif %}
   <div class="container hero__inner">
     <p class="hero__eyebrow">Data &amp; privacy</p>
     <h1 class="hero__title">What we hold, <em>and for how long.</em></h1>
@@ -36,6 +38,7 @@ pageDescription: "What personal data this series holds, why, for how long, and h
 </section>
 
 <section class="section container">
+  {% if motif.pieces %}{{ piece(motif, "below-band") }}{% endif %}
   <header class="section__head">
     <span class="section__num">01</span>
     <span class="section__label">The record</span>
