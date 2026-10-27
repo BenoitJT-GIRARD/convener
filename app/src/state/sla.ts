@@ -68,7 +68,7 @@ import type { Config, Speaker } from '../data/types';
 // The one thing this module asks of the publication gate: whether somebody
 // has *refused*. It is asked rather than restated because a second reading of
 // "refused" is a second answer to when a wrap-up clock stops, and it reaches
-// the daily digest as well as this screen. Importing `state/governance.ts`
+// the weekly digest as well as this screen. Importing `state/governance.ts`
 // does not weaken the working-day discipline above: what must never happen
 // here is a *conversion* between the two units, and no working-day function
 // is named anywhere in this file.

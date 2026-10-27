@@ -1214,8 +1214,8 @@ and `app/src/auth/role.ts` reads it at every sign-in. Two mandatory things
 depended on an optional one.
 
 **Proves it is done.** Run the configuration report: *Board notifications*
-moves from `absent` to `production`. Reading the day's message without sending
-it is a command of its own.
+moves from `absent` to `production`. Reading the week's message, on any day,
+without sending it is a command of its own.
 
 ```bash
 cd tools

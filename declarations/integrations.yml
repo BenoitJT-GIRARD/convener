@@ -236,9 +236,9 @@ integrations:
       - CONVENER_NOTIFY_THREAD
       - CONVENER_NOTIFY_MENTION
     purpose: >-
-      Posts the daily digest, and anything that cannot wait for it, onto one
-      thread the Board watches, mentioning the team so that GitHub delivers
-      the mail itself (D-07). Set the thread to the issue it should be
+      Posts the weekly digest on Mondays, and anything that cannot wait for
+      it, onto one thread the Board watches, mentioning the team so that
+      GitHub delivers the mail itself (D-07). Set the thread to the issue it should be
       written on and the mention to the team that should be pinged; one
       without the other addresses nobody.
     absent_behaviour: >-

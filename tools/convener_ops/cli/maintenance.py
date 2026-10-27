@@ -577,6 +577,10 @@ def check_credential_expiry() -> int:
     above use: the workflow's own last step is what turns the job red, so an
     unconfigured channel can never turn a real finding into silence. Returns
     1 only for a declaration this repository owns and cannot read.
+
+    Two outputs for the two steps after it: `renewal_alert` for the post
+    (`credential_expiry.to_post`) and `renewal_failing` for the red
+    (`credential_expiry.failing`).
     """
     root = repo_root()
     try:
@@ -588,6 +592,8 @@ def check_credential_expiry() -> int:
     today = paris_today(datetime.now(UTC))
     fired = credential_expiry.due(renewals, today)
     print(credential_expiry.summary(renewals, fired, today))
+    failing = "true" if credential_expiry.failing(fired) else "false"
+    step_output.write(f"renewal_failing={failing}\n")
     if not fired:
         step_output.write("renewal_alert=false\n")
         return 0
@@ -617,6 +623,13 @@ def check_credential_expiry() -> int:
         # private, and every duplicate's cockpit is private by design
         # (D-15).
         print(line)
+    if not credential_expiry.to_post(fired, today):
+        print(
+            "the Board hears of this on Mondays, and on the day one stops "
+            "working; not today"
+        )
+        step_output.write("renewal_alert=false\n")
+        return 0
     addressed = dispatch(credential_expiry.message(fired, today), os.environ)
     if addressed is not None:
         (root / RENEWALS_BODY).write_text(addressed.body, encoding="utf-8", newline="")
