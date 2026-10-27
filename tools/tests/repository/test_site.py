@@ -184,6 +184,44 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
     )
 
 
+def _css_blocks(style: str, selector: str) -> list[str]:
+    """The declaration blocks of every rule whose selector is exactly
+    `selector`, media queries included."""
+    return re.findall(rf"(?m)^\s*{re.escape(selector)}\s*\{{([^}}]*)\}}", style)
+
+
+def test_a_section_keeps_the_container_gutter() -> None:
+    """`.section` and `.container` sit on the same element, so a `padding`
+    shorthand on `.section` cancels the container's side gutter: the
+    section's text then starts left of the hero's on a wide screen and
+    touches the edge of a phone's screen."""
+    style = (SITE_SRC / "style.css").read_text(encoding="utf-8")
+    blocks = _css_blocks(style, ".section")
+    assert blocks, "style.css no longer styles .section at all"
+    for block in blocks:
+        assert not re.search(r"(?m)^\s*padding\s*:", block), (
+            ".section sets its padding with the shorthand, which resets the "
+            ".container gutter it shares an element with -- set padding-block"
+        )
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [".hero__title", ".coda__text", ".feature--empty p", ".archive-empty"],
+)
+def test_a_title_or_one_line_message_is_not_capped_in_characters(selector: str) -> None:
+    """A width fixed in characters breaks a title or a one-sentence message
+    at the same word whatever the screen, which reads as a mistake on a
+    wide one. These wrap at the width their column gives them."""
+    style = (SITE_SRC / "style.css").read_text(encoding="utf-8")
+    blocks = _css_blocks(style, selector)
+    assert blocks, f"style.css no longer styles {selector}"
+    for block in blocks:
+        assert not re.search(r"max-width\s*:\s*[\d.]+ch\b", block), (
+            f"{selector} is capped at a width in characters again"
+        )
+
+
 # -------------------------------------------------------------------------- #
 # A Content-Security-Policy and an
 # explicit referrer policy, both delivered by <meta> -- the only mechanism
