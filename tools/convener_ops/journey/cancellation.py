@@ -33,7 +33,7 @@ from datetime import date
 from typing import Any, Final
 
 from convener_ops.declaration.paths import DATA_DIR
-from convener_ops.journey.confirmation import Confirmation, EventDetails
+from convener_ops.journey.confirmation import SIGN_OFF, Confirmation, EventDetails
 from convener_ops.journey.registration import Registration
 
 #: Where the ledger lives. Under `instance/data/`, which the boundary hands to
@@ -153,24 +153,25 @@ def compose(registration: Registration, event: EventDetails) -> Confirmation:
 
     subject = "Cancelled"
     if event.title:
-        subject = f"{subject} — {event.title}"
+        subject = f"{subject}: {event.title}"
 
     lines: list[str] = [
         f"Dear {registration.first_name},",
         "",
-        f"The seminar you registered{what}{when} has been cancelled, and will "
-        "not take place.",
+        f"The seminar you registered{what}{when} has been cancelled.",
         "",
-        "There is nothing you need to do. Please ignore the joining details in "
-        "your confirmation, and accept our apologies for the change.",
+        "You do not need to do anything. Please ignore the joining details in "
+        "your confirmation. We are sorry for the change.",
         "",
-        "Your registration is closed. What you gave us stays encrypted and is "
-        "destroyed on the schedule the confirmation described, on the date the "
-        "seminar would have been held — a cancellation does not extend it.",
+        "Your registration is closed. Your details stay encrypted and are "
+        "deleted as your confirmation described, counting from the date the "
+        "seminar was planned for.",
         "",
-        "If this talk finds a new date it will be announced as a new seminar, "
-        "and registering again will be a fresh decision rather than something "
-        "we carried over on your behalf.",
+        "If the talk is rescheduled, it will be announced as a new seminar and "
+        "you will need to register again.",
+        "",
+        "Best regards,",
+        SIGN_OFF,
     ]
     return Confirmation(to=registration.email, subject=subject, body="\n".join(lines))
 

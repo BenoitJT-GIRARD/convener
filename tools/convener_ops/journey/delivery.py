@@ -382,9 +382,8 @@ class Delivery:
 #: (`f"{subject} — {event.title}"`) -- so this also fixes that drift, not
 #: only pins against a future one.
 DOCUMENT_INSTRUCTION: Final = (
-    "as a self-contained web page you can open in any browser — print it, "
-    'or use your browser\'s own "print to PDF" if you would rather keep a '
-    "PDF copy."
+    "as a web page you can open in any browser. To keep a PDF copy, open it "
+    'and use your browser\'s "Print to PDF".'
 )
 
 
@@ -400,7 +399,7 @@ def compose(
     message, not merely one carrying the same document."""
     subject = "Your certificate of attendance"
     if event_title:
-        subject = f"{subject} — {event_title}"
+        subject = f"{subject}: {event_title}"
 
     what = f" for {event_title}" if event_title else ""
     lines = [

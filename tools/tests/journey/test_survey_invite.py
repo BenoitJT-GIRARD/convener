@@ -67,7 +67,7 @@ def test_compose_returns_a_plain_confirmation() -> None:
 
 def test_compose_subject_names_the_event_and_nothing_personal() -> None:
     message = compose(_registration(), "On analytical engines", "mrg-042")
-    assert message.subject == "Tell us what you thought — On analytical engines"
+    assert message.subject == "Tell us what you thought: On analytical engines"
     assert "Ada" not in message.subject
     assert "Lovelace" not in message.subject
     assert "ada@example.org" not in message.subject

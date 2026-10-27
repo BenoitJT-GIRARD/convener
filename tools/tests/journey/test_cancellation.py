@@ -133,7 +133,7 @@ def test_the_first_line_says_it_is_off() -> None:
     body = message.body.split("\n")
     assert body[0] == "Dear Ada,"
     assert "has been cancelled" in body[2]
-    assert "will not take place" in body[2]
+    assert "has been cancelled" in body[2]
 
 
 def test_it_never_says_why() -> None:
@@ -154,7 +154,7 @@ def test_it_says_what_becomes_of_what_they_gave() -> None:
     body = cancellation.compose(_registration(), EVENT).body
 
     assert "encrypted" in body
-    assert "destroyed" in body
+    assert "deleted" in body
 
 
 def test_it_is_addressed_to_the_person_and_deterministic() -> None:

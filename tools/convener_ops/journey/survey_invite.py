@@ -250,10 +250,7 @@ def survey_url(event_id: str) -> str:
 #: Deliberately silent on anonymity or padding or metadata: see the module
 #: docstring's own paragraph on why a second, shorter paraphrase of
 #: `SurveyForm.tsx`'s full notice could only say it less precisely.
-NOTICE: Final = (
-    "This short, optional survey is only sent to people we have recorded "
-    "as present at this event."
-)
+NOTICE: Final = "We send this short, optional survey only to people who attended."
 
 
 def compose(
@@ -270,7 +267,7 @@ def compose(
     transport of its own."""
     subject = "Tell us what you thought"
     if event_title:
-        subject = f"{subject} — {event_title}"
+        subject = f"{subject}: {event_title}"
 
     what = f" {event_title}" if event_title else " the event"
     lines = [

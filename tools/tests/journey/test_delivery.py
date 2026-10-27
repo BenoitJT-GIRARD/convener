@@ -193,7 +193,7 @@ def test_compose_addresses_the_registrant() -> None:
 
 def test_compose_subject_names_the_event_when_known() -> None:
     message = compose(_registration(), "On analytical engines", _IDENTIFIER, "<html/>")
-    assert message.subject == "Your certificate of attendance — On analytical engines"
+    assert message.subject == "Your certificate of attendance: On analytical engines"
 
 
 def test_compose_subject_is_still_sensible_with_no_event_title() -> None:

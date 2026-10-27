@@ -243,10 +243,11 @@ def _published_url() -> str | None:
 #:
 #: Product text, not a configuration key. What it says is what
 #: `site/src/propose.njk` already tells the same person before they start --
-#: "a volunteer from the Editorial Board reads every proposal and gets back
-#: to you" -- and a series that had to write its own would be writing the
-#: product's promise in its own words, in a sequence that already asks an
-#: operator for thirty steps' worth of values.
+#: "a volunteer from the Editorial Board reads every proposal", and nothing
+#: more: a reply is not promised, because a series with many proposals and
+#: few slots cannot keep that promise. A series that had to write its own
+#: would be writing the product's promise in its own words, in a sequence
+#: that already asks an operator for thirty steps' worth of values.
 #:
 #: The anchor is written `<a href="U">U</a>` so that the address is legible
 #: whether or not Tally keeps the tag through its own html -> safeHTMLSchema
@@ -254,7 +255,7 @@ def _published_url() -> str | None:
 #: cannot fail silently: the worst case is a bare URL a reader can copy.
 _THANK_YOU_CONFIRMATION: Final = (
     "Your proposal has been recorded. A volunteer from the Editorial Board "
-    "reads every proposal and gets back to you."
+    "reads every proposal."
 )
 
 
@@ -487,7 +488,7 @@ _ANSWER_SPECS: Final[dict[tuple[str, ...], tuple[str, str, tuple[str, ...]]]] = 
     LABEL_COUNTRY: ("INPUT_TEXT", "Country of residence or affiliation", ()),
     LABEL_TITLE: (
         "INPUT_TEXT",
-        "Working title for the talk -- it can change later",
+        "A working title for the talk. It can change later.",
         (),
     ),
     LABEL_ABSTRACT: ("TEXTAREA", "A few sentences on what the talk would cover", ()),
@@ -514,8 +515,8 @@ _ANSWER_SPECS: Final[dict[tuple[str, ...], tuple[str, str, tuple[str, ...]]]] = 
     ),
     LABEL_PROPOSED_BY: (
         "INPUT_TEXT",
-        "Your own name -- the person submitting this proposal, not the"
-        " speaker named above",
+        "Your own name, as the person submitting this proposal (not the"
+        " speaker named above)",
         (),
     ),
 }
