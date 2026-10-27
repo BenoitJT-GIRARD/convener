@@ -702,6 +702,28 @@ def test_nothing_is_watched_that_is_not_there() -> None:
     )
 
 
+def test_security_updates_arrive_grouped_like_version_updates() -> None:
+    """A group applies to version updates unless it says otherwise, so the
+    monthly round arrived as one pull request per directory while every
+    advisory arrived as its own: nine in six days in October 2026, one
+    package in one directory each. A second group per entry, for
+    `security-updates`, folds an advisory round into one pull request per
+    directory as well."""
+    declared = yaml.safe_load(DEPENDABOT.read_text(encoding="utf-8"))
+    ungrouped = [
+        entry["package-ecosystem"]
+        for entry in declared["updates"]
+        if not any(
+            group.get("applies-to") == "security-updates"
+            and group.get("patterns") == ["*"]
+            for group in (entry.get("groups") or {}).values()
+        )
+    ]
+    assert ungrouped == [], (
+        f"{DEPENDABOT.name} still opens one pull request per advisory for {ungrouped}"
+    )
+
+
 def test_the_reason_a_duplicate_turns_this_off_is_written_down() -> None:
     """An instance inherits this file, and every manifest it names is the
     product's. A duplicate whose Dependabot bumps a lockfile has edited a
