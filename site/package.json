@@ -9,8 +9,8 @@
     "check:budget": "node scripts/check-performance-budget.mjs"
   },
   "devDependencies": {
-    "@11ty/eleventy": "3.1.6",
-    "axe-core": "^4.13.0",
+    "@11ty/eleventy": "3.1.7",
+    "axe-core": "^4.14.0",
     "puppeteer-core": "^25.12.0"
   }
 }
