@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"
+     viewBox="0 0 1920 1080" font-family="Archivo, 'Segoe UI', Arial, Helvetica, sans-serif">
+  <title>TEC Monthly Reading Group — video-call background</title>
+  <desc>Video-call background, 1920x1080. Unlike the other two files in this
+  kit it holds nothing an event changes, so there is nothing to fill in:
+  export it to PNG or JPEG and add it as a virtual background in whatever
+  the session runs on.</desc>
+
+  <!-- Generated, not drawn: tools/scripts/generate_brand_css.py writes this file
+  from instance/data/brand.json (the colours and the motif) and instance/config.json
+  (the names). Change one of those, run that command, and commit what it
+  writes; an edit made here is overwritten, and the check fails until it
+  is. Once you have downloaded a copy it is yours, of course: edit that as
+  freely as you like. -->
+  <rect width="1920" height="1080" fill="#fecac1"/>
+
+  <!-- The motif: the drawing the charter names, in the charter's own
+       motif colour and at its own weight. The plate below sits inside the
+       corridor the drawing leaves free, so no word is ever drawn across
+       it. -->
+  <g id="motif" fill="none" stroke="#012765"
+     stroke-width="22.03"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 151.52 283.84
+               L 151.52 183.6
+               L 19.76 183.6
+               L 19.76 494.64
+               L 151.52 494.64
+               L 151.52 394.4
+               M 1822.95 91.2
+               L 1822.95 27
+               L 1907.34 27
+               L 1907.34 226.21
+               L 1822.95 226.21
+               L 1822.95 162.01"/>
+  </g>
+
+  <!-- The plate: who this is, what the series is for, and where to find
+       it. All three lines are declared values set in capitals, and each is
+       sized to fit this plate rather than at a fixed size, so a longer
+       name shrinks instead of running off the edge. -->
+  <rect class="block" x="175.06" y="25.5" width="1624.36"
+        height="349"
+        fill="#ffffff" stroke="#000000" stroke-width="3"/>
+  <g text-anchor="middle" fill="#000000">
+    <text x="987.24" y="152" font-size="102.78"
+          font-weight="900">THE EXAMPLE COLLECTIVE</text>
+    <text x="987.24" y="241" font-size="62.5"
+          font-weight="800">READ TOGETHER</text>
+    <text x="987.24" y="311" font-size="34.72"
+          font-weight="700">FORUM.EXAMPLE.TEST</text>
+  </g>
+
+  <!-- The code, and what it does. It is drawn, not left as a slot to
+       fill: it encodes one declared address and nothing an event changes,
+       so there is nothing here for a volunteer to generate. That address
+       is in the title element below, in the clear, so what a code points
+       at can be read without scanning it. -->
+  <g text-anchor="middle" fill="#000000" font-size="21.04"
+     font-weight="800">
+    <text x="1733" y="801">SCAN TO JOIN</text>
+    <text x="1733" y="830">THE DISCUSSION</text>
+  </g>
+  <rect class="block" x="1632" y="854" width="202"
+        height="202"
+        fill="#ffffff"/>
+  <svg x="1632" y="854" width="202"
+       height="202"><svg viewBox="0 0 33 33" class="forum-qr"><title>https://forum.example.test</title><path class="forum-qr__line" stroke="#000" d="M4 4.5h7m1 0h2m2 0h2m2 0h1m1 0h7m-25 1h1m5 0h1m1 0h2m1 0h2m3 0h1m1 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m2 0h3m1 0h2m1 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m1 0h2m1 0h5m2 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m3 0h1m4 0h2m1 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m4 0h3m2 0h1m1 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-17 1h1m1 0h1m3 0h1m-15 1h1m1 0h2m1 0h3m2 0h2m2 0h2m2 0h1m2 0h1m1 0h2m-25 1h2m2 0h2m3 0h1m1 0h1m1 0h1m2 0h1m2 0h1m3 0h1m-24 1h2m1 0h1m2 0h1m2 0h2m1 0h1m3 0h1m1 0h1m-19 1h1m2 0h1m3 0h1m1 0h1m1 0h1m1 0h1m3 0h2m2 0h2m-23 1h4m1 0h2m1 0h8m1 0h2m1 0h1m1 0h3m-21 1h2m1 0h3m1 0h1m2 0h3m1 0h3m3 0h1m-24 1h1m1 0h1m2 0h5m2 0h2m1 0h1m3 0h1m1 0h2m-24 1h1m1 0h1m2 0h1m2 0h3m3 0h1m1 0h1m2 0h2m3 0h1m-23 1h2m1 0h2m1 0h17m-17 1h1m1 0h3m3 0h1m3 0h1m1 0h1m1 0h1m-25 1h7m1 0h1m4 0h2m1 0h1m1 0h1m1 0h1m1 0h3m-25 1h1m5 0h1m1 0h2m4 0h1m1 0h1m3 0h1m2 0h2m-25 1h1m1 0h3m1 0h1m3 0h1m1 0h1m1 0h1m1 0h6m2 0h1m-25 1h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h1m2 0h2m1 0h5m-25 1h1m1 0h3m1 0h1m1 0h5m2 0h2m1 0h1m1 0h1m1 0h2m-24 1h1m5 0h1m3 0h1m1 0h2m3 0h1m2 0h1m1 0h1m-23 1h7m1 0h1m1 0h1m1 0h3m2 0h8"/></svg></svg>
+</svg>

@@ -1,0 +1,46 @@
+<!-- cspell:ignore currentColor color
+  Convener — the mark.
+
+  **One file for every surface.** The ink is `currentColor`, so it takes the
+  colour of whatever it is placed in — set `color: #fff` on a dark ground and it
+  turns white, with no second file to keep in step.
+
+  The navy default is a `svg:root` rule, not a `color` attribute, and the
+  difference is the whole point: an attribute would win over inheritance and the
+  mark would stay navy on a dark ground. `svg:root` matches only when this file
+  is the document — opened on its own, or loaded through `<img>`. Inlined into a
+  page, it does not match, and inheritance decides.
+
+  The dark-scheme rule beside it is that same sentence for the one surface that
+  renders this file as a document and cannot be told what colour to use: a
+  browser tab. `app/scripts/copy-mark.mjs` makes this file the cockpit's own
+  favicon, and navy on a dark tab strip (#202124 in Chrome's own dark theme)
+  measures 1.13:1 — not low contrast, invisible. White there measures 16.1:1.
+  Nothing that inlines the mark is affected, because `svg:root` does not match
+  when it is inlined.
+
+  The mark is measured, not traced: radii, stroke widths and one 81° opening read
+  off the original raster and rebuilt as two arcs and a circle. It overlaid that
+  raster exactly.
+
+  The wordmark is Archivo at weight 400, converted to outlines — the face and
+  weight `instance/data/brand.json` declares as `body`, shipped here under the SIL Open
+  Font License 1.1 (`assets/fonts/`, `Archivo-LICENSE.txt`). It is **not** the face of
+  the original raster, which was never identified; see README.md for why
+  imitating it was the wrong trade.
+
+  Coral #fd6b52 is an accent on the ink, never text on white — 2.84:1 there.
+  Navy #012765 on white is 14.23:1. README.md carries both measurements.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+  <style>
+    svg:root { color: #012765 }
+    @media (prefers-color-scheme: dark) { svg:root { color: #fff } }
+  </style>
+  <title id="t">Convener</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="butt">
+    <path d="M 413.54 388.19 A 205.66 205.66 0 1 1 413.54 123.81" stroke-width="68.69"/>
+    <path d="M 356.90 340.67 A 131.72 131.72 0 1 1 356.90 171.33" stroke-width="25.86"/>
+  </g>
+  <circle cx="424.89" cy="255.19" r="47.68" fill="#fd6b52"/>
+</svg>
