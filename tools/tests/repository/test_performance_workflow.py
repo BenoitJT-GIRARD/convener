@@ -32,6 +32,9 @@ exercised by hand, not by this module.
 
 from __future__ import annotations
 
+import json
+import re
+
 from convener_ops.declaration.paths import repo_root
 
 _ROOT = repo_root()
@@ -42,6 +45,7 @@ _CHECKER = (_ROOT / "site" / "scripts" / "check-performance-budget.mjs").read_te
     encoding="utf-8"
 )
 _PACKAGE_JSON = (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
+_PACKAGE_LOCK = (_ROOT / "site" / "package-lock.json").read_text(encoding="utf-8")
 
 # quality.yml carries several jobs, and one of them
 # carries several lanes: what were the `typescript`, `site` and
@@ -257,11 +261,27 @@ def test_the_generator_version_is_pinned_exactly() -> None:
     exactly how the site's own dependency tree was found carrying known
     high-severity vulnerabilities in Eleventy 2's transitive dependencies
     (`markdown-it`/`linkify-it`) with no version bump ever surfacing as a
-    diff to review."""
-    assert '"@11ty/eleventy": "3.1.6"' in _PACKAGE_JSON, (
-        "site/package.json's @11ty/eleventy dependency is no longer an exact "
-        "pin at 3.1.6 -- a caret or tilde range here can float across a "
+    diff to review.
+
+    Read against the lock rather than against a version typed here: a
+    number in this test broke on every legitimate patch release, and a
+    pin that equals what the lock resolved is the whole property."""
+    package = json.loads(_PACKAGE_JSON)
+    declared = {
+        **package.get("dependencies", {}),
+        **package.get("devDependencies", {}),
+    }["@11ty/eleventy"]
+    resolved = json.loads(_PACKAGE_LOCK)["packages"]["node_modules/@11ty/eleventy"][
+        "version"
+    ]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", declared), (
+        f"site/package.json declares @11ty/eleventy as {declared!r}, not an "
+        "exact version -- a caret or tilde range here can float across a "
         "major version silently on the next `npm install`"
+    )
+    assert declared == resolved, (
+        f"site/package.json pins @11ty/eleventy at {declared} but the lock "
+        f"resolves {resolved}"
     )
 
 
